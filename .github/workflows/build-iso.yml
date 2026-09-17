@@ -1,0 +1,61 @@
+# ==============================================================================
+# UNTESTED skeleton — mirrors the structure pearOS-archlinux/iso's
+# gh-actions/ setup is described as having (build on push/schedule, publish
+# ISO + checksum), rewritten for this repo's Fedora engine.
+#
+# Known gap, not yet solved: engine/build-iso.sh needs real root privileges
+# for dnf --installroot and systemd-nspawn, and GitHub-hosted runners don't
+# grant the loop-device/user-namespace access livemedia-style ISO builds
+# usually need without extra setup (nested containers, --privileged, or a
+# self-hosted runner). This workflow runs the build step as a placeholder;
+# expect it to need a privileged self-hosted runner or a
+# fedora:latest container with --privileged before it actually produces an
+# ISO. Flagged rather than guessed at, per the same "don't assert what
+# wasn't verified" rule as the rest of this repo's Phase 0/2 work.
+# ==============================================================================
+
+name: Build ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Profile to build"
+        default: "pearos"
+        required: false
+      branch:
+        description: "Fedora release (a number, or 'rawhide')"
+        default: "42"
+        required: false
+  schedule:
+    - cron: "0 6 * * 0"   # weekly, Sundays 06:00 UTC
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:42
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf -y install dnf-plugins-core rsync squashfs-tools xorriso \
+              grub2-tools grub2-pc-modules dosfstools mtools systemd-container git
+
+      - name: Build ISO
+        run: |
+          ./engine/build-iso.sh \
+            --profile "${{ github.event.inputs.profile || 'pearos' }}" \
+            --branch "${{ github.event.inputs.branch || '42' }}" \
+            --clean-target
+
+      - name: Upload ISO + checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: pearos-iso
+          path: |
+            build/*.iso
+            build/*.iso.sha256
+          retention-days: 14
