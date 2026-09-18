@@ -217,7 +217,23 @@ KERNEL_VER="$(run_in_target rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel
 # regenerates for every installed kernel using dracut's own naming
 # convention. Since Phase 7 needs a known filename to copy onto the ISO,
 # target this one kernel explicitly instead.
-run_in_target dracut --force "/boot/initramfs-$KERNEL_VER.img" "$KERNEL_VER"
+#
+# VERIFIED (2026-09-18): a plain `dracut --force` here produces an
+# initramfs that boots partway (past GRUB into the actual kernel/systemd
+# — see the $root fix above) and then hard-fails with `dracut: FATAL:
+# Don't know how to handle 'root=live:CDLABEL=...'`. dracut's hostonly
+# mode (the default) decides which modules to include by inspecting the
+# *build* environment — a chroot with no live media involved — so it has
+# no way to detect that `dmsquash-live` (confirmed present at
+# /usr/lib/dracut/modules.d/70dmsquash-live/, part of the already-listed
+# dracut-live package) is needed, and silently leaves it out. `--add`
+# forces it in regardless of hostonly detection. `--no-hostonly` on top
+# of that because live media needs to work on whatever hardware it's
+# booted on, not just this build host's — hostonly's driver/module
+# pruning would otherwise ship an initramfs that might not even find its
+# own root filesystem on different hardware.
+run_in_target dracut --force --no-hostonly --add dmsquash-live \
+    "/boot/initramfs-$KERNEL_VER.img" "$KERNEL_VER"
 
 # ---- Phase 7: package the ISO ---------------------------------------------------
 echo "--- Assembling ISO ---"
