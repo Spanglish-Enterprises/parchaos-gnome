@@ -146,6 +146,14 @@ if [ ! -f "$BASE_MARKER" ] || [ "$(cat "$BASE_MARKER" 2>/dev/null)" != "$PKGLIST
         --setopt=keepcache=True \
         install "${base_packages[@]}"
     echo "$PKGLIST_HASH" > "$BASE_MARKER"
+    # FOOTGUN FIX (2026-09-18): a rebuilt base cache is worthless if
+    # ROOTFS_TARGET already existed and Phase 3 below just reuses it
+    # unchanged — found the hard way when a packages.list fix (adding
+    # systemd-pam) rebuilt the base cache correctly but the ISO still
+    # shipped the old rootfs, silently, because nothing forced a
+    # re-clone. Whenever the base cache itself was just rebuilt, force
+    # Phase 3 to re-clone from it too, regardless of --clean-target.
+    CLEAN_TARGET=1
 else
     echo "--- Base cache for Fedora $BRANCH is up to date, reusing ---"
 fi

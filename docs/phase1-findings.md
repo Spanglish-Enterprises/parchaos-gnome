@@ -405,9 +405,37 @@ missing base package the whole time.
 commit). Since the engine hashes `packages.list` and only rebuilds the
 `dnf --installroot` base cache when that hash changes, the very next
 build will pick this up automatically (no `--clean-base` flag needed).
-**Not yet retested at time of writing** — see whoever picks this up
-next to run the rebuild/reboot/reverify cycle and confirm a real SDDM
-greeter (and ideally a full Plasma desktop) actually renders now.
+**Retested (2026-09-18) — still broken, but a SECOND, different bug**:
+rebuilt and rebooted; the base cache rebuild for Fedora 44 genuinely
+ran (confirmed live in the build log — real dnf transaction output,
+not a cache-hit skip). But an interactive serial-console root login
+into the rebuilt the install-test VM showed the **exact same** `pam_systemd.so: No
+such file or directory` error, byte-for-byte identical to before.
+`rpm -ql systemd-pam | grep pam_systemd` returned nothing.
+
+Root-caused this second failure via `engine/build-iso.sh` itself: the
+`PKGLIST_HASH` check in Phase 2 correctly detected the change and
+rebuilt `$BASE_CACHE` (the shared `dnf --installroot` bootstrap dir)
+with `systemd-pam` this time — but **Phase 3 (cloning that base cache
+into `$ROOTFS_TARGET`, the actual working rootfs that gets packaged
+into the ISO) only re-clones when `--clean-target` is passed or
+`$ROOTFS_TARGET` doesn't already exist yet**. Since a prior build had
+already created `$ROOTFS_TARGET`, Phase 3 printed "Reusing existing
+working target" and skipped the reclone entirely — so the freshly
+fixed base cache never actually reached the rootfs that got packaged.
+The ISO was rebuilt, dracut reran, grub2-mkrescue reran — everything
+*looked* like a real rebuild — but the actual filesystem contents were
+untouched. This is a genuine engine bug (a silent footgun, not user
+error alone): any packages.list fix silently fails to take effect
+unless the caller remembers `--clean-target` on top of the base-cache
+rebuild it already correctly triggers.
+
+**Fixed in the engine**: Phase 2 now sets `CLEAN_TARGET=1` itself
+whenever it actually rebuilds the base cache, so Phase 3 always
+re-clones in that case regardless of what flags the caller passed.
+Rebuilding now (with `--clean-target` also passed by hand for this one
+verification run, belt-and-suspenders) — result to follow once the
+rebuild/reboot/reverify cycle completes.
 
 ## Where things stand
 
