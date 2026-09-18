@@ -327,3 +327,145 @@ silence a log line with no visible effect.
    unfiltered log for anything visually load-bearing, and always
    independently confirm the *visual* result (a screendump, not just a
    log) before declaring a UI fix done.
+
+## RESOLVED: the "unclaimed content" scope question (2026-09-18)
+
+User decision (asked directly): fold the rest of `pearos-settings`
+upstream's content into new subpackages of the same spec, following
+the precedent already set by `pearos-branding.spec` (one spec, several
+independent subpackages, no build step) — including the third-party
+plasmoid bundle, which surfaced as a separate sub-question mid-task
+(see below) and was also approved.
+
+Verified the real upstream tarball directly before writing anything
+(same discipline as every other package in this project). Five new
+subpackages, all `noarch`, no compiled content anywhere (checked):
+
+- **`pearos-kwin-effects`** — `usr/share/kwin/{effects,scripts,tabbox}/`.
+  The 4 `kinetic_*` effects are forks of KDE's own stock Maximize/
+  Scale/FadingPopups/Squash effects (GPL, real KWin upstream authors —
+  not pearOS originals); `macsimize6`/`truely-maximized` are
+  third-party GPLv3 scripts; `AquaMediumIcons` is a tabbox icon theme.
+  Shipped available, not enabled by default.
+- **`pearos-plasma-theme`** — `usr/share/plasma/desktoptheme/{pearOS,
+  pearOS-dark}/` + `usr/share/color-schemes/*.colors`. pearOS's own
+  full Plasma SVG chrome theme + matching color schemes. Wired as the
+  live-session default via `customize.sh`'s new `/etc/xdg/plasmarc`
+  (`[Theme] name=pearOS`) and an appended `/etc/xdg/kdeglobals`
+  `[General] ColorScheme=pearOS`.
+- **`pearos-aurorae-theme`** — `usr/share/aurorae/themes/{pearOS,
+  pearOS-dark}/`. Window-decoration theme. Wired via an appended
+  `/etc/xdg/kwinrc` `[org.kde.kdecoration2]` block
+  (`library=org.kde.kwin.aurorae`, `theme=__aurorae__svg__pearOS`).
+- **`pearos-sounds`** — `usr/share/sounds/pearOS-sounds/`. System event
+  sound theme. Not wired as a default (no obvious single config key
+  for this the way the others have; deferred, see below).
+- **`pearos-plasmoids`** — `usr/share/plasma/plasmoids/*/` (20
+  directories, ~1080 files). **Not pearOS originals in most cases** —
+  independently-authored KDE Store widgets pearOS bundles alongside
+  its own (antroids, nemmayan/zayronxio ×4, luisbocanegra ×2, upstream
+  `org.kde.windowtitle`, `tt.launchpadPlasma`, plus pearOS's own
+  `Pear*`/`xyz.pearos.*` widgets). Checked every single widget's own
+  `metadata.json` individually before packaging — all properly
+  licensed (GPL-2.0-or-later/GPL-3.0-or-later/BSD-2-Clause), no unclear
+  cases. Flagged to the user mid-task specifically because
+  `PearTaskManager` is a renamed copy of KDE's own stock Task Manager
+  plasmoid — installing this package only makes all 20 widgets
+  available via Plasma's "Add Widgets" dialog, nothing in
+  `customize.sh` adds any of them to a panel, so this does **not** run
+  alongside `pearos-dock` (the project's actual default dock) unless a
+  user manually adds it themselves.
+
+Deliberately **not** packaged: `usr/share/extras/` — inspected
+directly and it's upstream's own messy scratch/staging directory
+(loose logo files, a duplicate/stale plymouth-theme tarball, a stray
+`.py` script, mis-named files like
+`Pearos_fullscreen_non-transparent.png.png.png` and `svg(1).svg`) —
+not real distributable content.
+
+Two real license naming footnotes worth keeping: aurorae's and
+`pearOS-dark`'s own `metadata.json` files declare their license as
+"PPLv2"/"PPL_V2"/"PPL-2.0" (upstream spells it inconsistently across
+files) — a non-SPDX identifier ("Pear Public License v2", presumably),
+used verbatim in the spec's `License:` tags since that's genuinely what
+upstream declares, not independently verified against any actual
+license text. `pearos-sounds` has no license information anywhere
+upstream at all (no LICENSE file, no metadata.json) — packaged as-is,
+flagged rather than guessed.
+
+### Bug found and fixed: ambiguous Python shebang (real COPR build failure)
+
+First COPR build attempt (`11001562`) failed outright:
+
+```
+*** ERROR: ambiguous python shebang in
+/usr/share/plasma/plasmoids/luisbocanegra.panel.colorizer/contents/ui/tools/service.py:
+#!/usr/bin/env python. Change it to python3 (or python2) explicitly.
+```
+
+Fedora's `brp-mangle-shebangs` build policy hard-fails `%install` on
+any bundled script with a version-ambiguous `#!/usr/bin/env python`
+shebang. Checked the rest of the new content for the same pattern
+(`grep -rlE "^#!.*env python$"`) — exactly one file affected. Fixed
+with a targeted `sed` in `%install` disambiguating that one file to
+`python3` without touching anything else. Second build (`11001570`)
+succeeded.
+
+### Infra bug found while re-running the ISO build: backgrounded sudo loses its tty
+
+Rebuilding the ISO with the new packages (`branded6`) needed a build
+that took past the ~30-minute point (compressing ~110k rootfs files
+into squashfs, more than prior builds due to the new content). The
+first attempt (`ssh -tt ... sudo bash engine/build-iso.sh`, foreground
+over a single pexpect session) was killed when that session's own
+30-minute `pexpect.expect(EOF, timeout=1800)` wait expired — the build
+was still running at 67% squashfs progress, not actually failed.
+
+Re-launching it detached (`nohup ... & disown`) to survive past any
+single SSH session's lifetime hit a **different**, real bug: `sudo:
+a terminal is required to read the password`, even after running
+`sudo -S -v` first to pre-validate the credential cache — a backgrounded
+process loses its controlling tty entirely, and sudo's timestamp cache
+is tty-scoped on this system (most sudoers configs are), so a fresh
+`sudo` invocation with no tty at all refuses to proceed regardless of
+a valid cached ticket. Fixed by using a **detached `tmux` session**
+instead (`tmux new-session -d -s branded6 'sudo bash ...'`), which
+provides its own real pty that survives independently of any SSH
+session, then feeding the password in with `tmux send-keys -t branded6
+'alexgalicea' Enter` right after launch. This let the build run to
+completion (~1hr total) while being checked on periodically via
+`tmux capture-pane`, with no SSH session needing to stay alive for the
+duration.
+
+### Verification: rebuilt, boot-tested, partially confirmed visually
+
+Rebuilt the branded ISO (`branded6`) with the tmux approach above.
+Verified in the rootfs before boot-testing (same discipline as every
+fix this session): all 5 new packages installed at `2026.09.01-2`, and
+`/etc/xdg/plasmarc`, `/etc/xdg/kdeglobals`, `/etc/xdg/kwinrc` all show
+the expected new lines from `customize.sh` exactly as written.
+
+Boot-tested on the install-test VM: `journalctl` shows the same single known-benign
+`Main.qml:406:13: Unable to assign [undefined] to QUrl` warning (the
+harmless `config.logo` property, unchanged from the prior SDDM fix) and
+nothing new; the SDDM greeter screendump is visually identical to the
+already-confirmed-working `branded5` capture — **no regression**.
+
+**Not independently confirmed**: the Aurorae window-decoration wiring
+(`theme=__aurorae__svg__pearOS`) is a best-guess based on standard
+KWin/Aurorae naming convention (`__aurorae__svg__<install-dir-name>`),
+not the aurorae theme's own internal `Id` field (which is actually
+`"pearOS-Light"`, a different string — deliberately not used, since
+that field is unrelated to how kwin's own decoration KCM resolves an
+Aurorae theme on disk). Attempted to reach an actual logged-in desktop
+session via the live ISO's "Live System User" account to check this
+visually, but a blank-password login attempt (VT-switch + Enter on the
+empty password field) did not go through — this account isn't
+actually passwordless the way the root serial-console account is, and
+no credential for it is known. Whoever picks this up next should
+either find/set a real password for the live user in the profile, or
+verify a different way (e.g. `kreadconfig6 --file kwinrc --group
+org.kde.kdecoration2 --key theme` inside an actual running session via
+`systemd-nspawn` + a nested Xvfb/Wayland headless compositor, or just
+visual confirmation on real hardware). If the decoration doesn't
+apply, this line is the first thing to check.
