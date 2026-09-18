@@ -38,6 +38,11 @@ CLEAN_BASE=0          # wipe and rebuild the dnf --installroot base cache
 CLEAN_TARGET=0        # wipe and re-clone the working rootfs from the base cache
 DROP_TO_CHROOT=0      # drop into an interactive shell in the target rootfs
 NVIDIA=0              # pull in akmod-nvidia + friends from RPM Fusion
+SKIP_BRANDING=0       # skip Phase 5 (repo+PROFILE_REPO_PACKAGES) and Phase 5.5
+                      # (profile_customize) entirely — builds packages.list's
+                      # plain base only. This is the Phase 1 "unbranded
+                      # baseline" checkpoint: it doesn't need the profile's
+                      # COPR to exist yet (Phase 2), just packages.list.
 ISO_VERSION="$(date +%Y.%m.%d)"
 
 usage() {
@@ -54,6 +59,10 @@ Usage: $(basename "$0") [options]
   --chroot               Drop into a shell in the target rootfs before
                          packaging, instead of building the ISO
   --nvidia               Include RPM Fusion's proprietary NVIDIA packages
+  --skip-branding         Skip repo setup, PROFILE_REPO_PACKAGES, and
+                         profile_customize — build packages.list's plain
+                         base only (doesn't need the profile's COPR to
+                         exist yet)
   --version <ver>        ISO filename version tag (default: today's date)
   -h, --help             Show this help
 EOF
@@ -68,6 +77,7 @@ while [ $# -gt 0 ]; do
         --clean-target) CLEAN_TARGET=1; shift ;;
         --chroot) DROP_TO_CHROOT=1; shift ;;
         --nvidia) NVIDIA=1; shift ;;
+        --skip-branding) SKIP_BRANDING=1; shift ;;
         --version|-v) ISO_VERSION="$2"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
@@ -165,31 +175,35 @@ if [ "$DROP_TO_CHROOT" -eq 1 ]; then
 fi
 
 # ---- Phase 5: repo setup + package installation --------------------------------
-echo "--- Configuring repositories ---"
-profile_setup_repo   # defined in profiles/$PROFILE/repo.sh — COPR + RPM Fusion
-
-if [ "$NVIDIA" -eq 1 ]; then
-    PROFILE_REPO_PACKAGES+=("${PROFILE_NVIDIA_PACKAGES[@]}")
-fi
-
-if [ "$LOCAL" -eq 1 ]; then
-    LOCAL_RPM_DIR="$BUILD_DIR/local-rpms"
-    [ -d "$LOCAL_RPM_DIR" ] || { echo "--local given but $LOCAL_RPM_DIR doesn't exist" >&2; exit 1; }
-    echo "--- Installing local RPMs from $LOCAL_RPM_DIR ---"
-    mkdir -p "$ROOTFS_TARGET/tmp/local-rpms"
-    cp "$LOCAL_RPM_DIR"/*.rpm "$ROOTFS_TARGET/tmp/local-rpms/"
-    run_in_target dnf -y install /tmp/local-rpms/*.rpm
-    rm -rf "$ROOTFS_TARGET/tmp/local-rpms"
+if [ "$SKIP_BRANDING" -eq 1 ]; then
+    echo "--- --skip-branding given: skipping repo setup, PROFILE_REPO_PACKAGES, and profile_customize ---"
 else
-    echo "--- Installing profile packages from repo/COPR ---"
-    run_in_target dnf -y --setopt=install_weak_deps=False install "${PROFILE_REPO_PACKAGES[@]}"
+    echo "--- Configuring repositories ---"
+    profile_setup_repo   # defined in profiles/$PROFILE/repo.sh — COPR + RPM Fusion
+
+    if [ "$NVIDIA" -eq 1 ]; then
+        PROFILE_REPO_PACKAGES+=("${PROFILE_NVIDIA_PACKAGES[@]}")
+    fi
+
+    if [ "$LOCAL" -eq 1 ]; then
+        LOCAL_RPM_DIR="$BUILD_DIR/local-rpms"
+        [ -d "$LOCAL_RPM_DIR" ] || { echo "--local given but $LOCAL_RPM_DIR doesn't exist" >&2; exit 1; }
+        echo "--- Installing local RPMs from $LOCAL_RPM_DIR ---"
+        mkdir -p "$ROOTFS_TARGET/tmp/local-rpms"
+        cp "$LOCAL_RPM_DIR"/*.rpm "$ROOTFS_TARGET/tmp/local-rpms/"
+        run_in_target dnf -y install /tmp/local-rpms/*.rpm
+        rm -rf "$ROOTFS_TARGET/tmp/local-rpms"
+    else
+        echo "--- Installing profile packages from repo/COPR ---"
+        run_in_target dnf -y --setopt=install_weak_deps=False install "${PROFILE_REPO_PACKAGES[@]}"
+    fi
+
+    profile_teardown_repo
+
+    # ---- Phase 5.5: branding / customization ---------------------------------------
+    echo "--- Applying profile branding/customization ---"
+    profile_customize   # defined in profiles/$PROFILE/customize.sh
 fi
-
-profile_teardown_repo
-
-# ---- Phase 5.5: branding / customization ---------------------------------------
-echo "--- Applying profile branding/customization ---"
-profile_customize   # defined in profiles/$PROFILE/customize.sh
 
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
@@ -209,16 +223,24 @@ cp "$ROOTFS_TARGET/boot/vmlinuz-$KERNEL_VER" "$ISO_WORKDIR/boot/vmlinuz"
 cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.img"
 
 # --- UEFI: Ploader (rEFInd fork), reused verbatim per the brief — it's an
-# EFI-level binary, not something that needs rebuilding for Fedora.
-echo "Building UEFI boot image (Ploader)..."
-EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
-[ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || { echo "Missing $PROFILE_DIR/ploader/ploader_x64.efi" >&2; exit 1; }
-dd if=/dev/zero of="$EFIBOOT_IMG" bs=1M count=16
-mkfs.vfat "$EFIBOOT_IMG"
-mmd -i "$EFIBOOT_IMG" ::/EFI ::/EFI/BOOT
-mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
-if [ -d "$PROFILE_DIR/ploader/theme" ]; then
-    mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
+# EFI-level binary, not something that needs rebuilding for Fedora. Ploader
+# itself is Phase 4 work (see profiles/pearos/ploader/README.md) — until its
+# build output exists, degrade to a BIOS-only ISO with a warning instead of
+# hard-failing, so Phase 1's engine checkpoint doesn't have to wait on it.
+HAVE_UEFI=0
+if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+    HAVE_UEFI=1
+    echo "Building UEFI boot image (Ploader)..."
+    EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
+    dd if=/dev/zero of="$EFIBOOT_IMG" bs=1M count=16
+    mkfs.vfat "$EFIBOOT_IMG"
+    mmd -i "$EFIBOOT_IMG" ::/EFI ::/EFI/BOOT
+    mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+    if [ -d "$PROFILE_DIR/ploader/theme" ]; then
+        mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
+    fi
+else
+    echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building a BIOS-only ISO, no UEFI boot support." >&2
 fi
 
 # --- BIOS fallback: GRUB2, replacing syslinux per Fedora convention.
@@ -244,19 +266,29 @@ grub2-mkstandalone \
     --locales="" --fonts="" \
     "boot/grub2/grub.cfg=$GRUB_CFG"
 cat /usr/lib/grub/i386-pc/cdboot.img "$BUILD_DIR/bios-core.img" > "$BUILD_DIR/bios-eltorito.img"
+# xorriso's -eltorito-boot path is resolved relative to the ISO source tree
+# ($ISO_WORKDIR, the last xorriso argument below), not to the shell's cwd —
+# bios-eltorito.img has to actually be inside it, not just in $BUILD_DIR.
+cp "$BUILD_DIR/bios-eltorito.img" "$ISO_WORKDIR/boot/bios-eltorito.img"
 
 echo "Running xorriso..."
 ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-x86_64.iso"
-xorriso -as mkisofs \
-    -iso-level 3 \
-    -volid "$PROFILE_ISO_LABEL" \
-    -eltorito-boot bios-eltorito.img \
-        -no-emul-boot -boot-load-size 4 -boot-info-table \
-    -eltorito-alt-boot \
-        -e EFI/efiboot.img -no-emul-boot \
-    -isohybrid-gpt-basdat \
-    -output "$BUILD_DIR/$ISO_NAME" \
-    "$ISO_WORKDIR"
+XORRISO_ARGS=(
+    -as mkisofs
+    -iso-level 3
+    -volid "$PROFILE_ISO_LABEL"
+    -eltorito-boot boot/bios-eltorito.img
+        -no-emul-boot -boot-load-size 4 -boot-info-table
+)
+if [ "$HAVE_UEFI" -eq 1 ]; then
+    XORRISO_ARGS+=(
+        -eltorito-alt-boot
+            -e EFI/efiboot.img -no-emul-boot
+        -isohybrid-gpt-basdat
+    )
+fi
+XORRISO_ARGS+=(-output "$BUILD_DIR/$ISO_NAME" "$ISO_WORKDIR")
+xorriso "${XORRISO_ARGS[@]}"
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
 
