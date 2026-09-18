@@ -142,6 +142,54 @@ Concrete next steps for whoever picks this up:
 4. Try the same build on a different QEMU/SeaBIOS version to see if it's
    version-specific.
 
+## Update: compared the real Fedora ISO's El Torito record directly
+
+Ran `xorriso -indev <iso> -report_el_torito plain` against both the real
+`Fedora-KDE-Desktop-Live-44-1.7.x86_64.iso` and our
+`grub2-mkrescue`-built ISO, side by side:
+
+```
+Fedora:  El Torito boot img :   1  BIOS  y   none  0x0000  0x00      4         165
+         El Torito img path :   1  /boot/x86_64/loader/eltorito.img
+         El Torito img opts :   1  boot-info-table grub2-boot-info
+
+Ours:    El Torito boot img :   1  BIOS  y   none  0x0000  0x00      4        1228
+         El Torito img path :   1  /boot/grub/i386-pc/eltorito.img
+         El Torito img opts :   1  boot-info-table grub2-boot-info
+```
+
+**These are structurally equivalent** — same platform, same tiny
+4-sector initial load size, same `boot-info-table grub2-boot-info`
+options, both GRUB2-based. (Fedora's ISO also carries a second, separate
+UEFI El Torito entry pointing at a real ~30MB UEFI image — irrelevant
+here since we're debugging the BIOS path specifically, and our ISO
+correctly has no such entry since Ploader/UEFI isn't wired up yet.)
+
+This rules out the El Torito *catalog* record itself as the difference
+and narrows the real culprit to one of:
+
+1. The actual compiled contents of the embedded `eltorito.img` /
+   `core.img` (i.e. something in exactly which GRUB modules are built in
+   and how, beyond what the catalog metadata shows) — Fedora's own lorax
+   tooling almost certainly generates this from its own template/module
+   list rather than `grub2-mkrescue`'s defaults, and Phase 1's own
+   module-trimming experiment (see above) didn't reach parity with
+   whatever Fedora actually ships.
+2. How the *kernel and initramfs themselves* were built. Fedora's own
+   live initramfs is built by their own lorax/dracut invocation with
+   their own flags and module curation; ours comes from a plain `dracut
+   --force <path> <kver>` inside the chroot with no live-specific
+   flags beyond what `dracut-live` contributes by default. Worth
+   checking: run `lsinitrd` on both initramfs images and diff the
+   module/driver lists, and check whether Fedora's dracut invocation
+   (visible in their kickstart/lorax templates) passes flags this
+   engine's Phase 6 doesn't.
+
+Given the El Torito catalogs match, hypothesis 2 (the initramfs itself)
+is now the more promising lead over hypothesis 1 (the boot loader image) —
+next session should start there: `lsinitrd` both initramfs images and
+diff them before going back to disassembling `eltorito.img` binaries.
+
 ## Where things stand
 
 - The engine correctly performs Phases 1–6 (profile loading through
