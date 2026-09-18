@@ -207,7 +207,12 @@ fi
 
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
-KERNEL_VER="$(run_in_target rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)"
+# systemd-nspawn allocates a pty for run_in_target by default (needed for
+# --chroot's interactive shell), whose terminal (onlcr) settings leave a
+# trailing \r on captured output — strip it or every use of $KERNEL_VER
+# downstream silently breaks (e.g. realpath treating "...x86_64\r" as part
+# of the path).
+KERNEL_VER="$(run_in_target rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1 | tr -d '\r')"
 # --regenerate-all doesn't take an output path or kernel version — it
 # regenerates for every installed kernel using dracut's own naming
 # convention. Since Phase 7 needs a known filename to copy onto the ISO,
