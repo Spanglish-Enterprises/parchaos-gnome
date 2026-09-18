@@ -83,26 +83,90 @@ decorations, Plasma widget styling, KWin effects beyond the blur) will
 still look stock Breeze underneath. Not decided here; flagging again so
 it doesn't get lost.
 
-## Not yet done: an actual branded ISO build
+## DONE: first real branded ISO build attempted (2026-09-18)
 
-Every ISO build attempted this session used `--skip-branding`, since
-that was Phase 1's deliverable (the plain unbranded baseline). **A real
-branded build (`engine/build-iso.sh` without `--skip-branding`) has
-never been attempted.** Now that the COPR-slug bug above is fixed, this
-is the natural next real test — Phase 2/3's packages need to actually
-survive a real `dnf copr enable` + `dnf install` inside the engine's
-`dnf --installroot` bootstrap and a real boot to prove the wiring
-works end-to-end, the same "verify on real hardware" bar used for
-everything else in this project.
+Ran `engine/build-iso.sh --profile pearos --branch 44 --version
+2026.09.18-branded` on the build VM (no `--skip-branding` — the first such
+attempt this entire session). Found and fixed one real bug immediately:
 
-**Next step for whoever continues**: once build `11000859` is confirmed
-green, run `engine/build-iso.sh --profile pearos --branch 44` (no
-`--skip-branding`) on the build VM, boot it the same way Phase 1 verified the
-unbranded ISO (serial console + QMP screendump), and check for a real
-pearOS-branded SDDM greeter and desktop instead of stock Breeze. This
-will very likely surface new, real bugs — the same "manual verification
-missed something rpmbuild caught" pattern from Phase 2 should be
-expected here too (e.g. a package name mismatch between
-`PROFILE_REPO_PACKAGES` and what COPR actually publishes, a `dnf
---installroot` GPG-signing hiccup enabling an external COPR, etc.) —
-don't assume it'll boot clean on the first try.
+**Bug: `dnf copr enable` failed outright.** `Unknown argument "copr"
+for command "dnf5"`. Fedora 44's `dnf` is dnf5, and dnf5's `copr`
+subcommand comes from the `dnf5-plugins` package — `repo.sh` was
+installing `dnf-plugins-core` (the dnf4-era name, still installable on
+Fedora 44 for compat, but it doesn't provide dnf5's plugin interface).
+Confirmed the real providing package via `dnf5 repoquery
+--whatprovides 'dnf5-command(copr)'`. Fixed, pushed, retried.
+
+**Second attempt: full success at the packaging/wiring level.** All 8
+real COPR packages (`pafari`, `pearos-dock`, `pearos-liquidgel`,
+`pearos-settings`, and `pearos-branding`'s 4 subpackages) resolved and
+installed cleanly from the real `alexgalicea/plumos` repo, and
+`profile_customize()` ran through every step (SDDM theme, session,
+look-and-feel, Kvantum, GTK/icon theme, liquid-gel enable) without
+error. ISO built successfully.
+
+## Real bug found on boot: the SDDM theme is Qt5, this system is pure Qt6
+
+Booted the branded ISO on the install-test VM and verified the **wiring** is
+completely correct: `/etc/sddm.conf.d/10-pearos-theme.conf` says
+`Current=pearos`, and `/usr/share/sddm/themes/pearos/` is a real,
+complete theme (`Main.qml`, `Login.qml`, `Background.qml`,
+`Preview.png`, `background.png` — not a stub). `kdeglobals` says
+`LookAndFeelPackage=pearOS`, and `/usr/share/plasma/look-and-feel/`
+really does contain `pearOS`/`pearOS-dark` alongside the stock Fedora
+ones. No crash, no PAM/`XDG_RUNTIME_DIR` issue (Phase 1's fix held).
+
+But the **theme itself doesn't render** — a QMP screendump shows SDDM's
+own error banner right on screen:
+
+```
+The current theme cannot be loaded due to the errors below,
+please select another theme.
+
+file:///usr/share/sddm/themes/pearos/Main.qml:3:1: module
+"QtQuick.Controls" version 1.1 is not installed
+```
+
+Confirmed the real scope by reading the theme's actual imports
+(`grep -n "^import" /usr/share/sddm/themes/pearos/*.qml`): **4 of the
+theme's 6 QML files** (`Main.qml`, `BreezeMenuStyle.qml`,
+`KeyboardButton.qml`, `SessionButton.qml`) import
+`QtQuick.Controls 1.1/1.3/1.4` and/or `QtQuick.Controls.Styles 1.4` —
+genuine Qt5-era QML, not just an old version string. `Main.qml` also
+imports `QtGraphicalEffects 1.0` (removed in Qt6, replaced by
+`Qt5Compat.GraphicalEffects`), and several files import
+`org.kde.plasma.components 2.0` (the Plasma 5 component set — Plasma 6
+themes typically use `org.kde.plasma.components 3.0` or QQC2-based
+components instead). Confirmed via `rpm -qa` that this system has
+**zero** Qt5 QML packages installed at all (`qt5-qtdeclarative`,
+`qt5-qtquickcontrols` — neither present), so there's no compat shim to
+lean on even temporarily.
+
+This is real, substantial porting work — Controls 1.x → 2.x is not a
+version bump, the whole component/theming model changed (e.g. Controls
+1.x's `Button { style: ButtonStyle { ... } }` custom-styling pattern
+doesn't exist in Controls 2.x, which themes via `Material`/`Fusion`
+style plugins or fully custom delegates instead). **Deliberately not
+attempted in this session** — a rushed partial port risks leaving the
+theme in a worse, half-broken state than the current clean "falls back
+gracefully with a clear on-screen error" behavior, and this deserves
+focused, dedicated attention rather than being squeezed in at the end
+of an already long session.
+
+**Next step for whoever continues**: port
+`packaging/pearos-branding`'s SDDM theme source (from
+`Pear-Project/pearOS-Default-SDDM` upstream) to Qt6/Plasma 6 QML:
+replace `QtQuick.Controls 1.x` usage with `QtQuick.Controls 2.x` (or
+drop custom `ButtonStyle`-based styling entirely in favor of
+`org.kde.plasma.components 3.0`, which is likely the more idiomatic
+Plasma 6 approach and would also modernize the other now-outdated
+Plasma 2.0 component imports at the same time), replace
+`QtGraphicalEffects 1.0` with `Qt5Compat.GraphicalEffects` (needs
+`qt6-qt5compat` — check whether that's an acceptable BuildRequires/
+Requires addition, it's a compat shim not core Qt6) or rewrite the
+specific effects used with native Qt6 equivalents. Test iteratively the
+same way this session tested every other QML fix (Phase 0's
+`pearos-dock` patch is a good precedent) — reference `SDDM error`
+output is exact and actionable (`file:///.../Main.qml:3:1: ...`), so
+fix one file, rebuild the `pearos-branding` SRPM, resubmit to COPR,
+rebuild the ISO, reboot, re-check the screendump, repeat.
