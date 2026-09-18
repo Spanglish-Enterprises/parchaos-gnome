@@ -178,11 +178,48 @@ on the user's the hypervisor cluster, installed from the official
   KDE packaging moves fast and can be internally inconsistent" risk this
   doc's Section 1 predicted for KWin — it turned up first in the unrelated
   PIM/Akonadi dependency chain instead.
-- Not yet resolved. Working theory, not yet executed: run a full `sudo dnf
-  upgrade -y --allowerasing` first to move the whole system onto one
-  consistent package cohort, then layer the `-devel` packages on top,
-  rather than fighting a mixed-cohort transaction. **`liquid-gel` has not
-  been compiled yet** — this is still blocking that attempt.
+- Resolved by running a full `sudo dnf upgrade -y --exclude=systemd-udev
+  --exclude=intel-gpu-firmware` (plain `--allowerasing` alone tried to
+  **remove the protected `systemd-udev` package** to satisfy a
+  `systemd-networkd` version bump — refused, do not force this; excluding
+  it just leaves `systemd-networkd` at its old version, which is fine,
+  nothing on this box uses it). `intel-gpu-firmware` hit the exact same
+  unresolved-rename pattern as `kmime` (file conflict with `linux-firmware`,
+  irrelevant to this VM anyway — excluded). 1473 package
+  operations, one new kernel, one reboot, and the system landed on
+  `kwin-6.7.5`/`kf6-kwindowsystem-6.30.0`/`plasma-workspace-6.7.5`.
+- **`liquid-gel` now compiles.** `sudo dnf install` for the full real
+  BuildRequires list (see the corrected
+  `packaging/pearos-liquidgel/pearos-liquidgel.spec`) succeeded cleanly on
+  the upgraded system — no more file conflicts once everything was on one
+  cohort. `cmake -B build -S .` (no special flags — `BETTERBLUR_WAYLAND`
+  and `BETTERBLUR_X11` both default `ON` in liquid-gel's own
+  `CMakeLists.txt`) configured successfully, and `cmake --build build`
+  produced a working **`forceblur.so`** (the Wayland KWin effect plugin)
+  and **`pearos_liquidgel_config.so`** (its KCM config module) — Risk #1
+  from Section 1 above is resolved for the Wayland target: liquid-gel
+  builds against Fedora 44's real KWin 6.7.5 without any patching, despite
+  being several minor versions past the "6.4-ish" window its own README
+  warns about.
+- The **X11 variant does not build**: `forceblur_x11.so` fails with
+  `fatal error: core/region.h: No such file or directory` compiling the
+  *same* `blur.cpp` that succeeds for Wayland. This points at a header
+  gap in Fedora's `kwin-x11-devel` package, not a missing BuildRequires or
+  a liquid-gel bug (nothing else needed for X11 was missing — `KWinX11`,
+  `KDecoration3`, `libdrm` all resolved fine at configure time). Given this
+  project's fallback decision already defaults to Wayland (see below), the
+  spec now builds with `-DBETTERBLUR_X11=OFF` and treats fixing the X11
+  variant as a nice-to-have, not a blocker.
+- The real, corrected BuildRequires list needed several packages beyond
+  what Section 1's speculative reading assumed: full KF6 component set
+  (`kf6-kconfigwidgets-devel`, `kf6-kcrash-devel`, `kf6-kglobalaccel-devel`,
+  `kf6-ki18n-devel`, `kf6-kio-devel`, `kf6-knotifications-devel`,
+  `kf6-kwidgetsaddons-devel`, `kf6-kguiaddons-devel`, `kf6-kcmutils-devel`,
+  each pulling their own further transitive `-devel` deps), plus
+  `kdecoration-devel`, `libdrm-devel`, `vulkan-headers`, and
+  `wayland-devel` — none of which the original spec draft or this doc's
+  Section 1 had listed. Now reflected in
+  `packaging/pearos-liquidgel/pearos-liquidgel.spec`.
 
 ## Fallback decision (for now)
 
@@ -195,17 +232,17 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
 
 ## Open items before Phase 2 packaging work should be trusted
 
-1. **In progress** (see hands-on update above): compile `liquid-gel` against
-   real Fedora 44 `kf6-kwindowsystem-devel`/`kwin-devel`/
-   `plasma-workspace-devel`, using the CMake invocation in
-   `packaging/pearos-liquidgel/pearos-liquidgel.spec`. Currently blocked on
-   a `kmime`/`kf6-kmime` file-conflict in the devel-package install itself
-   (not liquid-gel's fault) — next step is a full `dnf upgrade` to a
-   consistent package cohort before retrying.
-1a. Decide whether to test against the installed-ISO baseline
-   (`kf6-kwindowsystem-6.25.0`/`kwin-6.6.4`) or the post-`dnf upgrade`
-   baseline (`plasma-workspace-26.08.1`-era) — or both, since they're
-   genuinely different version targets on the same release.
+1. **Done for Wayland** (see hands-on update above): `liquid-gel`'s Wayland
+   plugin (`forceblur.so` + `pearos_liquidgel_config.so`) compiles cleanly
+   against real Fedora 44 `kwin-6.7.5`/`kf6-kwindowsystem-6.30.0` (post
+   `dnf upgrade` cohort — the installed-ISO baseline of
+   `kwin-6.6.4`/`kf6-kwindowsystem-6.25.0` has not separately been tried,
+   and probably isn't worth the effort now that the newer cohort works).
+   **Still open**: the X11 variant fails on a `kwin-x11-devel` header gap
+   (`core/region.h`) — low priority given the Wayland-first fallback
+   decision, but worth a Fedora bug report if anyone wants the X11 session
+   to work later. Not yet tested: an actual runtime load of `forceblur.so`
+   in a live `kwin_wayland` session (this only proves it *compiles*).
 2. Install Fedora KDE Spin, add the (to-be-created) COPR repo, install
    `pearos-dock`, and drive a Wayland session for real: panel edge snapping,
    multi-monitor, HiDPI, and window-preview thumbnails are the specific
