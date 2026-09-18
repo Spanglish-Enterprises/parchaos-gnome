@@ -437,23 +437,61 @@ Rebuilding now (with `--clean-target` also passed by hand for this one
 verification run, belt-and-suspenders) — result to follow once the
 rebuild/reboot/reverify cycle completes.
 
+## CONFIRMED WORKING (2026-09-18)
+
+Rebuilt with `--clean-target` (so the fix actually landed in the
+packaged rootfs this time), rebooted the install-test VM, and verified two ways:
+
+1. **Interactive serial-console login** (root, blank password):
+   `/usr/lib64/security/pam_systemd.so` now exists, and
+   `journalctl -u sddm` shows a completely clean startup — `Started
+   sddm.service`, a cosmetic theme-fallback notice, `pam_unix(sddm-
+   greeter:session): session opened` — no PAM dlopen error, no
+   `XDG_RUNTIME_DIR is invalid`, no `kwin_wayland` core dump.
+2. **QMP screendump**: a real, fully-rendered **SDDM greeter** — live
+   clock, date, "LIVE SYSTEM USER" account with a password field, and
+   a working "Session" dropdown showing "Plasma". Hash confirmed
+   different from every prior capture's identical broken-screen hash
+   (`2617e8773e7bf659...`), and different across each VT-switch target
+   this time too (previously all five were always byte-identical).
+
 ## Where things stand
 
 - The engine correctly performs Phases 1–7 end to end: profile loading,
   base cache bootstrap, rootfs clone, initramfs regeneration, and ISO
   assembly all produce a working result with no known issues.
-- The built ISO **boots**: real GRUB menu → real kernel boot → real
-  systemd startup → live root mounted and switched into → networking up
-  with the correct live-media hostname, all the way to a working text
-  login (verified via an actual interactive root shell over the serial
-  console, not just log-watching). Three hard blockers found this
-  session are fixed and verified via full rebuild + reboot cycles, not
-  just reasoning: the GRUB relocator OOM (never explicitly setting
-  `$root`), dracut silently omitting the `dmsquash-live` module needed
-  to parse `root=live:...`, and now the missing `systemd-pam` package
-  that was silently killing every SDDM/kwin_wayland greeter attempt.
 - **Phase 1's "get a plain, unbranded Fedora KDE Plasma live ISO
-  building end-to-end" checkpoint is one rebuild+reboot cycle away from
-  fully confirmed** — the `systemd-pam` fix above needs a real
-  rebuild/reboot/screendump-or-serial-login verification pass (not done
-  yet as of this writing) before declaring it closed.
+  building end-to-end" checkpoint is DONE.** The built ISO boots all
+  the way from GRUB through kernel, dracut, systemd, and switch-root to
+  a real, working, on-screen SDDM greeter — confirmed visually, not
+  just via logs.
+- Five real bugs were found and fixed this session, each verified via
+  a full rebuild + reboot cycle rather than reasoning alone:
+  1. GRUB relocator OOM — never explicitly setting `$root`.
+  2. dracut silently omitting the `dmsquash-live` module needed to
+     parse `root=live:...`.
+  3. `graphical.target` not being set as default when `--skip-branding`
+     skips `profile_customize()` — moved to the engine unconditionally.
+  4. **`systemd-pam` missing from `profiles/pearos/packages.list`** —
+     the actual root cause of the "blank screen forever" symptom chased
+     for most of this session: without it, sddm's PAM session never
+     got `XDG_RUNTIME_DIR` set, so its embedded `kwin_wayland` greeter
+     compositor crashed on every single boot while `sddm.service`
+     itself stayed "active (running)" the whole time, making the
+     failure invisible to systemd/journalctl at the unit level.
+  5. **A `--clean-target` engine footgun**: a `packages.list` fix that
+     correctly triggers a base-cache rebuild can still silently ship a
+     *stale* ISO if `$ROOTFS_TARGET` already existed from a prior
+     build, because Phase 3 only re-clones from the base cache when
+     told to. Now fixed at the engine level (Phase 2 forces
+     `CLEAN_TARGET=1` whenever it rebuilds the base cache), so this
+     can't bite a future packages.list change silently again.
+- The video-mode grub.cfg preamble (`insmod all_video` /
+  `gfxpayload=keep` / `vga=791`) and the serial console
+  (`console=ttyS0,115200n8`) were both real, worthwhile additions along
+  the way — the video-mode fix turned out not to be the actual bug
+  (disproven via identical screendump hashes even after it), but is
+  harmless and matches upstream Fedora's own grub.cfg. The serial
+  console is what ultimately made root-causing this possible at all,
+  and is worth keeping in the engine going forward for any future
+  headless-VM debugging.
