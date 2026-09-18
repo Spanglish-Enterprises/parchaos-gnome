@@ -234,12 +234,16 @@ cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.
 # --- UEFI: Ploader (rEFInd fork), reused verbatim per the brief — it's an
 # EFI-level binary, not something that needs rebuilding for Fedora. Ploader
 # itself is Phase 4 work (see profiles/pearos/ploader/README.md) — until its
-# build output exists, degrade to a BIOS-only ISO with a warning instead of
-# hard-failing, so Phase 1's engine checkpoint doesn't have to wait on it.
+# build output exists, degrade to grub2-mkrescue's own default UEFI stub
+# (or none, if the host's grub2-efi modules aren't installed) with a
+# warning, so Phase 1's engine checkpoint doesn't have to wait on it.
+# Reconciling grub2-mkrescue's own EFI/BOOT layout with Ploader's branded
+# one is real Phase 4 work once ploader_x64.efi actually exists.
 HAVE_UEFI=0
 if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     HAVE_UEFI=1
     echo "Building UEFI boot image (Ploader)..."
+    mkdir -p "$ISO_WORKDIR/EFI/BOOT"
     EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
     dd if=/dev/zero of="$EFIBOOT_IMG" bs=1M count=16
     mkfs.vfat "$EFIBOOT_IMG"
@@ -249,17 +253,29 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
         mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
     fi
 else
-    echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building a BIOS-only ISO, no UEFI boot support." >&2
+    echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
 fi
 
-# --- BIOS fallback: GRUB2, replacing syslinux per Fedora convention.
-# VERIFY ON REAL HOST: the exact grub2-mkstandalone module list and the
-# hybrid-MBR file path (`/usr/lib/grub/i386-pc/boot_hybrid.img` below) vary
-# across Fedora's grub2-pc-modules package layout and haven't been checked
-# against an actual installed system.
-echo "Building BIOS boot image (GRUB2)..."
-GRUB_CFG="$BUILD_DIR/grub-bios.cfg"
-cat > "$GRUB_CFG" <<EOF
+# --- BIOS boot: grub2-mkrescue, not a hand-rolled grub2-mkstandalone +
+# manual El Torito image + raw xorriso invocation. The hand-rolled version
+# produced a structurally valid ISO9660 image (xorriso reported success)
+# that nonetheless hung forever at SeaBIOS's "Booting from DVD/CD..." on a
+# real boot test — confirmed via a real VM screendump, unchanged
+# across repeated checks, i.e. genuinely stuck, not just slow. Exactly the
+# risk this section's old "VERIFY ON REAL HOST" comment (removed now that
+# it's been verified — negatively) was flagged for. grub2-mkrescue is the
+# same tool real distros use for this and handles the El Torito boot
+# catalog, hybrid MBR, and (when grub2-efi modules are present) UEFI boot
+# correctly, without needing any of that reimplemented by hand.
+#
+# grub2-mkrescue's embedded core image looks for its config at the
+# upstream-conventional /boot/grub/grub.cfg on the resulting media — NOT
+# /boot/grub2/ (that renamed path is a Fedora-installed-system convention
+# for coexistence with legacy grub-legacy; it doesn't apply to rescue
+# media grub2-mkrescue builds itself).
+echo "Writing grub.cfg for grub2-mkrescue ---"
+mkdir -p "$ISO_WORKDIR/boot/grub"
+cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
 set default=0
 set timeout=5
 menuentry "$PROFILE_DISPLAY_NAME" {
@@ -267,37 +283,10 @@ menuentry "$PROFILE_DISPLAY_NAME" {
     initrd /boot/initramfs.img
 }
 EOF
-grub2-mkstandalone \
-    --format=i386-pc-eltorito \
-    --output="$BUILD_DIR/bios-core.img" \
-    --install-modules="linux normal iso9660 biosdisk memdisk search tar ls" \
-    --modules="linux normal iso9660 biosdisk memdisk search tar ls" \
-    --locales="" --fonts="" \
-    "boot/grub2/grub.cfg=$GRUB_CFG"
-cat /usr/lib/grub/i386-pc/cdboot.img "$BUILD_DIR/bios-core.img" > "$BUILD_DIR/bios-eltorito.img"
-# xorriso's -eltorito-boot path is resolved relative to the ISO source tree
-# ($ISO_WORKDIR, the last xorriso argument below), not to the shell's cwd —
-# bios-eltorito.img has to actually be inside it, not just in $BUILD_DIR.
-cp "$BUILD_DIR/bios-eltorito.img" "$ISO_WORKDIR/boot/bios-eltorito.img"
 
-echo "Running xorriso..."
+echo "Running grub2-mkrescue..."
 ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-x86_64.iso"
-XORRISO_ARGS=(
-    -as mkisofs
-    -iso-level 3
-    -volid "$PROFILE_ISO_LABEL"
-    -eltorito-boot boot/bios-eltorito.img
-        -no-emul-boot -boot-load-size 4 -boot-info-table
-)
-if [ "$HAVE_UEFI" -eq 1 ]; then
-    XORRISO_ARGS+=(
-        -eltorito-alt-boot
-            -e EFI/efiboot.img -no-emul-boot
-        -isohybrid-gpt-basdat
-    )
-fi
-XORRISO_ARGS+=(-output "$BUILD_DIR/$ISO_NAME" "$ISO_WORKDIR")
-xorriso "${XORRISO_ARGS[@]}"
+grub2-mkrescue -o "$BUILD_DIR/$ISO_NAME" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
 
