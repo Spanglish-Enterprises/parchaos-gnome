@@ -232,17 +232,38 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
 
 ## Open items before Phase 2 packaging work should be trusted
 
-1. **Done for Wayland** (see hands-on update above): `liquid-gel`'s Wayland
-   plugin (`forceblur.so` + `pearos_liquidgel_config.so`) compiles cleanly
-   against real Fedora 44 `kwin-6.7.5`/`kf6-kwindowsystem-6.30.0` (post
-   `dnf upgrade` cohort — the installed-ISO baseline of
-   `kwin-6.6.4`/`kf6-kwindowsystem-6.25.0` has not separately been tried,
-   and probably isn't worth the effort now that the newer cohort works).
+1. **Done for Wayland — compile and runtime both verified.**
+   `liquid-gel`'s Wayland plugin (`forceblur.so` + `pearos_liquidgel_config.so`)
+   compiles cleanly against real Fedora 44 `kwin-6.7.5`/
+   `kf6-kwindowsystem-6.30.0` (post `dnf upgrade` cohort — the installed-ISO
+   baseline of `kwin-6.6.4`/`kf6-kwindowsystem-6.25.0` has not separately
+   been tried, and probably isn't worth the effort now that the newer
+   cohort works). `sudo cmake --install build` places it at
+   `/usr/lib64/qt6/plugins/kwin/effects/plugins/forceblur.so` (+
+   `metadata.json`, plugin `Id: forceblur`); enabling it
+   (`kwriteconfig6 --file kwinrc --group Plugins --key forceblurEnabled
+   true` + `qdbus-qt6 org.kde.KWin /KWin reconfigure` — note the binary is
+   `qdbus-qt6` on this Fedora install, not `qdbus`/`qdbus6`) loads it into
+   a **live** `kwin_wayland` session with no crash, and
+   `qdbus-qt6 org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded
+   forceblur` confirms `true` — genuinely active, not just present on disk.
+   `.../Compositing.compositingType` reports `gl2`, i.e. KWin is running a
+   real OpenGL2 scene (via software Mesa/llvmpipe in this GPU-less VM, but
+   a GL scene nonetheless, which is what blur effects need — a pure
+   QPainter/software-2D fallback would have made this moot). One benign
+   warning logged (metadata `Id` field deprecation notice), nothing fatal.
+   A screendump (via the build VM's QMP socket, `human-monitor-command
+   screendump`) didn't show obvious blurring on the one dialog/panel
+   visible at the time — expected, since `forceblur`'s whole feature is
+   *force-adding* blur to specific windows via user-configured rules, it
+   doesn't blur everything by default the way the stock `blur` effect can.
+   Not yet done: configuring an actual force-blur window rule and
+   confirming the visual result, and testing under real GPU acceleration
+   rather than software Mesa.
    **Still open**: the X11 variant fails on a `kwin-x11-devel` header gap
    (`core/region.h`) — low priority given the Wayland-first fallback
    decision, but worth a Fedora bug report if anyone wants the X11 session
-   to work later. Not yet tested: an actual runtime load of `forceblur.so`
-   in a live `kwin_wayland` session (this only proves it *compiles*).
+   to work later.
 2. Install Fedora KDE Spin, add the (to-be-created) COPR repo, install
    `pearos-dock`, and drive a Wayland session for real: panel edge snapping,
    multi-monitor, HiDPI, and window-preview thumbnails are the specific
