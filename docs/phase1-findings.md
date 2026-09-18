@@ -356,19 +356,58 @@ the guest does (less likely, since we know from the earlier DHCP-lease
 evidence that the guest kept booting and reached a live/networked
 state well past this point in time).
 
-**Next step for whoever continues**: stop trying to infer state from
-`screendump` — it has now given the same non-answer twice. Attach a
-real serial console instead: add `console=ttyS0,115200n8` alongside
-the existing `console`/`vga=` args on the kernel cmdline in
-`engine/build-iso.sh`'s grub.cfg template, add a `serial0: socket`
-device to the install-test VM in the hypervisor (`qm set 112 --serial0 socket`, plus
-`--vga std` is already implied), rebuild, reboot, and read the serial
-socket directly (e.g. `socat -,raw,echo=0
-unix-connect:/var/run/qemu-server/112.serial0` or equivalent) to get
-actual kernel/systemd/dracut boot text instead of a screendump of a
-frozen cursor. That will show directly whether `getty@tty1` ever
-starts, whether `graphical.target`/`sddm.service` fail, or whether
-something else entirely is hanging.
+**Serial console added and used (2026-09-18)**: added
+`console=ttyS0,115200n8` to the grub.cfg kernel cmdline (kept after
+`console=tty0` so it becomes the primary `/dev/console`) and dropped
+`quiet`, plus a `--serial0 socket` device on the install-test VM. Captured ~75s of
+real boot text via the resulting Unix socket
+(`/var/run/qemu-server/112.serial0` on the the hypervisor host, read with
+`socat -u UNIX-CONNECT:... -`). The boot is genuinely healthy: GRUB →
+kernel → dracut → switch-root → systemd → NetworkManager/accounts-
+daemon/polkit all start cleanly → a real `localhost-live login:`
+prompt appears on ttyS0 around the 30s mark. **But the log never
+mentioned `sddm` starting at all** within the capture window, and a
+fresh screendump taken several minutes later was still byte-identical
+to every prior blank-cursor capture — ruling out "just needs more
+time."
+
+**ROOT CAUSE FOUND (2026-09-18)**: logged into the running the install-test VM over
+the serial console as `root` (blank password — this rootfs was never
+given a root password, since `--skip-branding` never set one) and ran
+`systemctl status sddm.service` + `journalctl -u sddm` directly. The
+real story:
+
+```
+sddm-helper[860]: PAM unable to dlopen(/usr/lib64/security/pam_systemd.so): No such file or directory
+sddm-helper-start-wayland[861]: QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-sddm'
+sddm-helper-start-wayland[861]: "kwin_core: Could not determine the active graphical session"
+sddm-helper-start-wayland[861]: "error: XDG_RUNTIME_DIR is invalid or not set... Failed to find a free display socket\nFATAL ERROR: could not add wayland socket"
+systemd-coredump[874]: Process 862 (kwin_wayland) of user 993 dumped core.
+```
+
+`pam_systemd.so` — provided by the `systemd-pam` sub-package, which
+was **missing from `profiles/pearos/packages.list`** (only `systemd`
+and `systemd-udev` were listed) — is the PAM module responsible for
+registering a login session with `systemd-logind` and exporting
+`XDG_RUNTIME_DIR`. Without it, sddm's own PAM session for the `sddm`
+greeter user never gets `XDG_RUNTIME_DIR` set, so when sddm launches
+its embedded `kwin_wayland` compositor to actually draw the greeter,
+kwin can't create a Wayland socket at all and immediately core-dumps.
+sddm itself stays "active (running)" the whole time from systemd's
+point of view (its main PID never dies) — it just silently fails to
+ever produce a display, on every single boot, which is exactly the
+"identical blank cursor forever" signature chased through this entire
+session. This was never a GRUB/video-mode/timing issue — every one of
+those was a real thing worth ruling out, but the actual bug was one
+missing base package the whole time.
+
+**Fix**: added `systemd-pam` to `profiles/pearos/packages.list` (see
+commit). Since the engine hashes `packages.list` and only rebuilds the
+`dnf --installroot` base cache when that hash changes, the very next
+build will pick this up automatically (no `--clean-base` flag needed).
+**Not yet retested at time of writing** — see whoever picks this up
+next to run the rebuild/reboot/reverify cycle and confirm a real SDDM
+greeter (and ideally a full Plasma desktop) actually renders now.
 
 ## Where things stand
 
@@ -377,15 +416,16 @@ something else entirely is hanging.
   assembly all produce a working result with no known issues.
 - The built ISO **boots**: real GRUB menu → real kernel boot → real
   systemd startup → live root mounted and switched into → networking up
-  with the correct live-media hostname. Both hard blockers found this
-  session (the GRUB relocator OOM, caused by never explicitly setting
-  `$root`; and dracut silently omitting the `dmsquash-live` module
-  needed to parse `root=live:...`) are fixed and verified via full
-  rebuild + reboot cycles, not just reasoning.
-- **This effectively achieves Phase 1's "get a plain, unbranded Fedora
-  KDE Plasma live ISO building end-to-end" checkpoint** — the one
-  remaining unconfirmed piece is whether the graphical session (SDDM →
-  Plasma) actually appears on screen, which wasn't visually confirmed
-  before this session ended (see the note above — most likely just needs
-  a longer wait or a kernel cmdline tweak for boot-progress visibility,
-  not a new bug). That's the very next thing to check.
+  with the correct live-media hostname, all the way to a working text
+  login (verified via an actual interactive root shell over the serial
+  console, not just log-watching). Three hard blockers found this
+  session are fixed and verified via full rebuild + reboot cycles, not
+  just reasoning: the GRUB relocator OOM (never explicitly setting
+  `$root`), dracut silently omitting the `dmsquash-live` module needed
+  to parse `root=live:...`, and now the missing `systemd-pam` package
+  that was silently killing every SDDM/kwin_wayland greeter attempt.
+- **Phase 1's "get a plain, unbranded Fedora KDE Plasma live ISO
+  building end-to-end" checkpoint is one rebuild+reboot cycle away from
+  fully confirmed** — the `systemd-pam` fix above needs a real
+  rebuild/reboot/screendump-or-serial-login verification pass (not done
+  yet as of this writing) before declaring it closed.
