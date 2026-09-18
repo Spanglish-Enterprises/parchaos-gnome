@@ -115,25 +115,29 @@ accidentally shipping it half-packaged. Worth deciding explicitly before
 or during Phase 3 (branding layer), since it directly affects that
 phase's scope.
 
-## What the user needs to do next (COPR itself)
+## COPR project: created and authenticated (2026-09-18)
 
-Actually creating the COPR project needs credentials this environment
-doesn't have:
+Done — no longer blocked:
 
-1. Create a Fedora account if you don't have one:
-   `https://accounts.fedoraproject.org`.
-2. Log into `https://copr.fedorainfracloud.org` with it.
-3. Create a new COPR project — suggested name: `plumos`. Enable the
-   `fedora-44-x86_64` chroot (matches this project's current target
-   branch; add others later as needed).
-4. Generate an API token from the COPR web UI (your username → "API"),
-   which gives you a `~/.config/copr` file to drop on whichever machine
-   will run `copr-cli` (the build VM is the natural choice — it already has
-   the Fedora toolchain and network access), or paste the token contents
-   directly if you'd rather I write the file myself next session.
-5. Once that exists, the actual `copr-cli buildscm`/`copr-cli build`
-   invocations to push these five specs in are straightforward — happy
-   to wire that up once the project/token exist.
+- Project created: `alexgalicea/plumos` (numeric ID 259140), chroot
+  `fedora-44-x86_64` enabled.
+- API token generated and placed at `~/.config/copr` on the build VM (not
+  committed anywhere in this repo — treat it as a live secret).
+- `copr-cli` installed on the build VM (`sudo dnf install -y copr-cli` — pure
+  Python package, did **not** hit the systemd/systemd-udev protected-
+  package conflict below). Auth confirmed: `copr-cli whoami` →
+  `alexgalicea`.
+
+**One remaining blocker before the first real build**: submitting a
+build normally means handing `copr-cli build alexgalicea/plumos
+<srpm>` a locally-built SRPM (`spectool -g` to fetch each `Source0`,
+then `rpmbuild -bs`) — and `rpmbuild`/`rpm-build` is still blocked by
+the exact same the build VM systemd/systemd-udev duplicate-version issue
+described above. So the **only remaining step** for Phase 2 is the
+`sudo dnf distro-sync --exclude=systemd-udev -y` command already
+previewed clean above — once that's run, `sudo dnf install -y
+rpm-build` will succeed, and building + submitting real SRPMs for the
+5 fixed specs is the very next thing to do.
 
 ## Summary
 
