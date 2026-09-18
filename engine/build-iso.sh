@@ -203,7 +203,20 @@ else
         rm -rf "$ROOTFS_TARGET/tmp/local-rpms"
     else
         echo "--- Installing profile packages from repo/COPR ---"
-        run_in_target dnf -y --setopt=install_weak_deps=False install "${PROFILE_REPO_PACKAGES[@]}"
+        # --refresh: real bug found via a live build (2026-09-18) — when
+        # $ROOTFS_TARGET is reused across builds (the normal case; only
+        # --clean-target or a base-cache rebuild forces a re-clone),
+        # dnf's plain `install` on an already-installed package just
+        # confirms it satisfies the request and does nothing, even when
+        # a newer version is available in the repo — it only checks
+        # local dnf cache metadata, which doesn't expire quickly enough
+        # to notice a COPR package rebuilt minutes earlier. Verified
+        # directly: rebuilt pearos-sddm-theme (1.0-1 -> 1.0-2) in COPR,
+        # rebuilt the ISO ~20 minutes later, and the rootfs still had
+        # 1.0-1 installed — the exact same SDDM QML bug shipped again
+        # despite the fix already being live. --refresh forces dnf to
+        # re-check the repo instead of trusting stale cached metadata.
+        run_in_target dnf -y --refresh --setopt=install_weak_deps=False install "${PROFILE_REPO_PACKAGES[@]}"
     fi
 
     profile_teardown_repo
