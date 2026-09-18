@@ -405,5 +405,18 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
    window-preview thumbnails — need actual manual use, not just an
    error-free load. Consider filing the `WindowType.Popup` enum bug
    upstream.
-3. Locate or recreate `pear-calamares-config` (see above) before Phase 4
-   installer work.
+3. **Found (2026-09-17), not yet ported.** `pear-calamares-config` 404'd
+   during the original Phase 0 pass but now exists publicly at
+   `pearOS-archlinux/pear-calamares-config` (pushed 2026-08-08, after that
+   pass) — so this was a timing gap, not a naming/access problem. It's
+   Arch-targeted: `etc/calamares/modules/` includes `initcpio*.conf`
+   (mkinitcpio, not dracut), and `packages.conf`/`users.conf` etc. are
+   presumably pacman/Arch-flavored throughout (not yet read in full
+   detail). Branding is real and complete, not a stub: full dark
+   macOS-style QSS stylesheet, QML sidebar + slideshow
+   (`calamares-sidebar.qml`, `show.qml`, `slide1.png`…`slide6.png`),
+   translations for 5 languages. Porting this to Fedora (dracut instead of
+   initcpio, dnf-backed `packages.conf`, verifying Calamares' Fedora
+   packaging supports the same module set) is genuine Phase 4 work, not
+   started — this item just confirms the source material exists and what
+   shape it's in.
