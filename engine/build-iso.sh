@@ -313,10 +313,25 @@ fi
 # bookkeeping when `boot` actually runs. The real Fedora ISO's own
 # grub.cfg never relies on automatic detection — it explicitly searches
 # for a known file and sets $root from that before referencing anything
-# via ($root)/... . Doing the same here (untested until the next real
-# boot attempt lands in docs/phase1-findings.md). Also switched
-# root=live:LABEL= to root=live:CDLABEL=, matching Fedora's exact
-# dracut-live invocation for optical media.
+# via ($root)/... . Doing the same here — confirmed by the next real
+# boot that this fixed the relocator OOM (see docs/phase1-findings.md).
+# Also switched root=live:LABEL= to root=live:CDLABEL=, matching
+# Fedora's exact dracut-live invocation for optical media.
+#
+# VIDEO MODE (2026-09-18): after the relocator/dracut-live fixes above,
+# boot reached a live login/network stage (confirmed via DHCP lease)
+# but the screen stayed a blank cursor, and VT-switching via QMP
+# sendkey to ctrl-alt-f1..f4 produced identical screendumps every
+# time — even a plain kernel getty console didn't respond, which rules
+# out SDDM/Plasma specifically and points at the console/framebuffer
+# itself. The real Fedora ISO's grub.cfg always loads `all_video`,
+# forces `gfxpayload=keep` inside the menuentry, and falls back to
+# `vga=791` on the kernel cmdline — this hand-written grub.cfg lacked
+# all three, so GRUB may have left the console in a video mode the
+# kernel's fbcon/DRM couldn't take over cleanly. Adding them here to
+# match; if the screen is still blank after this, the next step is a
+# serial console (see docs/phase1-findings.md) since screendumps alone
+# can no longer distinguish "slow" from "wedged".
 echo "Writing grub.cfg for grub2-mkrescue ---"
 mkdir -p "$ISO_WORKDIR/boot/grub"
 cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
@@ -324,12 +339,14 @@ cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
 insmod iso9660
 insmod gzio
 insmod ext2
+insmod all_video
 search --file --set=root /boot/vmlinuz
 
 set default=0
 set timeout=5
 menuentry "$PROFILE_DISPLAY_NAME" {
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image quiet
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image quiet vga=791
     initrd (\$root)/boot/initramfs.img
 }
 EOF
