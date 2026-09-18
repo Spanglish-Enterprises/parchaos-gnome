@@ -299,10 +299,51 @@ right after the branding block, so it always runs regardless of
 `--skip-branding` — booting to a desktop is baseline functionality, not
 branding. `profile_customize()` keeps everything that actually *is*
 branding (SDDM theme, look-and-feel package, Kvantum/GTK theme,
-liquid-gel enable) and stays skippable. **Not yet re-verified with
-another full rebuild + boot test** — that's the immediate next step for
-whoever continues, and should be the one that finally shows an actual
-KDE Plasma live desktop on screen.
+liquid-gel enable) and stays skippable.
+
+**Verified with a full rebuild + boot test**: the log confirms the fix
+actually applies (`Created symlink '/etc/systemd/system/default.target'
+→ '/usr/lib/systemd/system/graphical.target'.`), and the rebuilt ISO
+boots exactly as far as before (GRUB → kernel → live root → networking)
+with no new errors. **But no desktop appeared on screen even after 3+
+minutes of waiting** (multiple screendumps taken at increasing
+intervals, all identical: plain graphical-resolution console, blinking
+cursor, VM still running the whole time — not a crash, genuinely stuck
+or just never starting the display).
+
+**Leading theory, not yet tested**: this engine's `grub.cfg` never sets
+up a video mode. Fedora's own `grub.cfg` (read directly earlier this
+session) explicitly does `insmod all_video`, `set gfxpayload=keep`, and
+falls back to `vga=791` in basic-graphics mode — none of which this
+engine's template does. It's plausible the kernel comes up without a
+framebuffer SDDM/KMS can use, and Plasma's own known-flaky software
+rendering path (see `docs/phase0-findings.md`'s notes on the build VM's real
+install showing "Failed to initialize glamor" / "ZINK: failed to choose
+pdev" messages, which that install tolerated and fell back from
+successfully) might not be tolerating whatever different state this
+live-boot path leaves things in.
+
+**Additional data point, same session**: tried switching virtual
+terminals via QMP `sendkey ctrl-alt-f1` through `f4` to reach a plain
+text getty, specifically to rule out "it's just SDDM" in favor of "the
+whole console is stuck." **Identical screendump after every VT switch
+attempt** — not even a different cursor position. A plain kernel/getty
+text console doesn't depend on SDDM or Plasma at all, so this points at
+something lower-level than the display manager: either the console/DRM
+framebuffer itself is wedged (consistent with the missing video-mode
+setup theory above), or the boot genuinely hasn't reached
+`multi-user.target`'s getty units yet despite networking already being
+up (which would be unusual but not impossible if some other unit is
+blocking ahead of getty in the dependency graph).
+
+**Next step for whoever continues**: add Fedora's exact video-mode
+preamble (`insmod all_video`, `set gfxpayload=keep`, `vga=791` fallback)
+to this engine's grub.cfg template and retest first, since that's the
+most concrete lead. If VT switching still doesn't respond after that,
+the investigation needs a real console — attach a serial console
+(`-serial` / the hypervisor's serial0 device + `console=ttyS0` on the kernel
+cmdline) rather than continuing to infer from screendumps of a
+potentially-wedged framebuffer console.
 
 ## Where things stand
 
