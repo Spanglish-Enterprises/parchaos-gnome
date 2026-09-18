@@ -289,6 +289,64 @@ BuildRequires cross-reference, though (see below).
   separate, unrelated, and harmless warning (Unity Launcher DBus API,
   irrelevant outside Ubuntu-family desktops).
 
+### Root-caused and fixed — all three QML errors
+
+Read the actual source at each error's line:
+
+- **`PearFolderArc.qml:276`, `Unable to assign [undefined] to
+  PlasmaQuick::Dialog::WindowType`**: the code sets
+  `type: PlasmaCore.Dialog.Popup`. Checked the real enum this Fedora
+  build exposes (`grep -n "WindowType" ...corebindingsplugin.qmltypes`,
+  cross-checked against `/usr/include/PlasmaQuick/plasmaquick/dialog.h`):
+  `Normal, Dock, DialogWindow, PopupMenu, Tooltip, Notification,
+  OnScreenDisplay, CriticalNotification, AppletPopup`. **There is no
+  `Popup` value** — genuine Plasma-version API drift between whatever
+  upstream pearOS-dock was written against and Fedora 44's Plasma 6.7.5.
+  Fixed by changing to `AppletPopup`, the modern equivalent for a
+  widget's own popup dialog.
+- **`main.qml:616`/`617`, `Cannot read property 'height'/'width' of
+  null`**: both read `tasks.containmentItem.height`/`.width` directly.
+  Reading the surrounding code (lines ~55-81) shows `containmentItem`
+  starts as `null` by design and is filled in asynchronously by an
+  upstream-authored `lookForContainer()` recursive walk up the QML parent
+  chain, called from `applyBackgroundHint()` — i.e. **upstream already
+  anticipated this race**, just didn't guard these two particular
+  bindings (or a third one found by grep, `rightPanelOffset` at line 619,
+  same bug) against evaluating before the lookup completes. Fixed with a
+  ternary null-guard on all three; the existing async lookup naturally
+  corrects the value once `containmentItem` is actually found, no other
+  logic needed.
+- **`main.qml:288`, `Cannot read property 'IsLauncher' of undefined`**:
+  `publishIconGeometries()` reads `task.model.IsLauncher` without
+  checking `task.model` is set first — a plain missing-guard bug, fixed
+  the same way.
+
+None of these turned out to be the "sharper" private-`LibTaskManager`/
+`LibNotificationManager` ABI incompatibility Section 2 worried about at
+the *data* level — the task model itself works; these were three
+independent, ordinary QML defensive-coding gaps (one real version-drift
+enum, two race-condition null checks) that Fedora's exact package
+versions happened to expose. Patched, and **verified clean**: rebuilt,
+reinstalled, cleared every `qmlcache` directory under `~/.cache`
+(`plasmashell`, `kwin`, `ksplash`, etc. — Qt/Plasma cache compiled QML
+bytecode there, and it does **not** auto-invalidate on file-mtime alone;
+a `pkill -9 -f plasmashell` to force a truly fresh process, not just
+`systemctl --user restart` — was needed to confirm on a genuinely new
+PID before the fix could be trusted), then re-added the widget: zero
+`peardock`/`wavetask`/`TypeError`/`WindowType` lines in the journal for
+the fresh process. Patch saved as
+`packaging/pearos-dock/0001-fix-fedora-qml-runtime-errors.patch`, applied
+via the spec's `Patch0`.
+
+**Not yet tested**: the deeper functional questions Section 2 originally
+asked about (panel edge snapping, multi-monitor, HiDPI, window-preview
+thumbnails) — those need actual interactive use, not just an
+error-free load. Also not yet done: checking whether the `Popup` enum
+value ever existed in any real Plasma release (vs. always having been a
+typo/wrong name in upstream's source) and, if it's a genuine upstream
+bug rather than pure version drift, filing it against
+`pearOS-archlinux/pkgbuilds`.
+
 ## Fallback decision (for now)
 
 Per the brief's instruction to pick a fallback if a risk isn't resolved:
@@ -332,25 +390,20 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
    (`core/region.h`) — low priority given the Wayland-first fallback
    decision, but worth a Fedora bug report if anyone wants the X11 session
    to work later.
-2. **Done: compiles, installs, loads, and visibly renders** (see hands-on
-   update above) — `pearos-dock` builds against real Fedora 44
+2. **Done — compiles, installs, loads, renders, and now runs clean.**
+   `pearos-dock` builds against real Fedora 44
    `plasma-workspace-devel`/`libksysguard-devel`/`libplasma-devel` with no
-   private-lib link failures, and shows up as an actual dock panel with
-   icons when added live via the Plasma scripting API.
-   **Still open, and this is the real remaining risk**: genuine QML
-   runtime errors (`Cannot read property 'width'/'height' of null`,
-   `'IsLauncher' of undefined`) fire when it's added — not fatal, the icon
-   bar still renders, but something in the task-model integration isn't
-   getting the properties `pearos-dock` expects from Fedora's
-   `plasma-workspace` build. Needs: figuring out which model property is
-   actually missing/undefined (start in `plugin/backend.cpp`/
-   `smartlauncherbackend.cpp`), and testing the specific things Section 2
-   above called out as at-risk — panel edge snapping, multi-monitor,
-   HiDPI, window-preview thumbnails, and whether these QML errors affect
-   real functionality (launching apps, drag-to-reorder) or are cosmetic
-   (zoom/magnification animation only). Also fix
-   `packaging/pearos-dock/pearos-dock.spec`'s `Source0`/`URL` — they point
-   at a standalone repo that doesn't exist; `pearos-dock` only lives inside
-   `pearOS-archlinux/pkgbuilds/pearos-dock/`.
+   private-lib link failures, shows up as an actual dock panel with icons
+   when added live via the Plasma scripting API, and (after the
+   `0001-fix-fedora-qml-runtime-errors.patch` fix — see hands-on update
+   above) loads with **zero errors** in a freshly-verified plasmashell
+   process. `packaging/pearos-dock/pearos-dock.spec`'s `Source0`/`URL`
+   are also fixed (it's a `pkgbuilds/` subdirectory, not a standalone
+   repo).
+   **Still open**: the deeper interactive checks Section 2 originally
+   asked about — panel edge snapping, multi-monitor, HiDPI,
+   window-preview thumbnails — need actual manual use, not just an
+   error-free load. Consider filing the `WindowType.Popup` enum bug
+   upstream.
 3. Locate or recreate `pear-calamares-config` (see above) before Phase 4
    installer work.
