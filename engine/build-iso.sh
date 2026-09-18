@@ -205,6 +205,19 @@ else
     profile_customize   # defined in profiles/$PROFILE/customize.sh
 fi
 
+# VERIFIED (2026-09-18): booting to a graphical session isn't branding —
+# it's baseline desktop functionality, but it used to live inside
+# profile_customize() (`systemctl set-default graphical.target`), so
+# --skip-branding silently produced a text-mode-only ISO. Confirmed via
+# a real boot test: the --skip-branding build reached a fully working
+# multi-user environment (networking up, correct live-media hostname)
+# but sat at a plain text console forever because nothing ever set
+# graphical.target as default. Run this unconditionally so
+# --skip-branding builds still boot to a desktop; profile_customize()
+# still owns the actual branding specifics (SDDM theme, look-and-feel,
+# Kvantum/GTK theme, liquid-gel enable) and stays skippable.
+run_in_target systemctl set-default graphical.target
+
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
 # systemd-nspawn allocates a pty for run_in_target by default (needed for

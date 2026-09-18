@@ -279,21 +279,30 @@ short of an interactive login that the live root mounted, switch-root
 succeeded, and standard services (NetworkManager at minimum) started
 normally.
 
-The one remaining open question: the actual graphical session (SDDM →
-Plasma) hadn't visibly appeared on the display after ~2 minutes of
-waiting — screendumps showed a plain graphical-resolution console with
-just a blinking cursor, no crash, network fully up. This is most likely
-just the plain-text console (no `rhgb` on the kernel command line means
-no graphical Plymouth splash, so a "boring" text console during the
-quiet portion of boot is expected) with SDDM/Plasma still starting, not
-a new failure — but it wasn't confirmed reaching an actual visible
-desktop before this session ended. **Next step for whoever continues**:
-check whether SDDM actually starts (`systemctl status sddm` would need
-either a login shell or emitting to the console — consider temporarily
-dropping `quiet` and/or adding `rhgb` back so boot progress is visible
-on screen for the next test, or just wait longer / try logging in via
-the live user's default credentials once the console is confirmed to be
-an actual login prompt, not a hang).
+The one remaining open question was resolved by inspection, not another
+boot test: the actual graphical session (SDDM → Plasma) never appeared —
+screendumps showed a plain graphical-resolution console with just a
+blinking cursor for 2+ minutes, no crash, network fully up. **Root
+cause, found by reading the engine's own code**: `systemctl set-default
+graphical.target` used to live inside `profile_customize()`
+(`profiles/pearos/customize.sh`), which `--skip-branding` (added this
+same session, before any of this boot debugging started) skips
+entirely. So the `--skip-branding` build was never told to boot
+graphically at all — it correctly reached a fully working *text-mode*
+multi-user environment and just stayed there, exactly as configured.
+Not a bug in the boot chain; a scope mistake in what `--skip-branding`
+was allowed to skip.
+
+**Fix 3**: moved `run_in_target systemctl set-default graphical.target`
+out of `profile_customize()` and into `engine/build-iso.sh` itself,
+right after the branding block, so it always runs regardless of
+`--skip-branding` — booting to a desktop is baseline functionality, not
+branding. `profile_customize()` keeps everything that actually *is*
+branding (SDDM theme, look-and-feel package, Kvantum/GTK theme,
+liquid-gel enable) and stays skippable. **Not yet re-verified with
+another full rebuild + boot test** — that's the immediate next step for
+whoever continues, and should be the one that finally shows an actual
+KDE Plasma live desktop on screen.
 
 ## Where things stand
 
