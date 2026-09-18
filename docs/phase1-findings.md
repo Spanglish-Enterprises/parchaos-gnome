@@ -336,14 +336,39 @@ setup theory above), or the boot genuinely hasn't reached
 up (which would be unusual but not impossible if some other unit is
 blocking ahead of getty in the dependency graph).
 
-**Next step for whoever continues**: add Fedora's exact video-mode
-preamble (`insmod all_video`, `set gfxpayload=keep`, `vga=791` fallback)
-to this engine's grub.cfg template and retest first, since that's the
-most concrete lead. If VT switching still doesn't respond after that,
-the investigation needs a real console — attach a serial console
-(`-serial` / the hypervisor's serial0 device + `console=ttyS0` on the kernel
-cmdline) rather than continuing to infer from screendumps of a
-potentially-wedged framebuffer console.
+**RESULT (2026-09-18, later same session)**: the video-mode preamble
+fix (`insmod all_video`, `set gfxpayload=keep`, `vga=791`, committed to
+`engine/build-iso.sh`) was built and tested for real — rebuilt the ISO
+on the build VM, attached it to the install-test VM, rebooted, and captured `screendump` for
+the main console plus all four VT-switch targets (`ctrl-alt-f1`
+through `f4`) via QMP. **All five captures are byte-identical**
+(verified via SHA-256, not just eyeballing) and show the same picture
+as before the fix: a 1280x800 all-black frame with a single blinking
+text-mode cursor glyph in the top-left corner, nothing else. So the
+video-mode theory is **disproven** — this was not a
+GRUB/kernel-handoff video-mode mismatch, since adding Fedora's exact
+preamble changed nothing observable. The screen genuinely isn't
+progressing past a single idle cursor, on every virtual terminal,
+which is consistent with either (a) something *is* printing that
+cursor but then hangs before printing anything else on any VT, or (b)
+QEMU's screendump is stuck at a single stale frame regardless of what
+the guest does (less likely, since we know from the earlier DHCP-lease
+evidence that the guest kept booting and reached a live/networked
+state well past this point in time).
+
+**Next step for whoever continues**: stop trying to infer state from
+`screendump` — it has now given the same non-answer twice. Attach a
+real serial console instead: add `console=ttyS0,115200n8` alongside
+the existing `console`/`vga=` args on the kernel cmdline in
+`engine/build-iso.sh`'s grub.cfg template, add a `serial0: socket`
+device to the install-test VM in the hypervisor (`qm set 112 --serial0 socket`, plus
+`--vga std` is already implied), rebuild, reboot, and read the serial
+socket directly (e.g. `socat -,raw,echo=0
+unix-connect:/var/run/qemu-server/112.serial0` or equivalent) to get
+actual kernel/systemd/dracut boot text instead of a screendump of a
+frozen cursor. That will show directly whether `getty@tty1` ever
+starts, whether `graphical.target`/`sddm.service` fail, or whether
+something else entirely is hanging.
 
 ## Where things stand
 
