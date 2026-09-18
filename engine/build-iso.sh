@@ -203,20 +203,24 @@ else
         rm -rf "$ROOTFS_TARGET/tmp/local-rpms"
     else
         echo "--- Installing profile packages from repo/COPR ---"
-        # --refresh: real bug found via a live build (2026-09-18) — when
-        # $ROOTFS_TARGET is reused across builds (the normal case; only
-        # --clean-target or a base-cache rebuild forces a re-clone),
-        # dnf's plain `install` on an already-installed package just
-        # confirms it satisfies the request and does nothing, even when
-        # a newer version is available in the repo — it only checks
-        # local dnf cache metadata, which doesn't expire quickly enough
-        # to notice a COPR package rebuilt minutes earlier. Verified
-        # directly: rebuilt pearos-sddm-theme (1.0-1 -> 1.0-2) in COPR,
-        # rebuilt the ISO ~20 minutes later, and the rootfs still had
-        # 1.0-1 installed — the exact same SDDM QML bug shipped again
-        # despite the fix already being live. --refresh forces dnf to
-        # re-check the repo instead of trusting stale cached metadata.
-        run_in_target dnf -y --refresh --setopt=install_weak_deps=False install "${PROFILE_REPO_PACKAGES[@]}"
+        # --refresh + --best: real bug found via TWO successive live
+        # rebuilds (2026-09-18). When $ROOTFS_TARGET is reused across
+        # builds (the normal case), dnf5's plain `install` on an
+        # already-installed package has pure "ensure presence"
+        # semantics — it does NOT implicitly upgrade to a newer
+        # available version, confirmed directly: even with --refresh
+        # added (attempt #1, wrongly assumed sufficient — see git log),
+        # a full rebuild ~20 minutes after pushing a fixed
+        # pearos-sddm-theme (1.0-1 -> 1.0-2) to COPR still shipped the
+        # OLD 1.0-1, and the real dnf output said plainly "Package
+        # ... is already installed" / "Nothing to do" for every
+        # PROFILE_REPO_PACKAGES entry, --refresh or not. Verified
+        # --best is what actually fixes it: manually ran `dnf install
+        # --best pearos-sddm-theme` against the same stale rootfs and
+        # watched it correctly upgrade 1.0-1 -> 1.0-2. --refresh is
+        # still kept too, since --best only helps once dnf's metadata
+        # actually reflects the newer version existing.
+        run_in_target dnf -y --refresh --setopt=install_weak_deps=False install --best "${PROFILE_REPO_PACKAGES[@]}"
     fi
 
     profile_teardown_repo
