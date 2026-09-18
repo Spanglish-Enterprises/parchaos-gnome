@@ -221,6 +221,74 @@ on the user's the hypervisor cluster, installed from the official
   Section 1 had listed. Now reflected in
   `packaging/pearos-liquidgel/pearos-liquidgel.spec`.
 
+## Hands-on update — `pearos-dock` on the same real Fedora KDE Spin VM (2026-09-17)
+
+Same the build VM. First correction: **`pearos-dock` is not a standalone repo** —
+`https://github.com/pearOS-ArchLinux/pearos-dock` (what
+`packaging/pearos-dock/pearos-dock.spec`'s `URL`/`Source0` assumed) 404s.
+It only exists as a subdirectory of the monorepo,
+`pearOS-archlinux/pkgbuilds/pearos-dock/` (matching what Section 2 above
+already said, cross-checked again here) — a `git clone --sparse` of that
+path is what actually works; the spec's `Source0` needs to change to
+either vendor a tarball of just that subdirectory or fetch the monorepo
+and `%setup` into the subdir, not archive-download a repo that doesn't
+exist standalone.
+
+Second: the checked-in `org.vicko.wavetask_fedora.spec` sitting *inside*
+`pearos-dock/` in the upstream repo is **not** what builds `pearos-dock` —
+it's a spec for a different (but related) upstream project
+(`vickoc911/org.vicko.wavetask`, the reusable QML task-manager plugin
+`pearos-dock`'s own `plugin/` was apparently forked from — its author,
+Victor Calles, is exactly the person credited in `pearos-dock`'s own
+`plugin.cpp`). `pearos-dock`'s actual `CMakeLists.txt` (project name
+internally: `kara`) builds `plugin/` itself directly — no dependency on a
+separately-packaged `wavetask`. That stray spec was still useful as a
+BuildRequires cross-reference, though (see below).
+
+- **It compiles.** `find_package(Plasma ...)` failed first
+  (`packaging/pearos-dock/pearos-dock.spec`'s draft BuildRequires didn't
+  have the package providing it) — Fedora's package is **`libplasma-devel`**
+  (not obvious from the CMake package name `Plasma`). After adding
+  `libplasma-devel`, `plasma-activities-devel`,
+  `plasma-activities-stats-devel`, `libksysguard-devel`,
+  `kf6-kitemmodels-devel`, `kf6-kbookmarks-devel`, and
+  `qt6-qtbase-private-devel` (all cross-checked against the stray wavetask
+  spec's BuildRequires, which turned out to be a genuinely useful hint list
+  despite being the wrong project), `cmake --build` succeeded cleanly:
+  `plugin/wavetaskplugin.so` (the QML plugin, internally still named
+  `wavetask` — the fork's original name leaking through) and
+  `bin/libwavetaskplugin.so`. **No private-lib link failures** — the
+  `PW::LibTaskManager`/`PW::LibNotificationManager` risk flagged in Section
+  2 above did not materialize as a *build*-time problem.
+- **It loads and renders — with real errors.** `sudo cmake --install
+  build` installs cleanly (`/usr/share/plasma/plasmoids/PearDock/`, QML
+  plugin to `/usr/lib64/qt6/qml/PearDock/`). Added it live to the running
+  Plasma session via the scripting API — `qdbus-qt6 org.kde.plasmashell
+  /PlasmaShell org.kde.PlasmaShell.evaluateScript 'var p = new Panel;
+  p.addWidget("PearDock");'` — no crash, `plasma-plasmashell.service`
+  stayed active throughout, and **a screendump confirms it actually
+  rendered**: a real floating dock-style panel with app icons at the top
+  of the screen (position is just wherever `new Panel` defaults to, not
+  significant). At the same time, the journal logged genuine QML runtime
+  errors during that add: `main.qml:616`/`617`: `TypeError: Cannot read
+  property 'height'/'width' of null` (repeated), `main.qml:288`:
+  `TypeError: Cannot read property 'IsLauncher' of undefined`, and
+  `PearFolderArc.qml:276`: `Unable to assign [undefined] to
+  PlasmaQuick::Dialog::WindowType`. These didn't stop the icon bar itself
+  from showing up, so they're most likely in the
+  magnification/zoom-metrics or per-app "IsLauncher" state logic reading
+  from a task-manager model property that isn't populated the way
+  `pearos-dock` expects under Fedora's exact `plasma-workspace` build —
+  this is the concrete, real version of the "private-lib ABI risk" Section
+  2 predicted, just showing up as **runtime null-property errors** rather
+  than a build or crash failure. Not yet root-caused to a specific line in
+  `plugin/backend.cpp`/`smartlauncherbackend.cpp`, and not yet checked
+  whether it's cosmetic (zoom animation just doesn't work right) or
+  affects real functionality (e.g. actually launching apps from the dock).
+- `("Failed to register unity object")` also appears in the log — a
+  separate, unrelated, and harmless warning (Unity Launcher DBus API,
+  irrelevant outside Ubuntu-family desktops).
+
 ## Fallback decision (for now)
 
 Per the brief's instruction to pick a fallback if a risk isn't resolved:
@@ -264,13 +332,25 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
    (`core/region.h`) — low priority given the Wayland-first fallback
    decision, but worth a Fedora bug report if anyone wants the X11 session
    to work later.
-2. Install Fedora KDE Spin, add the (to-be-created) COPR repo, install
-   `pearos-dock`, and drive a Wayland session for real: panel edge snapping,
-   multi-monitor, HiDPI, and window-preview thumbnails are the specific
-   things a Plasma 6 applet can still get wrong under `kwin_wayland` even
-   with RHI rendering. Before that: actually compile `pearos-dock`'s
-   `plugin/` against Fedora's `plasma-workspace-devel`/`libksysguard-devel` —
-   given the private-lib dependency above, this may fail before the Wayland
-   question is even reachable.
+2. **Done: compiles, installs, loads, and visibly renders** (see hands-on
+   update above) — `pearos-dock` builds against real Fedora 44
+   `plasma-workspace-devel`/`libksysguard-devel`/`libplasma-devel` with no
+   private-lib link failures, and shows up as an actual dock panel with
+   icons when added live via the Plasma scripting API.
+   **Still open, and this is the real remaining risk**: genuine QML
+   runtime errors (`Cannot read property 'width'/'height' of null`,
+   `'IsLauncher' of undefined`) fire when it's added — not fatal, the icon
+   bar still renders, but something in the task-model integration isn't
+   getting the properties `pearos-dock` expects from Fedora's
+   `plasma-workspace` build. Needs: figuring out which model property is
+   actually missing/undefined (start in `plugin/backend.cpp`/
+   `smartlauncherbackend.cpp`), and testing the specific things Section 2
+   above called out as at-risk — panel edge snapping, multi-monitor,
+   HiDPI, window-preview thumbnails, and whether these QML errors affect
+   real functionality (launching apps, drag-to-reorder) or are cosmetic
+   (zoom/magnification animation only). Also fix
+   `packaging/pearos-dock/pearos-dock.spec`'s `Source0`/`URL` — they point
+   at a standalone repo that doesn't exist; `pearos-dock` only lives inside
+   `pearOS-archlinux/pkgbuilds/pearos-dock/`.
 3. Locate or recreate `pear-calamares-config` (see above) before Phase 4
    installer work.
