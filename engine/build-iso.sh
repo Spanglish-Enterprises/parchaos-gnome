@@ -329,9 +329,21 @@ fi
 # `vga=791` on the kernel cmdline — this hand-written grub.cfg lacked
 # all three, so GRUB may have left the console in a video mode the
 # kernel's fbcon/DRM couldn't take over cleanly. Adding them here to
-# match; if the screen is still blank after this, the next step is a
-# serial console (see docs/phase1-findings.md) since screendumps alone
-# can no longer distinguish "slow" from "wedged".
+# match — TESTED (2026-09-18) and DISPROVEN: rebuilt, rebooted, and
+# captured screendumps of the main console plus all four VT-switch
+# targets — all five came back byte-identical (same blank-cursor
+# frame as before), so this was never a video-mode mismatch. See
+# docs/phase1-findings.md.
+#
+# SERIAL CONSOLE (2026-09-18): screendump/VT-switch has now given the
+# same non-answer twice, so it can no longer distinguish "still
+# booting" from "wedged" — need actual boot text instead of a
+# screenshot. Adding `console=ttyS0,115200n8` as the primary console
+# (last `console=` wins) and dropping `quiet` so kernel/systemd/dracut
+# messages actually appear on it; `console=tty0` is kept first so the
+# local VGA console/screendump path still gets something too. This
+# needs a matching `--serial0 socket` device added to the VM
+# to actually capture it — see docs/phase1-findings.md.
 echo "Writing grub.cfg for grub2-mkrescue ---"
 mkdir -p "$ISO_WORKDIR/boot/grub"
 cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
@@ -346,7 +358,7 @@ set default=0
 set timeout=5
 menuentry "$PROFILE_DISPLAY_NAME" {
     set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image quiet vga=791
+    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image vga=791 console=tty0 console=ttyS0,115200n8
     initrd (\$root)/boot/initramfs.img
 }
 EOF
