@@ -273,14 +273,35 @@ fi
 # /boot/grub2/ (that renamed path is a Fedora-installed-system convention
 # for coexistence with legacy grub-legacy; it doesn't apply to rescue
 # media grub2-mkrescue builds itself).
+# VERIFIED ROOT CAUSE (2026-09-18) of the "grub_relocator_prepare_relocs:
+# out of memory" boot failure: this grub.cfg never explicitly set $root,
+# so it stayed at whatever bogus value grub2-mkrescue's automatic
+# detection left it at (confirmed interactively: `echo root=$root`
+# printed "hd96", not a real device) — bare paths like "/boot/vmlinuz"
+# resolved against that broken $root well enough for `ls` to still find
+# the files, but something about GRUB's internal state being wrong from
+# an unset/garbage root apparently corrupts the relocator's own
+# bookkeeping when `boot` actually runs. The real Fedora ISO's own
+# grub.cfg never relies on automatic detection — it explicitly searches
+# for a known file and sets $root from that before referencing anything
+# via ($root)/... . Doing the same here (untested until the next real
+# boot attempt lands in docs/phase1-findings.md). Also switched
+# root=live:LABEL= to root=live:CDLABEL=, matching Fedora's exact
+# dracut-live invocation for optical media.
 echo "Writing grub.cfg for grub2-mkrescue ---"
 mkdir -p "$ISO_WORKDIR/boot/grub"
 cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
+# Inspired by the config used for lorax-built live media
+insmod iso9660
+insmod gzio
+insmod ext2
+search --file --set=root /boot/vmlinuz
+
 set default=0
 set timeout=5
 menuentry "$PROFILE_DISPLAY_NAME" {
-    linux /boot/vmlinuz root=live:LABEL=$PROFILE_ISO_LABEL rd.live.image quiet
-    initrd /boot/initramfs.img
+    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image quiet
+    initrd (\$root)/boot/initramfs.img
 }
 EOF
 
