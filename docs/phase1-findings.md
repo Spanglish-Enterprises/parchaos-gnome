@@ -190,6 +190,38 @@ is now the more promising lead over hypothesis 1 (the boot loader image) —
 next session should start there: `lsinitrd` both initramfs images and
 diff them before going back to disassembling `eltorito.img` binaries.
 
+**Further update, same session**: checked what GRUB modules the real
+Fedora ISO actually ships (`xorriso -indev <iso> -find /boot -type f`)
+to test hypothesis 1 more rigorously. Fedora's `/boot/grub2/i386-pc/`
+contains essentially every GRUB i386-pc module — hundreds of `.mod`
+files, the same "install everything" footprint `grub2-mkrescue`'s
+default (`--install-modules=all`) produces. **This further disproves
+the module-trimming hypothesis**: if a large module set were the cause,
+Fedora's own ISO — which ships just as many modules and boots fine in
+this identical environment — would hit the same relocator error and it
+doesn't. Hypothesis 2 (the actual initramfs/kernel build, or Fedora's
+different `grub.cfg` structure — their layout uses `blscfg.mod`,
+implying BLS-style boot entries rather than this engine's simple
+hand-written `menuentry`, at paths `/boot/x86_64/loader/{linux,initrd}`
+rather than this engine's `/boot/{vmlinuz,initramfs.img}`) is now the
+clear leading theory. Extraction of Fedora's actual boot `linux`/`initrd`
+files for a direct `lsinitrd`/size comparison was queued but not
+completed this session (network access to the the hypervisor cluster became
+unreliable) — this is the exact next step for whoever continues:
+
+```
+xorriso -indev Fedora-KDE-Desktop-Live-44-1.7.x86_64.iso -osirrox on \
+  -extract /boot/x86_64/loader/initrd /tmp/fedora-initrd.img \
+  -extract /boot/x86_64/loader/linux /tmp/fedora-vmlinuz \
+  -extract /boot/grub2/grub.cfg /tmp/fedora-grub.cfg
+```
+
+then compare against this engine's own
+`build/rootfs-pearos-44/boot/{vmlinuz-*,initramfs-*.img}` (`lsinitrd`,
+file sizes, and reading `fedora-grub.cfg`'s actual `linux`/`initrd`
+invocation for anything this engine's simple grub.cfg template is
+missing).
+
 ## Where things stand
 
 - The engine correctly performs Phases 1–6 (profile loading through
