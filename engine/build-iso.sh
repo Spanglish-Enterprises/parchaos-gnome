@@ -243,6 +243,27 @@ fi
 # Kvantum/GTK theme, liquid-gel enable) and stays skippable.
 run_in_target systemctl set-default graphical.target
 
+# VERIFIED (2026-09-18): same class of bug as graphical.target above —
+# baseline live-boot functionality, not branding, but silently broken.
+# Fedora's own livesys-scripts package (already installed — it's what
+# creates the passwordless "liveuser" account and configures SDDM
+# autologin at first boot) gates ALL of its desktop-specific setup
+# behind /etc/sysconfig/livesys's livesys_session variable
+# (usr/libexec/livesys/livesys-main: `if [ "${livesys_session}" ]; then
+# . sessions.d/livesys-${livesys_session}; fi`) — on real Fedora spins
+# this is set by the official kickstart's %post, which this project's
+# engine doesn't run, so it defaults to empty and the whole block is
+# skipped unconditionally. Confirmed via a real boot test: liveuser was
+# created with no password (passwd -S showed "NP"), but
+# /etc/sddm.conf's [Autologin] section never got its User=/Session=
+# lines written by sessions.d/livesys-kde, so SDDM showed a normal
+# interactive login prompt instead of the passwordless one-click login
+# every real Fedora live image has — the very first person to boot this
+# ISO would hit a login prompt with no way in. Fixed by setting the
+# session type explicitly so livesys's own (already correct, already
+# tested) KDE-specific hook actually runs.
+sed -i 's/^livesys_session=.*/livesys_session="kde"/' "$ROOTFS_TARGET/etc/sysconfig/livesys"
+
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
 # systemd-nspawn allocates a pty for run_in_target by default (needed for

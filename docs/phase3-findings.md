@@ -451,21 +451,80 @@ harmless `config.logo` property, unchanged from the prior SDDM fix) and
 nothing new; the SDDM greeter screendump is visually identical to the
 already-confirmed-working `branded5` capture — **no regression**.
 
-**Not independently confirmed**: the Aurorae window-decoration wiring
-(`theme=__aurorae__svg__pearOS`) is a best-guess based on standard
-KWin/Aurorae naming convention (`__aurorae__svg__<install-dir-name>`),
+**Not independently confirmed at the time**: the Aurorae window-decoration
+wiring (`theme=__aurorae__svg__pearOS`) is a best-guess based on
+standard KWin/Aurorae naming convention (`__aurorae__svg__<install-dir-name>`),
 not the aurorae theme's own internal `Id` field (which is actually
 `"pearOS-Light"`, a different string — deliberately not used, since
 that field is unrelated to how kwin's own decoration KCM resolves an
 Aurorae theme on disk). Attempted to reach an actual logged-in desktop
 session via the live ISO's "Live System User" account to check this
 visually, but a blank-password login attempt (VT-switch + Enter on the
-empty password field) did not go through — this account isn't
+empty password field) did not go through — this account wasn't
 actually passwordless the way the root serial-console account is, and
-no credential for it is known. Whoever picks this up next should
-either find/set a real password for the live user in the profile, or
-verify a different way (e.g. `kreadconfig6 --file kwinrc --group
-org.kde.kdecoration2 --key theme` inside an actual running session via
-`systemd-nspawn` + a nested Xvfb/Wayland headless compositor, or just
-visual confirmation on real hardware). If the decoration doesn't
-apply, this line is the first thing to check.
+no credential for it was known at the time.
+
+## RESOLVED: live-user login was completely broken (root cause + fix in docs/phase1-findings.md)
+
+Investigated *why* the live user needed a password at all instead of
+Fedora's normal one-click live-session login, since that's not just a
+testing inconvenience — it would affect every real person booting this
+ISO. Root-caused to a missing `livesys_session="kde"` setting that
+gates Fedora's own already-installed `livesys-scripts` first-boot
+autologin setup; fixed in `engine/build-iso.sh`. Full story (this is a
+baseline Phase 1-class bug, not branding) is in
+`docs/phase1-findings.md`'s "Late addition" section.
+
+### Aurorae decoration: now fully confirmed, with one live-testing-only wrinkle found
+
+With autologin working, reached a real logged-in Plasma desktop for
+the first time this project. Checked the live user's actual runtime
+`~/.config/kwinrc` and found `[org.kde.kdecoration2]` only had
+`library=org.kde.kwin.aurorae.v2` — **no `theme=` line at all**, and
+the library name itself has a `.v2` suffix this project's `customize.sh`
+didn't have. Root cause: `livesys-kde`'s own first-login script writes
+a **fresh** `~/.config/kwinrc` for the live user via its own heredoc
+(for layout/virtual-desktop defaults etc.), which completely overwrites
+whatever `/etc/xdg/kwinrc` (this project's own system-wide default,
+written by `customize.sh`) would otherwise provide via normal XDG
+config cascading. This is a **live-ISO-testing-only** quirk — it's
+gated by the same `rd.live.image` kernel-cmdline check as the rest of
+`livesys`, so a real Calamares-installed system (Phase 4) won't hit it
+at all; `/etc/xdg/kwinrc` will apply normally for a real user's fresh
+home directory on an installed system.
+
+To actually verify the decoration renders correctly (not just that the
+config key is theoretically right), edited the live session's
+`~/.config/kwinrc` directly via the root serial console to add the
+`theme=__aurorae__svg__pearOS` line, triggered a live reconfigure
+(`dbus-send --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure`, run as
+`liveuser` with the right `DBUS_SESSION_BUS_ADDRESS`/`XDG_RUNTIME_DIR`),
+then spawned a real GUI window directly into the running Wayland
+session (`sudo -u liveuser env XDG_RUNTIME_DIR=... WAYLAND_DISPLAY=wayland-0
+dolphin &` — no mouse/keyboard simulation needed, same "drive it via
+the real IPC surface instead of fighting simulated input" approach
+Phase 0 used for `pearos-dock`).
+
+**Confirmed via screendump**: Dolphin's window renders pearOS's
+genuine macOS-style Aurorae decoration — yellow/green/red traffic-light
+controls on the *left* side of the titlebar (not KDE's usual
+right-side, minimize/maximize/close), rounded corners, a clean
+centered title. This is definitively not stock Breeze; the
+`__aurorae__svg__pearOS` naming guess was correct all along, and
+`customize.sh` has been updated with the confirmed `library=org.kde.kwin.aurorae.v2`
+value (previously the unversioned, incorrect `org.kde.kwin.aurorae`)
+for real installed users going forward.
+
+The same screendump also incidentally confirmed the rest of the
+desktop is fully working and correctly branded: the liquid-gel-style
+wallpaper, `PearCalendar`/`PearWeather` desktop widgets rendering with
+real data (from the `pearos-plasmoids` package), a macOS-style top
+menu bar, and `pearos-dock` at the bottom tracking the open Dolphin
+window. This is the first time in the project's history that an actual
+rendered pearOS desktop — not just the SDDM greeter — has been visually
+confirmed.
+
+Phase 3's "full desktop-session verification beyond just the greeter"
+item is now done. The only remaining Phase 3 item is the "unclaimed
+content" scope question, which is itself now resolved (see above) —
+Phase 3 is effectively complete.

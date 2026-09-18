@@ -495,3 +495,56 @@ packaged rootfs this time), rebooted the install-test VM, and verified two ways:
   console is what ultimately made root-causing this possible at all,
   and is worth keeping in the engine going forward for any future
   headless-VM debugging.
+
+## Late addition (2026-09-18, discovered during Phase 3 desktop-session testing): live-boot login was completely broken for real users
+
+This is a baseline live-ISO usability bug, not branding — filed here
+rather than in `docs/phase3-findings.md` even though it was found while
+testing Phase 3 content, because it would have affected every single
+boot of this ISO all the way back to Phase 1's first working desktop
+boot, unrelated to any of the branding work.
+
+**Symptom**: SDDM showed a normal interactive login prompt for a "Live
+System User" account, and there was no way to actually log in — no
+known password for that account, and an empty submission was rejected.
+Every real person who ever booted this ISO would have hit exactly this
+same dead end.
+
+**Root cause**: Fedora's own `livesys-scripts` package is already
+installed and already does the right thing — its `livesys.service`
+creates a passwordless `liveuser` account at first boot (confirmed via
+`passwd -S liveuser` → `NP`, "no password"), and its KDE-specific hook
+(`usr/libexec/livesys/sessions.d/livesys-kde`) is supposed to configure
+SDDM's `[Autologin]` `User=liveuser`/`Session=plasma.desktop` so the
+whole interactive-login step never even happens (matching how every
+real Fedora KDE Spin live image behaves). But that KDE-specific hook is
+gated behind an `if [ "${livesys_session}" ]; then . sessions.d/livesys-${livesys_session}; fi`
+check in `livesys-main`, reading a `livesys_session` variable from
+`/etc/sysconfig/livesys` — a file that real Fedora spins populate via
+their official kickstart's `%post` section, which this project's
+custom `engine/build-iso.sh` never runs. The variable defaulted to
+`""`, so the whole KDE-specific block (including the SDDM autologin
+setup) silently never executed, on every single build.
+
+Confirmed directly on a real boot: `systemctl status livesys.service`
+showed successful completion and the `liveuser` account existing, but
+`grep -A3 Autologin /etc/sddm.conf` still showed only the untouched
+`#User=`/`#Session=` template — proving the KDE hook never ran at all.
+
+**Fix**: `engine/build-iso.sh` now does
+`sed -i 's/^livesys_session=.*/livesys_session="kde"/' "$ROOTFS_TARGET/etc/sysconfig/livesys"`
+unconditionally, right alongside the existing `graphical.target`
+baseline fix (same category of bug: "boots to a technically-working
+system that's actually unusable", not caught by any of Phase 1's
+original text-console-based verification).
+
+**Verified end-to-end on a rebuilt ISO**: `journalctl` showed
+`pam_unix(sddm-autologin:session): session opened for user liveuser`
+and a real `plasmashell --no-respawn` process running — genuine
+autologin, no prompt at all. A QMP screendump of the booted desktop
+showed a complete, real pearOS session: the liquid-gel wallpaper,
+`PearCalendar` and `PearWeather` desktop widgets, a macOS-style top
+bar, and `pearos-dock` at the bottom — this is the first time this
+project has seen its own actual branded desktop rendering, not just
+the SDDM greeter. See `docs/phase3-findings.md` for how this also
+resolved the pending Aurorae window-decoration verification.
