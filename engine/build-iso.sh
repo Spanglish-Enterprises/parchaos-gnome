@@ -208,7 +208,11 @@ fi
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
 KERNEL_VER="$(run_in_target rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)"
-run_in_target dracut --force --regenerate-all "/boot/initramfs-$KERNEL_VER.img" "$KERNEL_VER"
+# --regenerate-all doesn't take an output path or kernel version — it
+# regenerates for every installed kernel using dracut's own naming
+# convention. Since Phase 7 needs a known filename to copy onto the ISO,
+# target this one kernel explicitly instead.
+run_in_target dracut --force "/boot/initramfs-$KERNEL_VER.img" "$KERNEL_VER"
 
 # ---- Phase 7: package the ISO ---------------------------------------------------
 echo "--- Assembling ISO ---"
