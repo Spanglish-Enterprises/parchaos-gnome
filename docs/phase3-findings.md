@@ -528,3 +528,42 @@ Phase 3's "full desktop-session verification beyond just the greeter"
 item is now done. The only remaining Phase 3 item is the "unclaimed
 content" scope question, which is itself now resolved (see above) —
 Phase 3 is effectively complete.
+
+## Confirmed: the macOS-style global menu bar already works (2026-09-18, later session)
+
+Compared this project's desktop against a real pearOS screenshot
+(fetched from pearos.xyz) and initially misread the result as a gap —
+assumed the top bar was missing real per-app File/Edit/View/Go/Window/Help
+menu functionality (the thing pearOS's own top bar shows next to the
+app name, e.g. "Pinder File Edit View Go Window Help"). That was wrong.
+Re-examined a screenshot already captured earlier in this project (a
+Dolphin window open on the live desktop) and its top bar clearly reads
+"Dolphin File Edit View Go Tools Settings Help Search" — a real,
+working global menu bar already rendering Dolphin's actual exported
+menu, not just an app-name label.
+
+Traced the mechanism: KDE Plasma's own native global-menu widget
+(`org.kde.plasma.appmenu`, ships built into `plasma-workspace`, no
+extra packaging needed) plus pearOS's own `PearAppTitle` and
+`xyz.pearos.pearmenu` plasmoids are all wired into the top panel
+already, via a layout template
+(`/usr/share/plasma/layout-templates/PearDock.panel`) — confirmed via
+`rpm -qf` against the real built rootfs that this template ships as
+part of **`pearos-dock`**, the package already built and shipped back
+in Phase 2. Nothing needed to be built or fixed here; the feature
+already existed. Verified directly against a real running live session
+(`grep plugin= .../plasma-org.kde.plasma.desktop-appletsrc`), which
+also confirmed the rest of the top-panel widget set matches pearOS's
+real one closely: `PearPrivacy`, `PearClock`, `org.kde.milou` (search),
+`PearControlCentre`, `com.github.antroids.application-title-bar`, and
+several `luisbocanegra.*` widgets, alongside the dock itself
+(`PearDock`).
+
+This was prompted by the user linking a GNOME Shell extension
+(`ChathurangaBW/AppMenu`) that does the same thing for GNOME and asking
+for it — that specific extension can't run on this project's KDE
+Plasma stack (different desktop environment, incompatible toolkits),
+but investigating what it actually does led to confirming the
+KDE-native equivalent was already present and working, rather than
+either force-fitting the wrong tool or leaving an inaccurate "this is
+missing" claim standing.

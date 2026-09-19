@@ -317,19 +317,63 @@ red or always green.
 **Not attempted, and why**: clicking through the rest of the wizard
 (Location → Keyboard → Users → Partitions → Summary → Install →
 Finish) to a real disk write and a genuine installed-system boot test.
-A single `sendkey ret` attempt (hoping Enter would trigger the
-already-focused "Next" button) didn't advance the page — focus was
-elsewhere (the language combo box), and blindly guessing at tab-order
-or coordinates via QMP keyboard/mouse input risks landing on the wrong
-control and producing a misleading result rather than a real one. This
-needs either a scriptable/unattended Calamares config (Calamares
-supports an unattended mode, not configured here) or real
-mouse-driven interaction (VNC/SPICE), neither of which this session
-set up. **This remains the single biggest unverified step before this
-project could reasonably go near real hardware**: nobody has yet
-confirmed Calamares can actually partition a disk, unpack the
-squashfs, write a bootloader, and produce a system that boots on its
-own.
+
+Made a real, multi-pronged effort at this in a later session
+(2026-09-18) rather than assuming it was impossible:
+
+- Confirmed QEMU's absolute-positioning "QEMU HID Tablet" device is
+  the active pointer (`info mice`) and that `mouse_move`/`mouse_button`
+  HMC commands all return success — but the on-screen cursor never
+  moved from its initial position across many attempts at different
+  coordinates (including obviously-different corners), and clicking
+  Calamares' own "Next" button (with a completely clean, all-checks-passing
+  Welcome page — a real disk attached, running as root) never advanced
+  the wizard.
+- Switched to the relative "QEMU PS/2 Mouse" device (`mouse_set 2`) and
+  sent many relative moves — same result, no movement, no effect.
+- Hypothesized the display backend (the hypervisor's default `vga: std`)
+  might not pair well with a Wayland compositor's expectations for
+  hardware cursor planes; switched to `--vga virtio` (paravirtualized,
+  the modern recommended pairing for Linux guests) and retested after a
+  full reboot — kernel-level device enumeration looked identical
+  (`input: QEMU QEMU USB Tablet` in dmesg), no visible cursor at all
+  this time (plausibly because virtio-gpu renders the cursor via a
+  hardware overlay plane that QMP's `screendump` doesn't capture — a
+  separate, real finding worth knowing for any future screenshot-based
+  verification work), but a click on the exact same "Next" button
+  coordinates still didn't advance the page.
+- Also confirmed, by actually reading Calamares' own `--help` output
+  and its project wiki's Test Guide, that Calamares has **no true
+  unattended/preseed install mode** — `-g`/`-j` exist only for isolated
+  single-module or slideshow *testing*, not for driving a real install
+  sequence without the interactive wizard. (An earlier draft of this
+  document incorrectly said "Calamares supports an unattended mode,
+  not configured here" — that was wrong and has been corrected here.)
+  Calamares is fundamentally built as an interactive GUI wizard; any
+  real automated QA of it (as some distros do in CI) drives actual
+  synthetic mouse/keyboard input against a real display, not a
+  config-only bypass.
+
+Keyboard input (arrow keys, Enter, letters — used earlier to unlock an
+idle session) does work throughout all of this. Only mouse motion and
+clicks fail to have any effect, consistently, across every device type
+and display backend tried. This points to something at the
+libinput/seat level in this specific QEMU/kwin_wayland combination, not
+a bug in Calamares or this project's own packaging — Calamares itself
+is already proven correct (real branded rendering, correct
+requirements-validation logic in both failing and passing states, all
+confirmed above). Not investigated further past this point (real,
+open-ended systems debugging with no guaranteed payoff) — asked the
+user how to proceed, and the decision was to move on rather than keep
+digging, revisiting later if useful (e.g., a manual click-through via
+the hypervisor's own real VNC/SPICE console, a genuinely different input path
+from QMP's emulated devices, was offered but not exercised this
+session).
+
+**This remains the single biggest unverified step before this project
+could reasonably go near real hardware**: nobody has yet confirmed
+Calamares can actually partition a disk, unpack the squashfs, write a
+bootloader, and produce a system that boots on its own.
 
 ## Secure Boot — not addressed, flagged for whoever continues
 
