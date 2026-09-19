@@ -511,6 +511,57 @@ icons, button order — see `docs/phase3-findings.md`), consistent with
 the earlier "move on, revisit later" call on the Calamares mouse-input
 gap.
 
+### Follow-up: the post-shim issue isn't about MOK enrollment — Ploader hangs unconditionally when chainloaded via shim
+
+Went back to this after the UI fixes were verified. Working theory
+going in: shim was correctly refusing our self-signed `grubx64.efi`
+because nothing had ever staged a MOK enrollment request (`mokutil
+--import` needs to run from a booted OS to set the `MokNew` EFI
+variable before shim will auto-launch MokManager on the next boot) —
+`mokutil` isn't even in this profile's `packages.list`, so the live ISO
+had no way to do this at all.
+
+To test that theory, booted the same `branded12` ISO on the boot-test VM with
+**Secure Boot fully disabled** (`pre-enrolled-keys=0`, same as every
+earlier non-SB UEFI test) — with SB off, LoadImage() doesn't verify
+anything at all, so if the MOK-enrollment theory were the whole story,
+this should boot straight through regardless of trust.
+
+**It didn't. It hung completely.** Two screendumps taken several
+real-world seconds apart, after confirming via QMP `query-status` that
+the VM's CPU was still actually running (not paused by the
+hypervisor), came back **pixel-identical** (`PIL.ImageChops.difference`
+bbox: `None`) — a genuine frozen frame, not just a slow-moving
+animation. This is a different symptom from the earlier SB-enabled
+test (which showed a *reset loop* — the OVMF splash recurring, video
+mode alternating) — with SB off there's no verification step to fail,
+so this isn't shim rejecting anything. **Something in Ploader itself
+hangs when it's invoked as `grubx64.efi` via shim's chainload, that
+does not happen when the identical binary is loaded directly by
+firmware as `BOOTX64.EFI`** (confirmed working in this doc's own
+standalone UEFI boot test, earlier).
+
+Leading (unconfirmed) hypothesis, not yet dug into at the source
+level: Ploader is a rEFInd fork, and rEFInd-family bootloaders commonly
+locate their own config/theme directory relative to their own known
+install path/filename. Loaded as `grubx64.efi` instead of the
+`BOOTX64.EFI` path it was built/tested against, Ploader may be failing
+to find itself and hanging instead of erroring gracefully — a real
+compatibility gap between "designed to be the firmware's directly
+chosen bootloader" and "designed to be chainloaded as GRUB's
+replacement," which are different roles. Would need to actually read
+Ploader's own path-discovery code (`profiles/pearos/ploader/`'s
+sources) to confirm — not done this session.
+
+**Not further pursued this session** — this is now a real, likely
+non-trivial Ploader source-level bug, not a quick config/procedure
+fix, and continuing to debug a silent hang with zero diagnostic
+surface (no serial output, no crash log, nothing but a frozen
+screendump) has a poor time-to-signal ratio without a better probe
+(e.g. rebuilding Ploader with debug prints to a serial port, if its
+codebase even supports that). Left as an open, well-documented gap
+rather than guessed at further.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
@@ -523,7 +574,7 @@ gap.
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
 | **A full disk install + booting the installed system** | **Not attempted — needs unattended Calamares config or real mouse-driven (VNC/SPICE) testing** |
-| Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; a separate post-shim reset/reboot-loop issue is open |
+| Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; **Ploader itself hangs when chainloaded via shim as `grubx64.efi`, confirmed independent of Secure Boot/MOK enrollment (hangs identically with SB off) — likely a Ploader-side path-discovery bug, not investigated at the source level** |
 
 Everything above the bold line is genuinely verified, not assumed. The
 bold line is the actual remaining unknown before this project could
