@@ -459,9 +459,19 @@ grub2-mkrescue -o "$STAGING_ISO" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
 # section's own comment above for why hand-rolling BIOS boot was abandoned.
 if [ "$HAVE_UEFI" = "1" ]; then
     echo "Re-assembling ISO with explicit El Torito control (Secure Boot fix)..."
-    mkdir -p "$ISO_WORKDIR/boot/grub/i386-pc"
+    # eltorito.img alone is only GRUB's minimal bootstrap core.img — it
+    # then loads further modules (partition-map drivers, fonts, etc.)
+    # from /boot/grub/i386-pc/*.mod at runtime. FOUND BY REAL BOOT TEST
+    # (2026-09-18): extracting only eltorito.img and dropping the rest of
+    # grub2-mkrescue's own /boot/grub tree produced an ISO that hit
+    # `grub rescue>` immediately — "part_*.mod ... file not found" for
+    # every partition module GRUB tried, because none of them existed on
+    # the medium at all. Extract the WHOLE /boot/grub tree instead (our
+    # own grub.cfg included — unchanged, since grub2-mkrescue only read
+    # it as input) so nothing GRUB relies on at runtime goes missing.
+    rm -rf "$ISO_WORKDIR/boot/grub"
     xorriso -indev "$STAGING_ISO" -osirrox on \
-        -extract /boot/grub/i386-pc/eltorito.img "$ISO_WORKDIR/boot/grub/i386-pc/eltorito.img"
+        -extract /boot/grub "$ISO_WORKDIR/boot/grub"
     xorriso -as mkisofs \
         -iso-level 3 -full-iso9660-filenames \
         -volid "$PROFILE_ISO_LABEL" \

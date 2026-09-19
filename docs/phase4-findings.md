@@ -479,10 +479,37 @@ manual console session, to actually see what's happening — not yet
 attempted further this session; deprioritized in favor of a live-desktop
 UI issue the user flagged directly (see docs/phase3-findings.md).
 
-Not yet applied to `engine/build-iso.sh` as the permanent fix — the
-verified xorriso recipe above needs to be encoded back into the script
-itself (currently still calls plain `grub2-mkrescue` with no
-`-eltorito-alt-boot` override) before the next full ISO build.
+Encoded into `engine/build-iso.sh` and rebuilt (`branded11`) — but this
+first attempt introduced a **real regression**: BIOS boot hit `grub
+rescue>` immediately, `part_*.mod ... file not found` for every
+partition module GRUB tried. Root cause: `eltorito.img` is only GRUB's
+minimal bootstrap core.img — at runtime it loads further modules
+(partition drivers, fonts, `normal.mod`, etc.) from
+`/boot/grub/i386-pc/*.mod`, and the fix's extraction step only pulled
+out the one `eltorito.img` file, not the ~970-file module tree that
+goes with it. Fixed by extracting the *whole* `/boot/grub` tree from
+grub2-mkrescue's staging output instead of just that one file (our own
+`grub.cfg` comes along unchanged, since grub2-mkrescue only read it as
+input). A second build (`branded12`) hit the identical `grub rescue>`
+failure because the fix had been verified against a standalone test
+script but the actual `build-iso.sh` edit was never re-synced to the
+build host before that run — a process mistake, not a second bug; caught
+by checking the built ISO's own `/boot/grub` file count
+(`xorriso -find`, expected 973, got 15) rather than assuming the earlier
+manual verification carried over.
+
+**Fully verified working, both boot paths, on a real rebuilt ISO
+(`branded12`)**: BIOS boot reaches full systemd/desktop (the install-test VM,
+seabios) — real boot log, no grub rescue. Secure-Boot-enabled UEFI
+(the boot-test VM, OVMF `pre-enrolled-keys=1`) no longer shows "Access Denied";
+shim itself is now trusted and loads. The separate post-shim
+reset/reboot-loop issue (video mode alternating 1280x800/640x480, no
+serial output since shim/MokManager only write to VGA/GOP) noted above
+is still open and unexplored further this session — deprioritized
+after the user's own attention moved to a live-desktop UI issue (dock
+icons, button order — see `docs/phase3-findings.md`), consistent with
+the earlier "move on, revisit later" call on the Calamares mouse-input
+gap.
 
 ## Summary: where Phase 4 actually stands
 

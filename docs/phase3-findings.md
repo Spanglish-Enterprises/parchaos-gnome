@@ -567,3 +567,69 @@ but investigating what it actually does led to confirming the
 KDE-native equivalent was already present and working, rather than
 either force-fitting the wrong tool or leaving an inaccurate "this is
 missing" claim standing.
+
+## Two real UI bugs found by directly looking at a live build (2026-09-18, later session)
+
+The user was looking at the install-test VM's live desktop themselves and flagged
+two things directly: the dock was missing most of its icons, and the
+window traffic-light buttons were on the wrong side. Both root-caused
+and fixed, then verified against a real rebuilt ISO (`branded12`) —
+not just inferred from source.
+
+**Traffic-light buttons on the right, not the left.** `kwinrc` set the
+Aurorae theme (`org.kde.kwin.aurorae.v2` / `__aurorae__svg__pearOS`,
+confirmed correct back in this doc's own earlier section) but never
+set `ButtonsOnLeft`/`ButtonsOnRight` — a separate kwinrc key from the
+theme itself, defaulting to KDE's own right-side convention. The
+earlier "traffic-light decoration renders correctly" verification only
+checked that the *theme* rendered, not which side the buttons sat on.
+Fixed in `profiles/pearos/customize.sh`: `ButtonsOnLeft=XIA`,
+`ButtonsOnRight=` (empty) — X=close, I=minimize, A=maximize, the
+standard KWin decoration button letter codes. Verified: opened a real
+Dolphin window on the rebuilt ISO and the red/yellow/green buttons now
+render top-left, macOS/pearOS-style.
+
+**Dock rendering with only 2 of its pinned icons.** Traced through two
+layers before finding the real cause:
+1. `pearos-dock`'s own layout template (`layout-templates/contents/layout.js`)
+   adds the `PearDock` widget with no launcher list set at all — fixed
+   with `packaging/pearos-dock/0002-set-default-dock-launchers.patch`,
+   but this turned out to have **no effect on the actual shipped
+   desktop**, because:
+2. `pearos-settings` ships its own `/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc`
+   with a real, authentic-looking pearOS launcher list (13 apps:
+   Safari-equivalent "seafari", Mail, Maps, Calendar, Contacts, Todo,
+   Notes, Music, App Store, KDE Connect, its own System
+   Settings/Calculator wrappers) — this skel file is what a fresh live
+   user session actually starts from, silently overriding whatever the
+   layout template set.
+
+Checked directly against a live boot of the actual shipped ISO (not
+just the the build VM dev box, which has a broader package set and was
+initially misleading): of those 13 pinned `.desktop` IDs, only
+`org.kde.gwenview.desktop` resolves to an installed app in this
+profile. The rest are pearOS's own custom apps (or KDE PIM/Discover/
+Elisa) that this Fedora port hasn't built or included in
+`packages.list` — each unresolvable entry just renders as no icon at
+all, with no error, which is what "missing icons" turned out to mean.
+
+Real fix, in `profiles/pearos/customize.sh` (`profile_customize()`,
+after the kwinrc block): `sed -i` the skel appletsrc's `launchers=`
+line to real installed `.desktop` IDs, confirmed via `ls
+/usr/share/applications/*.desktop` against the actual live ISO:
+`org.gnome.Pafari.desktop` (pearOS's own browser — already built and
+installed via `packaging/pafari/`, easy to overlook), `org.kde.dolphin.desktop`,
+`org.kde.gwenview.desktop`, `org.kde.konsole.desktop`,
+`systemsettings.desktop`, `org.kde.spectacle.desktop`. Verified: the
+rebuilt ISO's dock now renders a properly populated row of icons
+instead of two sparse ones.
+
+The `pearos-dock` layout.js patch was kept even though it turned out
+not to be the operative fix — it's a harmless, correct default for the
+layout template on its own, and costs nothing to leave in.
+
+Building and shipping real pearOS apps (browser done via Pafari;
+Calendar/Contacts/Notes/Todo/Mail/Maps/Music/App Store not started) is
+the actual way to eventually restore pearOS's own authentic dock list
+instead of this Fedora-native substitute — tracked as a real, distinct
+gap, not fixed here.
