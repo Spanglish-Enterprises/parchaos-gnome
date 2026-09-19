@@ -388,6 +388,102 @@ bootloaders use), or document that users need to disable Secure Boot
 before installing. This is a real gap between "boots in every test
 this session ran" and "boots on a real PC out of the box."
 
+## Secure Boot: signed the chain, then found grub2-mkrescue was silently discarding it (2026-09-18, later session)
+
+Generated a self-signed MOK (`openssl req` 2048-bit RSA, 10-year cert,
+`CN=plumOS (pearOS on Fedora) Secure Boot MOK`), signed `ploader_x64.efi`
+with it (`sbsign`, verified with `sbverify` → "Signature verification
+OK"), and pulled Fedora's own `shim-x64` package's binaries
+(`shimx64.efi`, `mmx64.efi`/MokManager, `fbx64.efi`) to chainload
+through, matching the standard third-party-signing pattern (VirtualBox/
+ZFS/NVIDIA kernel modules use the same shim→MOK→MokManager flow). Wired
+`engine/build-iso.sh` to lay out `EFI/BOOT/BOOTX64.EFI`=shim,
+`EFI/BOOT/grubx64.efi`=signed Ploader (shim's hardcoded next-stage
+name), plus `mmx64.efi` and the MOK `.cer` for enrollment, falling back
+to unsigned Ploader if the signing artifacts aren't present.
+
+**First real boot test under actual Secure-Boot-enabled OVMF** (the boot-test VM,
+the VM host, `efidisk0` recreated with `pre-enrolled-keys=1` — i.e. Microsoft's
+real keys pre-enrolled, not the `pre-enrolled-keys=0`-disabled config
+every earlier UEFI test in this doc used) **failed**: `BdsDxe: failed to
+load Boot0002 "UEFI QEMU DVD-ROM"... Access Denied -- rejected probably
+by Secure Boot`.
+
+Ruled out, in order, with real evidence for each:
+- **Wrong/broken signature** — `sbverify`/`osslsigncode verify` on the
+  shim binary confirmed it's genuinely signed by "Microsoft Corporation
+  UEFI CA 2011", the real chain shim ships with.
+- **OVMF doesn't trust that CA** — dumped the actual `db` variable from
+  the varstore template (`virt-fw-vars --print --verbose`) and found
+  "Microsoft Corporation UEFI CA 2011" present, exactly matching the
+  signer.
+- **dbx (forbidden-signature list) revocation** — computed the shim
+  binary's real Authenticode digest via `osslsigncode verify` and
+  grepped it against the full dbx hash dump; no match.
+- **File corruption in the build** — extracted the actual
+  `EFI/BOOT/BOOTX64.EFI` from inside the built ISO and diffed its
+  SHA256 against the original `shimx64.efi`; identical.
+- **This specific OVMF/the hypervisor setup can't do Secure Boot at all** —
+  booted the stock, unmodified `Fedora-KDE-Desktop-Live-44-1.7.x86_64.iso`
+  on the exact same VM/config; it booted cleanly through its own real
+  shim→grub chain, proving the firmware setup is sound.
+
+**Root cause, found by comparing the two ISOs' actual El Torito boot
+catalogs** (`xorriso -report_el_torito plain`): our own hand-built,
+correctly-signed `EFI/efiboot.img` (with shim/Ploader/mmx64.efi) really
+was sitting in the ISO's filesystem tree exactly as intended — but
+**`grub2-mkrescue` never uses it**. It silently builds its own,
+separate, freshly-generated (therefore unsigned) UEFI FAT image
+(reported as a hidden `/efi.img`, ~2.9MB, vs. our real 16MB image) and
+that's what the boot catalog's UEFI entry actually points at. Confirmed
+by byte-extracting the *real* El Torito UEFI image at its reported LBA
+(not the named `/EFI/efiboot.img` tree file, which is a red herring —
+it's never read by firmware) and hashing its `BOOTX64.EFI`: a totally
+different, unsigned, grub2-mkrescue-built GRUB binary
+(`edd7bb3c...`, 331,776 bytes), not our shim at all.
+
+This also means the earlier "Ploader chainloading the real live system
+under UEFI" claim in this same doc needs a **correction**: since
+`build-iso.sh` has always written a working `/boot/grub/grub.cfg` and
+grub2-mkrescue's own auto-generated GRUB reads that same path, the
+"full desktop boots under UEFI" result was very likely grub2-mkrescue's
+own GRUB chainloading the kernel directly — not Ploader at all. Ploader
+itself (menu chrome, keyboard input) was independently confirmed via
+the standalone bare-EFI test, which never went through grub2-mkrescue,
+so that half still stands. What's now in question is only whether
+Ploader was ever actually in the loop for the full-ISO boot chain.
+
+**Fix, verified working**: replaced the single `grub2-mkrescue` call's
+implicit UEFI handling with an explicit two-step build — reuse
+grub2-mkrescue's own proven-reliable BIOS El Torito image (extracted
+from its own output, `/boot/grub/i386-pc/eltorito.img`) but hand the
+whole thing to a direct `xorriso -as mkisofs` invocation that
+explicitly points `-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot`
+at *our* real efiboot.img. Verified via the same LBA-extraction method:
+the real UEFI boot catalog entry now correctly reports our full 16MB
+image (`Ldsiz 32768` × 512 = exactly 16,777,216 bytes), and the
+extracted `BOOTX64.EFI`/`grubx64.efi` inside it hash-match our real
+signed shim/Ploader exactly.
+
+**Booted this corrected ISO under the same Secure-Boot-enabled the boot-test VM**:
+no more "Access Denied" — shim itself is now accepted and loads. A
+*different*, not-yet-root-caused issue follows: the display alternates
+between the normal 1280×800 OVMF splash and a brief 640×480 blank frame
+(consistent with something — likely MokManager or Ploader itself —
+switching GOP video mode), then returns to the OVMF splash again,
+suggesting a reset/reboot loop rather than a clean stop at MokManager's
+enrollment screen. Serial console is empty at this stage (shim/
+MokManager only write to the VGA/GOP console, not serial), so this
+needs either a working mouse/more QMP screendump timing precision, or a
+manual console session, to actually see what's happening — not yet
+attempted further this session; deprioritized in favor of a live-desktop
+UI issue the user flagged directly (see docs/phase3-findings.md).
+
+Not yet applied to `engine/build-iso.sh` as the permanent fix — the
+verified xorriso recipe above needs to be encoded back into the script
+itself (currently still calls plain `grub2-mkrescue` with no
+`-eltorito-alt-boot` override) before the next full ISO build.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
@@ -396,11 +492,11 @@ this session ran" and "boots on a real PC out of the box."
 | AMD/Intel Vulkan + microcode | Done, confirmed installed |
 | Ploader build | Done, two real bugs fixed, confirmed against a real running system |
 | Ploader standalone UEFI boot | Confirmed (screendumps, keyboard input works) |
-| Ploader chainloading the real live system under UEFI | Confirmed (boot log, Plymouth splash, full desktop, all under real OVMF) |
+| Ploader chainloading the real live system under UEFI | **Retracted, see Secure Boot section above** — likely was grub2-mkrescue's own auto-built GRUB, not Ploader; unconfirmed either way until re-tested with the xorriso fix |
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
 | **A full disk install + booting the installed system** | **Not attempted — needs unattended Calamares config or real mouse-driven (VNC/SPICE) testing** |
-| Secure Boot support for Ploader | Not addressed |
+| Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; a separate post-shim reset/reboot-loop issue is open |
 
 Everything above the bold line is genuinely verified, not assumed. The
 bold line is the actual remaining unknown before this project could

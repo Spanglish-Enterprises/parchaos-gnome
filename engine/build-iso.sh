@@ -314,7 +314,22 @@ cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.
 # warning, so Phase 1's engine checkpoint doesn't have to wait on it.
 # Reconciling grub2-mkrescue's own EFI/BOOT layout with Ploader's branded
 # one is real Phase 4 work once ploader_x64.efi actually exists.
+#
+# Secure Boot: Ploader itself is unsigned and not enrolled with Microsoft,
+# so booting it directly under Secure Boot fails. Instead of getting it
+# signed by Microsoft (external, lengthy), we chainload through Fedora's
+# own already-Microsoft-signed shim (shim-x64), which validates the next
+# stage against a self-generated MOK the user enrolls once via shim's
+# MokManager UI — the same pattern VirtualBox/ZFS/NVIDIA kernel modules
+# use. Shim's hardcoded next-stage filename is grubx64.efi, sitting next
+# to it — see profiles/pearos/ploader/secureboot/ for the signing
+# artifacts (key generation + signing documented in
+# docs/phase4-findings.md). If those artifacts aren't present, fall back
+# to shipping unsigned Ploader directly as BOOTX64.EFI (works fine with
+# Secure Boot disabled, which is the state most VMs/test hardware default
+# to; real hardware with Secure Boot on needs the shim chain).
 HAVE_UEFI=0
+SECUREBOOT_DIR="$PROFILE_DIR/ploader/secureboot"
 if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     HAVE_UEFI=1
     echo "Building UEFI boot image (Ploader)..."
@@ -323,7 +338,20 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     dd if=/dev/zero of="$EFIBOOT_IMG" bs=1M count=16
     mkfs.vfat "$EFIBOOT_IMG"
     mmd -i "$EFIBOOT_IMG" ::/EFI ::/EFI/BOOT
-    mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+    if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
+       && [ -f "$SECUREBOOT_DIR/ploader_x64_signed.efi" ] && [ -f "$SECUREBOOT_DIR/pearos-mok.cer" ]; then
+        echo "Secure Boot signing artifacts found — chaining shim -> signed Ploader."
+        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
+        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
+        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/ploader_x64_signed.efi" ::/EFI/BOOT/grubx64.efi
+        if [ -f "$SECUREBOOT_DIR/fbx64.efi" ]; then
+            mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/fbx64.efi" ::/EFI/BOOT/fbx64.efi
+        fi
+        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/pearos-mok.cer" ::/EFI/BOOT/pearos-mok.cer
+    else
+        echo "WARNING: Secure Boot signing artifacts not found under $SECUREBOOT_DIR — shipping unsigned Ploader as BOOTX64.EFI. This boots fine with Secure Boot disabled but will be rejected with it enabled." >&2
+        mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+    fi
     if [ -d "$PROFILE_DIR/ploader/theme" ]; then
         mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
     fi
@@ -411,7 +439,44 @@ EOF
 
 echo "Running grub2-mkrescue..."
 ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-x86_64.iso"
-grub2-mkrescue -o "$BUILD_DIR/$ISO_NAME" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
+STAGING_ISO="$BUILD_DIR/.staging-$ISO_NAME"
+grub2-mkrescue -o "$STAGING_ISO" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
+
+# VERIFIED ROOT CAUSE (2026-09-18, later session, see docs/phase4-findings.md
+# "Secure Boot" section): grub2-mkrescue does NOT use our own
+# $ISO_WORKDIR/EFI/efiboot.img (the signed shim/Ploader chain built above)
+# for the actual El Torito UEFI boot catalog entry — it silently builds its
+# own separate, freshly-generated (therefore unsigned) UEFI FAT image and
+# points the boot catalog at THAT instead. Confirmed by extracting the real
+# boot-catalog-referenced image (not the merely-present tree file) via its
+# reported LBA/size and hashing its BOOTX64.EFI: a different, unsigned,
+# grub2-mkrescue-built GRUB, not our shim. This silently defeated Secure
+# Boot (and may mean Ploader itself was never actually in the UEFI boot
+# chain at all, only BIOS). Fixed by re-assembling the ISO with a direct
+# xorriso invocation that explicitly points the UEFI El Torito entry at our
+# own efiboot.img, reusing grub2-mkrescue's own (separately proven-reliable)
+# BIOS El Torito image rather than hand-rolling that too — see the BIOS
+# section's own comment above for why hand-rolling BIOS boot was abandoned.
+if [ "$HAVE_UEFI" = "1" ]; then
+    echo "Re-assembling ISO with explicit El Torito control (Secure Boot fix)..."
+    mkdir -p "$ISO_WORKDIR/boot/grub/i386-pc"
+    xorriso -indev "$STAGING_ISO" -osirrox on \
+        -extract /boot/grub/i386-pc/eltorito.img "$ISO_WORKDIR/boot/grub/i386-pc/eltorito.img"
+    xorriso -as mkisofs \
+        -iso-level 3 -full-iso9660-filenames \
+        -volid "$PROFILE_ISO_LABEL" \
+        -eltorito-boot boot/grub/i386-pc/eltorito.img \
+            -no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info \
+        -eltorito-alt-boot \
+        -e EFI/efiboot.img -no-emul-boot \
+        -isohybrid-gpt-basdat \
+        --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+        -output "$BUILD_DIR/$ISO_NAME" \
+        "$ISO_WORKDIR"
+    rm -f "$STAGING_ISO"
+else
+    mv "$STAGING_ISO" "$BUILD_DIR/$ISO_NAME"
+fi
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
 
