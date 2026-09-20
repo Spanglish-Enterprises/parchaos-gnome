@@ -672,6 +672,52 @@ history shows, this whole project) that a complete
 boot-live→install→reboot→working-desktop cycle has been verified
 end to end, not assumed or stopped short of.**
 
+## Second verification pass: fresh `branded13` ISO built through the real pipeline (2026-09-20)
+
+The install above was proven on the install-test VM's *live session*, hot-patched by
+hand (editing files directly on the running live filesystem, then
+launching Calamares against them). That's real, but it doesn't by
+itself prove the fixes survive going through the actual shipped
+pipeline: COPR-built `pearos-calamares-config` RPM pulled into the live
+rootfs via `packages.list`, assembled into a squashfs by
+`engine/build-iso.sh`. To close that gap, a full ISO
+(`pearos-44-2026.09.20-branded13-x86_64.iso`) was built from scratch
+from the current `main` branch (COPR build `11007027` +
+`packages.list` with `btrfs-progs`/`cracklib-dicts`/`squashfs-tools`
+already listed), deployed to the install-test VM, and the entire install verified a
+second time independently:
+
+1. Confirmed `btrfs-progs`, `cracklib-dicts`, and `squashfs-tools` were
+   already present in the fresh live rootfs via `rpm -q` — no manual
+   installation needed, proving the `packages.list` fix actually took
+   effect through the real build.
+2. Drove the full Calamares wizard again from scratch (Welcome →
+   Location → Keyboard → Users → Partitions → Summary → Install),
+   using the same AT-SPI + real QMP-keyboard technique as the first
+   pass.
+3. Confirmed via `parted` mid-install that the BIOS Boot Partition +
+   btrfs root were laid out correctly, matching the shipped
+   `partition.conf`.
+4. Unpacking completed and Calamares reported **"All done. pearOS has
+   been installed on your computer."** a second time.
+5. Set the VM's boot order to the installed disk and reset it: booted
+   a real systemd sequence from the installed disk and reached the
+   full pearOS desktop again (wallpaper, calendar/weather widgets,
+   "Pinder" top bar, populated dock) — pixel-equivalent result to the
+   first pass, confirmed via screenshot.
+
+This confirms the four bug fixes are reproducible through the actual
+shipped artifact (COPR package → `packages.list` →
+`engine/build-iso.sh` → ISO), not artifacts of manually patching a
+running live session. **The installable-pearOS-daily-driver goal set
+for this session is met**: a real ISO, built end to end through this
+project's own pipeline, installs to a blank disk and boots to a
+working desktop, verified twice independently.
+
+The console-TTY-login password discrepancy noted after the first pass
+was not re-checked on this second pass; it remains a minor,
+non-blocking follow-up.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
@@ -683,7 +729,7 @@ end to end, not assumed or stopped short of.**
 | Ploader chainloading the real live system under UEFI | **Retracted, see Secure Boot section above** — likely was grub2-mkrescue's own auto-built GRUB, not Ploader; unconfirmed either way until re-tested with the xorriso fix |
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
-| **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs) — see the section above. Four real bugs found and fixed: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, and a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround)** |
+| **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs), verified TWICE — once via live-session hot-patching, once via a genuinely fresh ISO built through the real COPR + packages.list + build-iso.sh pipeline (branded13, 2026-09-20). Four real bugs found and fixed: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, and a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround)** |
 | Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; **Ploader itself hangs when chainloaded via shim as `grubx64.efi`, confirmed independent of Secure Boot/MOK enrollment (hangs identically with SB off) — likely a Ploader-side path-discovery bug, not investigated at the source level. UEFI installs are untested against the new partition.conf/bios-boot-flag fixes, which only matter for BIOS — separate follow-up.** |
 
 Everything above the bold line is genuinely verified, not assumed. The
