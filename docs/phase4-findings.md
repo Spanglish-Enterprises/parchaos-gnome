@@ -850,6 +850,56 @@ non-blocking follow-up rather than a re-opened blocker, given the
 much larger boot-chain bug this investigation actually uncovered and
 fixed.
 
+## plumOS rebrand + final follow-up checks (branded17, 2026-09-21)
+
+Two pieces of follow-up work landed together in a `branded17` ISO,
+verified on the same genuinely-real disk boot method established
+above (CD-ROM fully detached):
+
+**plumOS rebrand** (user decision — see `profiles/pearos/profile.conf`'s
+`PROFILE_DISPLAY_NAME` comment): the shipped OS now identifies as
+plumOS rather than pearOS. Confirmed on the real installed disk's own
+GRUB menu: `Booting 'plumOS (7.2.5-200.fc44.x86_64) 44 (Forty Four)'`
+— previously this read verbatim as "Fedora Linux 44", since
+`grub2-mkconfig`'s BLS title generation reads the target's own
+`/etc/os-release` `PRETTY_NAME` directly. Also confirmed via a
+quiesced-disk mount (booted back into live media, mounted the
+installed `@root`/`@home` subvolumes read-only — safe, unlike mounting
+while the disk is actively in use, which was tried once earlier this
+session and produced a btrfs I/O error): `/etc/hostname` reads
+`plumos` and `/etc/os-release`'s `PRETTY_NAME` reads `"plumOS 44"` on
+the actual installed disk. Calamares' own installer UI text ("Welcome
+to the pearOS installer") was deliberately left unchanged — a separate
+branding asset outside the approved scope.
+
+**Root account security, verified not a problem**: earlier live-ISO
+testing found `root` logs in on the console with no password prompt
+at all, which briefly looked like it could carry over as a real
+security hole on the installed system. Checked directly on the
+installed disk's `/etc/shadow`: `root` has a real yescrypt password
+hash (`$y$...`), matching the "Use the same password for the
+administrator account" checkbox checked during setup. The passwordless
+root console login is a live-media-only convenience (standard for
+live ISOs) and does not carry over to a real install.
+
+**Konsole's dock icon, resolved with high confidence**: chased via the
+installed disk's own files rather than more screenshot guessing.
+`org.kde.konsole.desktop` exists (`Icon=utilities-terminal`), and
+`/usr/share/icons/pearOS/apps/scalable/utilities-terminal.svg` exists
+in pearOS's own icon theme — so Konsole is both a valid, present
+launcher and has a real custom icon to render with. The "5 of 6"
+count from the branded16 screenshot was very likely a
+screenshot-resolution misidentification on the reviewer's part, not a
+real gap; all 6 launcher entries are confirmed to resolve to real,
+present applications with real, present icons.
+
+**A boot-order quirk worth remembering for future testing**: `qm
+reset` does not reliably re-apply a changed `--boot order=` — SeaBIOS
+picked the (now-bootable) disk again despite `order=ide2` being set
+immediately beforehand. A full `qm stop` + `qm start` was needed to
+force a live-media boot for diagnostics. Not a plumOS bug, just a
+the hypervisor/SeaBIOS testing gotcha.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
