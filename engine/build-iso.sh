@@ -338,12 +338,32 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     dd if=/dev/zero of="$EFIBOOT_IMG" bs=1M count=16
     mkfs.vfat "$EFIBOOT_IMG"
     mmd -i "$EFIBOOT_IMG" ::/EFI ::/EFI/BOOT
+    # The MOK private key is never committed to the repo (only the public
+    # .crt/.cer are), so it only exists on a build host that was set up to
+    # sign releases — resolve it from an env var first, falling back to a
+    # conventional path outside the repo. If found, re-sign ploader_x64.efi
+    # fresh every build rather than trusting the checked-in
+    # ploader_x64_signed.efi: that checked-in binary is a point-in-time
+    # artifact that can silently go stale/bad (a real instance of this bit
+    # this project on 2026-09-21 — a checked-in signed binary that was
+    # byte-for-byte plausible but made shim reset-loop on real UEFI
+    # firmware; a fresh sbsign of the same unsigned input fixed it
+    # immediately, see docs/phase4-findings.md).
+    MOK_KEY="${PLOADER_MOK_KEY:-$HOME/pearos-mok/pearos-mok.key}"
+    MOK_CERT="${PLOADER_MOK_CERT:-$HOME/pearos-mok/pearos-mok.crt}"
+    SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
+    if command -v sbsign >/dev/null 2>&1 && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
+        echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
+        SIGNED_PLOADER="$ISO_WORKDIR/ploader_x64_signed.efi"
+        sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
+            "$PROFILE_DIR/ploader/ploader_x64.efi"
+    fi
     if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
-       && [ -f "$SECUREBOOT_DIR/ploader_x64_signed.efi" ] && [ -f "$SECUREBOOT_DIR/pearos-mok.cer" ]; then
+       && [ -f "$SIGNED_PLOADER" ] && [ -f "$SECUREBOOT_DIR/pearos-mok.cer" ]; then
         echo "Secure Boot signing artifacts found — chaining shim -> signed Ploader."
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/ploader_x64_signed.efi" ::/EFI/BOOT/grubx64.efi
+        mcopy -i "$EFIBOOT_IMG" "$SIGNED_PLOADER" ::/EFI/BOOT/grubx64.efi
         if [ -f "$SECUREBOOT_DIR/fbx64.efi" ]; then
             mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/fbx64.efi" ::/EFI/BOOT/fbx64.efi
         fi
