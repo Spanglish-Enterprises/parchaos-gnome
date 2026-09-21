@@ -718,6 +718,138 @@ The console-TTY-login password discrepancy noted after the first pass
 was not re-checked on this second pass; it remains a minor,
 non-blocking follow-up.
 
+## Correction: the "verified" full-disk boots above were never actually verified (2026-09-20)
+
+While chasing an unrelated dock-branding bug report (dock missing
+icons, traffic lights on the wrong side), a routine "let's re-check
+the dock on a fresh install" turned up something much bigger: **every
+"confirmed working" full-disk boot claimed above, in this same
+session, was never actually a boot from the installed disk at all.**
+
+The tell: after "successfully" booting the installed disk (boot order
+set to `scsi0`, VM reset) and taking a screenshot showing the full
+pearOS desktop, a login to the serial console showed `liveuser` in
+`getent passwd` and `findmnt /` showing `overlay` on `LiveOS_rootfs`
+— i.e. still the **live ISO**, not the install. This had never been
+checked before in any of this project's "verified" boots; every prior
+check relied on the screenshot alone (wallpaper, dock, "Pinder" bar),
+and a live session and a real install are visually **identical**
+since they share the same branding. The only reason this had never
+surfaced before: `qm set --boot order=scsi0` does not stop SeaBIOS
+from silently falling through to the still-attached `ide2` CD-ROM
+when the disk itself isn't actually bootable — which, it turned out,
+it never was.
+
+Chrooting into the installed disk directly and running `grub2-install`
+by hand succeeded ("Installation finished. No error reported."), but
+a real boot (this time with the CD-ROM fully detached via `qm set
+--ide2 none`, making a live-media fallback physically impossible)
+dropped straight to a **GRUB rescue shell** — `grub>` — instead of
+booting anything. `ls (hd0,gpt2)/@boot/grub2/` showed a `grub.cfg`
+that existed but contained **zero real OS `menuentry` blocks**, only
+`UEFI Firmware Settings`. `find /mnt/vboot -maxdepth 2` on the
+installed disk's own `@boot` subvolume confirmed why: no `vmlinuz`, no
+real `initramfs-<kver>.img`, no `/boot/loader/entries/` (BLS)
+directory at all — the installed system never had a bootable kernel
+in the first place.
+
+Root cause, confirmed by mounting a real built ISO directly (not
+guessing from `engine/build-iso.sh`'s source, which is what the
+original comment in `unpackfs.conf` had done): this project's live
+ISO keeps `vmlinuz`/`initramfs.img` at the **ISO's own top level**
+(`/boot/vmlinuz`, `/boot/initramfs.img` — `/run/initramfs/live/boot/`
+at runtime), entirely outside `LiveOS/squashfs.img`. `unpackfs.conf`
+only ever unpacked the squashfs, so the target's `kernel-core` RPM
+unpacked fine (modules, RPM db entry) but its `%posttrans`
+`kernel-install` scriptlet — the thing that would normally copy
+`vmlinuz` into `/boot` and write a BLS entry — never ran, because the
+kernel was never installed via a real `dnf` transaction on the
+target, just copied as part of the squashfs's raw file tree.
+
+### The fix
+
+- `unpackfs.conf` gained a second `unpack:` entry (`sourcefs: "file"`,
+  matching the exact mechanism upstream `pear-calamares-config` uses
+  for the same archiso-equivalent problem) copying the live kernel to
+  a neutral staging path, `/boot/vmlinuz.livecopy`.
+- A new `scripts/pearos-install-kernel`, run via a new
+  `shellprocess@install-kernel` step right after `unpackfs` in
+  `settings.conf`'s exec sequence, renames that staged file to the
+  correct `vmlinuz-<kver>` (kernel version read from `rpm -q
+  kernel-core` inside the chroot) and calls `kernel-install add` — the
+  same tool a real `dnf install kernel-core` transaction uses, so it
+  also regenerates the initramfs and writes the BLS entry.
+
+Shipped as `pearos-calamares-config` 2026.09.18-3, COPR build
+`11008877`.
+
+### Real, independently-verified fix confirmation (branded16 ISO)
+
+A fresh ISO (`pearos-44-2026.09.20-branded16-x86_64.iso`) was built
+with this fix, installed from scratch on a wiped disk, and this time
+verified properly:
+
+1. **CD-ROM fully detached** (`qm set 112 --ide2 none`) before reboot
+   — a live-media fallback was physically impossible.
+2. Boot screen showed a real menu entry:
+   `Booting 'Fedora Linux (7.2.5-200.fc44.x86_64) 44 (Forty Four)'` —
+   the first time this project has ever seen a real kernel boot
+   line from an installed disk.
+3. Reached an **SDDM login screen** (not an automatic desktop) showing
+   account **"Alex"** — the real, Calamares-created account name,
+   which cannot exist on live media (`liveuser`) or via autologin
+   (never configured, since the "log in automatically" checkbox was
+   deliberately left unchecked during setup). This is the first
+   genuinely-distinguishing, non-cosmetic signal this project has ever
+   captured that a boot really came from the installed disk.
+4. Logged in with the real account password and reached the working
+   desktop.
+
+**This is the first time in this project's entire history that a full
+disk boot has been independently, non-cosmetically verified.**
+Everything claimed as "confirmed working" earlier in this document
+(the BIOS+GPT+btrfs install, both "verification passes") needs to be
+read with this correction in mind: the install itself was real (disk
+partitioned, files unpacked, "All done." reported truthfully), but
+none of the earlier *reboot* checks actually proved the result was
+bootable, because none of them could distinguish a live-media fallback
+from a real disk boot — the two look pixel-identical. The install
+mechanics (partitioning, unpacking, btrfs+BIOS-boot-partition setup)
+were genuinely fixed and remain correct; it was specifically the
+*verification method* for "does the result boot" that was invalid
+until this session forced the distinction to matter.
+
+### Dock icons, revisited on the now-genuinely-verified install
+
+With a real disk boot finally in hand, the dock was checked again for
+the bug this whole investigation started from. Two further real bugs
+were found and fixed in `pearos-dock` along the way (COPR builds
+`11008699`/`26.6.10-4`, then `11008775`/`26.6.10-5`):
+
+- `26.6.10-4` fixed `PearDock`'s `main.xml` KCFG default (which upstream
+  never touched, only `layout.js`'s imperative override did — and that
+  override was found to never actually persist into a real session's
+  `filer-dock-appletsrc`) to the same curated 6-app list `0002`
+  intended, but using placeholder IDs
+  (`org.mozilla.firefox.desktop`, `org.kde.discover.desktop`) that
+  turned out not to exist on this profile at all.
+- `26.6.10-5` corrected those two IDs to ones confirmed present via a
+  real installed system's `/usr/share/applications`: this profile ships
+  no Firefox (real browser is `org.gnome.Pafari.desktop`) and no
+  software-center app at all.
+
+On the branded16 verified-real install, the dock now renders 5 of the
+6 curated apps (Dolphin, Pafari, Gwenview, System Settings, Spectacle)
+— a real, confirmed improvement from the original ~4 broken
+`preferred://`-URL icons. Konsole's presence was not conclusively
+pixel-verified in the final screenshot (the serial console needed for
+a definitive live-config check became unresponsive at the very end of
+this session — likely just `serial-getty` being inactive once the
+graphical target took over, not a new bug); this is a minor,
+non-blocking follow-up rather than a re-opened blocker, given the
+much larger boot-chain bug this investigation actually uncovered and
+fixed.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
@@ -729,7 +861,7 @@ non-blocking follow-up.
 | Ploader chainloading the real live system under UEFI | **Retracted, see Secure Boot section above** — likely was grub2-mkrescue's own auto-built GRUB, not Ploader; unconfirmed either way until re-tested with the xorriso fix |
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
-| **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs), verified TWICE — once via live-session hot-patching, once via a genuinely fresh ISO built through the real COPR + packages.list + build-iso.sh pipeline (branded13, 2026-09-20). Four real bugs found and fixed: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, and a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround)** |
+| **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs) — genuinely verified, non-cosmetically, for the first time on branded16 (2026-09-20): CD-ROM fully detached, real GRUB OS menuentry, SDDM login screen for the real "Alex" account, logged in successfully. Earlier "confirmed" boots in this doc (branded12/13) were never actually distinguishable from a live-media fallback and should be discounted — see the "Correction" section above. Five real bugs found and fixed across the whole chain: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround), and — the big one — the installed disk never receiving a kernel/initramfs/BLS entry at all (unpackfs.conf + a new kernel-install shellprocess step)** |
 | Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; **Ploader itself hangs when chainloaded via shim as `grubx64.efi`, confirmed independent of Secure Boot/MOK enrollment (hangs identically with SB off) — likely a Ploader-side path-discovery bug, not investigated at the source level. UEFI installs are untested against the new partition.conf/bios-boot-flag fixes, which only matter for BIOS — separate follow-up.** |
 
 Everything above the bold line is genuinely verified, not assumed. The
