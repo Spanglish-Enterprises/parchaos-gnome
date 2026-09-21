@@ -900,6 +900,52 @@ immediately beforehand. A full `qm stop` + `qm start` was needed to
 force a live-media boot for diagnostics. Not a plumOS bug, just a
 the hypervisor/SeaBIOS testing gotcha.
 
+## UEFI boot confirmed non-functional for the actual live ISO, not just an isolated Ploader test (2026-09-21)
+
+While the BIOS/daily-driver path was being finalized, the plumOS live
+ISO (branded17) was booted for the first time under real OVMF UEFI
+firmware (the boot-test VM, the existing `ploader-uefi-test` VM from earlier
+Ploader work, `pre-enrolled-keys=0` — Secure Boot essentially
+unenforced) to check whether the earlier-documented Ploader hang
+still blocked things, or was specific to some narrower test scenario.
+
+**Result: the live ISO never boots at all under UEFI** — OVMF's own
+"Start boot option" splash screen repeats in a loop (progress bar
+fills, resets, fills again), meaning whatever gets executed as
+`BOOTX64.EFI` either hangs and gets reset by a firmware watchdog, or
+returns control to firmware without actually taking over. This is a
+more fundamental confirmation than the earlier Secure Boot
+investigation's framing suggested — it isn't a narrow "chainloading
+Ploader specifically hangs" edge case, it's simply **the live ISO's
+real, as-shipped UEFI boot path failing outright**, in the exact
+configuration a real UEFI PC (even with Secure Boot off) would use.
+
+Confirmed by mounting the ISO's `EFI/efiboot.img` (the FAT image
+backing its El Torito UEFI boot catalog entry) directly:
+`EFI/BOOT/BOOTX64.EFI` (shim), `EFI/BOOT/grubx64.efi` (the file shim
+chainloads next — this is Ploader, confirmed by the sibling
+`EFI/BOOT/theme/icons/os_pearos.png` and other rEFInd-style theme
+assets living right next to it), `EFI/BOOT/mmx64.efi` (MOK manager),
+`EFI/BOOT/pearos-mok.cer` are all present — i.e. this is exactly the
+shim→Ploader-as-grubx64.efi chain the Secure Boot section above
+already flagged as hanging, just now confirmed as the literal,
+unavoidable real boot path for this ISO under UEFI, not a side
+experiment.
+
+**Not pursued further this session**: root-causing *why* Ploader
+(a rEFInd fork, GNU-EFI/EDK2 codebase) hangs/resets when chainloaded
+this way would mean real low-level EFI bootloader debugging — getting
+its source, likely adding debug output, understanding its own
+path-discovery internals — a substantial, open-ended, separate
+undertaking with an uncertain timeline, distinct in kind from the
+Calamares/GRUB2/kernel-install work this session otherwise did. Given
+BIOS+GPT+btrfs is now a fully verified, working daily-driver path (see
+above), and real hardware that boots UEFI can typically still fall
+back to BIOS/CSM/legacy boot mode if available, this is flagged clearly
+rather than silently left as a vague "separate follow-up" the way it
+was before — **UEFI is currently a hard blocker for booting plumOS on
+UEFI-only hardware**, not a cosmetic branding gap.
+
 ## Summary: where Phase 4 actually stands
 
 | Piece | Status |
@@ -912,9 +958,12 @@ the hypervisor/SeaBIOS testing gotcha.
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
 | **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs) — genuinely verified, non-cosmetically, for the first time on branded16 (2026-09-20): CD-ROM fully detached, real GRUB OS menuentry, SDDM login screen for the real "Alex" account, logged in successfully. Earlier "confirmed" boots in this doc (branded12/13) were never actually distinguishable from a live-media fallback and should be discounted — see the "Correction" section above. Five real bugs found and fixed across the whole chain: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround), and — the big one — the installed disk never receiving a kernel/initramfs/BLS entry at all (unpackfs.conf + a new kernel-install shellprocess step)** |
-| Secure Boot support for Ploader | MOK signing + shim chain built and verified cryptographically; root-caused and fixed the grub2-mkrescue image-substitution bug; shim now passes Secure Boot; **Ploader itself hangs when chainloaded via shim as `grubx64.efi`, confirmed independent of Secure Boot/MOK enrollment (hangs identically with SB off) — likely a Ploader-side path-discovery bug, not investigated at the source level. UEFI installs are untested against the new partition.conf/bios-boot-flag fixes, which only matter for BIOS — separate follow-up.** |
+| Secure Boot / UEFI boot for the live ISO | **CONFIRMED BROKEN, not just a narrow edge case — see the section above (2026-09-21).** MOK signing + shim chain build cryptographically fine and shim itself passes Secure Boot, but the live ISO's real `BOOTX64.EFI`→shim→`grubx64.efi`(Ploader) chain never actually boots under real OVMF firmware, Secure Boot on or off — confirmed via a full live-ISO UEFI boot attempt (reboot loop), not just an isolated chainload test. Root cause not investigated at the source level (would need real EFI bootloader debugging on Ploader/rEFInd's own codebase). **UEFI-only hardware cannot currently boot plumOS at all.** |
 
 Everything above the bold line is genuinely verified, not assumed. The
 project now has one fully verified, real, end-to-end installable path
-(BIOS+GPT+btrfs). UEFI's remaining gap is entirely in Ploader's own
-chainload behavior, not the installer.
+(BIOS+GPT+btrfs, confirmed non-cosmetically). **UEFI boot is currently
+completely non-functional** — this is a real blocker for any machine
+that doesn't support BIOS/CSM/legacy boot mode, not a minor cosmetic
+gap, and root-causing it would require dedicated low-level EFI
+bootloader work beyond this session's scope.
