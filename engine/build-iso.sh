@@ -349,8 +349,16 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     # byte-for-byte plausible but made shim reset-loop on real UEFI
     # firmware; a fresh sbsign of the same unsigned input fixed it
     # immediately, see docs/phase4-findings.md).
-    MOK_KEY="${PLOADER_MOK_KEY:-$HOME/pearos-mok/pearos-mok.key}"
-    MOK_CERT="${PLOADER_MOK_CERT:-$HOME/pearos-mok/pearos-mok.crt}"
+    # This script normally runs under `sudo`, which resets $HOME to /root —
+    # resolve the invoking user's real home (via $SUDO_USER) so the default
+    # path below actually finds a key placed in a normal user's homedir.
+    REAL_HOME="$HOME"
+    if [ -n "${SUDO_USER:-}" ]; then
+        SUDO_USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+        [ -n "$SUDO_USER_HOME" ] && REAL_HOME="$SUDO_USER_HOME"
+    fi
+    MOK_KEY="${PLOADER_MOK_KEY:-$REAL_HOME/pearos-mok/pearos-mok.key}"
+    MOK_CERT="${PLOADER_MOK_CERT:-$REAL_HOME/pearos-mok/pearos-mok.crt}"
     SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
     if command -v sbsign >/dev/null 2>&1 && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
         echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
