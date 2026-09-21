@@ -366,22 +366,39 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
         sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
             "$PROFILE_DIR/ploader/ploader_x64.efi"
     fi
+    # VERIFIED ROOT CAUSE (2026-09-21, see docs/phase4-findings.md "UEFI
+    # reboot loop" section): real hands-on testing on the boot-test VM/the VM host (real OVMF,
+    # not BIOS) found the reboot loop was NOT the shim/Ploader signature
+    # (a stale signed binary was a real, separate bug, fixed above) and NOT
+    # fbx64.efi/pearos-mok.cer/theme content specifically — it's a narrow,
+    # fully reproducible OVMF/edk2 FAT UEFI-driver limitation: this exact
+    # QEMU 11.0.3 / pve-edk2-firmware-ovmf 4.2026.08-1 combination hangs and
+    # resets on ANY El Torito UEFI FAT image whose /EFI/BOOT directory holds
+    # more than the 3 files shim itself requires (BOOTX64.EFI, mmx64.efi,
+    # grubx64.efi) — confirmed with a battery of minimal raw-disk repros:
+    # adding fbx64.efi alone, pearos-mok.cer alone, a trivial unrelated
+    # dummy file, or the theme/ subdirectory (even moved to be a sibling of
+    # BOOT rather than nested inside it) all independently reproduce the
+    # identical loop, while the bare 3-file set boots shim -> Ploader
+    # cleanly and reliably every time. Root-causing *why* OVMF's FAT driver
+    # breaks past that count is real EDK2-internals work, out of scope here;
+    # the practical, verified fix is to keep this image's own EFI/BOOT at
+    # exactly those 3 files. fbx64.efi/pearos-mok.cer are dropped from the
+    # image (a live-boot ISO doesn't need fallback.efi's install-time NVRAM
+    # registration anyway; MOK enrollment without the on-disk .cer needs a
+    # different distribution path — documented as a known follow-up) and
+    # Ploader's branded theme is not shipped inside efiboot.img at all for
+    # now, so Ploader renders its plain built-in menu under UEFI until a
+    # theme-delivery path that doesn't touch this image is found.
     if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
-       && [ -f "$SIGNED_PLOADER" ] && [ -f "$SECUREBOOT_DIR/pearos-mok.cer" ]; then
-        echo "Secure Boot signing artifacts found — chaining shim -> signed Ploader."
+       && [ -f "$SIGNED_PLOADER" ]; then
+        echo "Secure Boot signing artifacts found — chaining shim -> signed Ploader (minimal EFI/BOOT: see OVMF FAT-limit comment above)."
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
         mcopy -i "$EFIBOOT_IMG" "$SIGNED_PLOADER" ::/EFI/BOOT/grubx64.efi
-        if [ -f "$SECUREBOOT_DIR/fbx64.efi" ]; then
-            mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/fbx64.efi" ::/EFI/BOOT/fbx64.efi
-        fi
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/pearos-mok.cer" ::/EFI/BOOT/pearos-mok.cer
     else
         echo "WARNING: Secure Boot signing artifacts not found under $SECUREBOOT_DIR — shipping unsigned Ploader as BOOTX64.EFI. This boots fine with Secure Boot disabled but will be rejected with it enabled." >&2
         mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
-    fi
-    if [ -d "$PROFILE_DIR/ploader/theme" ]; then
-        mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
     fi
 else
     echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
