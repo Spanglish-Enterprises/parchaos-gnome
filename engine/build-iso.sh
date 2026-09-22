@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# plumOS build engine — generic, profile-driven Fedora live-ISO builder.
+# ParchaOS build engine — generic, profile-driven Fedora live-ISO builder.
 #
 # Mirrors the phase structure and engine/profile split of Pear-Project/iso's
 # build-iso.sh (the Debian pearOS build), rewritten against Fedora's own
@@ -117,14 +117,14 @@ ROOTFS_TARGET="$BUILD_DIR/rootfs-$PROFILE-$BRANCH"
 ISO_WORKDIR="$BUILD_DIR/iso-$PROFILE-$BRANCH"
 mkdir -p "$BUILD_DIR"
 
-echo "=== plumOS build: profile=$PROFILE branch=$BRANCH nvidia=$NVIDIA local=$LOCAL ==="
+echo "=== ParchaOS build: profile=$PROFILE branch=$BRANCH nvidia=$NVIDIA local=$LOCAL ==="
 
 # ---- Phase 2: base cache (dnf --installroot bootstrap) ------------------------
 # Mirrors the Debian engine's mmdebstrap step: a minimal Fedora rootfs shared
 # across builds of the same branch, rebuilt only when packages.list changes
 # or --clean-base is passed.
 PKGLIST_HASH="$(sha256sum "$PROFILE_DIR/packages.list" | cut -d' ' -f1)"
-BASE_MARKER="$BASE_CACHE/.plumos-base-hash"
+BASE_MARKER="$BASE_CACHE/.parchaos-base-hash"
 
 if [ "$CLEAN_BASE" -eq 1 ]; then
     rm -rf "$BASE_CACHE"

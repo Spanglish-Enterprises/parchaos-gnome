@@ -1,4 +1,4 @@
-# plumOS — pearOS on Fedora
+# ParchaOS — pearOS on Fedora
 
 A true pearOS variant on a **Fedora** base: same look, feel, and app set as
 the existing Arch and Debian pearOS builds (dock, top bar, SDDM login theme,
@@ -18,7 +18,7 @@ branding/app layer on top are the same pattern.
 
 ## Status
 
-**A real, working, installable plumOS exists today** — both as a live ISO
+**A real, working, installable ParchaOS exists today** — both as a live ISO
 you can boot and try, and as something you can install to a real disk.
 
 - **Live boot**: confirmed working fully automatically under both BIOS and
@@ -36,16 +36,20 @@ you can boot and try, and as something you can install to a real disk.
   kernel install, EFI System Partition population, real `efibootmgr` boot
   entry) are all individually verified correct; final reboot-to-desktop
   confirmation on this specific test setup is blocked by an apparent
-  OVMF/virtio-scsi quirk unrelated to plumOS's own logic — see
+  OVMF/virtio-scsi quirk unrelated to ParchaOS's own logic — see
   `docs/phase4-findings.md`.
 - **Packaging**: all custom pieces (Ploader branding assets, `liquid-gel`,
   `pearos-dock`, `pafari`, `pearos-settings`, `pearos-branding`,
   `pearos-calamares-config`) build and publish successfully via a live COPR
-  repo: [`alexgalicea/plumos`](https://copr.fedorainfracloud.org/coprs/alexgalicea/plumos/).
-- **Branding**: the shipped OS identifies as **plumOS** end-to-end (boot
+  repo: [`alexgalicea/parchaos`](https://copr.fedorainfracloud.org/coprs/alexgalicea/parchaos/).
+- **Branding**: the shipped OS identifies as **ParchaOS** end-to-end (boot
   menu, `/etc/os-release`, hostname, Calamares installer UI) while internal
   package/profile names stay `pearos-*`, since those name which upstream
-  flavor is being ported, not the product.
+  flavor is being ported, not the product. Renamed from "plumOS" on
+  2026-09-22 (plumOS was already taken by another project) — "Parcha" is
+  passion fruit in Puerto Rican Spanish. Product-original packages that
+  aren't a pearOS port (e.g. the TMOG launcher) use the `parchaos-*`
+  prefix instead.
 - **UI parity reference**: a real, official pearOS NiceC0re install is kept
   running as a standing side-by-side comparison target — see
   [`docs/pearos-ui-reference/`](docs/pearos-ui-reference/) for screenshots
@@ -76,7 +80,7 @@ summary above.
 
 ```
 engine/                     The generic Fedora build engine (build-iso.sh)
-profiles/pearos/            Everything specific to the pearOS/plumOS flavor:
+profiles/pearos/            Everything specific to the pearOS/ParchaOS flavor:
                              profile.conf, packages.list, repo.sh (COPR
                              setup), customize.sh (branding/session
                              defaults), ploader/ (vendored bootloader binary)
@@ -99,7 +103,7 @@ docs/                       Phase 0-4 findings (the real, detailed build
       (`engine/build-iso.sh`) building a working, unbranded live ISO
       end-to-end. See [`docs/phase1-findings.md`](docs/phase1-findings.md).
 - [x] **Phase 2 — Package repo.** Live COPR repo
-      ([`alexgalicea/plumos`](https://copr.fedorainfracloud.org/coprs/alexgalicea/plumos/))
+      ([`alexgalicea/parchaos`](https://copr.fedorainfracloud.org/coprs/alexgalicea/parchaos/))
       with all custom packages building successfully. See
       [`docs/phase2-findings.md`](docs/phase2-findings.md).
 - [x] **Phase 3 — Branding layer.** Icons, GTK theme, Kvantum, SDDM theme,

@@ -1,14 +1,14 @@
 #!/bin/bash
 # Launcher/fetcher for TMOG (Task Manager OG, https://tmog.org), Dave
 # Plummer's native cross-platform system monitor. TMOG is closed-source
-# freemium software with no stated redistribution grant, so plumOS does
-# not bundle its binary -- this script fetches the real, official
+# freemium software with no stated redistribution grant, so ParchaOS
+# does not bundle its binary -- this script fetches the real, official
 # AppImage directly from the vendor at first run and caches it, then
-# launches the cached copy on every run after that. plumOS/COPR never
+# launches the cached copy on every run after that. ParchaOS/COPR never
 # hosts or redistributes the binary itself.
 set -euo pipefail
 
-CACHE_DIR="$HOME/.local/share/pearos-tmog"
+CACHE_DIR="$HOME/.local/share/parchaos-tmog"
 APPIMAGE="$CACHE_DIR/TaskManagerOG-x86_64.AppImage"
 DOWNLOAD_URL="https://tmog.org/downloads/TaskManagerOG-0.1.4-x86_64.AppImage"
 
@@ -32,10 +32,10 @@ fi
 # AppImages need FUSE to mount themselves; not every Fedora install has
 # libfuse2 present (Fedora 44 defaults to fuse3). Fall back to
 # extract-and-run, which needs no FUSE at all, if the direct launch fails.
-if ! "$APPIMAGE" "$@" 2>/tmp/pearos-tmog-launch.err; then
-    if grep -qi fuse /tmp/pearos-tmog-launch.err 2>/dev/null; then
+if ! "$APPIMAGE" "$@" 2>/tmp/parchaos-tmog-launch.err; then
+    if grep -qi fuse /tmp/parchaos-tmog-launch.err 2>/dev/null; then
         exec "$APPIMAGE" --appimage-extract-and-run "$@"
     fi
-    cat /tmp/pearos-tmog-launch.err >&2
+    cat /tmp/parchaos-tmog-launch.err >&2
     exit 1
 fi
