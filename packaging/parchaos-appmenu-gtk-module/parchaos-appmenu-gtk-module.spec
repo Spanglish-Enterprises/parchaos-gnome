@@ -52,6 +52,16 @@ Patch1:         0002-skip-rpath-embedding.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc
+# Found via a real COPR clean-chroot build (2026-09-22): neither
+# CMakeLists.txt (this project's own or libdbusmenu's) declares
+# `project(... LANGUAGES C)` explicitly, so CMake's default behavior
+# enables BOTH C and CXX and tries to detect a C++ compiler even
+# though this is a pure-C project with zero .cpp files anywhere --
+# fails outright with "Could not find the compiler specified in the
+# environment variable CXX: g++" if gcc-c++ isn't present. This was
+# invisible building locally on the build VM, which already had gcc-c++
+# installed from earlier, unrelated work in this project.
+BuildRequires:  gcc-c++
 BuildRequires:  pkgconfig(gtk+-3.0)
 BuildRequires:  pkgconfig(glib-2.0)
 
@@ -148,3 +158,11 @@ install -m 0755 %{_vpath_builddir}/libappmenu-gtk-module-wayland.so \
   actual appmenu panel widget on an installed system (that needs a
   real GTK app open on a real install, not a synthetic tester binary)
   -- flagged honestly, not claimed as fully done.
+  5. First real COPR clean-chroot submission failed outright (build
+     11021730): neither CMakeLists.txt declares `project(...
+     LANGUAGES C)` explicitly, so CMake's default of enabling both C
+     and CXX tried to detect a C++ compiler for this pure-C project
+     and failed with "Could not find the compiler specified in the
+     environment variable CXX: g++" -- invisible on the build VM's own local
+     build since gcc-c++ already happened to be installed there from
+     earlier work. Added BuildRequires: gcc-c++.
