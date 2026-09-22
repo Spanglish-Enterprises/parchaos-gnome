@@ -958,7 +958,7 @@ UEFI-only hardware**, not a cosmetic branding gap.
 | Calamares launching + rendering pearOS branding | Confirmed |
 | Calamares' own requirements-detection (disk, privileges) | Confirmed working correctly in both failing and passing states |
 | **A full disk install + booting the installed system** | **CONFIRMED WORKING (BIOS+GPT+btrfs) — genuinely verified, non-cosmetically, for the first time on branded16 (2026-09-20): CD-ROM fully detached, real GRUB OS menuentry, SDDM login screen for the real "Alex" account, logged in successfully. Earlier "confirmed" boots in this doc (branded12/13) were never actually distinguishable from a live-media fallback and should be discounted — see the "Correction" section above. Five real bugs found and fixed across the whole chain: missing btrfs-progs, missing cracklib-dicts, missing squashfs-tools, a missing BIOS Boot Partition (config + a KPMCore-flag-application workaround), and — the big one — the installed disk never receiving a kernel/initramfs/BLS entry at all (unpackfs.conf + a new kernel-install shellprocess step)** |
-| Secure Boot / UEFI boot for the live ISO | **CONFIRMED BROKEN, not just a narrow edge case — see the section above (2026-09-21).** MOK signing + shim chain build cryptographically fine and shim itself passes Secure Boot, but the live ISO's real `BOOTX64.EFI`→shim→`grubx64.efi`(Ploader) chain never actually boots under real OVMF firmware, Secure Boot on or off — confirmed via a full live-ISO UEFI boot attempt (reboot loop), not just an isolated chainload test. Root cause not investigated at the source level (would need real EFI bootloader debugging on Ploader/rEFInd's own codebase). **UEFI-only hardware cannot currently boot plumOS at all.** |
+| Secure Boot / UEFI boot for the live ISO | **RESOLVED, see "UEFI boot: root-caused and fixed end-to-end (2026-09-21, next session)" below — this row's original text described a state that no longer applies.** Real root causes were a FAT16 image-size boundary (fixed: 16MB→64MB `efiboot.img`) and a missing UEFI-native kernel-boot path (fixed: Fedora's real `grub2-efi-x64-cdboot`/`gcdx64.efi` chained from shim). Confirmed via screendump: fully automatic boot to the real, correctly-branded plumOS desktop under real OVMF UEFI firmware. Secure-Boot-enforced testing (vs. this session's `pre-enrolled-keys=0`) is a remaining follow-up. |
 
 Everything above the bold line is genuinely verified, not assumed. The
 project now has one fully verified, real, end-to-end installable path
@@ -967,3 +967,218 @@ completely non-functional** — this is a real blocker for any machine
 that doesn't support BIOS/CSM/legacy boot mode, not a minor cosmetic
 gap, and root-causing it would require dedicated low-level EFI
 bootloader work beyond this session's scope.
+
+## UEFI boot: root-caused and fixed end-to-end (2026-09-21, next session)
+
+**This section supersedes the "UEFI-only hardware cannot currently boot
+plumOS at all" conclusion above.** That conclusion was correct as of
+2026-09-21's earlier findings, but a full follow-up session root-caused
+every piece of it and plumOS now boots under real UEFI firmware
+completely automatically, reaching the full branded desktop, verified
+by screendump. This section is written as a complete standalone account
+of that investigation — the symptom, the false lead, the two real root
+causes, the fixes, and the debugging methodology — since it's meant to
+be reusable outside this repo (an Obsidian note, a README section)
+without needing the rest of this file's history as context.
+
+### The starting symptom
+
+The live ISO's real UEFI boot path (`BOOTX64.EFI` → shim → `grubx64.efi`,
+the real El Torito path a physical UEFI PC would use) put the firmware
+into an outright reboot loop: OVMF's own "Start boot option" splash
+screen would fill its progress bar, the screen would go black for a
+moment, and then the splash would reappear with an empty progress bar —
+over and over, forever. No error message, no crash dump, nothing to
+grep in a log. Test environment throughout: the hypervisor the boot-test VM
+(`ploader-uefi-test`) on node `the VM host`, real OVMF firmware
+(`pve-edk2-firmware-ovmf` 4.2026.08-1), QEMU 11.0.3, Secure Boot
+effectively unenforced (`pre-enrolled-keys=0`, so the firmware is in
+"setup mode" and doesn't verify signatures — the loop happened
+regardless of Secure Boot state).
+
+### False lead: the shim/Ploader signature
+
+The first hypothesis was that the checked-in `ploader_x64_signed.efi`
+(Ploader — a rEFInd fork used as this project's branded boot menu,
+signed via `sbsign` against a self-generated MOK so shim will chainload
+it) had gone stale or corrupt. This looked very plausible from a series
+of raw-disk isolation tests (see "Debugging methodology" below): shim
+chainloading the checked-in signed binary looped, while shim
+chainloading a *freshly re-signed* copy of the exact same input booted
+Ploader's menu cleanly, every time. Two real, separate bugs were found
+and fixed here:
+
+1. The checked-in `ploader_x64_signed.efi` really was bad in some way
+   that never got fully root-caused at the cryptographic level (the PE
+   structure, WIN_CERTIFICATE layout, and Authenticode padding were all
+   spec-compliant on inspection — the actual signature bytes must have
+   differed in a way that mattered to shim's stricter parser but not to
+   `sbverify`'s lenient one). Fixed by replacing it with a freshly
+   signed copy.
+2. `engine/build-iso.sh` was changed to re-sign Ploader fresh at build
+   time whenever the MOK private key is available on the build host
+   (`PLOADER_MOK_KEY`/`PLOADER_MOK_CERT`, default
+   `~/pearos-mok/pearos-mok.{key,crt}`), instead of trusting a
+   point-in-time checked-in binary that can silently go stale — so this
+   specific failure mode can't recur. (A follow-up fix was needed here
+   too: the script runs under `sudo`, which resets `$HOME` to `/root`,
+   so the key lookup has to resolve the invoking user's real home via
+   `$SUDO_USER`, not `$HOME` directly.)
+
+**This fix was real but turned out to be insufficient** — rebuilding
+the actual ISO with the corrected signature and testing it through the
+real El Torito path *still* reboot-looped. That's what led to root
+cause #1 below.
+
+### Real root cause #1: a FAT image-size boundary in this OVMF build
+
+With the signature ruled out as the (sole) cause, the investigation
+went back to raw-disk isolation testing, varying one piece of content
+at a time in the 16MB `efiboot.img` FAT image that shim/Ploader/GRUB
+all live in. The results were initially very confusing: adding
+`fbx64.efi` alone, `pearos-mok.cer` alone, or even a single trivial
+6-byte unrelated text file to a previously-working 3-file `EFI/BOOT`
+directory *each independently* reproduced the identical loop — while
+the bare 3-file set (`BOOTX64.EFI`, `mmx64.efi`, `grubx64.efi`) booted
+reliably every time, including after 15+ repeated boot cycles on the
+same VM (ruling out VM/NVRAM state degradation as a confound).
+
+This pointed at "OVMF's FAT driver breaks once `EFI/BOOT` holds more
+than 3 files" — but that theory didn't survive one more test: the exact
+same "failing" content (3 core files plus Ploader's theme directory,
+moved to be a sibling of `BOOT` rather than nested inside it, so
+`EFI/BOOT` itself still only had 3 entries) *also* looped. The real
+variable, found by testing image size as an independent axis, was much
+simpler: **the identical "failing" content boots perfectly, reproducibly,
+at 64MB instead of 16MB.** This is a FAT16 root-directory-sizing
+boundary specific to this exact QEMU 11.0.3 /
+`pve-edk2-firmware-ovmf` 4.2026.08-1 combination and a 16MB image size —
+not a hard cap on file count, and not something worth root-causing
+further at the EDK2-internals level (that would be real, substantial
+firmware-internals work with no clear payoff once a working, free fix
+exists).
+
+**Fix**: bumped `efiboot.img` from 16MB to 64MB in `engine/build-iso.sh`
+(negligible cost on a 2GB+ ISO) and restored the full original UEFI
+image content (Ploader's theme, `fbx64.efi`, `pearos-mok.cer`) that an
+earlier, now-superseded attempt at this fix had stripped out
+unnecessarily.
+
+### Real root cause #2: no UEFI-native path to the actual kernel
+
+Fixing the reboot loop was necessary but not sufficient. With it fixed,
+Ploader itself now booted and rendered its menu cleanly under real
+UEFI — but it only ever showed its own fallback
+Reboot/Shutdown/Firmware-Setup menu, never a real bootable OS entry, and
+would auto-reboot when its own countdown expired (a real, intentional
+Ploader behavior, not a crash).
+
+The actual cause: **this project only ever built a BIOS-target
+(`i386-pc`) GRUB2** for booting the live kernel (see `engine/build-iso.sh`'s
+BIOS section, `grub2-mkrescue` with `boot/grub/i386-pc/eltorito.img`).
+An `i386-pc` GRUB core image is a 16-bit real-mode/BIOS binary — it
+relies on BIOS interrupts (disk I/O, video) that simply don't exist
+under pure UEFI (no CSM/legacy fallback configured, and real modern
+UEFI-only hardware has none at all). Ploader, being a genuine UEFI PE
+executable, physically cannot chainload it, and its own OS auto-scan
+correctly found nothing bootable to offer. There was no missing
+config, no bug to fix in Ploader itself — the UEFI kernel-boot path
+simply didn't exist yet anywhere in the engine.
+
+**Fix**: rather than hand-building a UEFI-native GRUB2 core image via
+`grub2-mkimage` (real, substantial work — picking the right module set,
+building/testing a standalone image from scratch), the engine now
+installs Fedora's own real `grub2-efi-x64-cdboot` package
+(`profiles/pearos/packages.list`) and uses its output, `gcdx64.efi` —
+the exact, already-tested, already-Fedora-signed binary real Fedora
+Live ISOs use for El Torito UEFI boot — as the shim chainload target,
+with a custom `grub.cfg` (same GRUB scripting used by the working BIOS
+config; GRUB's config language is platform-independent, only the
+embedded native-platform modules differ between an `i386-pc` and
+`x86_64-efi` core image).
+
+One more real bug surfaced in the process: `gcdx64.efi`'s own
+config-search logic targets the **outer ISO9660 filesystem it was
+booted from** (what GRUB itself enumerates as `(cd0)`), not the small
+`efiboot.img` FAT image shim chainloaded it out of. A `grub.cfg` copied
+into `efiboot.img`'s own `EFI/BOOT/` is invisible to it — GRUB drops to
+its interactive shell instead of auto-loading a menu. This was found
+by typing directly into GRUB's live shell via QMP-driven keypresses
+(see methodology below) and confirmed with `ls (cd0)/EFI/BOOT/`, which
+showed the directory genuinely empty. **Fix**: `grub.cfg` (and the GRUB
+font, `unicode.pf2`) are now written directly into
+`$ISO_WORKDIR/EFI/BOOT/` — the real ISO9660-level tree that ends up on
+the disc — instead of being packed into `efiboot.img`.
+
+A smaller, related bug found and fixed along the way: two temporary
+build artifacts (`ploader_x64_signed.efi`, an early `uefi-grub.cfg`
+draft) were briefly being written directly into `$ISO_WORKDIR` — the
+exact directory tree that gets shipped on the ISO — so they leaked into
+the final disc's root as stray files. Found by `ls (cd0)/` in GRUB's
+own shell. Fixed by writing build-time temp files under `$BUILD_DIR`
+instead.
+
+### Current status
+
+**Confirmed via screendump, fully automatically, with zero manual
+intervention**: shim → `gcdx64.efi` → GRUB's own menu (auto-rendering,
+auto-booting after its timeout) → real kernel/initramfs → systemd boot
+log → the complete, correctly-branded plumOS desktop (the "Pinder" top
+bar, live calendar/weather widgets, the populated dock, the liquid-gel
+wallpaper) — under real OVMF UEFI firmware. This is the first time this
+project has had a genuinely working, unattended UEFI boot.
+
+**Ploader is currently parked, not removed.** It's still built and
+signed by the engine, but it is no longer wired into the shim chain —
+`gcdx64.efi` occupies the `EFI/BOOT/grubx64.efi` slot shim always
+chainloads. Re-integrating Ploader as a branded front-end (e.g. having
+`gcdx64.efi`'s own `grub.cfg` chainload into Ploader, or some other
+layering) is real, legitimate future work, but was explicitly
+deprioritized in favor of shipping a working, unbranded-at-the-firmware-
+level UEFI boot — the branded desktop itself (which is what a user
+actually sees almost the entire time) is unaffected either way.
+
+**Not yet re-verified**: Secure Boot enforcement (this session's testing
+used `pre-enrolled-keys=0`, i.e. Secure Boot not actively enforcing).
+Fedora's `gcdx64.efi` and the shim are both real, Fedora/Microsoft-signed
+binaries already used on millions of real Secure-Boot-enabled Fedora
+installs, so there's good reason to expect this works, but it hasn't
+been independently tested in *this* project's exact boot chain with
+Secure Boot actively verifying signatures yet.
+
+### Debugging methodology (reusable beyond this specific bug)
+
+Two techniques carried most of the investigation and are worth reusing
+for any future low-level boot-chain problem on this project:
+
+1. **Raw-disk isolation, bypassing the ISO/El Torito layer entirely.**
+   Rather than rebuilding and re-testing the full ~2GB ISO for every
+   hypothesis (slow — a full rebuild + two-hop file transfer to the test
+   VM took 10-20+ minutes each), extract just the El Torito UEFI image
+   (`xorriso -indev <iso> -osirrox on -extract /EFI/efiboot.img <out>`,
+   or hand-build a minimal one with `mkfs.vfat` + `mtools`' `mmd`/`mcopy`),
+   attach it directly to the test VM as a plain SCSI/virtio disk (via
+   the hypervisor's `qm importdisk` + `qm set --scsiN ...`), and set that as
+   the sole boot device. This turns a 10-20 minute full-build test cycle
+   into a ~1-2 minute one, and — critically — makes it possible to vary
+   exactly one file/setting at a time to isolate a cause, which is what
+   actually found both real root causes here. The one trap to watch
+   for: a test that only changes the *bootloader* but not the actual
+   kernel/OS content (as the raw-disk `gcdx64.efi` test here initially
+   did) can't validate anything that depends on both living on the same
+   medium — that has to be verified against the real, fully-assembled
+   ISO at least once.
+2. **Typing directly into a live GRUB shell via QMP-driven keystrokes.**
+   When GRUB itself is running but not doing what's expected (e.g.
+   dropping to its interactive shell instead of auto-loading a menu),
+   QEMU's HMP monitor `sendkey` command can type individual keys into
+   the running VM (`qm sendkey <vmid> <key>`, one key/combo per call;
+   uppercase and punctuation need the right `shift-<key>` mapping).
+   Scripting this into a small helper that sends a whole string
+   character-by-character, waiting for each to land, then requesting a
+   `screendump`, turns the VM's live GRUB shell into a real, interactive
+   diagnostic tool — `ls`, `ls (cd0)/`, `ls (cd0)/EFI/BOOT/`, and
+   `configfile <path>` were what actually found and confirmed both the
+   `EFI/BOOT` emptiness and the correct fix here, faster and more
+   conclusively than any amount of re-reading `engine/build-iso.sh`'s
+   own logic would have.
