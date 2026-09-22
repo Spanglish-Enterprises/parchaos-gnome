@@ -380,22 +380,57 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
         sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
             "$PROFILE_DIR/ploader/ploader_x64.efi"
     fi
+    # UEFI KERNEL BOOT (2026-09-21): Ploader (rEFInd fork) has no working
+    # UEFI-native path to the actual kernel — this project only ever builds
+    # a BIOS-target (i386-pc) GRUB, which pure UEFI firmware (no CSM) can't
+    # execute at all, so Ploader's own OS auto-scan never finds anything
+    # bootable and just falls back to its Reboot/Shutdown menu. Building a
+    # real UEFI-native bootloader by hand (grub2-mkimage, custom modules)
+    # is real, substantial work; instead this uses Fedora's own real,
+    # tested, already-signed grub2-efi-x64-cdboot package output (gcdx64.efi
+    # — the exact binary real Fedora Live ISOs use for El Torito UEFI boot)
+    # as the shim target, with our own grub.cfg (same content as the BIOS
+    # config below, GRUB's scripting is platform-independent). Verified via
+    # a real raw-disk boot test on the boot-test VM/the VM host: shim -> gcdx64.efi renders
+    # its own GRUB menu and executes the entry with zero crash/loop.
+    # Ploader is parked (still built/signed above) for future
+    # re-integration as a branded front-end once this real boot path is
+    # solid — shipping a working UEFI boot took priority over Ploader's
+    # branding under the "ship today" call, see docs/phase4-findings.md.
+    UEFI_GRUB_EFI="$(find "$ROOTFS_TARGET/usr/lib/efi/grub2" -name gcdx64.efi 2>/dev/null | head -1)"
+    if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi" ]; then
+        UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi"
+    fi
     if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
-       && [ -f "$SIGNED_PLOADER" ] && [ -f "$SECUREBOOT_DIR/pearos-mok.cer" ]; then
-        echo "Secure Boot signing artifacts found — chaining shim -> signed Ploader."
+       && [ -n "$UEFI_GRUB_EFI" ]; then
+        echo "Chaining shim -> Fedora's real grub2-efi-x64-cdboot (gcdx64.efi) for UEFI kernel boot."
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
-        mcopy -i "$EFIBOOT_IMG" "$SIGNED_PLOADER" ::/EFI/BOOT/grubx64.efi
-        if [ -f "$SECUREBOOT_DIR/fbx64.efi" ]; then
-            mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/fbx64.efi" ::/EFI/BOOT/fbx64.efi
+        mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" ::/EFI/BOOT/grubx64.efi
+        UEFI_GRUB_CFG="$ISO_WORKDIR/uefi-grub.cfg"
+        cat > "$UEFI_GRUB_CFG" <<EOF
+insmod iso9660
+insmod gzio
+insmod ext2
+insmod all_video
+search --file --set=root /boot/vmlinuz
+
+set default=0
+set timeout=5
+menuentry "$PROFILE_DISPLAY_NAME" {
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image console=tty0 console=ttyS0,115200n8
+    initrd (\$root)/boot/initramfs.img
+}
+EOF
+        mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_CFG" ::/EFI/BOOT/grub.cfg
+        if [ -f "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ]; then
+            mmd -i "$EFIBOOT_IMG" ::/EFI/BOOT/fonts
+            mcopy -i "$EFIBOOT_IMG" "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ::/EFI/BOOT/fonts/unicode.pf2
         fi
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/pearos-mok.cer" ::/EFI/BOOT/pearos-mok.cer
     else
-        echo "WARNING: Secure Boot signing artifacts not found under $SECUREBOOT_DIR — shipping unsigned Ploader as BOOTX64.EFI. This boots fine with Secure Boot disabled but will be rejected with it enabled." >&2
+        echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
         mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
-    fi
-    if [ -d "$PROFILE_DIR/ploader/theme" ]; then
-        mcopy -i "$EFIBOOT_IMG" -s "$PROFILE_DIR/ploader/theme" ::/EFI/BOOT/theme
     fi
 else
     echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
