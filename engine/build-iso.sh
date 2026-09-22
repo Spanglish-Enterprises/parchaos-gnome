@@ -376,7 +376,7 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
     if command -v sbsign >/dev/null 2>&1 && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
         echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
-        SIGNED_PLOADER="$ISO_WORKDIR/ploader_x64_signed.efi"
+        SIGNED_PLOADER="$BUILD_DIR/ploader_x64_signed.efi"
         sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
             "$PROFILE_DIR/ploader/ploader_x64.efi"
     fi
@@ -407,8 +407,20 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
         mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
         mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" ::/EFI/BOOT/grubx64.efi
-        UEFI_GRUB_CFG="$ISO_WORKDIR/uefi-grub.cfg"
-        cat > "$UEFI_GRUB_CFG" <<EOF
+        # gcdx64.efi's own prefix/config search targets the OUTER ISO9660
+        # filesystem it was booted from (i.e. (cd0) as GRUB itself sees it),
+        # NOT the small efiboot.img FAT image shim loaded it out of — real
+        # hands-on testing on the boot-test VM/the VM host found grub.cfg copied into
+        # efiboot.img's ::/EFI/BOOT/ is never found (GRUB drops to its
+        # interactive shell instead of auto-loading a menu), while the
+        # identical content placed at the real ISO9660-level EFI/BOOT/ (via
+        # $ISO_WORKDIR, i.e. where grub2-mkrescue's own now-otherwise-empty
+        # EFI/BOOT placeholder lives) loads and boots correctly. Confirmed
+        # via a manual `configfile` in GRUB's own shell: real systemd/kernel
+        # boot log on screen, the first genuinely working UEFI kernel boot
+        # this project has had.
+        mkdir -p "$ISO_WORKDIR/EFI/BOOT/fonts"
+        cat > "$ISO_WORKDIR/EFI/BOOT/grub.cfg" <<EOF
 insmod iso9660
 insmod gzio
 insmod ext2
@@ -423,10 +435,8 @@ menuentry "$PROFILE_DISPLAY_NAME" {
     initrd (\$root)/boot/initramfs.img
 }
 EOF
-        mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_CFG" ::/EFI/BOOT/grub.cfg
         if [ -f "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ]; then
-            mmd -i "$EFIBOOT_IMG" ::/EFI/BOOT/fonts
-            mcopy -i "$EFIBOOT_IMG" "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ::/EFI/BOOT/fonts/unicode.pf2
+            cp "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" "$ISO_WORKDIR/EFI/BOOT/fonts/unicode.pf2"
         fi
     else
         echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
