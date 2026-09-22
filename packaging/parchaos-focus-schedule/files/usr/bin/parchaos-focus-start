@@ -1,0 +1,24 @@
+#!/bin/bash
+# Registers a real freedesktop.org notification inhibit (the same
+# mechanism apps use to silence notification popups during, e.g., a
+# fullscreen presentation) and persists the returned cookie so
+# parchaos-focus-end can release the exact same one later. This is a
+# recurring nightly schedule -- KDE Plasma 6 itself has no such
+# feature (manual/trigger-based DND only, confirmed via research), so
+# this achieves the practical result without needing to patch KDE.
+set -euo pipefail
+
+COOKIE_FILE="$HOME/.cache/parchaos-focus-cookie"
+mkdir -p "$(dirname "$COOKIE_FILE")"
+
+RESULT="$(gdbus call --session \
+    --dest org.freedesktop.Notifications \
+    --object-path /org/freedesktop/Notifications \
+    --method org.freedesktop.Notifications.Inhibit \
+    "org.parchaos.focusschedule" "Scheduled focus time" "{}")"
+
+# RESULT looks like "(uint32 2,)" -- pull out the number after
+# "uint32", not just any digit in the string (a naive digit-grep also
+# matches the "32" inside the literal word "uint32" itself).
+COOKIE="$(echo "$RESULT" | grep -oE 'uint32 [0-9]+' | grep -oE '[0-9]+$')"
+echo "$COOKIE" > "$COOKIE_FILE"

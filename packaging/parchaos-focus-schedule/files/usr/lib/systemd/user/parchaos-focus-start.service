@@ -1,0 +1,6 @@
+[Unit]
+Description=Start scheduled focus time (silence notification popups)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/parchaos-focus-start

@@ -1,0 +1,19 @@
+#!/bin/bash
+# Releases the inhibit cookie parchaos-focus-start registered. Safe to
+# run even if no cookie file exists (e.g. first boot before any start
+# has fired) -- just exits quietly.
+set -euo pipefail
+
+COOKIE_FILE="$HOME/.cache/parchaos-focus-cookie"
+[ -f "$COOKIE_FILE" ] || exit 0
+
+COOKIE="$(cat "$COOKIE_FILE")"
+[ -n "$COOKIE" ] || exit 0
+
+gdbus call --session \
+    --dest org.freedesktop.Notifications \
+    --object-path /org/freedesktop/Notifications \
+    --method org.freedesktop.Notifications.UnInhibit \
+    "$COOKIE" >/dev/null 2>&1 || true
+
+rm -f "$COOKIE_FILE"
