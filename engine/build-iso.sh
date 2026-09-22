@@ -68,6 +68,18 @@ Usage: $(basename "$0") [options]
 EOF
 }
 
+# Saved BEFORE the arg-parsing loop below, which consumes "$@" via
+# `shift` — FOUND 2026-09-22 via a real build that silently reverted to
+# every hardcoded default (branch 42 instead of the requested 44, etc):
+# the sudo self-re-exec further down used to reference "$@" too, but by
+# that point the parsing loop had already shifted through the entire
+# original argument list, leaving it empty. The re-exec'd (root) process
+# then re-parsed nothing and fell back to this script's own compiled-in
+# defaults, discarding every flag the caller actually passed —
+# invisibly, since the script still ran and produced *an* ISO, just not
+# the one asked for.
+ORIGINAL_ARGS=("$@")
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --profile) PROFILE="$2"; shift 2 ;;
@@ -86,7 +98,7 @@ done
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Re-executing under sudo (dnf --installroot and chroot need root)..."
-    exec sudo -E "$0" "$@"
+    exec sudo -E "$0" "${ORIGINAL_ARGS[@]}"
 fi
 
 for bin in dnf mksquashfs xorriso grub2-mkstandalone rpm2cpio; do
