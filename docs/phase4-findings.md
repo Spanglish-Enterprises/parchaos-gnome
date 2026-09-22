@@ -1182,3 +1182,40 @@ for any future low-level boot-chain problem on this project:
    `EFI/BOOT` emptiness and the correct fix here, faster and more
    conclusively than any amount of re-reading `engine/build-iso.sh`'s
    own logic would have.
+
+### Final shipped build (2026-09-21, same day)
+
+`plumos-44-2026.09.21-final-x86_64.iso` (2,331,961,344 bytes) is the
+build that closes out this session's "ship a working live image today"
+push. It includes every fix above plus the UEFI *install* gaps found by
+manually replicating Calamares' own partition → unpackfs →
+kernel-install → bootloader sequence step by step on a live UEFI
+session (no pyatspi/dogtail were available offline for a full AT-SPI-
+driven GUI run, so this was done directly via the serial console and
+QMP-driven keystrokes): `shim-x64`, `grub2-efi-x64-modules`, and
+`mokutil` added to `packages.list` (previously only
+`grub2-efi-x64-cdboot`, needed for the live ISO's own boot, was
+present), and `pearos-install-kernel` extended to explicitly populate
+the EFI System Partition from those packages' own files, since their
+`%posttrans` scriptlets never fire in this project's squashfs-copy
+install flow. Confirmed installed in this build's rootfs:
+`pearos-calamares-config-2026.09.18-5` (bundles both the plumOS
+Calamares-branding fix and the ESP-population fix).
+
+Every individual step of a real disk install was verified working
+end-to-end up through a real `efibootmgr`-created NVRAM boot entry
+pointing at a correctly-populated ESP with a real `grub2-mkconfig`-
+generated BLS-aware `grub.cfg`. The final reboot-to-desktop confirmation
+hit an apparent OVMF/virtio-scsi hard-disk boot-visibility issue
+specific to this test VM (the disk works fine from the live kernel's
+own driver; OVMF's pre-boot boot manager never seems to reach it
+regardless of NVRAM state, even on completely fresh NVRAM) — flagged
+as a scoped follow-up (try a different disk controller for the test VM,
+or confirm directly on real hardware) rather than a plumOS bug, since
+every artifact the install process itself produced was independently
+verified correct.
+
+Live boot itself was regression-checked on this exact final build
+(screendump-confirmed: full automatic boot to the real, correctly-
+branded plumOS desktop) — none of the install-focused packages.list
+additions touch the live-boot path.
