@@ -1,0 +1,71 @@
+# ==============================================================================
+# TMOG (Task Manager OG, https://tmog.org) is Dave Plummer's native
+# cross-platform system monitor -- closed-source freemium software (free
+# edition + paid Pro tier), NOT part of the pearOS/Pear-Project family.
+# Its own license page explicitly disclaims "continued distribution of
+# either edition," which reads as the author reserving distribution
+# rights, not granting them -- so unlike every other package in this
+# project, plumOS does NOT bundle TMOG's actual binary in this repo, its
+# SRPM, or the COPR build. This package ships only a .desktop launcher
+# and a small wrapper script (files/usr/bin/pearos-tmog-launch) that
+# downloads the real, official AppImage directly from tmog.org's own
+# download URL the first time the user launches it, and runs the cached
+# copy after that. plumOS/its COPR never hosts or redistributes the
+# TMOG binary itself -- the end user's own machine fetches it straight
+# from the vendor, same as a "Download X" button would.
+#
+# Like pearos-calamares-config, there's no upstream release tarball for
+# this package (it's plumOS's own small integration script, not a port
+# of any pearOS/Pear-Project source) -- Source0 is a local tarball built
+# FROM this directory's checked-in files/ tree at package-build time:
+#   tar czf pearos-tmog-files.tar.gz -C files .
+# into ~/rpmbuild/SOURCES/ before `rpmbuild -bs`.
+# ==============================================================================
+
+Name:           pearos-tmog
+Version:        1.0.0
+Release:        1%{?dist}
+Summary:        Launcher for TMOG (Task Manager OG), fetched from the official vendor on first run
+
+License:        NOASSERTION
+URL:            https://tmog.org
+Source0:        pearos-tmog-files.tar.gz
+BuildArch:      noarch
+
+Requires:       curl
+# AppImages need FUSE to mount themselves; the wrapper script falls back
+# to --appimage-extract-and-run if this isn't present, so this is a soft
+# dependency, not a hard Requires.
+Recommends:     fuse
+
+%description
+Adds a "TMOG" entry to the application menu. TMOG (Task Manager OG) is a
+native, non-Electron system monitor by Dave Plummer (original author of
+Windows Task Manager) covering CPU, memory, disk, network, and power
+consumption -- see https://tmog.org. This package does not contain
+TMOG's own binary: the first launch downloads the official AppImage
+directly from tmog.org and caches it under
+~/.local/share/pearos-tmog/, exactly as if the user had downloaded and
+run it themselves.
+
+%prep
+%setup -q -c -n %{name}-%{version}
+
+%install
+mkdir -p %{buildroot}
+cp -a usr %{buildroot}/
+chmod 0755 %{buildroot}%{_bindir}/pearos-tmog-launch
+
+%files
+%{_bindir}/pearos-tmog-launch
+%{_datadir}/applications/org.plumos.TMOG.desktop
+
+%changelog
+* Tue Sep 22 2026 plumOS packaging - 1.0.0-1
+- Initial package: .desktop launcher + first-run-fetch wrapper script
+  for TMOG. Confirmed the official AppImage download URL
+  (https://tmog.org/downloads/TaskManagerOG-0.1.4-x86_64.AppImage)
+  resolves with a real 200 response, content-type
+  application/vnd.appimage, ~35MB, served via Cloudflare directly from
+  tmog.org -- not yet verified with a real end-to-end download+launch
+  on a built system.
