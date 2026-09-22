@@ -1,0 +1,16 @@
+diff --git a/yin_yang/daemon_handler.py b/yin_yang/daemon_handler.py
+index 1a2b3c4..5d6e7f8 100644
+--- a/yin_yang/daemon_handler.py
++++ b/yin_yang/daemon_handler.py
+@@ -20,9 +20,9 @@
+     if not SYSTEMD_PATH.is_dir():
+         SYSTEMD_PATH.mkdir(parents=True, exist_ok=True)
+     if not TIMER_PATH.is_file():
+-        shutil.copy('./resources/yin_yang.timer', TIMER_PATH)
++        shutil.copy(helpers.get_usr() + 'share/parchaos-yin-yang/resources/yin_yang.timer', TIMER_PATH)
+     if not SERVICE_PATH.is_file():
+-        shutil.copy('./resources/yin_yang.service', SERVICE_PATH)
++        shutil.copy(helpers.get_usr() + 'share/parchaos-yin-yang/resources/yin_yang.service', SERVICE_PATH)
+     if helpers.is_flatpak():
+         with open(SERVICE_PATH, 'r') as service:
+             lines = service.readlines()

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Yin & Yang
+GenericName=Automatic Theme Switcher
+Comment=Automatically switch between light and dark themes
+Exec=yin_yang
+Icon=sh.oskar.yin_yang
+Terminal=false
+Categories=Utility;System;Settings;
+Keywords=night;dark;light;theme;sunset;sunrise;
