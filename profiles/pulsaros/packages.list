@@ -88,6 +88,14 @@ gnome-keyring
 # explicitly since customize.sh's dconf-based extension-enablement
 # mechanism needs the `dconf` CLI at build time (Phase 5.5).
 dconf
+
+# Real, confirmed Fedora package (`dnf repoquery gnome-shell-extension-user-theme`)
+# needed to apply a GNOME Shell-level theme (panel/overview chrome) --
+# distinct from org.gnome.desktop.interface's gtk-theme key, which only
+# affects GTK app chrome, not the Shell itself. Needed for
+# parchaos-gtk-theme's Shell theme to actually apply.
+gnome-shell-extension-user-theme
+
 gnome-shell-extension-common
 gnome-disk-utility
 gnome-system-monitor
