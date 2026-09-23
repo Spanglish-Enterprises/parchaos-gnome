@@ -175,7 +175,26 @@ project's history.
   further.
 - The README's "Real, substantial from-scratch ports" list is unchanged
   and still accurate: Sayri, `pulsaros-timemachine`, `pulsaros-welcome`,
-  `pulsaros-cloud` remain not started.
+  `pulsaros-cloud` remain not started. **Real blocker found scoping
+  Sayri (2026-09-23), before writing any packaging**: its real source
+  repo (`Inled-Pulsar-OS/sayri`) has no `LICENSE` file at all, and
+  GitHub's own API confirms `license: null` — under default copyright
+  that means all rights reserved, not "open source, license just
+  unspecified." This project has consistently tracked licenses
+  carefully for its other real ports (parchaos-finder, parchaos-dock,
+  parchaos-global-menu all document their real upstream license in
+  their spec's own banner comment) specifically because a public
+  release is planned — packaging unlicensed third-party source would
+  be a real legal exposure, not just a technical shortcut. Also worth
+  noting for whoever picks this up: Sayri is described by its own
+  README as "an AI Agent framework" with API-key-holding LLM access
+  and a claimed 5-level sandboxing model — even once licensing is
+  resolved (e.g. by asking Inled directly, or finding a license
+  elsewhere in the monorepo), this is security-sensitive enough that
+  the sandboxing claims need real, hands-on verification before
+  shipping it to users, not just a build-and-ship port like the
+  cosmetic/GNOME-Shell-extension pieces. Not started past this
+  scoping pass.
 - This repo still carries a pile of KDE-only cruft inherited from the
   original `git push --mirror`-style fork (`pearos-dock`,
   `pearos-liquidgel`, `pearos-launchpad`, `pearos-settings`,
