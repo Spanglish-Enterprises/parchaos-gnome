@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -49,6 +49,19 @@ BuildArch:      noarch
 
 BuildRequires:  sassc
 BuildRequires:  git
+# Real bug found via a real COPR build attempt (2026-09-23, build
+# 11024750): install_theme_deps() (libs/lib-install.sh) auto-detects
+# missing `glib-compile-resources` (glib2-devel) / `xmllint`
+# (libxml2) and, before attempting a `sudo dnf install`, does a real
+# internet-connectivity ping (prepare_deps() -> get_utc_epoch_time(),
+# opens /dev/tcp/iana.org/80) -- which always fails in COPR's
+# network-isolated build sandbox, and even if it somehow succeeded,
+# the subsequent unattended `sudo dnf install` would hang forever on
+# a password prompt. Our build VM test shell already has both tools
+# installed, masking this from every local test until reproduced by
+# explicitly hiding them from PATH.
+BuildRequires:  glib2-devel
+BuildRequires:  libxml2
 # Real bug found via a real COPR build attempt (2026-09-23, build
 # 11024653): lib-core.sh runs `set -Eeo pipefail` then, near its very
 # top (before any output is printed), does
@@ -125,6 +138,16 @@ mkdir -p %{buildroot}%{_datadir}/themes
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-6
+- Real fourth root cause found via the actual COPR build log
+  (11024750 failed with "DEPS ERROR: You have an internet connection
+  issue"): install_theme_deps() auto-detects missing
+  glib-compile-resources/xmllint and, before auto-installing them,
+  does a real internet-connectivity ping that always fails in COPR's
+  network-isolated sandbox (and would otherwise hang on an unattended
+  sudo password prompt). the build VM's test shell already had both tools,
+  masking this locally. Reproduced by hiding them from PATH; fixed
+  with BuildRequires: glib2-devel, libxml2.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-5
 - Real third root cause found via the actual COPR build log (11024717
   failed with "'-d' ERROR: You have no permission to access that
