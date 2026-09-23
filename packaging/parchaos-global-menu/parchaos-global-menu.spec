@@ -54,7 +54,7 @@
 
 Name:           parchaos-global-menu
 Version:        1.0.134
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,17 @@ sed -i \
     metadata.json extension.js org.gnome.shell.extensions.parchaos-global-menu.gschema.xml
 sed -i "s/pulsar-white-sf\.png/parchaos-menu-icon.png/" extension.js
 
+# Real bug found via a real boot test (2026-09-23): the extension's own
+# JS hardcodes the literal string "Finder" as the idle-state app name
+# (shown in the menu bar itself when no window has focus, matching real
+# macOS's "Finder is the default app" behavior) -- 13 occurrences,
+# every one the same concept (display label + the matching
+# `appName === "Finder"` state comparison), confirmed via a full grep
+# before this blanket rename so it wouldn't accidentally touch an
+# unrelated meaning of the word. The earlier UUID/schema-only sed above
+# missed this entirely since it wasn't part of any identifier string.
+sed -i 's/Finder/Parcher/g' extension.js
+
 %build
 mkdir -p schemas
 glib-compile-schemas --targetdir=schemas src 2>/dev/null || true
@@ -118,6 +129,13 @@ install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-2
+- Real trademark bug found via a real boot test: the shipped menu bar
+  literally read "Finder File Edit View Go Window Help" on the idle
+  desktop -- the earlier UUID/schema rename missed 13 hardcoded
+  "Finder" string literals inside extension.js entirely (not part of
+  any identifier, so the earlier sed's scope never touched them). Fixed
+  with a verified-safe blanket word rename.
 * Wed Sep 23 2026 ParchaOS packaging - 1.0.134-1
 - Initial package, real upstream source (Inled-Pulsar-OS/PKG monorepo,
   MIT-INLED license), rebranded "Parcha Menu". Deliberately scoped to
