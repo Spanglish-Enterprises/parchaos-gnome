@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -100,6 +100,7 @@ cp -a usr %{buildroot}/
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-finalize-install
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-fix-biosboot-flag
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
+chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 
 %files
 %{_sysconfdir}/calamares/settings.conf
@@ -107,8 +108,28 @@ chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
 %{_sysconfdir}/calamares/scripts/
 %{_sysconfdir}/calamares/branding/
 /usr/local/share/applications/calamares.desktop
+/usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-4
+- Real bug found via a real end-to-end test of the actual desktop-icon
+  launch flow (search "install" -> Enter -> polkit dialog -> press
+  Authenticate), the exact path a real user takes: the Release 3 fix
+  set DISPLAY/QT_QPA_PLATFORM on the pkexec'd Calamares but never
+  forwarded XAUTHORITY or granted the escalated root process X11
+  access via `xhost +si:localuser:root` -- both of which the earlier
+  manual verification (from a root shell) had done by hand and which
+  Release 3's .desktop Exec= line silently dropped. Confirmed via
+  screendump: the polkit dialog closes immediately on Authenticate and
+  Calamares never appears (no window, no crash dialog) -- consistent
+  with the escalated Qt process failing to open the X11 display and
+  exiting near-instantly. Fixed by moving the launch logic out of
+  Exec= (fragile to get right through Desktop Entry Spec quoting) into
+  a real script, /usr/local/bin/parchaos-launch-calamares, which grants
+  the xhost access, resolves XAUTHORITY (from the environment, falling
+  back to globbing /run/user/$UID/.mutter-Xwaylandauth.* if unset),
+  and execs pkexec with DISPLAY/XAUTHORITY/QT_QPA_PLATFORM all
+  forwarded explicitly.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-3
 - Real bug found via a real, full end-to-end Calamares install +
   reboot test on the install-test VM/the VM host (2026-09-23 -- the actual disk install

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Launches Calamares as root under XWayland from a GNOME live session.
+#
+# pkexec sanitizes the escalated process's environment, so DISPLAY and
+# QT_QPA_PLATFORM must be forwarded explicitly -- but that alone isn't
+# enough: the escalated (root) Qt process also needs a valid XAUTHORITY
+# cookie for this X11 display, and the X server needs to be told to
+# accept connections from a different uid (root) at all. Both are
+# handled here rather than in the .desktop file's Exec= line, since
+# getting this multi-step sequence right through Desktop Entry Spec's
+# Exec= quoting rules is fragile -- a real script is easier to get
+# right and to debug.
+set -e
+
+: "${DISPLAY:=:0}"
+if [ -z "$XAUTHORITY" ]; then
+    XAUTHORITY=$(ls -t "/run/user/$(id -u)"/.mutter-Xwaylandauth.* 2>/dev/null | head -n1)
+fi
+
+xhost "+si:localuser:root" >/dev/null 2>&1 || true
+
+exec pkexec env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" QT_QPA_PLATFORM=xcb /usr/bin/calamares

@@ -5,7 +5,7 @@ Name=Install System
 GenericName=System Installer
 Keywords=calamares;system;installer;
 TryExec=calamares
-Exec=pkexec env DISPLAY=:0 QT_QPA_PLATFORM=xcb /usr/bin/calamares
+Exec=/usr/local/bin/parchaos-launch-calamares
 Comment=Calamares — System Installer
 Icon=calamares
 Terminal=false
