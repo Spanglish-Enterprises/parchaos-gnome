@@ -2,16 +2,20 @@
 # pulsaros profile — package groupings (sourced by engine/build-iso.sh)
 # ==============================================================================
 # Installed in Phase 5, against the repo set up by profile_setup_repo()
-# in repo.sh (this profile's own COPR + RPM Fusion). Empty for now —
-# 2026-09-22, this profile has no ported packages yet. As real Pulsar OS
-# components get ported (Nautilus/Finder fork first, per this repo's own
-# README's priority order), add them here the same way the KDE (pearos)
-# profile's own packages.sh does, with the same kind of explanatory
-# comment per package (what it replaces, why, real bugs found while
-# porting it).
+# in repo.sh (this profile's own COPR + RPM Fusion).
 # ==============================================================================
 
 PROFILE_REPO_PACKAGES=(
+    # Parcher — ParchaOS's build of Pulsar OS's real, working macOS-styled
+    # fork of GNOME Files/Nautilus (packaging/parchaos-finder/). Real
+    # traffic-light window controls, live folder color tagging, cloud
+    # drive sidebar integration. Renamed from upstream's "Files"/Pulsar
+    # OS's own "Finder" branding to avoid Apple trademark exposure ahead
+    # of a planned public release (see the spec's own banner comment).
+    # Obsoletes/Conflicts/Provides stock nautilus directly (not listed in
+    # packages.list's base set) -- a real drop-in replacement, same as
+    # the actual Pulsar OS package itself.
+    parchaos-finder
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
