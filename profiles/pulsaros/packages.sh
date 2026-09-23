@@ -150,6 +150,21 @@ PROFILE_REPO_PACKAGES=(
     # minimal-touch precedent rather than adding new default-browser
     # plumbing this project hasn't established yet.
     pafari
+
+    # ParchaOS desktop meta-package (packaging/parchaos-desktop/) -- a
+    # real, standard-pattern no-content package whose only job is a
+    # Requires: line naming every package above. Exists in direct
+    # response to real user feedback: `dnf update` alone never installs
+    # a package that's new since the user's own install, only upgrades
+    # ones already present -- installing this meta-package (which
+    # happens automatically as part of this same Phase 5 install) means
+    # a plain `sudo dnf update` becomes genuine OTA for future additions
+    # to this list, since bumping this meta-package's Release with an
+    # expanded Requires: pulls the new dependency in on update. MUST be
+    # kept in sync by hand whenever this array changes -- see the
+    # spec's own banner comment for the full reasoning and the
+    # maintenance rule.
+    parchaos-desktop
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
