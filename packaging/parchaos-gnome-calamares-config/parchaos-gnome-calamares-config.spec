@@ -48,7 +48,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -87,6 +87,12 @@ chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
 %{_sysconfdir}/calamares/branding/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
+- Real user feedback ("logo seems a bit weird and off center"): fixed
+  at the source in branding/logo/ (asymmetric canvas padding cropped
+  and re-centered -- see parchaos-global-menu's changelog for the
+  full root-cause writeup) and regenerated logo.png, icon.png,
+  welcome.png, slide1.png from the corrected source.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial port from the KDE (pearos) variant's own
   pearos-calamares-config for the GNOME profile: real ParchaOS

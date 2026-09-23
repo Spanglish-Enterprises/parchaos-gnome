@@ -54,7 +54,7 @@
 
 Name:           parchaos-global-menu
 Version:        1.0.134
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
@@ -129,6 +129,15 @@ install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-4
+- Real user feedback ("logo seems a bit weird and off center"): the
+  source logo file itself had asymmetric canvas padding (170px left
+  margin vs 62px right margin), so every composited/derived asset
+  inherited a visible rightward shift. Root-caused via
+  Image.getbbox(), fixed by cropping to actual content and
+  re-centering with uniform padding in branding/logo/ directly, then
+  regenerating this icon from the corrected silhouette source (also
+  now a true 570x570 square, was a non-square 443x570 before).
 * Wed Sep 23 2026 ParchaOS packaging - 1.0.134-3
 - Real user feedback ("looks strange, low quality") on the panel icon:
   the detailed logo's fine internal linework (ring + seed dots)

@@ -14,7 +14,7 @@
 
 Name:           parchaos-gnome-wallpaper
 Version:        2026.09.23
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS (GNOME) default desktop wallpaper
 
 License:        NOASSERTION
@@ -38,6 +38,11 @@ cp -a usr %{buildroot}/
 %{_datadir}/backgrounds/parchaos/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
+- Real user feedback ("logo seems a bit weird and off center"): fixed
+  at the source in branding/logo/ (see parchaos-global-menu's
+  changelog for the full root-cause writeup) and regenerated the
+  wallpaper's watermark from the corrected source.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial wallpaper: dark gradient with a subtle logo watermark,
   generated from branding/logo/. Not yet build-tested or wired into

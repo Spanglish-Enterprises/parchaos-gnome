@@ -36,7 +36,7 @@
 
 Name:           parchaos-gnome-plymouth-theme
 Version:        2026.09.23
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS (GNOME) Plymouth boot splash theme
 
 License:        GPL-2.0-or-later
@@ -63,6 +63,11 @@ cp -a parcha-plymouth %{buildroot}%{_datadir}/plymouth/themes/
 %{_datadir}/plymouth/themes/parcha-plymouth/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
+- Real user feedback ("logo seems a bit weird and off center"): fixed
+  at the source in branding/logo/ (see parchaos-global-menu's
+  changelog for the full root-cause writeup) and regenerated
+  watermark.png from the corrected source.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial theme: Fedora's own stock spinner theme (GPL-2.0-or-later)
   with ParchaOS's own watermark and a dark background color matching
