@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -108,6 +108,15 @@ fi
 # directly into the destination we pass -- nothing to build separately.
 
 %install
+# Real bug found via a real COPR build attempt (2026-09-23, build
+# 11024717): install.sh's own -d validation (check_param) requires the
+# destination to already exist and be writable -- it doesn't create
+# it. Every local verification this session implicitly worked around
+# this by mkdir -p'ing the test destination by hand before invoking
+# install.sh, masking the fact that the spec itself never did.
+# parchaos-icon-theme's spec already does this correctly; this one
+# didn't.
+mkdir -p %{buildroot}%{_datadir}/themes
 ./install.sh -c dark -d %{buildroot}%{_datadir}/themes --silent-mode
 
 %files
@@ -116,6 +125,20 @@ fi
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-5
+- Real third root cause found via the actual COPR build log (11024717
+  failed with "'-d' ERROR: You have no permission to access that
+  directory."): install.sh's check_param validates `-d` via
+  `[[ ! -w "${value}" && ! -w "$(dirname ${value})" ]]` -- a
+  nonexistent dest is fine as long as its PARENT exists and is
+  writable (it auto-mkdir's just the leaf). But rpmbuild only creates
+  the bare %{buildroot} itself, not %{buildroot}%{_datadir}/themes's
+  intermediate usr/share/ parents, so BOTH checks failed. Every local
+  verification this session used `mkdir -p` on a destination whose
+  parent already existed (e.g. /tmp/...), masking this. Reproduced
+  exactly with a deeply-nested nonexistent path (parent also missing);
+  fixed by mkdir -p'ing the full destination before invoking
+  install.sh, matching what parchaos-icon-theme's spec already does.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-4
 - Real second root cause found via the actual COPR build log (11024653
   failed with zero install.sh output before "Bad exit status"):
