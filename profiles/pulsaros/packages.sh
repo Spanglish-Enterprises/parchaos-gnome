@@ -68,6 +68,13 @@ PROFILE_REPO_PACKAGES=(
     # dependency; this overrides it) and by Calamares'
     # parchaos-finalize-install script for installed systems.
     parchaos-gnome-plymouth-theme
+
+    # ParchaOS's default desktop wallpaper
+    # (packaging/parchaos-gnome-wallpaper/) -- a dark gradient with the
+    # real logo as a subtle centered watermark, installed to
+    # /usr/share/backgrounds/parchaos/ and applied by default via
+    # customize.sh's dconf override.
+    parchaos-gnome-wallpaper
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled

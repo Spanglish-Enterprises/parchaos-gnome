@@ -92,6 +92,14 @@ theme='MacTahoe-Dark'
 
 [org/gnome/shell/extensions/user-theme]
 name='MacTahoe-Dark'
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
+picture-uri-dark='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
+picture-options='zoom'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
 EOF
     run_in_target dconf update
 
