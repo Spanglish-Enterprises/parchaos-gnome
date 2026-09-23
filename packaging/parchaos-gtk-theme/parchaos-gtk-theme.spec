@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -74,7 +74,14 @@ BuildRequires:  libxml2
 # invoked in our root-less RPM build path; it just needs to resolve so
 # the assignment succeeds.
 BuildRequires:  sudo
-Requires:       gnome-themes-extra
+# Real bug found at ISO-build time (2026-09-23, not caught by COPR's
+# own build since Requires: aren't resolved there): `gnome-themes-extra`
+# doesn't exist as an installable package in Fedora 44 at all (`dnf
+# repoquery '*gnome-themes*'` returns nothing) -- GNOME bundles Adwaita
+# natively now, this package appears retired upstream. Nothing in
+# MacTahoe-gtk-theme's own installed files actually needs it (it's a
+# GTK3/GTK4 theme, self-contained); dropped rather than guessing at a
+# replacement name.
 Requires:       gtk-murrine-engine
 
 %description
@@ -138,6 +145,14 @@ mkdir -p %{buildroot}%{_datadir}/themes
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-7
+- Real fifth root cause found -- this time not from a COPR build (which
+  doesn't resolve Requires:), but from the ISO build's own package
+  install: "nothing provides gnome-themes-extra needed by
+  parchaos-gtk-theme". Confirmed via `dnf repoquery` that this package
+  doesn't exist in Fedora 44 at all (retired upstream, GNOME bundles
+  Adwaita natively now). Nothing in the theme's own installed files
+  needs it; dropped the Requires rather than guessing a replacement.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-6
 - Real fourth root cause found via the actual COPR build log
   (11024750 failed with "DEPS ERROR: You have an internet connection
