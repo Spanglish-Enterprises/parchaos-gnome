@@ -123,6 +123,20 @@ PROFILE_REPO_PACKAGES=(
     # the spec's own banner comment for the real upstream
     # daemon-self-management architecture this relies on).
     parchaos-yin-yang
+
+    # TMOG (Task Manager OG) launcher (packaging/parchaos-tmog/) -- a
+    # .desktop entry + first-run-fetch wrapper for Dave Plummer's
+    # closed-source native system monitor. Does not bundle TMOG's own
+    # binary at all (its license page reserves distribution rights);
+    # the wrapper downloads the official AppImage directly from
+    # tmog.org on first launch and caches it, same as a user clicking
+    # a "Download" button themselves -- ParchaOS/its COPR never hosts
+    # or redistributes the binary. Genuinely DE-agnostic (AppImage +
+    # .desktop launcher, no KDE dependency at all); already
+    # end-to-end verified once under an earlier product name (real
+    # download confirmed, real Qt init reached) per the spec's own
+    # changelog.
+    parchaos-tmog
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
