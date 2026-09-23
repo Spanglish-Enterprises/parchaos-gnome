@@ -98,6 +98,31 @@ PROFILE_REPO_PACKAGES=(
     # deliberately dropped (real trademarks, never actually used by the
     # script itself).
     parchaos-cloud
+
+    # Nightly Focus/Do Not Disturb schedule (packaging/parchaos-focus-schedule/)
+    # -- two systemd --user timers (22:00/08:00 by default) calling the
+    # real freedesktop.org Notifications Inhibit/UnInhibit D-Bus
+    # methods. Built and verified working against KDE Plasma originally
+    # (docs/phase0-findings.md in the KDE repo); genuinely 100%
+    # DE-agnostic (pure D-Bus spec calls via gdbus, no toolkit
+    # dependency at all) -- carried over unchanged for this GNOME
+    # profile, no porting needed. Enabled by default via its own
+    # systemd user-preset.
+    parchaos-focus-schedule
+
+    # Auto light/dark theme switching with real sunrise/sunset support
+    # (packaging/parchaos-yin-yang/, real upstream oskarsh/Yin-Yang,
+    # MIT) -- a cross-desktop PySide6/Qt app (its own UI toolkit is
+    # independent of GNOME vs KDE), with dedicated GTK/icon-theme/
+    # wallpaper plugins that are directly relevant to this profile
+    # (its Kvantum/Plasma-color-scheme/Konsole plugins are inert no-ops
+    # under GNOME, harmless). User-configured, not forced on by
+    # default -- same "respect user choice" reasoning as this
+    # project's other optional personal-preference features; nothing
+    # runs until the user opens the app once and picks a schedule (see
+    # the spec's own banner comment for the real upstream
+    # daemon-self-management architecture this relies on).
+    parchaos-yin-yang
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
