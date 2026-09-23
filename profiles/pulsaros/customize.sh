@@ -95,6 +95,16 @@ name='MacTahoe-Dark'
 EOF
     run_in_target dconf update
 
+    # ParchaOS's own Plymouth boot splash (packages.list ships
+    # plymouth-theme-spinner as the base/fallback theme; this makes our
+    # own the live session's actual default). Must run before
+    # engine/build-iso.sh's own dracut regeneration step (right after
+    # this function returns) or the old theme stays baked into the
+    # initramfs -- same ordering requirement as Calamares'
+    # parchaos-finalize-install script uses for installed systems.
+    echo "--- Setting ParchaOS's Plymouth theme as default ---"
+    run_in_target plymouth-set-default-theme parcha-plymouth
+
     # Flathub remote (system-wide), same as the KDE profile — deliberately
     # does NOT pre-install any Flatpak app during the build to keep the
     # build itself fast; GNOME Software (already installed, native

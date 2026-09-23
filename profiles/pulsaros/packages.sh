@@ -59,6 +59,15 @@ PROFILE_REPO_PACKAGES=(
     # comment). Without this, Calamares would install and boot fine
     # but show generic/no branding and lack those fixes.
     parchaos-gnome-calamares-config
+
+    # ParchaOS's own boot splash (packaging/parchaos-gnome-plymouth-theme/),
+    # Plymouth's stock two-step module with a dark background matching
+    # the GTK theme and ParchaOS's real logo as the watermark. Applied
+    # as the live session's default via customize.sh (the live ISO
+    # ships plymouth-theme-spinner in packages.list as a fallback/base
+    # dependency; this overrides it) and by Calamares'
+    # parchaos-finalize-install script for installed systems.
+    parchaos-gnome-plymouth-theme
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
