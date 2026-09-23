@@ -67,12 +67,17 @@ cracklib-dicts
 squashfs-tools
 
 # --- GNOME desktop ---
-# GNOME Shell is Wayland-native; gnome-session-xsession kept for an
-# Xorg fallback the same way the KDE profile kept kwin-x11 installed
-# without defaulting to it.
+# GNOME Shell is Wayland-native. Real bug found via a real dnf query
+# (2026-09-22): unlike the KDE profile's kwin-x11 fallback, Fedora 44 no
+# longer ships a separate "gnome-session-xsession" Xorg-fallback
+# subpackage at all (confirmed via `dnf repoquery '*gnome-session*'` —
+# only gnome-session and gnome-session-wayland-session exist) — dropped
+# rather than guessing at a different name; GNOME on Xorg isn't a
+# priority for this project anyway (Wayland-only, same as the KDE
+# profile's own real-world default).
 gnome-shell
 gnome-session
-gnome-session-xsession
+gnome-session-wayland-session
 gnome-control-center
 gdm
 xdg-desktop-portal-gnome
