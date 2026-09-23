@@ -16,6 +16,7 @@ set -e
 if [ -z "$XAUTHORITY" ]; then
     XAUTHORITY=$(ls -t "/run/user/$(id -u)"/.mutter-Xwaylandauth.* 2>/dev/null | head -n1)
 fi
+export DISPLAY XAUTHORITY
 
 xhost "+si:localuser:root" >/dev/null 2>&1 || true
 

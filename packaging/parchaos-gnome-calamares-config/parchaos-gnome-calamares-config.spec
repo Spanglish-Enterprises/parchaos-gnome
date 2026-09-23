@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -111,6 +111,21 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 /usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-5
+- Real bug found via a real root-shell test on the install-test VM (2026-09-23):
+  Release 4's wrapper resolved DISPLAY/XAUTHORITY into plain shell
+  variables but never `export`ed them, so the `xhost
+  +si:localuser:root` call right after (a plain external command,
+  reads its target display from the process environment, not from an
+  unexported parent-shell variable) silently failed to find a display
+  to grant access to -- the ACL grant never actually happened, so the
+  escalated root Calamares still couldn't connect to X and exited
+  near-instantly, identical symptom to Release 3's bug. Confirmed via
+  a manual root-shell reproduction: the exact same pkexec command
+  launched Calamares successfully (stayed running, no crash) once
+  DISPLAY/XAUTHORITY were properly `export`ed before the xhost call.
+  Fixed by adding `export DISPLAY XAUTHORITY` to the wrapper script
+  before the xhost grant.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-4
 - Real bug found via a real end-to-end test of the actual desktop-icon
   launch flow (search "install" -> Enter -> polkit dialog -> press
