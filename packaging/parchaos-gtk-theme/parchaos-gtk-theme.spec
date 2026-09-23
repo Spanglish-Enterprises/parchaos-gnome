@@ -1,6 +1,7 @@
 # ==============================================================================
-# ParchaOS's GTK/GNOME Shell theme — real macOS Tahoe-styled GTK3/GTK4
-# theme, forked from Pulsar OS's own fork
+# ParchaOS's GTK/GNOME Shell theme — real Tahoe-styled GTK3/GTK4 theme
+# (dock, traffic-light window controls, translucent panels), forked
+# from Pulsar OS's own fork
 # (Inled-Pulsar-OS/MacTahoe-gtk-theme), which is itself a real fork of
 # vinceliuice's well-known MacTahoe-gtk-theme (MIT) — the same trusted
 # author whose WhiteSur-kde this project already ported for the KDE
@@ -32,8 +33,8 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        1%{?dist}
-Summary:        ParchaOS's macOS Tahoe-styled GTK3/GTK4 theme
+Release:        2%{?dist}
+Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
 URL:            https://github.com/vinceliuice/MacTahoe-gtk-theme
@@ -52,11 +53,12 @@ Requires:       gnome-themes-extra
 Requires:       gtk-murrine-engine
 
 %description
-ParchaOS's real macOS Tahoe-styled GTK3/GTK4 theme, built from
-vinceliuice's real upstream MacTahoe-gtk-theme (MIT) using its own
-install.sh — the same underlying theme Pulsar OS ships (Inled's own
-fork adds only non-essential accent-color polish this package doesn't
-yet replicate). Dark variant only for this initial release.
+ParchaOS's real Tahoe-styled GTK3/GTK4 theme (dock, traffic-light
+window controls, translucent panels), built from vinceliuice's real
+upstream MacTahoe-gtk-theme (MIT) using its own install.sh — the same
+underlying theme Pulsar OS ships (Inled's own fork adds only
+non-essential accent-color polish this package doesn't yet replicate).
+Dark variant only for this initial release.
 
 %prep
 %autosetup -n MacTahoe-gtk-theme-%{commit}
@@ -64,8 +66,17 @@ yet replicate). Dark variant only for this initial release.
 # Root/sudo-check patches — same real mechanism Pulsar OS's own
 # packaging uses (confirmed against their real prepare-assets.sh)
 # because install.sh assumes it's never run as root, but an RPM build
-# environment always is.
+# environment always is. Real bug found via a real COPR build attempt
+# (2026-09-23): the first pass here only patched install.sh/tweaks.sh/
+# lib-install.sh's UID/EUID checks, but --silent-mode's actual root
+# gate lives in a DIFFERENT function (full_sudo(), in libs/lib-core.sh)
+# checking `[[ ! -w "/root" ]]` -- a check Pulsar OS's own real
+# prepare-assets.sh specifically neutralizes too (confirmed by
+# re-reading their script), which this spec's first draft missed.
 sed -i 's/UID -ne 0/false/g; s/EUID -ne 0/false/g' install.sh tweaks.sh 2>/dev/null || true
+if [ -f libs/lib-core.sh ]; then
+    sed -i 's/! -w "\/root"/false/g' libs/lib-core.sh
+fi
 if [ -f libs/lib-install.sh ]; then
     sed -i 's/UID -ne 0/false/g; s/EUID -ne 0/false/g' libs/lib-install.sh
 fi
@@ -83,6 +94,12 @@ fi
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
+- Real bug found via a real COPR build attempt: --silent-mode's actual
+  root check lives in libs/lib-core.sh's full_sudo() (`[[ ! -w "/root"
+  ]]`), a different file/check than the UID/EUID patches already
+  applied elsewhere -- fixed, matching a check Pulsar OS's own real
+  packaging script specifically neutralizes too.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial package, real upstream source (vinceliuice/MacTahoe-gtk-theme,
   MIT), dark variant only. Not yet build-tested -- the install.sh

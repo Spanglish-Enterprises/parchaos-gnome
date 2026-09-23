@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -28,6 +28,13 @@ URL:            https://github.com/vinceliuice/MacTahoe-icon-theme
 Source0:        %{url}/archive/%{commit}/MacTahoe-icon-theme-%{shortcommit}.tar.gz
 
 BuildArch:      noarch
+
+# Real bug found via a real COPR build attempt (2026-09-23): install.sh
+# calls gtk-update-icon-cache internally after installing each variant
+# -- real installed variants confirmed via that same build's log
+# ("Installing '.../icons/MacTahoe'", "MacTahoe-light", "MacTahoe-dark")
+# before it failed on this missing command.
+BuildRequires:  gtk-update-icon-cache
 
 Requires:       hicolor-icon-theme
 
@@ -52,6 +59,10 @@ mkdir -p %{buildroot}%{_datadir}/icons
 %{_datadir}/icons/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
+- Real bug found via a real COPR build attempt: install.sh calls
+  gtk-update-icon-cache internally, missing BuildRequires. Icon
+  variants themselves installed correctly before this failure.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial package, real upstream source (vinceliuice/MacTahoe-icon-theme,
   GPL-3.0-or-later), pinned to commit 839848b, default color variant.
