@@ -137,6 +137,19 @@ PROFILE_REPO_PACKAGES=(
     # download confirmed, real Qt init reached) per the spec's own
     # changelog.
     parchaos-tmog
+
+    # Pafari (packaging/pafari/) -- pearOS/Pulsar OS's real fork of
+    # GNOME Web (Epiphany), GPL-3.0-or-later. This profile ships no
+    # other web browser at all (confirmed via packages.list), so this
+    # fills a real gap, matching the KDE (pearos) variant's own use of
+    # it as the default browser (profiles/pearos/packages.sh). Genuine
+    # GTK4/libadwaita/WebKitGTK app -- if anything, a more natural fit
+    # for this GNOME profile than it was for KDE. The KDE variant
+    # never set an explicit XDG MIME default for it either (just
+    # installs it and pins it to the panel), so this follows the same
+    # minimal-touch precedent rather than adding new default-browser
+    # plumbing this project hasn't established yet.
+    pafari
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
