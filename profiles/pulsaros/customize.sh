@@ -77,13 +77,15 @@ EOF
 enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com']
 disable-user-extensions=false
 EOF
-    # ParchaOS's Tahoe-styled theme (packaging/parchaos-gtk-theme/),
-    # installed as /usr/share/themes/MacTahoe-Dark -- confirmed via
-    # `rpm -qlp` on the real built RPM, not assumed. Icon theme gets
-    # added here once parchaos-icon-theme's own build succeeds.
+    # ParchaOS's Tahoe-styled GTK/Shell theme and icon theme, both
+    # confirmed via `rpm -qlp` on their real built RPMs (not assumed):
+    # /usr/share/themes/MacTahoe-Dark and
+    # /usr/share/icons/{MacTahoe,MacTahoe-light,MacTahoe-dark} -- the
+    # "-dark" icon variant pairs with the dark GTK theme.
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/01-parchaos-theme" <<EOF
 [org/gnome/desktop/interface]
 gtk-theme='MacTahoe-Dark'
+icon-theme='MacTahoe-dark'
 
 [org/gnome/desktop/wm/preferences]
 theme='MacTahoe-Dark'

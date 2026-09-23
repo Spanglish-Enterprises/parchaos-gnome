@@ -41,6 +41,13 @@ PROFILE_REPO_PACKAGES=(
     # itself needs the user-theme extension (below) to pick up its own
     # gnome-shell/ subdirectory.
     parchaos-gtk-theme
+
+    # ParchaOS's Tahoe-styled icon theme (packaging/parchaos-icon-theme/),
+    # real upstream vinceliuice MacTahoe-icon-theme (GPL-3.0). Installs
+    # three real variants (MacTahoe, MacTahoe-light, MacTahoe-dark --
+    # confirmed via rpm -qlp on the built RPM); MacTahoe-dark is applied
+    # by default via customize.sh to pair with the dark GTK theme.
+    parchaos-icon-theme
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
