@@ -66,10 +66,30 @@ user-db:user
 system-db:local
 EOF
     mkdir -p "$ROOTFS_TARGET/etc/dconf/db/local.d"
+    # user-theme@gnome-shell-extensions.gcampax.github.com is the real,
+    # stock Fedora extension (gnome-shell-extension-user-theme package,
+    # UUID confirmed via its own installed metadata.json on the build VM, not
+    # assumed) -- GNOME Shell itself only reads the Shell theme's own
+    # gnome-shell/ subdirectory through this extension; GTK apps read
+    # gtk-theme directly and don't need it.
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com']
 disable-user-extensions=false
+EOF
+    # ParchaOS's Tahoe-styled theme (packaging/parchaos-gtk-theme/),
+    # installed as /usr/share/themes/MacTahoe-Dark -- confirmed via
+    # `rpm -qlp` on the real built RPM, not assumed. Icon theme gets
+    # added here once parchaos-icon-theme's own build succeeds.
+    cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/01-parchaos-theme" <<EOF
+[org/gnome/desktop/interface]
+gtk-theme='MacTahoe-Dark'
+
+[org/gnome/desktop/wm/preferences]
+theme='MacTahoe-Dark'
+
+[org/gnome/shell/extensions/user-theme]
+name='MacTahoe-Dark'
 EOF
     run_in_target dconf update
 

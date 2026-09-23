@@ -31,6 +31,16 @@ PROFILE_REPO_PACKAGES=(
     # and GRUB/hibernation postinst mutations -- see the spec's own
     # banner comment. Enabled by default via customize.sh.
     parchaos-global-menu
+
+    # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
+    # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
+    # MacTahoe-gtk-theme (MIT), dark variant. Installs as
+    # /usr/share/themes/MacTahoe-Dark. Applied by default via
+    # customize.sh's dconf override -- GTK apps read
+    # org.gnome.desktop.interface gtk-theme directly, but GNOME Shell
+    # itself needs the user-theme extension (below) to pick up its own
+    # gnome-shell/ subdirectory.
+    parchaos-gtk-theme
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
