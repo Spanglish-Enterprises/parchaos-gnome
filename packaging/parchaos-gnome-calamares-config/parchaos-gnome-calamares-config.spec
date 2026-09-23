@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -100,6 +100,7 @@ cp -a usr %{buildroot}/
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-finalize-install
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-fix-biosboot-flag
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
+chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-stage-kernel
 chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 
 %files
@@ -111,6 +112,30 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 /usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-7
+- Found and fixed the REAL root cause of Release 6's kernel-install
+  failure (that release's own fix, based on a "directory vs file"
+  theory, was wrong and has been removed). Reproduced the exact
+  failure in a controlled VM by attaching the ISO as a raw block
+  device instead of a virtual CD-ROM (closer to how a real USB stick
+  presents itself), which reliably triggered the same error a real
+  hardware install hit. Extracted Calamares' own session log
+  (~/.cache/calamares/session.log) and found the real rsync command
+  it ran for unpackfs.conf's second entry: exit code 23, "total size
+  is 0" -- the file was never even queued for transfer. Reproducing
+  that exact rsync invocation by hand confirmed why: Calamares'
+  unpackfs module reuses its generic --exclude /proc/ /sys/ /dev/
+  /run/ /run/udev/ pseudo-filesystem excludes for "file" sourcefs
+  entries too, and the real source path,
+  /run/initramfs/live/boot/vmlinuz, itself lives under /run/ on this
+  dracut-live image -- so the entire file was being silently
+  self-excluded by its own exclude list. Fixed by staging the kernel
+  to /tmp (outside any excluded path) in a new
+  shellprocess@stage-kernel step that runs immediately before
+  unpackfs, and pointing unpackfs.conf's second entry at that staged
+  copy instead. Verified the fix directly: re-running the exact same
+  rsync command against the staged path succeeds (exit 0, full
+  19MB file transferred) where it silently failed before.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-6
 - Real bug found via a real disk-install attempt on actual hardware
   (2026-09-23): install failed partway through with "Command

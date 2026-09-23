@@ -1,0 +1,30 @@
+#!/bin/bash
+# Real bug found via a real disk-install attempt on actual hardware
+# (2026-09-23, see settings.conf's own comment above shellprocess@stage-kernel
+# for the full story): Calamares' unpackfs module runs the SAME rsync
+# invocation (with its generic --exclude /proc/ /sys/ /dev/ /run/
+# /run/udev/ pseudo-filesystem excludes) for "file" sourcefs entries as
+# it does for full directory/squashfs sources. unpackfs.conf's second
+# entry copies the live kernel from its real path,
+# /run/initramfs/live/boot/vmlinuz -- which itself lives under /run/ on
+# this dracut-live image, so `--exclude /run/` silently excludes the
+# entire source file. Confirmed directly: reproducing Calamares' own
+# logged rsync command by hand gives exit 23 ("some files/attrs were
+# not transferred") with "total size is 0" -- not a permissions or
+# xattr/ACL problem, the file was never even queued for transfer.
+#
+# Fix: copy the kernel to /tmp first (not under any of those excluded
+# paths) in this separate, un-chrooted step that runs BEFORE unpackfs,
+# and point unpackfs.conf's second entry at this staged copy instead
+# of the original /run/initramfs/live path.
+set -e
+
+SRC="/run/initramfs/live/boot/vmlinuz"
+DEST="/tmp/parchaos-vmlinuz-staged"
+
+if [ ! -f "$SRC" ]; then
+    echo "parchaos-stage-kernel: $SRC not found, nothing to stage" >&2
+    exit 1
+fi
+
+cp -a "$SRC" "$DEST"
