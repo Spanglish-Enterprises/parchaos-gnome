@@ -16,6 +16,14 @@ PROFILE_REPO_PACKAGES=(
     # packages.list's base set) -- a real drop-in replacement, same as
     # the actual Pulsar OS package itself.
     parchaos-finder
+
+    # Parcha Dock — ParchaOS's rebrand of Pulsar OS's real fork of the
+    # well-known Dash-to-Dock GNOME Shell extension (macOS-style hover
+    # magnification, launch bounce, downloads-folder stack, live
+    # minimized-window previews). Enabled by default via customize.sh's
+    # dconf override (GNOME Shell extensions are inert until listed in
+    # org.gnome.shell's enabled-extensions key).
+    parchaos-dock
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled

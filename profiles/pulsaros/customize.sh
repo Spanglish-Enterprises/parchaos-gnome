@@ -48,6 +48,31 @@ profile_customize() {
     # own established pattern of not assuming a fix works without
     # checking.
 
+    # Enabling ParchaOS's GNOME Shell extensions by default. GNOME Shell
+    # extensions are inert until listed in org.gnome.shell's
+    # "enabled-extensions" gsettings key — real, standard Fedora/GNOME
+    # system-wide-default mechanism (GNOME's own admin documentation,
+    # not guessed): a dconf "system" database compiled from
+    # /etc/dconf/db/local.d/*, layered under the user's own db via
+    # /etc/dconf/profile/user, compiled with `dconf update`. Extensions
+    # list starts with just Parcha Dock (packages.sh) — more UUIDs get
+    # appended here as more GNOME Shell extensions are ported (blur,
+    # global menu, etc.), matching the KDE profile's own pattern of
+    # growing customize.sh alongside packages.sh.
+    echo "--- Enabling ParchaOS's GNOME Shell extensions by default ---"
+    mkdir -p "$ROOTFS_TARGET/etc/dconf/profile"
+    cat > "$ROOTFS_TARGET/etc/dconf/profile/user" <<EOF
+user-db:user
+system-db:local
+EOF
+    mkdir -p "$ROOTFS_TARGET/etc/dconf/db/local.d"
+    cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
+[org/gnome/shell]
+enabled-extensions=['parcha-dock@parchaos.org']
+disable-user-extensions=false
+EOF
+    run_in_target dconf update
+
     # Flathub remote (system-wide), same as the KDE profile — deliberately
     # does NOT pre-install any Flatpak app during the build to keep the
     # build itself fast; GNOME Software (already installed, native
