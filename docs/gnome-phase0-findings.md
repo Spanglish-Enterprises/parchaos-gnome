@@ -66,6 +66,22 @@ now met for this profile too.
   actually creates). Built and COPR-verified 2026-09-23; **not yet
   baked into a rebuilt ISO** (deliberately — see "A note on pacing ISO
   rebuilds" below).
+- **`parchaos-cloud`** — real Pulsar OS original work
+  (`pulsaros-cloud`, GPL-3.0-or-later): rclone-backed cloud drives
+  (Google Drive, OneDrive, iCloud, or any other rclone backend) mounted
+  under `~/Cloud/<name>` via a per-account systemd user template unit,
+  rebranded, plus a real `.desktop` launcher upstream doesn't ship
+  (`Exec=parchaos-cloud choose`, reachable from Activities search).
+  Deliberately dropped the upstream package's `onedrive.svg`/
+  `google-drive.svg` — real, literal Microsoft/Google trademarked
+  logos (confirmed by inspecting the actual SVG paths/gradients, not
+  guessed from the filenames), which the real `pulsar-cloud` script
+  never actually references at all (provider names only ever appear
+  as plain text menu labels in the terminal wizard) — so nothing
+  functional was lost by not shipping them, and it avoids real
+  trademark exposure the same way this project already avoids
+  Apple's. Built and COPR-verified 2026-09-23; also not yet baked into
+  a rebuilt ISO, same reasoning as `parchaos-macos-remap`.
 
 ## The logo-centering bug (real user feedback, fixed at the source)
 
@@ -155,27 +171,41 @@ session chasing the launcher bug (rounds 2 and 3 above), and a real
 same-day install deadline meant the *last* one (Release 5 of
 `parchaos-gnome-calamares-config`, with the `export DISPLAY XAUTHORITY`
 fix) was deliberately treated as the final artifact for that install —
-`parchaos-macos-remap` (built and COPR-verified after that point) was
-**not** folded into another rebuild, to avoid re-touching an ISO that had
-already cleared its verification bar right before someone was about to
-use it on real hardware. Whoever picks this up next should fold
-`parchaos-macos-remap` into the next ISO rebuild along with whatever
-else has accumulated, and re-run a real boot test before calling that
-build done — same "verify, don't assume" rule as everything else in this
-project's history.
+`parchaos-macos-remap` and `parchaos-cloud` (both built and
+COPR-verified after that point) were **not** folded into another
+rebuild, to avoid re-touching an ISO that had already cleared its
+verification bar right before someone was about to use it on real
+hardware. Whoever picks this up next should fold both into the next ISO
+rebuild along with whatever else has accumulated, and re-run a real boot
+test before calling that build done — same "verify, don't assume" rule
+as everything else in this project's history.
 
 ## What's next (see README's own roadmap for full detail)
 
-- Fold `parchaos-macos-remap` into a rebuild; real-boot-test the Cmd<->Ctrl
-  swap and the per-app remaps (Parcher, GNOME Terminal) on an actual
-  keyboard, not just a config-syntax check.
+- Fold `parchaos-macos-remap` and `parchaos-cloud` into a rebuild;
+  real-boot-test the Cmd<->Ctrl swap and the per-app remaps (Parcher,
+  GNOME Terminal) on an actual keyboard, and the cloud-mount flow
+  (`parchaos-cloud choose` → rclone auth → mount appearing under
+  `~/Cloud` in Parcher) end to end — neither has been exercised beyond
+  a build/dependency check yet.
 - Confirm the Calamares launcher fix's last unverified step (real mouse
   click → Authenticate → Calamares window) on whatever hardware actually
   ran tonight's install, and close the loop here if it needs anything
   further.
-- The README's "Real, substantial from-scratch ports" list is unchanged
-  and still accurate: Sayri, `pulsaros-timemachine`, `pulsaros-welcome`,
-  `pulsaros-cloud` remain not started. **Real blocker found scoping
+- The README's "Real, substantial from-scratch ports" list is now
+  partly out of date: **`pulsaros-cloud` is done** (`parchaos-cloud`,
+  above) — it turned out much smaller in practice than the README's
+  "multi-day effort each" framing suggested, since the real upstream
+  source is a single self-contained shell script + systemd template +
+  icon checked directly into the monorepo, not a separate application
+  needing a real build system. `pulsaros-timemachine` (GPL3, but a
+  real GTK4/Libadwaita Python app depending on `btrfs-progs`/`restic`/
+  `udisks2` — genuinely substantial) and `pulsaros-welcome` (license
+  "custom" — needs the same real license check `pulsaros-cloud` and
+  Sayri got before any packaging work starts, plus it's a real Rust
+  (Tauri)/npm build, not a vendor-and-go port) remain not started.
+  **Real blocker found scoping Sayri (2026-09-23), before writing any
+  packaging**: its real source
   Sayri (2026-09-23), before writing any packaging**: its real source
   repo (`Inled-Pulsar-OS/sayri`) has no `LICENSE` file at all, and
   GitHub's own API confirms `license: null` — under default copyright
