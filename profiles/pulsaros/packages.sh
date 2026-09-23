@@ -87,6 +87,17 @@ PROFILE_REPO_PACKAGES=(
     # comment. The xremap@k0kubun.com extension it ships is enabled by
     # default via customize.sh.
     parchaos-macos-remap
+
+    # ParchaOS's cloud drives (packaging/parchaos-cloud/) -- rclone-backed
+    # cloud storage (Google Drive, OneDrive, iCloud, or any other rclone
+    # backend) mounted under ~/Cloud/<name> via a per-account systemd
+    # user unit, plus a real Activities-searchable "Add Cloud Account"
+    # launcher. Real Pulsar OS original work (GPL-3.0-or-later),
+    # rebranded and repackaged -- see the spec's own banner comment for
+    # why the upstream package's OneDrive/Google Drive logo files were
+    # deliberately dropped (real trademarks, never actually used by the
+    # script itself).
+    parchaos-cloud
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled

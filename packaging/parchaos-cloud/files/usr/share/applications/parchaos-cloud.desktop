@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Add Cloud Account
+GenericName=Cloud Storage
+Keywords=cloud;drive;onedrive;dropbox;icloud;storage;
+TryExec=parchaos-cloud
+Exec=parchaos-cloud choose
+Comment=Connect a cloud storage account and mount it under Cloud
+Icon=parchaos-cloud-symbolic
+Terminal=false
+StartupNotify=false
+Categories=System;Utility;
