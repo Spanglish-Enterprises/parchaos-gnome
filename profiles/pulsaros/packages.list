@@ -1,0 +1,115 @@
+# ==============================================================================
+# pulsaros profile — base package list (Phase 2 of engine/build-iso.sh)
+# One package per line, '#' comments ignored. This is what goes into the
+# dnf --installroot base-cache bootstrap: a plain Fedora GNOME system,
+# with no Pulsar OS / ParchaOS branding/apps yet (those come from
+# PROFILE_REPO_PACKAGES in packages.sh, installed against the profile's
+# own COPR in Phase 5). Keeping this list unbranded is what lets Phase
+# 1's "get a plain Fedora GNOME live ISO building before any branding"
+# checkpoint actually mean something — same pattern the KDE (pearos)
+# profile used successfully.
+#
+# Adapted directly from profiles/pearos/packages.list — see that file's
+# own comments for the real bugs already found and fixed in the shared
+# non-DE-specific parts (btrfs-progs/cracklib-dicts/squashfs-tools for
+# Calamares, mesa-vulkan-drivers/microcode_ctl for AMD+Intel GPU/CPU
+# support, grub2/shim for boot). Only the desktop-environment-specific
+# packages below actually changed.
+# ==============================================================================
+
+# --- Core system ---
+fedora-release
+dnf
+systemd
+systemd-udev
+systemd-pam
+NetworkManager
+kernel-core
+kernel-modules
+kernel-modules-extra
+linux-firmware
+dracut
+dracut-live
+
+# --- Hardware support (AMD + Intel, see pearos profile's own comment
+# for the real gaps this was found to close) ---
+mesa-vulkan-drivers
+microcode_ctl
+grub2-pc-modules
+grub2-efi-x64-cdboot
+grub2-efi-x64-modules
+shim-x64
+mokutil
+sudo
+passwd
+util-linux
+procps-ng
+bash-completion
+polkit
+dbus-broker
+
+# --- Live-media specifics ---
+livesys-scripts
+plymouth
+plymouth-theme-spinner
+
+# Installer (Calamares, same as the KDE profile — Fedora ships it
+# directly, no COPR/build needed).
+calamares
+
+# Calamares partition/users/unpackfs module dependencies — same three
+# real bugs already found/fixed once in the KDE profile (see its
+# packages.list comments for the exact failure modes): mkfs.btrfs,
+# password dictionary validation, and unsquashfs all need explicit
+# packages Fedora doesn't pull in by default.
+btrfs-progs
+cracklib-dicts
+squashfs-tools
+
+# --- GNOME desktop ---
+# GNOME Shell is Wayland-native; gnome-session-xsession kept for an
+# Xorg fallback the same way the KDE profile kept kwin-x11 installed
+# without defaulting to it.
+gnome-shell
+gnome-session
+gnome-session-xsession
+gnome-control-center
+gdm
+xdg-desktop-portal-gnome
+xdg-desktop-portal
+gnome-keyring
+gnome-shell-extension-common
+gnome-disk-utility
+gnome-system-monitor
+gnome-firmware
+NetworkManager-adsl
+
+# --- Apps referenced by Pulsar OS's / pearOS's default app set (Fedora
+# equivalents for now — Pulsar OS's own forks like the patched Nautilus
+# and Sayri come from this profile's own COPR once ported, see
+# packages.sh, same pattern as pafari/pearos-dock in the KDE profile) ---
+nautilus
+gnome-terminal
+gnome-text-editor
+loupe
+file-roller
+gnome-screenshot
+gnome-calculator
+gnome-weather
+gnome-calendar
+gnome-contacts
+
+# AirDrop/Handoff equivalent — GSConnect, a real GNOME Shell extension
+# (confirmed listed in Pulsar OS's own bundled-extensions table,
+# andyholmes/gnome-shell-extension-gsconnect upstream). Fedora ships it
+# directly.
+gnome-shell-extension-gsconnect
+
+# macOS-style trackpad gestures — same real Fedora package the KDE
+# profile uses (touchegg, DE-agnostic system-level daemon); config
+# still needs porting/verifying for GNOME's own gesture conventions.
+touchegg
+
+# --- Fonts / basics needed for the branding layer to render correctly ---
+google-noto-sans-fonts
+google-noto-emoji-fonts
