@@ -180,8 +180,19 @@ project's history.
   original `git push --mirror`-style fork (`pearos-dock`,
   `pearos-liquidgel`, `pearos-launchpad`, `pearos-settings`,
   `parchaos-whitesur-lookandfeel`, `parchaos-appmenu-gtk-module`,
-  `pearos-branding`, `pearos-calamares-config` under `packaging/`) that
-  the README's own "needs full replacement"/"not applicable" table
-  already calls out — none of it is wired into `packages.sh` for this
-  profile, so it's inert, but it's still confusing dead weight for
-  whoever reads `packaging/` next. Low-risk cleanup, not yet done.
+  `pearos-branding`, `pearos-calamares-config` under `packaging/`, plus
+  `profiles/pearos/` itself) that the README's own "needs full
+  replacement"/"not applicable" table already calls out. **Checked
+  2026-09-23 whether this is safe to just delete — it is not, yet**:
+  `profiles/pearos/` is the only thing referencing those `packaging/`
+  subdirs, but `engine/build-iso.sh` line 34 hardcodes
+  `PROFILE="pearos"` as its default when `--profile` isn't passed on
+  the command line — deleting `profiles/pearos/` outright would
+  silently break any future build invocation that omits `--profile
+  pulsaros`. Real cleanup here means changing that default (and
+  probably auditing every place that still assumes it) *before*
+  deleting anything, not deleting first. Deliberately not done as part
+  of this pass — `engine/build-iso.sh` is the same script that built
+  the ISO used for tonight's real install, and this is exactly the
+  kind of low-payoff, non-zero-risk change not worth touching on that
+  timeline. Real cleanup, still not yet done.
