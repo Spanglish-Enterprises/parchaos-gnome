@@ -74,7 +74,7 @@ EOF
     # gtk-theme directly and don't need it.
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com']
 disable-user-extensions=false
 EOF
     # ParchaOS's Tahoe-styled GTK/Shell theme and icon theme, both

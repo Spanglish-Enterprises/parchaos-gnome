@@ -75,6 +75,18 @@ PROFILE_REPO_PACKAGES=(
     # /usr/share/backgrounds/parchaos/ and applied by default via
     # customize.sh's dconf override.
     parchaos-gnome-wallpaper
+
+    # ParchaOS's macOS-style keyboard remap (packaging/parchaos-macos-remap/)
+    # -- swaps Cmd<->Ctrl and layers on macOS keyboard conventions
+    # (Cmd-Left/Right as Home/End, Cmd-C/V/T/N/W/Q/F in the terminal,
+    # Parcher's Cmd-based file shortcuts, Cmd-Tab app switching) via
+    # xremap + its companion GNOME Shell extension, repackaged from
+    # Pulsar OS's gnome-macos-remap-wayland as a real declarative RPM
+    # (systemd user-preset, udev uaccess, dconf db) instead of an
+    # interactive per-user install script -- see the spec's own banner
+    # comment. The xremap@k0kubun.com extension it ships is enabled by
+    # default via customize.sh.
+    parchaos-macos-remap
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
