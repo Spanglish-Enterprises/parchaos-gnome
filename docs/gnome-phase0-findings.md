@@ -82,6 +82,25 @@ now met for this profile too.
   trademark exposure the same way this project already avoids
   Apple's. Built and COPR-verified 2026-09-23; also not yet baked into
   a rebuilt ISO, same reasoning as `parchaos-macos-remap`.
+- **`parchaos-focus-schedule`** / **`parchaos-yin-yang`** (+ its
+  `python-suntime` dependency) — both already existed in `packaging/`
+  (inherited from the KDE repo fork, built and working there) but were
+  never added to `profiles/pulsaros/packages.sh`. Checked both for
+  real GNOME-specific blockers before wiring them in rather than
+  assuming "carries over unchanged" from the README was still
+  accurate: `parchaos-focus-schedule` is genuinely 100% DE-agnostic
+  (plain `org.freedesktop.Notifications` Inhibit/UnInhibit D-Bus calls
+  via `gdbus`, no toolkit dependency at all); `parchaos-yin-yang` is a
+  cross-desktop PySide6/Qt app whose GTK/icon-theme/wallpaper plugins
+  are directly relevant to this profile (its Kvantum/Plasma-color-
+  scheme/Konsole plugins just become inert no-ops under GNOME, not
+  broken). Neither needed any code changes — only rebuilding fresh
+  against this project's own COPR (`alexgalicea/parchaos-gnome`),
+  since both had only ever been built against the KDE repo's separate
+  COPR project before. Verified via a real local `rpmbuild --rebuild`
+  test for each plus the real COPR mock build, all three (focus-
+  schedule, suntime, yin-yang) succeeded. Also not yet baked into a
+  rebuilt ISO.
 
 ## The logo-centering bug (real user feedback, fixed at the source)
 
@@ -171,23 +190,26 @@ session chasing the launcher bug (rounds 2 and 3 above), and a real
 same-day install deadline meant the *last* one (Release 5 of
 `parchaos-gnome-calamares-config`, with the `export DISPLAY XAUTHORITY`
 fix) was deliberately treated as the final artifact for that install —
-`parchaos-macos-remap` and `parchaos-cloud` (both built and
-COPR-verified after that point) were **not** folded into another
-rebuild, to avoid re-touching an ISO that had already cleared its
-verification bar right before someone was about to use it on real
-hardware. Whoever picks this up next should fold both into the next ISO
-rebuild along with whatever else has accumulated, and re-run a real boot
-test before calling that build done — same "verify, don't assume" rule
-as everything else in this project's history.
+`parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`, and
+`parchaos-yin-yang` (all built and COPR-verified after that point) were
+**not** folded into another rebuild, to avoid re-touching an ISO that had
+already cleared its verification bar right before someone was about to
+use it on real hardware. Whoever picks this up next should fold all four
+into the next ISO rebuild along with whatever else has accumulated, and
+re-run a real boot test before calling that build done — same "verify,
+don't assume" rule as everything else in this project's history.
 
 ## What's next (see README's own roadmap for full detail)
 
-- Fold `parchaos-macos-remap` and `parchaos-cloud` into a rebuild;
-  real-boot-test the Cmd<->Ctrl swap and the per-app remaps (Parcher,
-  GNOME Terminal) on an actual keyboard, and the cloud-mount flow
-  (`parchaos-cloud choose` → rclone auth → mount appearing under
-  `~/Cloud` in Parcher) end to end — neither has been exercised beyond
-  a build/dependency check yet.
+- Fold `parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`,
+  and `parchaos-yin-yang` into a rebuild; real-boot-test the Cmd<->Ctrl
+  swap and the per-app remaps (Parcher, GNOME Terminal) on an actual
+  keyboard, the cloud-mount flow (`parchaos-cloud choose` → rclone auth
+  → mount appearing under `~/Cloud` in Parcher), the notification
+  inhibit actually suppressing a real popup during the scheduled
+  window, and Yin-Yang's GTK/icon/wallpaper plugins actually switching
+  ParchaOS's own MacTahoe theme variants — none of these four have
+  been exercised beyond a build/dependency check yet.
 - Confirm the Calamares launcher fix's last unverified step (real mouse
   click → Authenticate → Calamares window) on whatever hardware actually
   ran tonight's install, and close the loop here if it needs anything
