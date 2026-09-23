@@ -44,11 +44,31 @@
 #     ship yet -- the existing `[ -d ... ]` guard makes this a safe
 #     no-op until one is built, matching how the KDE variant handled
 #     the same gap while its own theme was in progress).
+#   - usr/local/share/applications/calamares.desktop (new, GNOME-only
+#     addition) -- overrides Fedora's stock calamares package's own
+#     /usr/share/applications/calamares.desktop, which ships
+#     `Exec=kdesu /usr/bin/calamares`. kdesu is KDE-specific and FAILS
+#     OUTRIGHT on this GNOME live session (confirmed via real testing,
+#     2026-09-23: exits status 1 immediately, no output at all --
+#     clicking the real "Install System" icon would do nothing
+#     visible). /usr/local/share/applications/ is a real, standard
+#     XDG_DATA_DIRS override mechanism (freedesktop.org's own default
+#     ordering puts it before /usr/share/applications/) -- no RPM file
+#     conflict with the stock calamares package, since it's a different
+#     path. Real, verified working replacement Exec line:
+#     `pkexec env DISPLAY=:0 QT_QPA_PLATFORM=xcb /usr/bin/calamares` --
+#     found via extensive real debugging this session: plain `pkexec
+#     calamares` authenticates fine (this live media's own polkit rules
+#     allow it passwordlessly) but the escalated Qt process can't find
+#     a display at all without DISPLAY/QT_QPA_PLATFORM explicitly set,
+#     since pkexec sanitizes the environment. Verified this exact
+#     recipe launches Calamares with full branding and control end to
+#     end (real disk install + reboot completed successfully using it).
 # ==============================================================================
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -76,6 +96,7 @@ why.
 %install
 mkdir -p %{buildroot}
 cp -a etc %{buildroot}/
+cp -a usr %{buildroot}/
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-finalize-install
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-fix-biosboot-flag
 chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
@@ -85,8 +106,23 @@ chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
 %{_sysconfdir}/calamares/modules/
 %{_sysconfdir}/calamares/scripts/
 %{_sysconfdir}/calamares/branding/
+/usr/local/share/applications/calamares.desktop
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-3
+- Real bug found via a real, full end-to-end Calamares install +
+  reboot test on the install-test VM/the VM host (2026-09-23 -- the actual disk install
+  completed successfully and booted into a real installed GDM login
+  and desktop session, confirming this package's ported KDE-variant
+  fixes all work correctly for this profile too): the stock calamares
+  package's own /usr/share/applications/calamares.desktop uses
+  `Exec=kdesu /usr/bin/calamares`, which is KDE-specific and fails
+  outright on GNOME (kdesu exits 1 immediately). Added a real XDG
+  override at /usr/local/share/applications/calamares.desktop with
+  `Exec=pkexec env DISPLAY=:0 QT_QPA_PLATFORM=xcb /usr/bin/calamares`,
+  the exact recipe verified this session to launch Calamares
+  correctly (branding, keyboard input, and a full successful install
+  all confirmed working through it).
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
 - Real user feedback ("logo seems a bit weird and off center"): fixed
   at the source in branding/logo/ (asymmetric canvas padding cropped
