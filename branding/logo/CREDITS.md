@@ -22,6 +22,17 @@ credit *outside* the image rather than baked into it.
 - `parcha-logo-black.png` — black on transparent, for light backgrounds.
 - `parcha-logo-white.png` — white on transparent, for dark backgrounds
   (boot splash, dark wallpaper, SDDM/lock-screen contexts).
+- `parcha-silhouette-black.png` / `parcha-silhouette-white.png` — a real
+  derivative of the same logo (2026-09-23): the exact outer contour
+  (fruit body + leaf/stem, same proportions and curves as the original)
+  with the internal ring/seed-dot detail filled in solid, produced by
+  flood-filling the original's own enclosed holes — not a redrawn
+  approximation. Needed because the detailed version's fine internal
+  linework visually collapses into noise at true menu-bar icon size
+  (~16-20px); the silhouette stays crisp and recognizable at that size.
+  Used for `packaging/parchaos-global-menu`'s panel icon; the detailed
+  versions remain the default for every larger context (app icons,
+  splash screens, etc.). Same CC BY 3.0 attribution applies to both.
 
 Chosen 2026-09-22 to replace pearOS's own pear-shaped logo, matching
 ParchaOS's actual name etymology ("Parcha" = passion fruit in Puerto
