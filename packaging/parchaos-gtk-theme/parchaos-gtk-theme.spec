@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -49,6 +49,18 @@ BuildArch:      noarch
 
 BuildRequires:  sassc
 BuildRequires:  git
+# Real bug found via a real COPR build attempt (2026-09-23, build
+# 11024653): lib-core.sh runs `set -Eeo pipefail` then, near its very
+# top (before any output is printed), does
+# `SUDO_BIN="$(command -v sudo)"` as a plain assignment -- if `sudo`
+# isn't present, that command substitution's nonzero exit kills the
+# whole script instantly and silently under errexit. Minimal COPR mock
+# chroots don't guarantee `sudo` is present (unlike our own build VM test
+# shell, which has it for its own SSH workflow -- that's why local
+# testing never reproduced this). `sudo` itself is never actually
+# invoked in our root-less RPM build path; it just needs to resolve so
+# the assignment succeeds.
+BuildRequires:  sudo
 Requires:       gnome-themes-extra
 Requires:       gtk-murrine-engine
 
@@ -104,6 +116,19 @@ fi
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-4
+- Real second root cause found via the actual COPR build log (11024653
+  failed with zero install.sh output before "Bad exit status"):
+  lib-core.sh's `SUDO_BIN="$(command -v sudo)"` runs under
+  `set -Eeo pipefail` near the very top of the script, before any
+  output is printed -- if `sudo` isn't present, that assignment's
+  nonzero exit kills the whole script instantly and silently. Minimal
+  COPR mock chroots don't guarantee `sudo`, unlike our own build VM test
+  shell (which has it for SSH workflow use, hiding this locally).
+  Reproduced exactly (zero output, exit 1) by stripping sudo from
+  PATH; fixed by adding `BuildRequires: sudo` so the assignment
+  resolves. sudo itself is never actually invoked in this root-less
+  RPM build path.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-3
 - REAL ROOT CAUSE FOUND (via BASH_XTRACEFD tracing that survives
   install.sh's own internal `exec 2> error_log.txt` fd reassignment,
