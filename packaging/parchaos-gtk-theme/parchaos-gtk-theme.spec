@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -75,7 +75,17 @@ Dark variant only for this initial release.
 # re-reading their script), which this spec's first draft missed.
 sed -i 's/UID -ne 0/false/g; s/EUID -ne 0/false/g' install.sh tweaks.sh 2>/dev/null || true
 if [ -f libs/lib-core.sh ]; then
-    sed -i 's/! -w "\/root"/false/g' libs/lib-core.sh
+    # NOTE (real bug found 2026-09-23, root-caused via BASH_XTRACEFD
+    # tracing that survives install.sh's own internal `exec 2>` fd
+    # reassignment): a naive `s/! -w "\/root"/false/` here produces
+    # `if [[ false ]]; then`, but bash has no boolean literals --
+    # `[[ false ]]` is a single-word test, i.e. an implicit `-n false`
+    # (is the STRING "false" non-empty?), which is always TRUE. That
+    # patch was silently making full_sudo()'s root-check fire
+    # unconditionally regardless of actual root status -- the real
+    # explanation for why testing as genuine root never helped. Using
+    # a real always-false relational test instead.
+    sed -i 's/! -w "\/root"/1 -eq 2/g' libs/lib-core.sh
 fi
 if [ -f libs/lib-install.sh ]; then
     sed -i 's/UID -ne 0/false/g; s/EUID -ne 0/false/g' libs/lib-install.sh
@@ -94,6 +104,19 @@ fi
 %{_datadir}/themes/*
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-3
+- REAL ROOT CAUSE FOUND (via BASH_XTRACEFD tracing that survives
+  install.sh's own internal `exec 2> error_log.txt` fd reassignment,
+  which was hiding the real trace from earlier bash -x attempts): the
+  -2 patch's `s/! -w "\/root"/false/` produced `if [[ false ]]; then`,
+  but bash has no boolean literals -- `[[ false ]]` is a single-word
+  test (implicit `-n false`, is the STRING "false" non-empty?), which
+  is always TRUE. That patch made full_sudo()'s check fire
+  unconditionally, explaining why testing as genuine verified root
+  never helped. Fixed with a real always-false relational test
+  (`1 -eq 2`). Verified clean (exit 0) locally as a normal non-root
+  user: produces real MacTahoe-Dark / MacTahoe-Dark-solid (+ hdpi/xhdpi
+  density variants) directories.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
 - Real bug found via a real COPR build attempt: --silent-mode's actual
   root check lives in libs/lib-core.sh's full_sudo() (`[[ ! -w "/root"
