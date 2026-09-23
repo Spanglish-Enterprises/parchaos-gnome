@@ -1,6 +1,6 @@
 # ParchaOS (GNOME variant) — pearOS/Pulsar OS on Fedora
 
-**Status as of 2026-09-22: just forked from the KDE variant, desktop-layer work not yet started. If you are an agent picking this up, read this whole file before touching code.**
+**Status as of 2026-09-23: no longer "just forked" — a real, installable, end-to-end verified GNOME live ISO exists (theme, icons, dock, Parcher/Nautilus, global menu, Calamares branding + install, Plymouth, wallpaper, macOS-style keyboard remap), and a real disk install + reboot + login has been confirmed working. See `docs/gnome-phase0-findings.md` for the full story — this file's roadmap sections below are the ORIGINAL plan from the fork and are now partly stale; the phase doc has the current, accurate picture. If you are an agent picking this up, read both before touching code.**
 
 ## What this repo is
 
