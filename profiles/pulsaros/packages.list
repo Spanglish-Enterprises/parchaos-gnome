@@ -33,8 +33,30 @@ dracut-live
 
 # --- Hardware support (AMD + Intel, see pearos profile's own comment
 # for the real gaps this was found to close) ---
+# Real bug found on real AMD hardware (2026-09-23, RX 6750): the live
+# session rendered at a horribly low resolution on a real 1080p
+# monitor. mesa-vulkan-drivers alone is Vulkan-only -- mesa-dri-drivers
+# (radeonsi/iris, the actual OpenGL/GLX driver Mutter needs for
+# hardware-accelerated rendering and correct native-EDID resolution
+# under both X11 and Wayland) was never listed at all, so Mutter almost
+# certainly fell back to software rendering (llvmpipe) or a degraded
+# mode instead of the real amdgpu/radeonsi path.
+mesa-dri-drivers
 mesa-vulkan-drivers
 microcode_ctl
+# Real bug found via a real disk-install test on actual hardware
+# (2026-09-23): parchaos-gnome-calamares-config's parchaos-install-kernel
+# script populates the installed system's ESP from grub2-efi-x64's own
+# "master" files under /usr/lib/efi/grub2/*/EFI/fedora/ (grubx64.efi,
+# grub.cfg) -- grub2-efi-x64-cdboot (below) only provides gcdx64.efi and
+# depends on grub2-common, NOT grub2-efi-x64 itself (confirmed via `dnf
+# repoquery --requires grub2-efi-x64-cdboot`), so those master files were
+# never actually present. Non-fatal on its own (the script only warns:
+# "ESP not populated, UEFI boot will not work") but a real gap toward a
+# working installed system. Also present, latent, in the KDE (pearos)
+# profile's own packages.list -- not yet confirmed whether it's been hit
+# there too.
+grub2-efi-x64
 grub2-pc-modules
 grub2-efi-x64-cdboot
 grub2-efi-x64-modules

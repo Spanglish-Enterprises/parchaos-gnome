@@ -69,6 +69,28 @@ fi
 
 KVER=$(rpm -q --qf '%{version}-%{release}.%{arch}\n' kernel-core | tail -1)
 
+# Real bug found via a real disk-install failure on actual hardware
+# (2026-09-23): unpackfs.conf's second (`sourcefs: "file"`) entry
+# reported success (Calamares' own progress UI showed "Unpacking image
+# 2/2" with no error) but /boot/vmlinuz.livecopy still didn't exist as
+# a plain file afterwards -- this exact install worked in every VM
+# test this project ran before, the one real difference being a real
+# USB boot instead of a virtual CD-ROM. Most likely explanation:
+# Calamares' unpackfs module copies a "file" source INTO a same-named
+# destination directory (producing /boot/vmlinuz.livecopy/vmlinuz)
+# rather than renaming it to the destination path directly, and this
+# behavior depends on some real-hardware-specific detail (mount flags,
+# timing) this project hasn't fully pinned down yet -- handle both
+# shapes defensively rather than assuming the simpler one always holds.
+if [ -d /boot/vmlinuz.livecopy ]; then
+    INNER="$(find /boot/vmlinuz.livecopy -maxdepth 1 -type f | head -1)"
+    if [ -n "$INNER" ]; then
+        mv "$INNER" /boot/vmlinuz.livecopy.real
+        rmdir /boot/vmlinuz.livecopy 2>/dev/null || true
+        mv /boot/vmlinuz.livecopy.real /boot/vmlinuz.livecopy
+    fi
+fi
+
 if [ -f /boot/vmlinuz.livecopy ]; then
     mv /boot/vmlinuz.livecopy "/boot/vmlinuz-$KVER"
 fi

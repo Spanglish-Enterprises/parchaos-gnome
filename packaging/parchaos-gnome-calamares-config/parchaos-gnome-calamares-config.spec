@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -111,6 +111,24 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 /usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-6
+- Real bug found via a real disk-install attempt on actual hardware
+  (2026-09-23): install failed partway through with "Command
+  /etc/calamares/scripts/parchaos-install-kernel finished with exit
+  code 1" -- /boot/vmlinuz-<kver> missing, nothing to install. Every
+  VM test this project ran before this succeeded end to end; the real
+  difference was booting from an actual USB stick rather than a
+  virtual CD-ROM. Most likely explanation: Calamares' unpackfs module
+  copied the live kernel INTO a same-named destination directory
+  (/boot/vmlinuz.livecopy/vmlinuz) instead of renaming it to the
+  destination path directly, so the plain `[ -f ... ]` check on
+  /boot/vmlinuz.livecopy silently found nothing. parchaos-install-kernel
+  now handles both shapes defensively. Same real hardware test also
+  surfaced parchaos-install-kernel's own "ESP not populated" warning
+  for real (grub2-efi-x64's own master EFI files weren't present) --
+  fixed separately by adding grub2-efi-x64 to packages.list (it was
+  never actually pulled in by grub2-efi-x64-cdboot, confirmed via `dnf
+  repoquery --requires`).
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-5
 - Real bug found via a real root-shell test on the install-test VM (2026-09-23):
   Release 4's wrapper resolved DISPLAY/XAUTHORITY into plain shell
