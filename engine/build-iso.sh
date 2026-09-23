@@ -274,7 +274,8 @@ run_in_target systemctl set-default graphical.target
 # ISO would hit a login prompt with no way in. Fixed by setting the
 # session type explicitly so livesys's own (already correct, already
 # tested) KDE-specific hook actually runs.
-sed -i 's/^livesys_session=.*/livesys_session="kde"/' "$ROOTFS_TARGET/etc/sysconfig/livesys"
+: "${PROFILE_LIVESYS_SESSION:=kde}"
+sed -i "s/^livesys_session=.*/livesys_session=\"$PROFILE_LIVESYS_SESSION\"/" "$ROOTFS_TARGET/etc/sysconfig/livesys"
 
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
