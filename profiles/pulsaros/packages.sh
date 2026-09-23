@@ -48,6 +48,17 @@ PROFILE_REPO_PACKAGES=(
     # confirmed via rpm -qlp on the built RPM); MacTahoe-dark is applied
     # by default via customize.sh to pair with the dark GTK theme.
     parchaos-icon-theme
+
+    # ParchaOS's own real branding for the Calamares installer --
+    # passion-fruit logo/icon/welcome/slideshow images (derived from
+    # branding/logo/), install-sequence module config, and the three
+    # real BIOS-boot/kernel/EFI install-time fixes ported wholesale
+    # from the KDE (pearos) variant's own pearos-calamares-config
+    # (100% DE-agnostic content, found via that variant's own real
+    # end-to-end install+reboot tests -- see the spec's own banner
+    # comment). Without this, Calamares would install and boot fine
+    # but show generic/no branding and lack those fixes.
+    parchaos-gnome-calamares-config
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled

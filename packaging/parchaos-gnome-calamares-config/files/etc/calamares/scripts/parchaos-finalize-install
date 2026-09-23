@@ -1,0 +1,30 @@
+#!/usr/bin/bash
+# ParchaOS (GNOME) post-install finalization, run inside the target
+# chroot by Calamares' shellprocess module (shellprocess-remove-livecd.
+# conf) right before the dracut module regenerates the initramfs.
+#
+# Ported from the KDE (pearos) variant's own pearos-finalize-install,
+# which itself was written from scratch for Fedora since upstream
+# pear-calamares-config's finalization script isn't part of that repo.
+# Scope kept intentionally small: systemd's own
+# ConditionKernelCommandLine=rd.live.image guard already makes
+# livesys-scripts' own units inert on a real (non-live) boot, so most
+# of the "clean up live-only stuff" work upstream needs doesn't apply
+# to this engine at all.
+set -e
+
+# Make ParchaOS's own Plymouth theme the installed system's default
+# boot splash instead of the live image's plymouth-theme-spinner, once
+# one exists (parcha-plymouth not yet built -- see the GNOME variant's
+# own README/memory notes; this guard is a safe no-op until then, same
+# pattern as the KDE variant used while its own theme was in progress).
+# Must run before dracut regenerates the initramfs (see settings.conf)
+# or the old theme stays baked in.
+if [ -d /usr/share/plymouth/themes/parcha-plymouth ]; then
+    plymouth-set-default-theme parcha-plymouth || true
+fi
+
+# livesys-scripts is harmless to leave installed (its own units no-op
+# via ConditionKernelCommandLine=rd.live.image on a real boot), but
+# there's no reason to ship it either.
+dnf -y remove livesys-scripts --noautoremove 2>/dev/null || true

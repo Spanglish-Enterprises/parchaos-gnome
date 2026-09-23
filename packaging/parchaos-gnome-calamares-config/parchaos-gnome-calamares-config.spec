@@ -1,0 +1,98 @@
+# ==============================================================================
+# ParchaOS (GNOME) Calamares installer branding and module configuration.
+# Ported directly from the KDE (pearos) variant's own
+# pearos-calamares-config -- everything here (partition layout, kernel
+# install, EFI population, bootloader branding, install sequence) is
+# 100% DE-agnostic (nothing SDDM/KDE-specific), and the KDE variant's
+# own package already carries three real, hard-won fixes found via
+# genuine end-to-end install+reboot tests on real/virtual hardware (see
+# that package's own spec banner and changelog for the full story):
+#   1. BIOS+GPT+btrfs needs an explicit BIOS Boot Partition that
+#      Fedora's stock partition.conf doesn't add automatically.
+#   2. KPMCore accepts the BIOS Boot Partition's `type:` GUID without
+#      error but doesn't actually apply it to the GPT partition entry
+#      -- grub2-install still fails without a follow-up `parted ...
+#      set N bios_grub on`.
+#   3. This engine's unpackfs-based install (copying a pre-built
+#      squashfs rather than running real `dnf install` transactions)
+#      means kernel-core's, grub2-efi-x64's, and shim-x64's own
+#      %posttrans scriptlets never fire -- no kernel/initramfs/BLS
+#      entry, and no populated EFI System Partition, without step 3's
+#      manual work.
+#
+# What changed from the KDE (pearos) package, and why:
+#   - branding/ParchaOS/ (was branding/pearOS/) -- logo.png, icon.png,
+#     welcome.png, slide1.png replaced with ParchaOS's own real
+#     passion-fruit branding (derived from branding/logo/ in this
+#     repo), not pearOS's pear. componentName/branding: key updated to
+#     match. Unused leftover assets/ (installer_frame.png,
+#     pearos_installer.png -- confirmed unreferenced by any .qml/.qss/
+#     .desc file) dropped rather than carried over uncritically.
+#   - branding.desc's productName/versionedName simplified to
+#     "ParchaOS" (dropped the KDE variant's own "NiceC0re" codename,
+#     which is specific to that product); bootloaderEntryName set to
+#     "ParchaOS (GNOME)" and bootloader.conf's efiBootloaderId to
+#     "parchaos-gnome", both distinct from the KDE variant's own
+#     "ParchaOS"/"parchaos" so the two products' EFI boot menu entries
+#     don't collide if both are ever tested on the same physical
+#     machine.
+#   - scripts/pearos-* renamed to scripts/parchaos-* (and the
+#     shellprocess-*.conf files that reference them updated to match)
+#     for naming consistency with this product; script *logic* is
+#     unchanged except parchaos-finalize-install's Plymouth theme name
+#     (pear-plymouth -> parcha-plymouth, a theme this profile doesn't
+#     ship yet -- the existing `[ -d ... ]` guard makes this a safe
+#     no-op until one is built, matching how the KDE variant handled
+#     the same gap while its own theme was in progress).
+# ==============================================================================
+
+Name:           parchaos-gnome-calamares-config
+Version:        2026.09.23
+Release:        1%{?dist}
+Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
+
+License:        NOASSERTION
+URL:            https://github.com/alexgalicea/parchaos-gnome
+Source0:        parchaos-gnome-calamares-config-files.tar.gz
+BuildArch:      noarch
+
+Requires:       calamares
+
+%description
+Calamares installer configuration for ParchaOS's GNOME variant: real
+ParchaOS passion-fruit branding (logo, icon, welcome image, slideshow,
+stylesheet, sidebar) and module configuration (install sequence, live
+squashfs unpack source, BIOS Boot Partition + KPMCore workaround,
+kernel/EFI installation, bootloader branding, post-install
+finalization) ported from the KDE (pearos) variant's own
+pearos-calamares-config, which carries three real fixes found via that
+variant's own end-to-end install+reboot tests. See this spec's banner
+comment for the full list of what changed for this GNOME product and
+why.
+
+%prep
+%setup -q -c -n %{name}-%{version}
+
+%install
+mkdir -p %{buildroot}
+cp -a etc %{buildroot}/
+chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-finalize-install
+chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-fix-biosboot-flag
+chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-install-kernel
+
+%files
+%{_sysconfdir}/calamares/settings.conf
+%{_sysconfdir}/calamares/modules/
+%{_sysconfdir}/calamares/scripts/
+%{_sysconfdir}/calamares/branding/
+
+%changelog
+* Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
+- Initial port from the KDE (pearos) variant's own
+  pearos-calamares-config for the GNOME profile: real ParchaOS
+  passion-fruit branding images generated from branding/logo/, script/
+  branding directory names and EFI bootloader ID distinguished from
+  the KDE variant, otherwise carrying over that package's own
+  real, tested install-sequence fixes unchanged (BIOS Boot Partition,
+  KPMCore bios_grub workaround, kernel/EFI installation). Not yet
+  build-tested or install-tested for this profile.

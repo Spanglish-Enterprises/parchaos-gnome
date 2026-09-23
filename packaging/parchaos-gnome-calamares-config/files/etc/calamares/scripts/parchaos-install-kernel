@@ -1,0 +1,81 @@
+#!/bin/bash
+# Real bug found via a full end-to-end install+reboot test (2026-09-20,
+# see docs/phase4-findings.md): the installed system's disk never
+# contained a bootable kernel at all. Root cause: unpackfs.conf's single
+# unpack entry (the squashfs) unpacks the target's rootfs including the
+# kernel-core RPM's own files (modules, etc.), but engine/build-iso.sh
+# does NOT bake vmlinuz/initramfs into that squashfs's own /boot -- this
+# project's live ISO is a standard dracut-live image, where the kernel
+# and initramfs live at the ISO's own top level (/boot/vmlinuz,
+# /boot/initramfs.img), outside the squashfs entirely, confirmed by
+# mounting a real built ISO directly and listing it. Since kernel-core
+# was unpacked via a raw file copy rather than a real `dnf install`
+# transaction on the target, its %posttrans kernel-install scriptlet
+# never ran either -- so the target ends up with kernel modules and an
+# RPM database entry for kernel-core, but no vmlinuz, no initramfs, and
+# no /boot/loader/entries/*.conf (BLS) entry for grub2-mkconfig to turn
+# into a real boot menu item. GRUB itself installs and loads fine (once
+# /boot is correctly mounted from its own btrfs subvolume at
+# grub2-install time -- see partition.conf/mount.conf), but drops to a
+# rescue shell at boot because grub.cfg has no OS menuentry at all.
+#
+# Fix: unpackfs.conf gained a second `file`-type unpack entry that
+# copies the live ISO's own vmlinuz to a neutral staging path
+# (/boot/vmlinuz.livecopy, since its unversioned filename can't be
+# known until we're in the chroot and can query the actually-installed
+# kernel-core version). This script, run chrooted right after unpackfs,
+# renames that staged file to the correct vmlinuz-<kver> name and calls
+# `kernel-install add`, the same tool a real `dnf install kernel-core`
+# transaction uses -- it regenerates the initramfs (via its dracut
+# installkernel plugin) AND writes the BLS entry, so the later `dracut`
+# module (which only needs an existing kernel to regenerate the
+# initramfs for, e.g. after Plymouth theme changes) and `grubcfg` module
+# both have real content to work with.
+set -e
+
+# Real end-to-end UEFI install test (2026-09-21, see docs/phase4-findings.md):
+# `kernel-install add` (below) internally calls `grub2-editenv`, which fails
+# with "failed to get canonical path of /boot/grub2" on a fresh install --
+# grub2-common's own package would normally create that directory via its
+# own scriptlet on a real `dnf install`, but this project's target rootfs
+# is written by unpackfs copying a pre-built squashfs, not a real dnf
+# transaction, so that scriptlet never ran. Same root cause class as the
+# kernel-not-installed bug this whole script already exists to fix.
+mkdir -p /boot/grub2
+
+# Same real test found a second gap: shim-x64/grub2-efi-x64's own
+# %posttrans scriptlets (which populate the EFI System Partition with
+# shimx64.efi/grubx64.efi/mmx64.efi/grub.cfg) also never ran for the same
+# reason, and even when manually re-triggered they failed outright because
+# /boot/efi/EFI/fedora and /boot/efi/EFI/BOOT didn't exist yet on a freshly
+# formatted ESP. Populate the ESP explicitly and deterministically here,
+# copying from each package's own "master" copy under /usr/lib/efi/ (the
+# same source those scriptlets themselves copy from) rather than depending
+# on scriptlets firing -- this also means calamares' own `bootloader`
+# module (efiBootLoader: "sb-shim") has real files to point shim/efibootmgr
+# at when it runs later in the sequence.
+GRUB_EFI_SRC="$(find /usr/lib/efi/grub2 -maxdepth 2 -name fedora -type d 2>/dev/null | head -1)"
+SHIM_EFI_SRC="$(find /usr/lib/efi/shim -maxdepth 2 -name fedora -type d 2>/dev/null | head -1)"
+if [ -n "$GRUB_EFI_SRC" ] && [ -n "$SHIM_EFI_SRC" ]; then
+    mkdir -p /boot/efi/EFI/fedora /boot/efi/EFI/BOOT
+    cp -a "$GRUB_EFI_SRC/." /boot/efi/EFI/fedora/
+    cp -a "$SHIM_EFI_SRC/." /boot/efi/EFI/fedora/
+    cp -a /boot/efi/EFI/fedora/shimx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
+    [ -f /boot/efi/EFI/fedora/mmx64.efi ] && cp -a /boot/efi/EFI/fedora/mmx64.efi /boot/efi/EFI/BOOT/mmx64.efi
+    [ -f /boot/efi/EFI/fedora/fbx64.efi ] && cp -a /boot/efi/EFI/fedora/fbx64.efi /boot/efi/EFI/BOOT/fbx64.efi
+else
+    echo "parchaos-install-kernel: grub2-efi-x64/shim-x64 master EFI files not found under /usr/lib/efi -- ESP not populated, UEFI boot will not work" >&2
+fi
+
+KVER=$(rpm -q --qf '%{version}-%{release}.%{arch}\n' kernel-core | tail -1)
+
+if [ -f /boot/vmlinuz.livecopy ]; then
+    mv /boot/vmlinuz.livecopy "/boot/vmlinuz-$KVER"
+fi
+
+if [ ! -f "/boot/vmlinuz-$KVER" ]; then
+    echo "parchaos-install-kernel: /boot/vmlinuz-$KVER missing, nothing to install" >&2
+    exit 1
+fi
+
+kernel-install add "$KVER" "/boot/vmlinuz-$KVER"

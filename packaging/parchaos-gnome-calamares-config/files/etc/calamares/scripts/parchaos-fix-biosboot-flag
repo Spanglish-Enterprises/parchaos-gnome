@@ -1,0 +1,48 @@
+#!/bin/bash
+# Workaround for a real KPMCore bug found via an end-to-end install test
+# (2026-09-20, see docs/phase4-findings.md and this package's own
+# partition.conf comment): partition.conf's `partitionLayout` creates a
+# correctly-sized/positioned 1MiB BIOS Boot Partition via its `type:`
+# GUID field, but KPMCore silently does not apply that GUID to the
+# actual GPT partition entry -- the partition comes out with no
+# recognizable flag at all, so `grub2-install --target=i386-pc` later
+# fails with "this GPT partition label contains no BIOS Boot Partition"
+# followed by "filesystem `btrfs` doesn't support blocklists" (btrfs
+# refuses grub's fallback embedding method because its COW/balance
+# semantics can move blocks after the fact).
+#
+# Manually confirmed the fix by hand: `parted <disk> set <N> bios_grub
+# on` on the same partition, followed by `grub2-install`, succeeds
+# cleanly ("Installation finished. No error reported."). This script
+# reapplies that fix programmatically, right after the partition module
+# runs (see settings.conf's exec sequence) and before mount/unpackfs.
+#
+# Runs un-chrooted (dontChroot: true in this script's shellprocess
+# config) so it can use the live session's own `parted`, rather than
+# depending on the target rootfs having it installed.
+#
+# Detects the target partition by shape (~1MiB, no filesystem) rather
+# than a hardcoded device name, since the real disk name varies by
+# hardware (sda, vda, nvme0n1, ...).
+
+set -e
+
+for d in /dev/sd? /dev/vd? /dev/nvme?n?; do
+    [ -b "$d" ] || continue
+    if [[ "$d" == *nvme* ]]; then
+        p1="${d}p1"
+    else
+        p1="${d}1"
+    fi
+    [ -b "$p1" ] || continue
+
+    size=$(blockdev --getsize64 "$p1" 2>/dev/null || echo 0)
+    # 1MiB = 1048576 bytes; a little slack for alignment rounding.
+    if [ "$size" -ge 900000 ] && [ "$size" -le 1200000 ]; then
+        fstype=$(blkid -o value -s TYPE "$p1" 2>/dev/null || true)
+        if [ -z "$fstype" ]; then
+            echo "parchaos-fix-biosboot-flag: setting bios_grub on $d partition 1"
+            parted -s "$d" set 1 bios_grub on
+        fi
+    fi
+done
