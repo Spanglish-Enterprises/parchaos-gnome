@@ -68,7 +68,7 @@ EOF
     mkdir -p "$ROOTFS_TARGET/etc/dconf/db/local.d"
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org']
 disable-user-extensions=false
 EOF
     run_in_target dconf update

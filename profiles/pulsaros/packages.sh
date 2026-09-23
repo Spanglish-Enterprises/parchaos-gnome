@@ -24,6 +24,13 @@ PROFILE_REPO_PACKAGES=(
     # dconf override (GNOME Shell extensions are inert until listed in
     # org.gnome.shell's enabled-extensions key).
     parchaos-dock
+
+    # Parcha Menu — ParchaOS's rebrand of Pulsar OS's real in-house
+    # macOS-style global menu GNOME Shell extension. Deliberately
+    # scoped to exclude upstream's setuid-root lock-screen auth helper
+    # and GRUB/hibernation postinst mutations -- see the spec's own
+    # banner comment. Enabled by default via customize.sh.
+    parchaos-global-menu
 )
 
 # Pulled in only with --nvidia, from RPM Fusion nonfree (enabled
