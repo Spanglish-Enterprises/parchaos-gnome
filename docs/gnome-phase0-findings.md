@@ -101,6 +101,42 @@ now met for this profile too.
   test for each plus the real COPR mock build, all three (focus-
   schedule, suntime, yin-yang) succeeded. Also not yet baked into a
   rebuilt ISO.
+- **`parchaos-tmog`** — already existed, genuinely DE-agnostic
+  (AppImage-fetching wrapper, no KDE dependency), already end-to-end
+  verified once under an earlier product name. Rebuilt fresh against
+  this project's own COPR (11027251, succeeded), wired in.
+- **`pafari`** (real pearOS/Pulsar OS fork of GNOME Web/Epiphany,
+  GPL-3.0-or-later) — wired in as this profile's browser, filling a
+  real gap: `packages.list` ships no web browser at all otherwise.
+  The spec's own top banner said "UNTESTED", but that was stale —
+  its `%files` section already carried real, dated fixes from an
+  actual COPR clean-chroot build (rst2man missing, the real installed
+  binary name, modern metainfo path, several installed-but-unpackaged
+  libexec/D-Bus/search-provider paths), just never reflected in the
+  changelog. Found two real, separate problems getting a fresh build
+  working: (1) `rpmbuild --rebuild` only checks *locally installed*
+  packages, not what's available via dnf repos — its "pkgconfig(...)
+  is needed" errors looked like missing dependencies but were really
+  just "not installed on this build box yet"; fixed with a real `sudo
+  dnf builddep` pass (67 packages) rather than assuming the spec was
+  broken. (2) The `%changelog` had a wrong weekday (Sep 17 2026 is a
+  Thursday, not Wednesday) and, once corrected, a new entry appended
+  in the wrong order — rpmbuild enforces strictly descending
+  chronological order and errors (non-fatally in this rpm version,
+  but worth fixing properly) otherwise. A real local `rpmbuild
+  --rebuild` (405 compile steps) and the real COPR mock build
+  (11027385) both succeeded after these fixes. Also not yet baked
+  into a rebuilt ISO.
+- **`parchaos-boot-sound`** — checked, deliberately **not** wired in.
+  It depends on `pearos-sounds` (built from the KDE repo's
+  `pearos-settings.spec`), whose own `%description` already says
+  "Upstream declares no license anywhere for this specific content
+  (no LICENSE file, no metadata.json); packaged as-is under this
+  spec's overall License pending clarification" — a real, pre-existing,
+  unresolved license gap. It was apparently already accepted once for
+  the KDE product; extending it to a second product this project also
+  plans to publicly release, without anything new resolving the gap,
+  isn't something to do quietly. Left out and documented instead.
 
 ## The logo-centering bug (real user feedback, fixed at the source)
 
@@ -190,25 +226,28 @@ session chasing the launcher bug (rounds 2 and 3 above), and a real
 same-day install deadline meant the *last* one (Release 5 of
 `parchaos-gnome-calamares-config`, with the `export DISPLAY XAUTHORITY`
 fix) was deliberately treated as the final artifact for that install —
-`parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`, and
-`parchaos-yin-yang` (all built and COPR-verified after that point) were
-**not** folded into another rebuild, to avoid re-touching an ISO that had
-already cleared its verification bar right before someone was about to
-use it on real hardware. Whoever picks this up next should fold all four
-into the next ISO rebuild along with whatever else has accumulated, and
-re-run a real boot test before calling that build done — same "verify,
-don't assume" rule as everything else in this project's history.
+`parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`,
+`parchaos-yin-yang`, `parchaos-tmog`, and `pafari` (all built and
+COPR-verified after that point) were **not** folded into another
+rebuild, to avoid re-touching an ISO that had already cleared its
+verification bar right before someone was about to use it on real
+hardware. Whoever picks this up next should fold all six into the next
+ISO rebuild along with whatever else has accumulated, and re-run a real
+boot test before calling that build done — same "verify, don't assume"
+rule as everything else in this project's history.
 
 ## What's next (see README's own roadmap for full detail)
 
 - Fold `parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`,
-  and `parchaos-yin-yang` into a rebuild; real-boot-test the Cmd<->Ctrl
-  swap and the per-app remaps (Parcher, GNOME Terminal) on an actual
-  keyboard, the cloud-mount flow (`parchaos-cloud choose` → rclone auth
-  → mount appearing under `~/Cloud` in Parcher), the notification
+  `parchaos-yin-yang`, `parchaos-tmog`, and `pafari` into a rebuild;
+  real-boot-test the Cmd<->Ctrl swap and the per-app remaps (Parcher,
+  GNOME Terminal) on an actual keyboard, the cloud-mount flow
+  (`parchaos-cloud choose` → rclone auth → mount appearing under
+  `~/Cloud` in Parcher), pafari actually launching and rendering a real
+  page, TMOG's first-run download, and the notification
   inhibit actually suppressing a real popup during the scheduled
   window, and Yin-Yang's GTK/icon/wallpaper plugins actually switching
-  ParchaOS's own MacTahoe theme variants — none of these four have
+  ParchaOS's own MacTahoe theme variants — none of these six have
   been exercised beyond a build/dependency check yet.
 - Confirm the Calamares launcher fix's last unverified step (real mouse
   click → Authenticate → Calamares window) on whatever hardware actually
