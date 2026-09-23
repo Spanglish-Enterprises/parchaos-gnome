@@ -54,7 +54,7 @@
 
 Name:           parchaos-global-menu
 Version:        1.0.134
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
@@ -129,6 +129,14 @@ install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-3
+- Real user feedback ("looks strange, low quality") on the panel icon:
+  the detailed logo's fine internal linework (ring + seed dots)
+  visually collapses into noise at real menu-bar icon size (~16-20px).
+  Replaced SOURCE4 with a true silhouette derived from the real logo's
+  own outer contour (flood-filled holes, same exact shape/proportions
+  — not a redrawn approximation), which stays crisp at that size. See
+  branding/logo/CREDITS.md for the full derivation note.
 * Wed Sep 23 2026 ParchaOS packaging - 1.0.134-2
 - Real trademark bug found via a real boot test: the shipped menu bar
   literally read "Finder File Edit View Go Window Help" on the idle
