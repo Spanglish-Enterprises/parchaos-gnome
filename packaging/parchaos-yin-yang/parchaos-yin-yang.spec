@@ -58,7 +58,7 @@ Name:           parchaos-yin-yang
 # versioning inconsistency, not a typo on this end), confirmed by
 # checking pyproject.toml's content at the v4.0.1 ref directly.
 Version:        4.0.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Automatic light/dark theme switching with real sunrise/sunset support
 
 License:        MIT
@@ -104,6 +104,18 @@ Patch1:         0002-fix-broken-relative-resource-paths.patch
 # workaround, following this package's own established pattern of
 # patching real upstream gaps (see Patch0/Patch1's own history).
 Patch2:         0003-add-gnome-icons-support-and-color-scheme-sync.patch
+# Real bug found via live testing on real hardware (2026-09-25): on
+# GNOME every plugin defaults to disabled, so the tray toggle and
+# `yin_yang -t` changed nothing at all out of the box. Enabling GTK
+# alone wouldn't have helped either: its defaults were 'Default'/'Default'
+# (no such theme), and identical light/dark names made Patch2's
+# color-scheme check always choose prefer-dark. The System (shell theme)
+# plugin had no default theme names at all ('Theme "" is invalid').
+# Patch3 ships the real MacTahoe light/dark GTK, icon and shell theme
+# names, enables those three plugins by default on GNOME only, and seeds
+# a fresh config's dark_mode from the real color-scheme so the first
+# toggle on the (dark by default) desktop isn't a silent no-op.
+Patch3:         0004-gnome-real-default-themes-and-enabled-plugins.patch
 
 BuildArch:      noarch
 BuildRequires:  python3-devel
@@ -183,6 +195,16 @@ install -m 0644 usr/share/parchaos-yin-yang/resources/yin_yang.timer \
 %{_datadir}/parchaos-yin-yang/resources/yin_yang.timer
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 4.0.1-3
+- Real bug found via live testing on real hardware: toggling did nothing
+  on GNOME because every plugin defaulted to disabled, the GTK/Icons
+  defaults named a nonexistent 'Default' theme (and identical light/dark
+  names forced prefer-dark), and System had no defaults at all. Patch0004
+  ships real MacTahoe light/dark defaults and enables GTK, Icons and
+  System by default on GNOME; a fresh config now starts from the real
+  color-scheme so the first toggle isn't a no-op. Verified by toggling back and forth on the
+  live desktop and reading back color-scheme, gtk-theme, icon-theme and
+  the user-theme name each time.
 * Fri Sep 25 2026 ParchaOS packaging - 4.0.1-2
 - Real bug found via real desktop usage: the Icons plugin never had a
   GNOME case wired up upstream (Budgie's identical implementation was

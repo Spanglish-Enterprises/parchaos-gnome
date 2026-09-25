@@ -1,0 +1,128 @@
+diff --git a/yin_yang/config.py b/yin_yang/config.py
+index 527893e..7f44e87 100755
+--- a/yin_yang/config.py
++++ b/yin_yang/config.py
+@@ -2,6 +2,7 @@ import json
+ import logging
+ import os
+ import pathlib
++import subprocess
+ import shutil
+ from abc import ABC, abstractmethod
+ from datetime import time
+@@ -118,6 +119,19 @@ def get_sun_time(latitude, longitude) -> tuple[time, time]:
+         logger.error(f'Error: {e}.')
+ 
+ 
++def _gnome_prefers_dark() -> bool:
++    """ParchaOS: start from the desktop's real mode, so the first toggle on a
++    fresh config isn't a no-op on an already-dark GNOME desktop."""
++    if get_desktop() != Desktop.GNOME:
++        return False
++    try:
++        out = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.interface', 'color-scheme'],
++                             capture_output=True, text=True).stdout
++    except OSError:
++        return False
++    return 'prefer-dark' in out
++
++
+ def get_desktop() -> Desktop:
+     desktop = os.getenv('XDG_CURRENT_DESKTOP')
+     if desktop is None:
+@@ -335,7 +349,7 @@ class ConfigManager(dict):
+         conf_default = {
+             'version': 4.0,
+             'running': False,
+-            'dark_mode': False,
++            'dark_mode': _gnome_prefers_dark(),
+             'mode': Modes.MANUAL.value,
+             'coordinates': (0.0, 0.0),
+             'update_location': False,
+@@ -348,7 +362,9 @@ class ConfigManager(dict):
+         # plugin settings
+         for pl in plugins:
+             conf_default['plugins'][pl.name.casefold()] = {
+-                'enabled': False,
++                # ParchaOS: on GNOME, switch the GTK, icon and shell themes
++                # out of the box instead of shipping a toggle that does nothing
++                'enabled': get_desktop() == Desktop.GNOME and pl.name in ('GTK', 'Icons', 'System'),
+                 'light_theme': pl.theme_light,
+                 'dark_theme': pl.theme_dark
+             }
+diff --git a/yin_yang/plugins/gtk.py b/yin_yang/plugins/gtk.py
+index 276d040..2b8cc77 100755
+--- a/yin_yang/plugins/gtk.py
++++ b/yin_yang/plugins/gtk.py
+@@ -54,8 +54,11 @@ class _Gnome(PluginCommandline):
+         super().__init__(
+             ['gsettings', 'set', 'org.gnome.desktop.interface', 'gtk-theme', '{theme}']
+         )
+-        self.theme_light = 'Default'
+-        self.theme_dark = 'Default'
++        # ParchaOS: upstream's 'Default'/'Default' names no real theme, and
++        # identical light/dark names made the color-scheme check below
++        # always pick prefer-dark. Default to the GTK themes ParchaOS ships.
++        self.theme_light = 'MacTahoe-Light'
++        self.theme_dark = 'MacTahoe-Dark'
+ 
+     @property
+     def available(self) -> bool:
+@@ -73,7 +76,12 @@ class _Gnome(PluginCommandline):
+         if not (self.available and self.enabled):
+             return
+ 
+-        color_scheme = 'prefer-dark' if theme == self.theme_dark else 'prefer-light'
++        if self.theme_light != self.theme_dark:
++            is_dark = theme == self.theme_dark
++        else:
++            # same theme for both modes: fall back to the theme's own name
++            is_dark = 'dark' in theme.lower()
++        color_scheme = 'prefer-dark' if is_dark else 'prefer-light'
+         helpers.check_call(
+             ['gsettings', 'set', 'org.gnome.desktop.interface', 'color-scheme', color_scheme]
+         )
+@@ -136,7 +144,12 @@ class _Kde(DBusPlugin):
+ 
+         # change dconf db. since dconf sending data as GVariant, use gsettings instead
+         helpers.run(['gsettings', 'set', 'org.gnome.desktop.interface', 'gtk-theme', f'{theme}'])
+-        color_scheme = 'prefer-dark' if theme == self.theme_dark else 'prefer-light'
++        if self.theme_light != self.theme_dark:
++            is_dark = theme == self.theme_dark
++        else:
++            # same theme for both modes: fall back to the theme's own name
++            is_dark = 'dark' in theme.lower()
++        color_scheme = 'prefer-dark' if is_dark else 'prefer-light'
+         helpers.run(['gsettings', 'set', 'org.gnome.desktop.interface', 'color-scheme', f'{color_scheme}'])
+ 
+ 
+diff --git a/yin_yang/plugins/icons.py b/yin_yang/plugins/icons.py
+index 7c52339..6245569 100644
+--- a/yin_yang/plugins/icons.py
++++ b/yin_yang/plugins/icons.py
+@@ -25,6 +25,9 @@ class Icons(PluginDesktopDependent):
+                 # exactly what plain GNOME needs. Reused directly rather
+                 # than duplicating it.
+                 super().__init__(_Budgie())
++                # ParchaOS: ship real defaults instead of Budgie's 'Default'
++                self.theme_light = 'MacTahoe-light'
++                self.theme_dark = 'MacTahoe-dark'
+             case Desktop.KDE:
+                 super().__init__(_Kde())
+             case _:
+diff --git a/yin_yang/plugins/system.py b/yin_yang/plugins/system.py
+index fb94da1..5c20633 100644
+--- a/yin_yang/plugins/system.py
++++ b/yin_yang/plugins/system.py
+@@ -59,6 +59,11 @@ class _Gnome(PluginCommandline):
+                 '{theme}',
+             ]
+         )
++        # ParchaOS: upstream sets no default at all, so enabling this
++        # plugin raised 'Theme "" is invalid'. Default to the shipped
++        # GNOME Shell user-themes.
++        self.theme_light = 'MacTahoe-Light'
++        self.theme_dark = 'MacTahoe-Dark'
+ 
+     @property
+     def available(self) -> bool:

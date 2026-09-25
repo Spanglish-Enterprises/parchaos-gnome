@@ -1244,6 +1244,35 @@ screenshot) has no real Weather-app screenshot to clone precisely, so
 this would target current/recent real macOS Weather design language
 unless a real reference image is provided.
 
+## Update 2026-09-25 (evening): yin-yang's light/dark switch did nothing on GNOME
+
+Worked through the "still needs a human" checklist from the real machine
+itself (Claude Code now runs locally on the real hardware install).
+"Does yin-yang's theme switch actually change GTK/icons/wallpaper?" --
+**no, it changed nothing at all.** Every plugin defaults to disabled
+upstream, so the toggle was a silent no-op. Enabling them wouldn't have
+been enough either: the GNOME GTK/Icons defaults were `'Default'`/`'Default'`
+(no such theme), identical light/dark names made Patch0003's color-scheme
+check always pick `prefer-dark`, and the System (shell theme) plugin had no
+default names at all. Patch0004 (`parchaos-yin-yang` 4.0.1-3) ships the real
+MacTahoe light/dark GTK, icon and shell-theme names, enables those three
+plugins by default on GNOME, and seeds a fresh config's `dark_mode` from the
+real `color-scheme` so the first toggle on the dark-by-default desktop isn't
+a no-op.
+
+Verified by building the RPM locally, installing it, and toggling the real
+`/usr/bin/yin_yang -t` back and forth on the live session, reading back
+`color-scheme`, `gtk-theme`, `icon-theme` and the user-theme name after each
+toggle. Wallpaper is deliberately left out: ParchaOS ships one wallpaper
+for both modes.
+
+**Testing trap worth remembering:** isolating yin-yang's config with
+`XDG_CONFIG_HOME=<scratch>` also hides dconf's user database
+(`$XDG_CONFIG_HOME/dconf/user`) from every `gsettings get` in that
+environment, so reads return distro defaults and look exactly like
+"something reverted the theme." Symlink `~/.config/dconf` into the scratch
+dir (or don't export the variable for the reads) before trusting results.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
