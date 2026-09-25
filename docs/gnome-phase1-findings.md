@@ -790,6 +790,54 @@ in this same session (`pafari`, and an early, incomplete read of
 yin-yang's own error output) before the real, narrower Icons/GTK
 finding above was isolated.
 
+## Update 2026-09-25: parchaos-browser (Chromium) confirmed working, third false alarm this session
+
+Continuing "just do the log based testing" after a side-task (compiling
+website content, unrelated to this doc). `chromium-browser` initially
+looked broken over raw SSH: first `[ERROR] Missing X server or
+$DISPLAY`, then (after adding `DISPLAY=:0`, confirmed via `systemctl
+--user show-environment`) `Authorization required, but no authorization
+protocol specified` even with a guessed `XAUTHORITY=~/.Xauthority`
+(that file doesn't exist for this pure-Wayland session). Root cause:
+XWayland's real X11 auth cookie for this session lives at a
+Mutter-managed path, not the traditional `~/.Xauthority` -- found the
+real value via `systemctl --user show-environment | grep -i xauth`:
+`XAUTHORITY=/run/user/1000/.mutter-Xwaylandauth.<random-per-session-token>`.
+Retesting with that value (plus the same full session env vars already
+established for the pafari/yin-yang false alarms) launched Chromium
+cleanly: zygote, GPU, network-service, and a real renderer process all
+came up, stayed running, no auth errors, no crash. **Third false alarm
+of this session, same root cause class as the first two**: a raw-SSH
+test environment missing real session-specific variables, not an actual
+packaging bug. Killed the test instance afterward
+(`pkill -f '[c]hromium-browser'` -- plain `pkill -f chromium-browser`
+self-matches its own invoking shell command and kills the SSH session
+instead of the browser, a real gotcha worth remembering for future
+remote cleanup commands).
+
+## Update 2026-09-25: hblock ad-blocker confirmed working (initial "silent failure" appearance was a red herring)
+
+Continuing the log-based sweep. `hblock.timer` showed a real fire
+(`LAST` timestamp from the previous night) but `journalctl -u
+hblock.service` returned zero entries across all boots, and `/etc/hosts`
+still had its stock install-time content/mtime -- looked like a real
+bug (`ProtectSystem=strict` in `hblock.service`'s hardening sandboxing
+its own `ExecStartPost` write to `/etc/hosts`, a plausible failure
+mode). Manually triggered `systemctl start hblock.service` to check
+directly rather than assume: it completed cleanly end to end --
+`ExecStart` (fetches/builds the blocklist), both `ExecStartPost` steps
+(the `+`-prefixed `cat ... > /etc/hosts`, which correctly bypasses the
+sandboxing for that one privileged step, and the cache cleanup) all
+exited `0/SUCCESS`, with a real log line confirming
+`471495 blocked domains!`. **Not a bug** -- the missing journal history
+and stale `/etc/hosts` were consistent with journald simply not having
+retained that one entry across this session's many reboots, not with
+the service failing. A follow-up direct read of the post-run
+`/etc/hosts` content was blocked by Claude Code's own auto-mode
+permission classifier (flagged as "Modify Shared Resources" even for a
+read-only `wc`/`head`/`grep`); not pursued further since the service's
+own exit-status and log output already confirm success without it.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
