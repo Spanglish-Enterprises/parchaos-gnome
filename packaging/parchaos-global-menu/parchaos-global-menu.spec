@@ -54,7 +54,7 @@
 
 Name:           parchaos-global-menu
 Version:        1.0.134
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
@@ -129,6 +129,25 @@ install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.134-5
+- Two real bugs found via a live comparison against a real macOS
+  reference screenshot. (1) The menu bar showed the literal app-id
+  "com.rastersoft.ding" instead of "Parcher" when no real window had
+  focus -- Desktop Icons NG's own background rendering window
+  (application_id 'com.rastersoft.ding', confirmed directly against
+  its real source) sometimes receives real window focus (e.g.
+  clicking the desktop), and _onFocusWindowChanged() had no exclusion
+  for it the way it already does for gnome-shell/gdm windows. Added
+  one. (2) The Finder menu bar was missing "View" entirely
+  (File/Edit/Go/Window/Help, no View) -- real macOS order is
+  File/Edit/View/Go/Window/Help. Added a real View menu (Icon View,
+  List View, Show Hidden Files) using the same _sendKeyStroke()
+  mechanism every other menu here already uses, mapped to Nautilus's
+  own real Ctrl+1/Ctrl+2/Ctrl+H shortcuts. Also renamed the leftover
+  "Pulsar OS" notification title in the About-app handler to
+  "ParchaOS" while in the area (the file's %%prep already does a
+  blanket Finder->Parcher sed, so the source-level Finder->Parcher
+  renames made alongside these fixes are redundant but harmless).
 * Wed Sep 23 2026 ParchaOS packaging - 1.0.134-4
 - Real user feedback ("logo seems a bit weird and off center"): the
   source logo file itself had asymmetric canvas padding (170px left

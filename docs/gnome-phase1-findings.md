@@ -966,6 +966,104 @@ stayed installed since it turned out to already be a real, protected
 dependency of `kmod`/`systemd-udev`, not something this session
 introduced.
 
+## Update 2026-09-25: a real macOS reference comparison, two more real bugs, and a real self-inflicted packaging incident
+
+Real user request: a real macOS screenshot as a reference, asking "how
+can we make it work like the real macOS." Took a fresh screenshot of
+the live desktop and compared side by side rather than guessing from
+memory.
+
+**The menu bar showed the literal app-id "com.rastersoft.ding" instead
+of "Parcher" when no real window had focus.** Root cause, confirmed
+against `parcha-global-menu`'s real `_onFocusWindowChanged()`: Desktop
+Icons NG's own background rendering window (`application_id:
+'com.rastersoft.ding'`, confirmed directly against DING's real
+`app/ding.js`) sometimes receives real window focus (e.g. clicking the
+desktop to select/deselect icons), and the focus handler only ever
+excluded `gnome-shell`/`gdm` windows from being tracked as "the active
+app," not DING's. Fixed by adding the same exclusion for DING's
+wm-class/GApplication id. While in the area, renamed the extension's
+remaining "Finder" fallback-string constants to "Parcher" (the file's
+own `%%prep` already does a blanket `Finder`->`Parcher` sed, so this
+was already covered at build time, but fixing it at the source too
+keeps the two in sync) and rebranded one leftover "Pulsar OS"
+notification title to "ParchaOS". `parchaos-global-menu` Release 5.
+
+**Finder's menu bar was missing "View" entirely** (File/Edit/Go/
+Window/Help -- real macOS order is File/Edit/View/Go/Window/Help).
+Added a real View menu (Icon View, List View, Show Hidden Files) using
+the same `_sendKeyStroke()` mechanism every other menu in this
+extension already uses, mapped to Nautilus's own real, long-standing
+`Ctrl+1`/`Ctrl+2`/`Ctrl+H` shortcuts. Same `parchaos-global-menu`
+Release 5.
+
+**A real GNOME Shell extension lifecycle lesson, re-learned the hard
+way**: disabling and re-enabling an extension via
+`EnableExtension`/`DisableExtension` picked up the new package's files
+on disk (confirmed via `grep` against the installed
+`extension.js`) but the *running* menu bar still showed the old
+behavior -- GJS's ES-module loader holds the previously-imported module
+in memory for the life of the Shell process, so a toggle alone doesn't
+re-`import()` changed source. Only a real fresh Shell process (a full
+logout/login, done again via `ydotool` synthetic input, same
+already-approved mechanism as earlier this session) actually picked up
+the new code, confirmed both via `GetExtensionInfo` and a real
+screenshot. Same lesson as the earlier dock/keyboard-remap findings
+("GNOME Shell caches ... until a fresh Shell process starts"), now
+confirmed to apply to ordinary behavioral JS changes too, not just
+error states.
+
+**The clock read "Sep 25" with no day-of-week** (real macOS always
+shows "Wed Sep 16"). Not extension code at all -- this is GNOME's own
+native date menu. `clock-show-date=true` turned out to already be
+Fedora's own real stock default (confirmed live, not something this
+profile set); `clock-show-weekday` was the one key still at its
+GNOME-upstream default (`false`). Added `clock-show-weekday=true` to
+`customize.sh`'s existing theme dconf block and applied live. Real
+screenshot confirms: "Fri Sep 25   2:43 PM".
+
+**A real, separate, self-inflicted incident found and fixed in the
+same pass**: earlier in this same session, diagnosing the thumbnail
+bug required temporarily installing `gcc`/`gnome-desktop4-devel`/
+`gdk-pixbuf2-devel`/`glib2-devel` for a direct C test, then removing
+them again afterward. That removal (`dnf -y remove gcc
+gnome-desktop4-devel gdk-pixbuf2-devel glib2-devel`) altered 72
+packages, not the ~15 actually installed for the test --
+`dnf history info` showed `parchaos-finder`, `parchaos-desktop-icons`
+(DING), and `parchaos-desktop` all removed with reason `Dependency`,
+real collateral damage from Fedora's default
+`clean_requirements_on_remove` behavior interacting with this
+profile's own package graph, not a version conflict (the real shared
+libraries these packages link against were never touched). This
+produced a real, misleading false lead: a dock comparison screenshot
+taken while `parchaos-finder` was uninstalled appeared to show
+"Finder isn't pinned in the dock at all" as a missing-feature bug --
+it wasn't. `favorite-apps` already correctly lists
+`org.gnome.Nautilus.desktop`; the icon was simply missing because the
+app behind it had been accidentally removed minutes earlier. Fixed by
+reinstalling all three (`dnf install parchaos-finder
+parchaos-desktop-icons parchaos-desktop`), confirmed via a fresh
+screenshot showing Parcher correctly back in the dock with no
+`favorite-apps` change needed. **Lesson for future sessions**: don't
+batch-remove multiple `-devel` packages together on this real,
+in-use machine without checking `dnf history info`-style impact first
+(or better, just leave diagnostic dev tools installed rather than
+cleaning them up -- the disk cost is far smaller than the risk of a
+wide, silent cascade removal).
+
+**Deliberately not done in this pass, flagged for later**: Finder's
+real macOS sidebar uses full-color icons throughout (blue folders,
+Dropbox's own logo, a house icon for the home folder, etc.); GTK4/
+libadwaita's own sidebar convention deliberately uses monochrome
+"symbolic" icons that recolor with the accent/dark-light state
+instead. Making Nautilus's sidebar render full color there would mean
+patching its own C source (`GtkPlacesSidebar`-style row icon
+resolution), a real, more invasive theming change than anything else
+in this update -- not started. Weather and Bluetooth status-bar icons
+are also missing in the top-right cluster; both are backend-dependent
+(a real weather provider + location services; confirmed Bluetooth
+hardware) rather than a quick extension fix, also not started.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper

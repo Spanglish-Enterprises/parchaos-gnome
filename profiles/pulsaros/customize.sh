@@ -237,6 +237,13 @@ gtk-theme='MacTahoe-Dark'
 icon-theme='MacTahoe-dark'
 cursor-theme='MacTahoe-dark'
 color-scheme='prefer-dark'
+# Real gap found via a live macOS reference comparison 2026-09-25: the
+# top bar's clock read "Sep 25", missing the day-of-week real macOS
+# always shows ("Wed Sep 16"). Fedora's own default already has
+# clock-show-date=true (confirmed live, not this profile's own
+# setting) -- clock-show-weekday is the one real GNOME key still at
+# its stock default (false).
+clock-show-weekday=true
 
 [org/gnome/desktop/wm/preferences]
 theme='MacTahoe-Dark'
