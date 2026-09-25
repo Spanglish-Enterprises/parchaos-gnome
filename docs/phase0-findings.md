@@ -413,7 +413,7 @@ Fedora KDE Spin shows `pearos-dock` misbehaving under `kwin_wayland`. See
    (mkinitcpio, not dracut), and `packages.conf`/`users.conf` etc. are
    presumably pacman/Arch-flavored throughout (not yet read in full
    detail). Branding is real and complete, not a stub: full dark
-   macOS-style QSS stylesheet, QML sidebar + slideshow
+   custom QSS stylesheet, QML sidebar + slideshow
    (`calamares-sidebar.qml`, `show.qml`, `slide1.png`…`slide6.png`),
    translations for 5 languages. Porting this to Fedora (dracut instead of
    initcpio, dnf-backed `packages.conf`, verifying Calamares' Fedora

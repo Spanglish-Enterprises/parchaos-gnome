@@ -506,7 +506,7 @@ the real IPC surface instead of fighting simulated input" approach
 Phase 0 used for `pearos-dock`).
 
 **Confirmed via screendump**: Dolphin's window renders pearOS's
-genuine macOS-style Aurorae decoration — yellow/green/red traffic-light
+genuine Aurorae decoration — yellow/green/red traffic-light
 controls on the *left* side of the titlebar (not KDE's usual
 right-side, minimize/maximize/close), rounded corners, a clean
 centered title. This is definitively not stock Breeze; the
@@ -518,7 +518,7 @@ for real installed users going forward.
 The same screendump also incidentally confirmed the rest of the
 desktop is fully working and correctly branded: the liquid-gel-style
 wallpaper, `PearCalendar`/`PearWeather` desktop widgets rendering with
-real data (from the `pearos-plasmoids` package), a macOS-style top
+real data (from the `pearos-plasmoids` package), a global-menu top
 menu bar, and `pearos-dock` at the bottom tracking the open Dolphin
 window. This is the first time in the project's history that an actual
 rendered pearOS desktop — not just the SDDM greeter — has been visually
@@ -529,7 +529,7 @@ item is now done. The only remaining Phase 3 item is the "unclaimed
 content" scope question, which is itself now resolved (see above) —
 Phase 3 is effectively complete.
 
-## Confirmed: the macOS-style global menu bar already works (2026-09-18, later session)
+## Confirmed: the global menu bar already works (2026-09-18, later session)
 
 Compared this project's desktop against a real pearOS screenshot
 (fetched from pearos.xyz) and initially misread the result as a gap —
@@ -587,7 +587,7 @@ Fixed in `profiles/pearos/customize.sh`: `ButtonsOnLeft=XIA`,
 `ButtonsOnRight=` (empty) — X=close, I=minimize, A=maximize, the
 standard KWin decoration button letter codes. Verified: opened a real
 Dolphin window on the rebuilt ISO and the red/yellow/green buttons now
-render top-left, macOS/pearOS-style.
+render top-left, pearOS-style.
 
 **Dock rendering with only 2 of its pinned icons.** Traced through two
 layers before finding the real cause:

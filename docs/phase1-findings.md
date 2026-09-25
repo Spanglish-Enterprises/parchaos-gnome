@@ -543,7 +543,7 @@ original text-console-based verification).
 and a real `plasmashell --no-respawn` process running — genuine
 autologin, no prompt at all. A QMP screendump of the booted desktop
 showed a complete, real pearOS session: the liquid-gel wallpaper,
-`PearCalendar` and `PearWeather` desktop widgets, a macOS-style top
+`PearCalendar` and `PearWeather` desktop widgets, a global-menu top
 bar, and `pearos-dock` at the bottom — this is the first time this
 project has seen its own actual branded desktop rendering, not just
 the SDDM greeter. See `docs/phase3-findings.md` for how this also

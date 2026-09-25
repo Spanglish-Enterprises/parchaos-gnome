@@ -119,7 +119,7 @@ amd-gpu-firmware
 # subpackage that linux-firmware's own dependencies do NOT pull in --
 # same per-vendor-subpackage split pattern as amd-gpu-firmware above.
 mt7xxx-firmware
-# Real gap found via a live macOS reference comparison 2026-09-25,
+# Real gap found via a live reference-desktop comparison 2026-09-25,
 # investigating why no Bluetooth status icon ever appears: the
 # MT7922 combo card's Bluetooth radio is real and working at the
 # kernel level (confirmed live via `rfkill list` -- a genuine
@@ -133,8 +133,8 @@ mt7xxx-firmware
 # real source (js/ui/status/bluetooth.js) that the top-bar icon only
 # ever appears once a device is actively connected
 # (`this._indicator.visible = nConnectedDevices > 0`, hardcoded, no
-# gsettings override) -- real macOS shows a permanent Bluetooth icon
-# regardless of connection state, a genuine GNOME-vs-macOS design
+# gsettings override) -- the reference desktop shows a permanent
+# Bluetooth icon regardless of connection state, a genuine GNOME design
 # difference, not a bug this package addition fixes by itself. See
 # docs/gnome-phase1-findings.md for the full trace.
 bluez
@@ -278,7 +278,7 @@ gnome-contacts
 # directly.
 gnome-shell-extension-gsconnect
 
-# macOS-style trackpad gestures — same real Fedora package the KDE
+# Multi-finger trackpad gestures — same real Fedora package the KDE
 # profile uses (touchegg, DE-agnostic system-level daemon); config
 # still needs porting/verifying for GNOME's own gesture conventions.
 touchegg
@@ -409,7 +409,7 @@ geary
 # Clock.app equivalent -- renamed to "Clock" by parchaos-app-renames.
 gnome-clocks
 
-# Real macOS-polish extensions, matching Pulsar OS's own real config
+# Real desktop-polish extensions, matching Pulsar OS's own real config
 # (see customize.sh's 00-parchaos-extensions comment for the full
 # reasoning) -- confirmed via real `dnf list --available` these are
 # genuine official Fedora packages with the same UUIDs Pulsar OS uses.

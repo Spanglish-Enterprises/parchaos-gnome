@@ -293,7 +293,7 @@ output quickly (`Cannot open display "default display"` plus benign
 MESA/ZINK software-rendering warnings already seen elsewhere in this
 project's logs) and, per a screendump, **rendered a complete, correctly
 branded window**: "Welcome to the pearOS installer," the pearOS
-dark stylesheet, macOS-style traffic-light window controls, and the
+dark stylesheet, traffic-light window controls, and the
 full step sequence in the bottom nav bar (Welcome / Location / Keyboard
 / Users / Partitions / Summary / Install / Finish) — confirming
 `settings.conf`'s restored `users` step is correctly wired in. The page

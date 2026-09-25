@@ -76,8 +76,8 @@ EOF
     # theming"): cross-checked this profile's extension list against
     # Pulsar OS's own real dconf defaults (Inled-Pulsar-OS/PKG's
     # pulsaros-gnome/etc/dconf/db/local.d/00-pulsaros-theme, fetched
-    # directly) -- they ship ~15 extensions for the full "feels like
-    # macOS" polish; this profile only shipped 5. Four of Pulsar's real
+    # directly) -- they ship ~15 extensions for their full desktop
+    # polish; this profile only shipped 5. Four of Pulsar's real
     # extensions are, confirmed via `dnf list --available` on real
     # hardware, genuine official Fedora packages with the exact same
     # UUIDs Pulsar OS's own config uses (verified via each extension's
@@ -189,8 +189,8 @@ animation=1
 startup-status=0
 dash-icon-size=0
 
-# Real macOS-style default: top-right, sliding in from the right edge
-# (macOS's own real notification behavior), with a small edge inset
+# Default: top-right, sliding in from the right edge (matching the
+# reference desktop's notification behavior), with a small edge inset
 # rather than flush-to-corner. anchor-vertical=0/anchor-horizontal=1
 # confirmed against the extension's own real extension.js source
 # (0=top/1=bottom/2=center for vertical, 0=left/1=right/2=center for
@@ -237,18 +237,18 @@ gtk-theme='MacTahoe-Dark'
 icon-theme='MacTahoe-dark'
 cursor-theme='MacTahoe-dark'
 color-scheme='prefer-dark'
-# Real gap found via a live macOS reference comparison 2026-09-25: the
-# top bar's clock read "Sep 25", missing the day-of-week real macOS
+# Real gap found via a live reference-desktop comparison 2026-09-25: the
+# top bar's clock read "Sep 25", missing the day-of-week the reference
 # always shows ("Wed Sep 16"). Fedora's own default already has
 # clock-show-date=true (confirmed live, not this profile's own
 # setting) -- clock-show-weekday is the one real GNOME key still at
 # its stock default (false).
 clock-show-weekday=true
 
-# Real macOS reference comparison, 2026-09-25: the new weather
+# Reference-desktop comparison, 2026-09-25: the new weather
 # indicator (parcha-global-menu) needs real location data via Geoclue
-# to work at all, matching real macOS's own out-of-the-box menu-bar
-# weather. GNOME's own stock default for this is off (a real,
+# to work at all, matching the reference desktop's out-of-the-box
+# menu-bar weather. GNOME's own stock default for this is off (a real,
 # deliberate privacy default upstream) -- enabling it here is a
 # genuine user-facing tradeoff this profile is choosing to make for
 # the built-in weather feature, not a silent override; a user who

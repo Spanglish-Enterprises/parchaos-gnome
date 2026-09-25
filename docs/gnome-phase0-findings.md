@@ -36,7 +36,7 @@ now met for this profile too.
   changelog for the full root-cause writeup of each.
 - **`parchaos-dock`** — Pulsar OS's real Dash-to-Dock fork ("Pulsar
   Dock"), rebranded "Parcha Dock" (GPL-2.0).
-- **`parchaos-global-menu`** — Pulsar OS's real in-house macOS-style
+- **`parchaos-global-menu`** — Pulsar OS's real in-house
   global menu GNOME Shell extension, rebranded "Parcha Menu"
   (MIT-INLED), deliberately scoped to exclude upstream's setuid-root
   lock-screen helper and GRUB/hibernation postinst mutations (see that
@@ -55,8 +55,8 @@ now met for this profile too.
   Fedora's stock Plymouth spinner theme and a from-scratch dark
   wallpaper, both carrying the project's real passion-fruit logo as a
   subtle watermark.
-- **`parchaos-macos-remap`** — real macOS-style keyboard remap (Cmd<->Ctrl
-  swap + macOS keyboard conventions) via xremap (MIT) + its companion
+- **`parchaos-macos-remap`** — real keyboard remap (Cmd<->Ctrl
+  swap + Cmd-key conventions) via xremap (MIT) + its companion
   GNOME Shell extension (GPLv2+), repackaged from Pulsar OS's
   `gnome-macos-remap-wayland` as a declarative RPM (systemd user-preset,
   udev `uaccess`, dconf db) instead of an interactive per-user install
@@ -246,15 +246,15 @@ rule as everything else in this project's history.
 
 ## What's next (see README's own roadmap for full detail)
 
-- **Deeper Calamares macOS-esque skinning** (explicit user ask,
+- **Deeper Calamares installer skinning** (explicit user ask,
   2026-09-23, deliberately deferred — "to complete much later"): the
   current branding pass (logo/icon/welcome/slideshow images,
   stylesheet, page copy) reads as a reskinned generic Linux installer
-  wizard, not a real macOS Installer.app look-alike. Calamares'
+  wizard, not a look-alike of the reference installer. Calamares'
   branding.desc + QML view files (`main.qml` and each page's own .qml
   under `/usr/share/calamares/...` or an override under
   `/etc/calamares/branding/ParchaOS/`) are the real place to push this
-  further — page transitions, a real macOS-style sidebar/progress
+  further — page transitions, a real sidebar/progress
   layout instead of the stock top-tab bar, window chrome, font choices
   — all overridable there. Not started; this is real QML/UI work, not
   a config-value fix like tonight's bugs, so budget real time for it

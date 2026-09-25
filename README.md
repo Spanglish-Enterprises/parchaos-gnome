@@ -6,10 +6,10 @@ GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
 ships 25 real custom packages plus the full Fedora base — dock, global
 menu, Finder (Nautilus fork), GTK/icon/Plymouth/wallpaper theming
 (light + dark), a Chromium-based browser alongside the WebKitGTK one,
-macOS keyboard remap, cloud drives, focus schedule, auto light/dark,
+a Cmd-as-Ctrl keyboard remap, cloud drives, focus schedule, auto light/dark,
 TMOG, a hosts-file ad-blocker, a real live/video wallpaper, Desktop
 Icons NG, and 12 of Pulsar OS's own real GNOME Shell extensions for
-macOS-style polish (traffic-light window buttons, genie minimize
+desktop polish (traffic-light window buttons, genie minimize
 effect, top-right notification banners, blur, and more). The KDE-only
 cruft this repo inherited from its original fork (`profiles/pearos/`
 and its packaging) has been fully removed.
@@ -48,7 +48,7 @@ This is a **GNOME-based** sibling of [`alexgalicea/parchaos`](https://github.com
 [pearOS](https://github.com/pearOS-archlinux), a macOS-styled Linux distro).
 
 **Why a second repo instead of continuing the KDE one**: pearOS's own
-macOS-mimicry is itself downstream of a much larger, more mature, more
+desktop look is itself downstream of a much larger, more mature, more
 complete project called **Pulsar OS "Bitten Fruit"**
 (https://bittenfruit.inled.es/, source at
 [`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG),
@@ -106,7 +106,7 @@ docs/               gnome-phase{0,1,2,3}-findings.md — see above.
 
 **Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, genie minimize
 effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (real
-macOS-style menu bar), `parchaos-gtk-theme`/`parchaos-icon-theme`
+global menu bar), `parchaos-gtk-theme`/`parchaos-icon-theme`
 (MacTahoe, both light and dark), `parchaos-gnome-wallpaper`,
 `parchaos-gnome-plymouth-theme` (currently a safe no-op guard, see
 "Still deferred" below), `parchaos-gdm-logo`, `parchaos-desktop-icons`
@@ -147,7 +147,7 @@ project's own real hardware more than once; see phase1/phase3 docs.
 
 ## Still deferred (explicit user calls, not forgotten)
 
-- Deeper Calamares macOS-esque installer skinning (real QML/UI work,
+- Deeper Calamares installer skinning to match the desktop's look (real QML/UI work,
   not started — could be done as this project's own original work,
   doesn't need Pulsar's blocked `calamares-themes`).
 - A real Plymouth boot-splash theme (`parcha-plymouth` doesn't exist
@@ -165,6 +165,23 @@ Sayri, `pulsaros-timemachine`, `pulsaros-welcome`, `pulsaros-cloud`,
 Island-style notification UI, an app store, a driver manager. See
 `docs/gnome-phase2-findings.md` and `docs/gnome-phase3-findings.md` for
 the full audit and the drafted (unsent) outreach email.
+
+## Naming policy (trademark caution)
+
+ParchaOS is meant to ship publicly, so Apple's names stay out of anything
+we name or write ourselves: package names, app/feature names, package
+summaries/descriptions, and docs prose. Describe the feature instead (dock,
+global menu bar, traffic-light window controls, hover magnification,
+Cmd-as-Ctrl) or say "the reference desktop". Renamed so far:
+`parchaos-macos-remap` -> `parchaos-keyboard-remap`, "Finder" -> "Parcher".
+Still needing ParchaOS names before they're ported: Spotlight, Time
+Machine, the "Apple Tahoe" SDDM theme.
+
+Deliberately kept: upstream project names and URLs (e.g. `MacTahoe`,
+`gnome-macos-remap-wayland`, Pulsar OS's own "Finder"), because renaming
+them would misstate where the code came from; old names that
+`Obsoletes:`/changelogs need; and direct quotes. This is risk reduction,
+not legal clearance -- get a real legal review before a public launch.
 
 ## A note on working style, for any agent picking this up
 

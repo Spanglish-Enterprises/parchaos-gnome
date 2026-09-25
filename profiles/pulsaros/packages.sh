@@ -6,7 +6,7 @@
 # ==============================================================================
 
 PROFILE_REPO_PACKAGES=(
-    # Parcher — ParchaOS's build of Pulsar OS's real, working macOS-styled
+    # Parcher — ParchaOS's build of Pulsar OS's real, working
     # fork of GNOME Files/Nautilus (packaging/parchaos-finder/). Real
     # traffic-light window controls, live folder color tagging, cloud
     # drive sidebar integration. Renamed from upstream's "Files"/Pulsar
@@ -18,7 +18,7 @@ PROFILE_REPO_PACKAGES=(
     parchaos-finder
 
     # Parcha Dock — ParchaOS's rebrand of Pulsar OS's real fork of the
-    # well-known Dash-to-Dock GNOME Shell extension (macOS-style hover
+    # well-known Dash-to-Dock GNOME Shell extension (hover
     # magnification, launch bounce, downloads-folder stack, live
     # minimized-window previews). Enabled by default via customize.sh's
     # dconf override (GNOME Shell extensions are inert until listed in
@@ -26,7 +26,7 @@ PROFILE_REPO_PACKAGES=(
     parchaos-dock
 
     # Parcha Menu — ParchaOS's rebrand of Pulsar OS's real in-house
-    # macOS-style global menu GNOME Shell extension. Deliberately
+    # global menu GNOME Shell extension. Deliberately
     # scoped to exclude upstream's setuid-root lock-screen auth helper
     # and GRUB/hibernation postinst mutations -- see the spec's own
     # banner comment. Enabled by default via customize.sh.

@@ -9,11 +9,11 @@ actual license text (read directly at `license.inled.es`, not assumed from the
 clause, a mandatory-relicensing-back-to-MIT-INLED clause, and a rights-
 retention clause requiring derivative works to grant "all rights and benefits
 exclusively to the original authors." ParchaOS is a directly competing
-macOS-styled Linux product, so this is real exposure, not a theoretical one.
+Linux desktop product, so this is real exposure, not a theoretical one.
 
 This document is the *only* thing the rewrite should be written from. No part
 of the implementation should be written by reading, referencing, or adapting
-Inled's actual `extension.js` — only this feature description, real macOS's
+Inled's actual `extension.js` — only this feature description, the reference desktop's
 publicly-known menu bar conventions, and GNOME Shell's own public,
 documented extension APIs (`PanelMenu`, `PopupMenu`, `St`, `Clutter`,
 `GObject`, etc. — the same APIs any independent GNOME Shell extension uses).
@@ -35,13 +35,13 @@ user window has focus (desktop focused, or a background/overlay window like
 Desktop Icons NG's own rendering surface — exclude any window whose
 GApplication id or WM_CLASS matches known desktop-shell helper apps, not
 just DING specifically, so this generalizes), shows "Parcher" as the
-default idle-state label, matching real macOS's own "Finder is focused when
+default idle-state label, matching the reference desktop's own "Finder is focused when
 nothing else is" convention. Clicking it opens a small menu: "About
 {app}," "Hide {app}," "Quit {app}" — Hide should minimize the focused
 window, Quit should close it via the window's own close/delete request.
 
 ### Standard menus: File, Edit, View, Go, Window, Help
-Populated with real, standard actions a macOS user would expect, using
+Populated with real, standard actions a desktop user would expect, using
 real public keyboard shortcuts (GNOME/GTK/Nautilus conventions, not
 anything Inled invented):
 - **File**: New Window (`Ctrl+N`), Close Window (`Ctrl+W`)

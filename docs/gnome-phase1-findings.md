@@ -451,7 +451,7 @@ rules of traffic lights", "we don't seem to have a light mode",
   `safari.svg` already in the MacTahoe icon theme -- no new asset
   needed.
 - **App display-name rebrands** (`packaging/parchaos-app-renames/`):
-  audited icon coverage for every stock app with a macOS equivalent
+  audited icon coverage for every stock app with a reference-desktop equivalent
   (Calculator, Calendar, Weather, Loupe, Contacts, Clocks, Geary,
   Amberol) and found the MacTahoe icon theme already covers all of
   them by real app ID (`org.gnome.Loupe.svg`, `org.gnome.Geary.svg`,
@@ -475,7 +475,7 @@ rules of traffic lights", "we don't seem to have a light mode",
 Following up on "what other apps/theming are we missing" -- diffed
 this profile's `enabled-extensions` against Pulsar OS's own real
 config (`00-pulsaros-theme`, same fetch as the button-layout fix
-above). Pulsar ships ~15 extensions for the full "feels like macOS"
+above). Pulsar ships ~15 extensions for their full desktop
 polish; this profile only shipped 5. Four of Pulsar's real extensions
 are, confirmed via `dnf list --available` on real hardware, genuine
 official Fedora packages with the exact same UUIDs Pulsar's config
@@ -513,7 +513,7 @@ Pulsar OS's own config already sets
 added the same key to `customize.sh`, both as the fix for this
 extension and as general hardening for anything added later. Default
 position set to top-right with an 8px inset, sliding in from the
-right edge (matching real macOS notification behavior, confirmed
+right edge (matching the reference desktop's notification behavior, confirmed
 against the extension's own `extension.js` source for what the
 anchor/animation-direction integers actually mean, not guessed from
 the bare gschema). Applied live via `dconf write` rather than
@@ -883,7 +883,7 @@ hover magnification.** Real user report, confirmed visually. Root
 cause, confirmed against GNOME Shell's own real `appDisplay.js`: the
 badge (`_numberOverlayBin`) is a sibling of the icon inside
 `_iconContainer`, not a descendant of the icon graphic itself -- but
-this fork's custom macOS-style hover magnification
+this fork's custom hover magnification
 (`_onDockMotionEvent`) only ever transforms the icon graphic
 (`icon._iconBin`), never that sibling, so the badge stayed visually
 fixed while the icon scaled and moved underneath it. Fixed by
@@ -966,9 +966,9 @@ stayed installed since it turned out to already be a real, protected
 dependency of `kmod`/`systemd-udev`, not something this session
 introduced.
 
-## Update 2026-09-25: a real macOS reference comparison, two more real bugs, and a real self-inflicted packaging incident
+## Update 2026-09-25: a real reference-desktop comparison, two more real bugs, and a real self-inflicted packaging incident
 
-Real user request: a real macOS screenshot as a reference, asking "how
+Real user request: a real reference-desktop screenshot, asking "how
 can we make it work like the real macOS." Took a fresh screenshot of
 the live desktop and compared side by side rather than guessing from
 memory.
@@ -990,7 +990,7 @@ keeps the two in sync) and rebranded one leftover "Pulsar OS"
 notification title to "ParchaOS". `parchaos-global-menu` Release 5.
 
 **Finder's menu bar was missing "View" entirely** (File/Edit/Go/
-Window/Help -- real macOS order is File/Edit/View/Go/Window/Help).
+Window/Help -- the reference desktop's order is File/Edit/View/Go/Window/Help).
 Added a real View menu (Icon View, List View, Show Hidden Files) using
 the same `_sendKeyStroke()` mechanism every other menu in this
 extension already uses, mapped to Nautilus's own real, long-standing
@@ -1013,7 +1013,7 @@ screenshot. Same lesson as the earlier dock/keyboard-remap findings
 confirmed to apply to ordinary behavioral JS changes too, not just
 error states.
 
-**The clock read "Sep 25" with no day-of-week** (real macOS always
+**The clock read "Sep 25" with no day-of-week** (the reference desktop always
 shows "Wed Sep 16"). Not extension code at all -- this is GNOME's own
 native date menu. `clock-show-date=true` turned out to already be
 Fedora's own real stock default (confirmed live, not something this
@@ -1052,7 +1052,7 @@ cleaning them up -- the disk cost is far smaller than the risk of a
 wide, silent cascade removal).
 
 **Deliberately not done in this pass, flagged for later**: Finder's
-real macOS sidebar uses full-color icons throughout (blue folders,
+reference sidebar uses full-color icons throughout (blue folders,
 Dropbox's own logo, a house icon for the home folder, etc.); GTK4/
 libadwaita's own sidebar convention deliberately uses monochrome
 "symbolic" icons that recolor with the accent/dark-light state
@@ -1106,10 +1106,10 @@ here.
 
 ## Correction, 2026-09-25: the sidebar colored-icons item above was wrong
 
-The "deliberately not done" note above claiming "real macOS sidebar
+The "deliberately not done" note above claiming "reference sidebar
 uses full-color icons throughout" was never actually checked against
 the real reference screenshot the user provided at the start of this
-comparison pass -- it was a general assumption about macOS, and a
+comparison pass -- it was a general assumption about the reference desktop, and a
 wrong one. A real patch was written and shipped on that assumption
 (`parchaos-finder` 48.7-7: renamed the sidebar's `-symbolic` icon
 constants and `g_*_get_symbolic_icon()` calls to their non-symbolic
@@ -1121,7 +1121,7 @@ re-cropped and re-examined directly, every single sidebar icon in it
 -- Applications, Desktop, Documents, Downloads, iCloud Drive, Dropbox,
 the home folder, Macintosh HD, AirDrop, Network, Trash -- is
 monochrome or accent-tinted, not full-color. This is real, current
-macOS design (Big Sur onward moved away from the older colorful 3D
+reference design (its 2020 redesign onward moved away from the older colorful 3D
 folder icons to flat monochrome/tinted glyphs); GNOME's existing
 `-symbolic` icon convention was already correct and already matched
 it. The patch was reverted in full (`parchaos-finder` 48.7-8, `Patch0`
@@ -1129,9 +1129,9 @@ and its file removed, `%%autosetup` back to its plain unpatched form)
 before it reached wider use.
 
 **The real lesson, not just the specific mistake**: a UI-fidelity claim
-("real macOS does X") needs to be checked against the actual reference
+("the reference does X") needs to be checked against the actual reference
 material in hand, not answered from general/default assumptions about
-what a version of macOS looks like -- exactly the same discipline this
+what a version of the reference desktop looks like -- exactly the same discipline this
 project already applies to code (verify against real hands-on results,
 not assumptions), just missed here because the claim felt visually
 obvious rather than technical. Leaving the original wrong note above in
@@ -1149,7 +1149,7 @@ re-apply from it.
 
 ## Update 2026-09-25: Bluetooth hardware was real but the whole stack was missing
 
-Continuing the flagged items from the macOS reference comparison.
+Continuing the flagged items from the reference-desktop comparison.
 Checked whether the missing Bluetooth status icon was a real gap or
 another false assumption before touching anything: `rfkill list`
 confirmed a genuine `hci0: Bluetooth` radio, not soft/hard blocked --
@@ -1169,7 +1169,7 @@ the actual mechanism first rather than assuming): fetched
 `this._indicator.visible = nConnectedDevices > 0`, hardcoded, no
 `gsettings` override anywhere in the file. GNOME's top-bar Bluetooth
 icon only ever appears once a device is actively connected; real
-macOS shows a permanent icon regardless of connection state. Confirmed
+The reference desktop shows a permanent icon regardless of connection state. Confirmed
 via a fresh logout/login (new Shell process, so bluez's presence would
 be picked up if that were the blocker) that installing the stack alone
 does not make an icon appear with nothing paired -- expected, matches
@@ -1178,7 +1178,7 @@ the source exactly, not a bug.
 **Real, valuable fix either way**: Bluetooth now actually works on
 this hardware for the first time (pairing, the Settings panel, etc.),
 independent of the icon-visibility question. Making the icon always
-show, macOS-style, would need a small custom indicator (a new panel
+show permanently would need a small custom indicator (a new panel
 element, likely in `parcha-global-menu` alongside its existing
 custom icons) rather than a GNOME Shell patch -- a real, scoped,
 buildable follow-up, not started in this pass.
@@ -1189,7 +1189,7 @@ already installed on this profile; `libgweather4` is not. But the
 real, structural gap is bigger than a missing package: GNOME Shell has
 no built-in top-bar weather indicator at all, by design -- Weather is
 only ever a standalone app upstream, never panel-integrated. Getting a
-real macOS-style "☀️ 59°F" in the menu bar means building new custom
+reference-style "☀️ 59°F" in the menu bar means building new custom
 functionality into `parcha-global-menu` itself (querying geoclue2 for
 location, querying a weather data source, rendering and periodically
 refreshing an icon+temperature) -- a genuinely new feature on the
@@ -1211,7 +1211,7 @@ providers -- no API key needed or managed by this project.
 
 Added a real `WeatherIndicator` (`PanelMenu.Button` subclass) to
 `parcha-global-menu`, registered at the leftmost position of the top
-bar's right box, matching real macOS ordering. Hidden until real data
+bar's right box, matching the reference desktop's ordering. Hidden until real data
 arrives (no placeholder/guessed state); refreshes every 30 minutes;
 clicking it opens the real installed Weather app (`org.gnome.Weather`)
 for full detail rather than building a custom detail popup. Two real
@@ -1233,15 +1233,15 @@ fresh logout/login (JS module reload, same lesson as every other
 extension change today): a real sun icon and "91 °F" rendering in the
 top bar, leftmost among the status icons.
 
-**Follow-up idea raised, not started**: a full macOS-style Weather
+**Follow-up idea raised, not started**: a full redesigned Weather
 *app* (reskinning the real, already-installed `gnome-weather` app's
-UI to match macOS's visual language -- gradient condition backgrounds,
+UI to match the reference desktop's visual language -- gradient condition backgrounds,
 hourly strip, 10-day forecast, data tiles), consistent with this
 project's established pattern of patching/reskinning real upstream
 apps rather than building from scratch. Flagged: "macOS 27 Golden
 Gate" (the fictional future version in the user's reference
 screenshot) has no real Weather-app screenshot to clone precisely, so
-this would target current/recent real macOS Weather design language
+this would target current/recent reference Weather design language
 unless a real reference image is provided.
 
 ## Update 2026-09-25 (evening): yin-yang's light/dark switch did nothing on GNOME
@@ -1303,7 +1303,7 @@ dir (or don't export the variable for the reads) before trusting results.
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
-Calamares macOS-esque skinning, a real Plymouth boot-splash theme,
+Calamares installer skinning, a real Plymouth boot-splash theme,
 Sayri's licensing question, the KDE-cruft cleanup) — none of those
 changed status tonight. New from this session:
 
