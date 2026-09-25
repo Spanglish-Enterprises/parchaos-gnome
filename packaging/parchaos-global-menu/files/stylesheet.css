@@ -1,0 +1,49 @@
+/* ParchaOS Global Menu — original stylesheet. */
+
+.parchaos-menubar-logo-icon {
+    width: 16px;
+    height: 16px;
+    padding: 0 4px;
+}
+
+.parchaos-menubar-app-label {
+    font-weight: bold;
+    color: #ffffff;
+    padding: 0 4px;
+    font-size: 13px;
+}
+
+.parchaos-menubar-label {
+    font-weight: normal;
+    color: #dfdfdf;
+    padding: 0 4px;
+    font-size: 13px;
+    transition: color 0.15s ease;
+}
+
+.parchaos-menubar-label:hover,
+.parchaos-menubar-app-label:hover {
+    color: #ffffff;
+}
+
+.parchaos-weather-box {
+    spacing: 4px;
+    padding: 0 4px;
+}
+
+.parchaos-weather-label {
+    font-weight: normal;
+    color: #dfdfdf;
+    font-size: 13px;
+}
+
+.parchaos-confirm-dialog-label,
+.parchaos-about-box {
+    padding: 12px 16px;
+}
+
+.parchaos-about-title {
+    font-weight: bold;
+    font-size: 16px;
+    padding-bottom: 6px;
+}

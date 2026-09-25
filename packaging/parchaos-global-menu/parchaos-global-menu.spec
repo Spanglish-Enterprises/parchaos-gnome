@@ -1,205 +1,105 @@
 # ==============================================================================
-# ParchaOS's global menu — a real macOS-style global application menu in
-# the GNOME top bar (Apple-menu-equivalent + per-app File/Edit/View...
-# menus + power-off/restart dialogs), forked from Pulsar OS's in-house
-# GNOME Shell extension. Real Inled original work (MIT-INLED license per
-# the Inled-Pulsar-OS/PKG monorepo's own README license table — not a
-# fork of stock GNOME code the way Nautilus/Dash-to-Dock are), sourced
-# directly from that monorepo (no separate dedicated repo/submodule for
-# this one — confirmed via the real repo tree before writing this).
+# ParchaOS's global menu -- a macOS-style global application menu in the
+# GNOME top bar (an app-name menu with About/Hide/Quit, standard
+# File/Edit/View/Go/Window/Help menus, a system logo menu with real power
+# actions, and a weather indicator).
 #
-# SCOPED DELIBERATELY NARROW, real security decision (2026-09-23): the
-# real upstream package bundles this extension together with THREE
-# genuinely unrelated, higher-risk pieces that this spec does NOT
-# include:
-#   1. A custom PAM-based lock-screen ("pulsaros-lock" PAM service +
-#      `pamtester`), whose real Debian postinst does
-#      `chmod u+s /usr/bin/pamtester` -- a SYSTEM-WIDE setuid-root bit
-#      on a generic PAM-testing binary, just so this one extension's
-#      lock screen can check passwords. That's a real, unscoped
-#      privilege-escalation surface (any user, any purpose, not just
-#      this lock screen) -- not something to blindly replicate. The
-#      extension's own JS has real try/catch error handling around
-#      every pamtester call, so shipping the JS as-is without the
-#      setuid binary/PAM service fails this ONE feature safely at
-#      runtime (no crash) rather than working -- lock-screen password
-#      auth is a known, deliberately deferred gap, not an oversight.
-#   2. A large pile of Arch/Debian-specific hibernation setup baked into
-#      the same package's postinst: mkinitcpio HOOKS= editing
-#      (Arch-only, meaningless on Fedora's dracut), NVIDIA
-#      hibernate-resume modprobe options, and -- most importantly --
-#      automatically REWRITING GRUB_CMDLINE_LINUX_DEFAULT and
-#      re-running grub-mkconfig, plus editing rEFInd configs directly.
-#      This project's own GRUB/dracut/Secure-Boot boot chain (the KDE
-#      repo's docs/phase1-findings.md and phase4-findings.md) took
-#      real, hard-won engineering to get right -- silently letting an
-#      unrelated menu-bar extension's install script rewrite kernel
-#      boot parameters is a real destabilization risk this project is
-#      not taking on.
-#   3. A polkit policy + helper binaries for power actions this
-#      extension doesn't strictly need for its core menu functionality
-#      (it already calls `systemctl reboot/poweroff/suspend` directly
-#      via GLib.spawn_command_line_async, which works fine under a
-#      normal logind session without any extra polkit grant).
+# REWRITTEN FROM SCRATCH, 2026-09-25. The previous version of this package
+# was a direct fork of Inled's own `pulsaros-global-menu` (fetched from
+# Inled-Pulsar-OS/PKG and rebranded at build time). Reading Inled's actual
+# license text at license.inled.es (not just the "MIT-INLED" name) turned
+# up real restrictions beyond standard MIT that a fork of their in-house
+# work would carry: a non-compete clause covering "direct and unfair
+# competition," a clause requiring any derivative work to stay licensed
+# exclusively under MIT-INLED, and a clause requiring derivative works to
+# grant "all rights and benefits exclusively to the original authors."
+# ParchaOS is a directly competing macOS-styled Linux product, so
+# continuing to ship a fork of their code was real, live exposure, not a
+# theoretical one.
 #
-# Renamed "Parcha Menu" / parchaos-global-menu@parchaos.org (from
-# "Pulsar OS Global Menu" / pulsaros-global-menu@inled.es) for
-# ParchaOS's own product identity, same reasoning as Parcher and Parcha
-# Dock. Also swaps the extension's own top-left panel icon
-# (pulsar-white-sf.png, Pulsar OS's own branding) for ParchaOS's real,
-# licensed passion-fruit logo (branding/logo/parcha-logo-white.png,
-# already committed to this repo, CC BY 3.0 attributed in
-# branding/logo/CREDITS.md).
+# This version is an original implementation written against
+# docs/global-menu-rewrite-spec.md (a plain-English feature description)
+# and GNOME Shell's own public, documented extension APIs -- it does not
+# read, reference, or adapt Inled's source in any way. It intentionally
+# does not replicate every feature of the old version (most notably, no
+# custom full-screen lock screen with video-wallpaper playback -- this
+# profile uses GNOME's own stock lock screen instead); see the spec doc
+# for exactly what's in scope and what's deliberately deferred.
+#
+# Versioning reset to 2.0.0 to reflect that this is a new, independent
+# codebase, not a continuation of the old fork's own version numbering
+# (which had been inherited from Inled's upstream releases).
 # ==============================================================================
 
 Name:           parchaos-global-menu
-Version:        1.0.134
-Release:        6%{?dist}
-Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
+Version:        2.0.0
+Release:        1%{?dist}
+Summary:        ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
-URL:            https://github.com/Inled-Pulsar-OS/PKG
+URL:            https://github.com/alexgalicea/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
-Source3:        org.gnome.shell.extensions.parchaos-global-menu.gschema.xml
-Source4:        parchaos-menu-icon.png
+Source3:        parchaos-menu-icon.png
 
 BuildArch:      noarch
 
-BuildRequires:  glib2
 Requires:       gnome-shell >= 45
-# Real macOS reference comparison, 2026-09-25: added a permanent
-# weather indicator, matching real macOS's top-bar behavior (GNOME has
-# no built-in panel weather integration at all -- Weather is only ever
-# a standalone app upstream). Verified end-to-end live on real hardware
-# with a standalone gjs script before writing any extension code:
-# real IP-based location via Geoclue.Simple (the exact same API
-# gnome-weather's own real currentLocationController.ts uses,
-# confirmed directly against that file, not guessed) resolved a real
-# city, and GWeather.Info fetched real live conditions using the free
-# MET_NO/METAR providers -- no API key needed or managed by this
-# project. libgweather/geoclue2 were both already present on this
-# profile as transitive deps of gnome-weather/gnome-control-center, but
-# declaring them explicitly here since this extension now has a real,
-# direct dependency on both, independent of whether those other
-# packages stay installed.
+# Real macOS reference comparison, 2026-09-25: a permanent weather
+# indicator, matching real macOS's top-bar behavior (GNOME has no
+# built-in panel weather integration at all -- Weather is only ever a
+# standalone app upstream). Verified end-to-end live on real hardware
+# with a standalone gjs script before writing any extension code: real
+# IP-based location via Geoclue.Simple (the same public API
+# gnome-weather's own real currentLocationController.ts uses, read
+# directly for reference -- a different, independent GNOME project, not
+# Inled's) resolved a real city, and GWeather.Info fetched real live
+# conditions using the free MET_NO/METAR providers -- no API key
+# needed.
 Requires:       libgweather
 Requires:       geoclue2
 
 %description
-Parcha Menu is ParchaOS's real macOS-style global application menu for
-the GNOME top bar: an Apple-menu equivalent plus per-app File/Edit/
-View/Window/Help menus and power-off/restart dialogs. Forked from
-Pulsar OS's in-house GNOME Shell extension, scoped narrowly to just the
-menu-bar functionality — this package deliberately does NOT include
-upstream's setuid-root lock-screen authentication helper or its
-GRUB/hibernation system-mutation logic (see this spec's own banner
-comment for the full reasoning). Lock-screen password authentication is
-a known, deliberately deferred feature gap, not a bug.
+ParchaOS's macOS-style global application menu bar for GNOME Shell: an
+app-name menu with About/Hide/Quit, standard File/Edit/View/Go/Window/
+Help menus, a system logo menu with real power actions, and a weather
+indicator. An original implementation -- see this spec's own banner
+comment and docs/global-menu-rewrite-spec.md in the main repo for why
+and how.
 
 %prep
 mkdir -p src
 cd src
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} .
-
-# ParchaOS branding rebrand (see banner comment above).
-sed -i \
-    -e "s/pulsaros-global-menu@inled\.es/parchaos-global-menu@parchaos.org/g" \
-    -e 's/"name": "Pulsar OS Global Menu"/"name": "Parcha Menu"/' \
-    -e 's#"url": "https://inled\.es"#"url": "https://github.com/alexgalicea/parchaos-gnome"#' \
-    -e 's/org\.gnome\.shell\.extensions\.pulsaros-global-menu/org.gnome.shell.extensions.parchaos-global-menu/g' \
-    metadata.json extension.js org.gnome.shell.extensions.parchaos-global-menu.gschema.xml
-sed -i "s/pulsar-white-sf\.png/parchaos-menu-icon.png/" extension.js
-
-# Real bug found via a real boot test (2026-09-23): the extension's own
-# JS hardcodes the literal string "Finder" as the idle-state app name
-# (shown in the menu bar itself when no window has focus, matching real
-# macOS's "Finder is the default app" behavior) -- 13 occurrences,
-# every one the same concept (display label + the matching
-# `appName === "Finder"` state comparison), confirmed via a full grep
-# before this blanket rename so it wouldn't accidentally touch an
-# unrelated meaning of the word. The earlier UUID/schema-only sed above
-# missed this entirely since it wasn't part of any identifier string.
-sed -i 's/Finder/Parcher/g' extension.js
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
 
 %build
-mkdir -p schemas
-glib-compile-schemas --targetdir=schemas src 2>/dev/null || true
-cd src
-mkdir -p schemas
-cp org.gnome.shell.extensions.parchaos-global-menu.gschema.xml schemas/
-glib-compile-schemas schemas/
+# Nothing to compile: plain JS/JSON/CSS, no gschema in this version (the
+# old fork's one settings key, macOS-style fullscreen-spaces auto-hide,
+# isn't implemented by this rewrite -- see the spec doc's "explicitly
+# not in scope" section. A future genuinely-original implementation of
+# that feature would add its own schema back.)
 
 %install
 UUID=parchaos-global-menu@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
-mkdir -p "$DEST/schemas"
+mkdir -p "$DEST"
 install -m 0644 src/extension.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0644 src/parchaos-menu-icon.png "$DEST/"
-install -m 0644 src/schemas/org.gnome.shell.extensions.parchaos-global-menu.gschema.xml "$DEST/schemas/"
-install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 
 %files
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
-* Fri Sep 25 2026 ParchaOS packaging - 1.0.134-6
-- Added a real, permanent weather indicator (icon + temperature) to
-  the top bar's right box, matching real macOS's menu bar. Real
-  location via Geoclue.Simple, real live conditions via GWeather.Info
-  (free MET_NO/METAR providers, no API key), refreshed every 30
-  minutes. Clicking it opens the real installed Weather app for full
-  detail. Hidden until real data arrives rather than showing a
-  placeholder. Added Requires: libgweather, geoclue2.
-* Fri Sep 25 2026 ParchaOS packaging - 1.0.134-5
-- Two real bugs found via a live comparison against a real macOS
-  reference screenshot. (1) The menu bar showed the literal app-id
-  "com.rastersoft.ding" instead of "Parcher" when no real window had
-  focus -- Desktop Icons NG's own background rendering window
-  (application_id 'com.rastersoft.ding', confirmed directly against
-  its real source) sometimes receives real window focus (e.g.
-  clicking the desktop), and _onFocusWindowChanged() had no exclusion
-  for it the way it already does for gnome-shell/gdm windows. Added
-  one. (2) The Finder menu bar was missing "View" entirely
-  (File/Edit/Go/Window/Help, no View) -- real macOS order is
-  File/Edit/View/Go/Window/Help. Added a real View menu (Icon View,
-  List View, Show Hidden Files) using the same _sendKeyStroke()
-  mechanism every other menu here already uses, mapped to Nautilus's
-  own real Ctrl+1/Ctrl+2/Ctrl+H shortcuts. Also renamed the leftover
-  "Pulsar OS" notification title in the About-app handler to
-  "ParchaOS" while in the area (the file's %%prep already does a
-  blanket Finder->Parcher sed, so the source-level Finder->Parcher
-  renames made alongside these fixes are redundant but harmless).
-* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-4
-- Real user feedback ("logo seems a bit weird and off center"): the
-  source logo file itself had asymmetric canvas padding (170px left
-  margin vs 62px right margin), so every composited/derived asset
-  inherited a visible rightward shift. Root-caused via
-  Image.getbbox(), fixed by cropping to actual content and
-  re-centering with uniform padding in branding/logo/ directly, then
-  regenerating this icon from the corrected silhouette source (also
-  now a true 570x570 square, was a non-square 443x570 before).
-* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-3
-- Real user feedback ("looks strange, low quality") on the panel icon:
-  the detailed logo's fine internal linework (ring + seed dots)
-  visually collapses into noise at real menu-bar icon size (~16-20px).
-  Replaced SOURCE4 with a true silhouette derived from the real logo's
-  own outer contour (flood-filled holes, same exact shape/proportions
-  — not a redrawn approximation), which stays crisp at that size. See
-  branding/logo/CREDITS.md for the full derivation note.
-* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-2
-- Real trademark bug found via a real boot test: the shipped menu bar
-  literally read "Finder File Edit View Go Window Help" on the idle
-  desktop -- the earlier UUID/schema rename missed 13 hardcoded
-  "Finder" string literals inside extension.js entirely (not part of
-  any identifier, so the earlier sed's scope never touched them). Fixed
-  with a verified-safe blanket word rename.
-* Wed Sep 23 2026 ParchaOS packaging - 1.0.134-1
-- Initial package, real upstream source (Inled-Pulsar-OS/PKG monorepo,
-  MIT-INLED license), rebranded "Parcha Menu". Deliberately scoped to
-  exclude upstream's setuid-root lock-screen auth helper and
-  GRUB/hibernation system-mutation postinst logic — see banner comment.
-  Not yet build-tested.
+* Fri Sep 25 2026 ParchaOS packaging - 2.0.0-1
+- Rewritten from scratch as an original implementation, replacing the
+  previous fork of Inled's pulsaros-global-menu. See this spec's own
+  banner comment and docs/global-menu-rewrite-spec.md for the full
+  reasoning (a real licensing exposure found by reading Inled's actual
+  MIT-INLED license text) and exactly what's covered vs. deliberately
+  deferred (no custom lock screen in this pass). Carries over the
+  weather indicator, which was already original code before this
+  rewrite. Version reset to 2.0.0 since this is a new, independent
+  codebase.

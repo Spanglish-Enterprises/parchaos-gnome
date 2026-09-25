@@ -1,0 +1,14 @@
+{
+  "uuid": "parchaos-global-menu@parchaos.org",
+  "name": "ParchaOS Global Menu",
+  "description": "A macOS-style global application menu bar for GNOME Shell: an app menu, File/Edit/View/Go/Window/Help, and a weather indicator.",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/alexgalicea/parchaos-gnome"
+}
