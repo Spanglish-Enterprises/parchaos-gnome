@@ -1,0 +1,70 @@
+--- a/dash.js
++++ b/dash.js
+@@ -870,6 +870,25 @@
+             targetActor.scale_y = data.scale;
+             targetActor.translation_x = finalTransX;
+             targetActor.translation_y = finalTransY * 0.3;
++
++            // The Hot-Key number-overlay badge (_numberOverlayBin) is a
++            // sibling of the icon inside _iconContainer, not a descendant
++            // of targetActor -- it never inherited the magnification
++            // transform above, so it stayed glued in place while the icon
++            // underneath it scaled and moved. Mirror the same transform
++            // onto it so it visually tracks the icon it's badging.
++            const badge = data.icon._numberOverlayBin;
++            if (badge) {
++                badge.remove_transition('scale-x');
++                badge.remove_transition('scale-y');
++                badge.remove_transition('translation-x');
++                badge.remove_transition('translation-y');
++                badge.set_pivot_point(0.5, 0.5);
++                badge.scale_x = data.scale;
++                badge.scale_y = data.scale;
++                badge.translation_x = finalTransX;
++                badge.translation_y = finalTransY * 0.3;
++            }
+         });
+     }
+ 
+@@ -887,6 +906,18 @@
+                 targetActor.translation_x = 0;
+                 targetActor.translation_y = 0;
+             }
++
++            const badge = icon._numberOverlayBin;
++            if (badge) {
++                badge.remove_transition('scale-x');
++                badge.remove_transition('scale-y');
++                badge.remove_transition('translation-x');
++                badge.remove_transition('translation-y');
++                badge.scale_x = 1.0;
++                badge.scale_y = 1.0;
++                badge.translation_x = 0;
++                badge.translation_y = 0;
++            }
+         });
+     }
+ 
+@@ -1341,6 +1372,12 @@
+         const appIcons = this.getAppIcons();
+         let counter = 1;
+         appIcons.forEach(icon => {
++            // getAppIcons() also returns the "Show Applications" grid
++            // button (a DockShowAppsIcon, which extends Dash.ShowAppsIcon,
++            // not DockAbstractAppIcon) -- it was never meant to be
++            // number-launchable and has no setNumberOverlay() at all.
++            if (typeof icon.setNumberOverlay !== 'function')
++                return;
+             if (counter < 10) {
+                 icon.setNumberOverlay(counter);
+                 counter++;
+@@ -1358,7 +1395,8 @@
+     toggleNumberOverlay(activate) {
+         const appIcons = this.getAppIcons();
+         appIcons.forEach(icon => {
+-            icon.toggleNumberOverlay(activate);
++            if (typeof icon.toggleNumberOverlay === 'function')
++                icon.toggleNumberOverlay(activate);
+         });
+     }
+ 

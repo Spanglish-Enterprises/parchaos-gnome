@@ -27,11 +27,45 @@
 # Makefile before writing this (sassc for the SCSS->CSS stylesheet
 # compile, msgfmt for .po->.mo translations, glib-compile-schemas for
 # the gschema), not guessed.
+# Patch0: real, reproducible crash found via log-based live testing
+# 2026-09-25 (first misattributed to parchaos-desktop-icons/DING, whose
+# activity just happened to coincide with it -- see
+# docs/gnome-phase1-findings.md). dash.js's getAppIcons() includes the
+# "Show Applications" grid button alongside real app icons (needed so
+# hover-magnification/drag reordering treat it consistently), but
+# _updateNumberOverlay()/toggleNumberOverlay() call
+# icon.setNumberOverlay()/icon.toggleNumberOverlay() on every icon
+# unconditionally -- methods that only exist on DockAbstractAppIcon,
+# not on the Show Apps button's own class (DockShowAppsIcon extends
+# Dash.ShowAppsIcon). Confirmed this is a real upstream bug, not
+# something this fork introduced: the exact same shape exists in
+# micheleg/dash-to-dock's own current master (dash.js's getAppIcons/
+# _updateNumberOverlay, appIcons.js's DockShowAppsIcon), fetched
+# directly and compared line-for-line, not assumed. It fires on nearly
+# every dash redisplay (any app opened/closed) whenever the Show Apps
+# button is visible, i.e. by default, essentially always -- silent
+# rather than fatal only because GNOME Shell's own extension-callback
+# wrapper swallows the exception, which is why it only ever showed up
+# as log noise. Fixed by guarding both call sites with a
+# typeof-is-function check before calling.
+# Patch0 also fixes a second real bug found via log-based live testing
+# 2026-09-25 (real user report: "the notification badge on the dock
+# stays put and doesn't move with the icon while hovering"). Root
+# cause, confirmed against GNOME Shell's own real appDisplay.js: the
+# Hot-Key number-overlay badge (_numberOverlayBin) is added as a
+# sibling of the icon inside _iconContainer, not a descendant of the
+# icon graphic itself -- but this fork's custom macOS-style hover
+# magnification (_onDockMotionEvent) only ever applies its scale/
+# translation transform to the icon graphic (icon._iconBin), never to
+# that sibling badge, so the badge stayed visually fixed while the
+# icon scaled and moved underneath it. Fixed by mirroring the same
+# transform onto _numberOverlayBin wherever the icon's own transform
+# is applied or reset.
 # ==============================================================================
 
 Name:           parchaos-dock
 Version:        106
-Release:        2%{?dist}
+Release:        5%{?dist}
 Summary:        Parcha Dock — ParchaOS's macOS-styled fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -39,6 +73,7 @@ URL:            https://github.com/Inled-Pulsar-OS/dash-to-dock
 %global commit  f761ebe9a795262b42a18cf57cccd4afe9d3d5a4
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/archive/%{commit}/parchaos-dock-%{shortcommit}.tar.gz
+Patch0:         0001-fix-showappsicon-number-overlay-crash.patch
 
 BuildArch:      noarch
 
@@ -57,7 +92,7 @@ launch bounce animations, a downloads-folder stack, and live
 minimized-window previews. Enabled by default as ParchaOS's dock.
 
 %prep
-%autosetup -n dash-to-dock-%{commit}
+%autosetup -n dash-to-dock-%{commit} -p1
 
 # ParchaOS branding rebrand (see banner comment above) — real upstream
 # UUID/name confirmed via the real metadata.json before writing this
@@ -117,6 +152,32 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-5
+- Fixed a second real bug found via log-based live testing (same
+  Patch0): the dock's notification/Hot-Key number-overlay badge stayed
+  fixed in place instead of tracking the icon during hover
+  magnification, since it's a sibling of the icon actor, not a
+  descendant, and the magnification code never transformed it.
+  Mirrored the icon's scale/translation onto the badge in both the
+  apply and reset paths. See spec banner comment for the trace.
+* Fri Sep 25 2026 ParchaOS packaging - 106-4
+- Release 106-3's Patch0 was malformed (a hand-transcribed diff --git
+  header confused GNU patch's git-diff heuristic into thinking dash.js
+  was being newly created, so the patch silently failed the COPR
+  build: "The next patch would create the file dash.js, which already
+  exists!"). Regenerated the patch mechanically from a real diff -u
+  run and confirmed it applies cleanly against a fresh, pristine
+  extraction (plain unified-diff header, no diff --git/index lines)
+  before resubmitting. Same fix as 106-3, this time verified working.
+* Fri Sep 25 2026 ParchaOS packaging - 106-3
+- Fixed a real, reproducible crash (TypeError: icon.setNumberOverlay
+  is not a function) found via log-based live testing, first
+  misattributed to parchaos-desktop-icons/DING. Confirmed as a genuine
+  upstream dash-to-dock bug (also present in micheleg/dash-to-dock's
+  own master, checked directly): the Show Apps grid button lacks the
+  number-overlay methods that getAppIcons() assumes every icon has.
+  Patch0 guards both call sites. See spec banner comment and
+  docs/gnome-phase1-findings.md for the full trace.
 * Thu Sep 24 2026 ParchaOS packaging - 106-2
 - Real bug found on real hardware: the dock was enabled in dconf but
   crashed at enable() with State: ERROR (missing

@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        8%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -158,12 +158,96 @@ mkdir -p %{buildroot}%{_datadir}/themes
 # more.
 ./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
 
+# Real bug found via log-based live testing 2026-09-25 (real user
+# report: "the window button traffic lights are only showing the icons
+# and not the color circles like a Mac"). Root cause, confirmed against
+# upstream's own README ("Fix for libadwaita (not perfect)") and
+# libs/lib-install.sh's config_gtk4(): libadwaita apps (most of modern
+# GNOME, including Settings/Files) ignore the system theme directory
+# entirely for GTK4 CSS -- this theme's *only* way to reach them is a
+# separate `-l`/`--libadwaita` install mode that overwrites
+# $HOME/.config/gtk-4.0 directly with real colored titlebutton assets
+# (confirmed real red/yellow/green circle PNGs in the upstream source
+# tree, not a guess). This spec never ran that step, so no account on
+# the system -- old or new -- ever got real traffic-light colors in any
+# libadwaita app; they silently fell back to stock Adwaita's monochrome
+# buttons. config_gtk4()'s TARGET_DIR is a literal "${HOME}/.config/gtk-4.0"
+# (not a `-d`-configurable path), so the only way to reach it at package
+# build time is to point $HOME itself at a skel-style destination -- the
+# same per-user first-login provisioning pattern already used elsewhere
+# in this project (systemd user-presets, dconf defaults) for exactly
+# this class of "needs to land in a not-yet-created home directory"
+# problem. Scoped to dark only for skel, matching this profile's actual
+# default color-scheme -- upstream's own docs are explicit that this
+# workaround is "not perfect": a libadwaita app can only ever use
+# whichever single variant was last installed into gtk-4.0 config, it
+# cannot follow the system dark/light toggle. A user who switches to
+# light mode would need to manually rerun
+# `./install.sh -l -c light` themselves to get matching libadwaita
+# colors -- a real, honest upstream limitation, not something this
+# package can silently paper over.
+mkdir -p %{buildroot}%{_sysconfdir}/skel
+HOME=%{buildroot}%{_sysconfdir}/skel ./install.sh -l -c dark --silent-mode
+
+# config_gtk4() creates gtk.css/gtk-dark.css as symlinks built from the
+# literal $HOME we passed above -- since that $HOME IS the buildroot
+# path, the symlinks point INTO the buildroot itself
+# (.../BUILDROOT/etc/skel/...), which rpmbuild correctly refuses to
+# package ("Symlink points to BuildRoot"). Both link targets live in
+# the exact same directory as the link itself, so a plain
+# basename-only relative symlink is the correct, portable fix -- no
+# different behavior once actually installed, just no baked-in
+# buildroot path.
+GTK4_SKEL=%{buildroot}%{_sysconfdir}/skel/.config/gtk-4.0
+ln -sf gtk-Dark.css "$GTK4_SKEL/gtk.css"
+ln -sf gtk-Dark.css "$GTK4_SKEL/gtk-dark.css"
+
 %files
 %license COPYING
 %doc README.md
 %{_datadir}/themes/*
+%{_sysconfdir}/skel/.config/gtk-4.0/
+# install.sh -l's main() doesn't scope itself to just the gtk-4.0
+# config -- it also runs the plain per-user GTK3 install (duplicate
+# .themes/MacTahoe-Dark* variants) and installs the bundled
+# "gnome-theme-switcher" helper app, all under the same $HOME we
+# pointed at skel. Found via a real COPR build failure ("Installed
+# but unpackaged"), not guessed. Harmless/expected content for a
+# per-user skel (a real theme-switcher app and standard ~/.themes
+# entries are normal desktop-Linux conventions), so packaged as-is
+# rather than fighting upstream's own bundling.
+%{_sysconfdir}/skel/.themes/
+%{_sysconfdir}/skel/.local/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-11
+- Release 10's COPR build failed with "Installed (but unpackaged)
+  file(s)": install.sh -l's main() also installs the plain per-user
+  GTK3 theme (.themes/MacTahoe-Dark* variants) and the bundled
+  gnome-theme-switcher app into the same $HOME, not just the gtk-4.0
+  libadwaita config. Added %files entries for %{_sysconfdir}/skel/.themes/
+  and %{_sysconfdir}/skel/.local/ rather than fighting upstream's
+  bundling -- both are normal, harmless per-user skel content.
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-10
+- Release 9's COPR build failed: config_gtk4()'s gtk.css/gtk-dark.css
+  symlinks are built from the literal $HOME we point at the buildroot,
+  so they pointed into the buildroot itself ("Symlink points to
+  BuildRoot"). Fixed by recreating both as plain relative (basename-
+  only) symlinks after install.sh runs -- same real files, no baked-in
+  build-time path. Same libadwaita fix as 106-9 in intent, this is the
+  version that actually builds.
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-9
+- Fixed a real bug found via log-based live testing: traffic-light
+  window buttons showed as monochrome icons, not macOS-style colored
+  circles, in every libadwaita (GTK4) app. Root cause: this theme's
+  colored button assets only reach libadwaita apps via a separate
+  `-l`/`--libadwaita` install step that overwrites $HOME/.config/gtk-4.0
+  directly -- never run by this spec. Added a skel-targeted invocation
+  (HOME=%{buildroot}%{_sysconfdir}/skel) so new accounts get it
+  automatically; existing accounts need a one-time manual copy (see
+  docs/gnome-phase1-findings.md). Dark-only, matching this profile's
+  default -- upstream's own docs note this workaround can't follow the
+  system light/dark toggle.
 * Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-8
 - Real user feedback: no light mode was ever shipped. Confirmed
   upstream's own libs/lib-core.sh has always supported a real 'light'

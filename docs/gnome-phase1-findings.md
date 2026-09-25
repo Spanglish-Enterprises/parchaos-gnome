@@ -838,6 +838,134 @@ permission classifier (flagged as "Modify Shared Resources" even for a
 read-only `wc`/`head`/`grep`); not pursued further since the service's
 own exit-status and log output already confirm success without it.
 
+## Update 2026-09-25: screenshots unblocked, four more real bugs found and fixed with visual confirmation
+
+Real breakthrough: after the earlier "screenshots are a hard wall" finding,
+the user manually approved a portal consent dialog on the real screen,
+which unblocked `org.freedesktop.portal.Screenshot` for good -- an
+`interactive: false` call now returns a real `Response` signal with a
+saved file in `~/Pictures` every time (the earlier hang was genuinely a
+never-answered consent dialog, exactly as suspected, not a technical
+dead end). This reopened real visual verification for the rest of this
+session's fixes, on top of the log-based sweep already documented above.
+
+**Traffic-light buttons showed monochrome icons, not colored circles.**
+Real user report, confirmed visually. Root cause, found by reading
+`MacTahoe-gtk-theme`'s own real README ("Fix for libadwaita (not
+perfect)") and `libs/lib-install.sh`: libadwaita (GTK4) apps -- most of
+modern GNOME, including Settings and Files -- ignore the system theme
+directory for GTK4 CSS entirely; the theme's only real path to them is
+a separate `-l`/`--libadwaita` install mode that overwrites
+`$HOME/.config/gtk-4.0` directly with real colored titlebutton PNGs
+(confirmed real assets in the upstream tree, not guessed).
+`parchaos-gtk-theme` never ran that step. Since `config_gtk4()`'s
+`TARGET_DIR` is a literal `${HOME}/.config/gtk-4.0`, not a
+`-d`-configurable path, the only way to reach it at package-build time
+is pointing `$HOME` itself at a skel destination -- the same
+first-login-provisioning pattern already used elsewhere in this
+project. Two real build bugs surfaced fixing this (both caught by
+actually building, not assumed): the resulting `gtk.css`/`gtk-dark.css`
+symlinks were absolute paths into the buildroot itself ("Symlink
+points to BuildRoot") until recreated as plain relative symlinks
+post-install, and `-l`'s own `main()` also installs a full duplicate
+GTK3 `.themes/MacTahoe-Dark*` tree and a `gnome-theme-switcher` app
+into the same `$HOME` -- packaged as-is rather than fighting upstream's
+bundling. `parchaos-gtk-theme` Release 11. Applied live (copied the new
+skel content into the real account, since skel only reaches new users)
+and confirmed visually: real red/yellow/green circles now render.
+**Real, honest limitation carried forward, not hidden**: this
+workaround can't follow the system light/dark toggle -- whichever
+variant is installed into gtk-4.0 config is fixed until manually
+reinstalled. Dark-only for now, matching this profile's default.
+
+**The dock's Hot-Key number-overlay badge didn't track the icon during
+hover magnification.** Real user report, confirmed visually. Root
+cause, confirmed against GNOME Shell's own real `appDisplay.js`: the
+badge (`_numberOverlayBin`) is a sibling of the icon inside
+`_iconContainer`, not a descendant of the icon graphic itself -- but
+this fork's custom macOS-style hover magnification
+(`_onDockMotionEvent`) only ever transforms the icon graphic
+(`icon._iconBin`), never that sibling, so the badge stayed visually
+fixed while the icon scaled and moved underneath it. Fixed by
+mirroring the same scale/translation onto the badge in both the apply
+and reset paths (`parcha-dock`'s `Patch0`, same patch as the crash fix
+below).
+
+**A real, separate, reproducible dock crash found in the same pass**:
+`TypeError: icon.setNumberOverlay is not a function`, first
+misattributed in an earlier session entry to `parchaos-desktop-icons`
+(DING)'s activity merely coinciding with it. Actual root cause, found
+by reading `dash-to-dock`'s real `dash.js`/`appIcons.js`:
+`getAppIcons()` includes the "Show Applications" grid button alongside
+real app icons (needed so hover-magnification and drag-reordering
+treat it consistently), but `_updateNumberOverlay()`/
+`toggleNumberOverlay()` call `.setNumberOverlay()`/`.toggleNumberOverlay()`
+on every icon unconditionally -- methods that only exist on
+`DockAbstractAppIcon`, not on the Show Apps button's own class
+(`DockShowAppsIcon extends Dash.ShowAppsIcon`). Confirmed this is a
+real upstream bug, not something this fork introduced: the identical
+shape exists in `micheleg/dash-to-dock`'s own current master, fetched
+and compared directly. It fires on nearly every dash redisplay (any
+app opened or closed) whenever the Show Apps button is visible --
+i.e., by default, essentially always -- silent rather than fatal only
+because GNOME Shell's own extension-callback wrapper swallows the
+exception, which is why it only ever showed up as log noise before
+now. Fixed by guarding both call sites with a `typeof`-is-function
+check. `parcha-dock` Release 5 (Release 3's first patch attempt was
+itself malformed -- a hand-transcribed `diff --git` header confused
+GNU patch's git-diff heuristic into thinking `dash.js` was being newly
+created, silently failing the COPR build with "The next patch would
+create the file dash.js, which already exists!"; regenerated
+mechanically from a real `diff -u` run and verified against a pristine
+extraction before resubmitting as Release 4, then bundled with the
+badge fix as Release 5). Also learned (again) the hard way: plain
+`pkill -f <name>` self-matches its own invoking shell command over
+SSH and kills the wrong thing -- use the classic `pkill -f
+'[n]ame'` bracket trick for remote cleanup commands.
+
+**The file browser window's own titlebar said "Finder", not
+"Parcher".** Real user report, confirmed visually (`Parc...` now shown,
+truncated by width). Root cause: the earlier Parcher rebrand only ever
+touched the `.desktop` file's `Name=` key -- Pulsar OS's own real
+upstream fork (this package's actual `Source0`, not stock GNOME Files)
+independently hardcodes the literal string "Finder" in three places,
+confirmed by reading the real source directly: the window's
+`AdwWindowTitle` property (a static title, not stock Nautilus's usual
+dynamic per-folder one -- a real Pulsar OS design choice this fork
+inherits), the "_About Finder" menu label, and the About dialog's
+application name. Renamed all three to "Parcher". `parchaos-finder`
+Release 6.
+
+**Image thumbnails never generated in icon/grid view.** Real user
+report, confirmed visually (real live previews of screenshot content
+now render, including a correctly all-black thumbnail for the one
+screenshot genuinely captured while the screen was locked). Root cause
+took real work to pin down since `python3-gobject` isn't installed on
+this profile at all (ruling out a quick python-gi probe) and no error
+appeared in any journal: temporarily installed `gcc` +
+`gnome-desktop4-devel` + friends and wrote a small standalone C program
+calling `GnomeDesktopThumbnailFactory` directly (the same real API
+`nautilus-thumbnails.c` uses internally, confirmed by reading that file
+first) -- `can_thumbnail()` returned `FALSE` and `generate_thumbnail()`
+failed with `Could not find thumbnailer for mime-type 'image/png'`,
+reproduced for both a real screenshot and a plain small PNG, so this
+was systemic, not file-specific. GdkPixbuf decodes PNG fine on its
+own; the factory still needs an explicit `.thumbnailer` registration
+file before it will even attempt one, and Fedora ships that
+registration in the separate `glycin-thumbnailer` subpackage, not
+bundled with `gdk-pixbuf2` or `gnome-desktop` -- the same
+missing-subpackage pattern as `localsearch`'s crash fix earlier this
+session, never pulled in because this profile doesn't use Fedora's
+full comps.xml bundle. Installed live and reran the same C test to
+confirm the fix (`can_thumbnail=1`, `generate_thumbnail` succeeded)
+before adding `Requires: glycin-thumbnailer` to `parchaos-finder.spec`
+(Release 6, same release as the title fix). The temporary dev
+toolchain (`gcc`, `gnome-desktop4-devel`, `gdk-pixbuf2-devel`,
+`glib2-devel`) was removed again afterward; `pkgconf-pkg-config`
+stayed installed since it turned out to already be a real, protected
+dependency of `kmod`/`systemd-udev`, not something this session
+introduced.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
