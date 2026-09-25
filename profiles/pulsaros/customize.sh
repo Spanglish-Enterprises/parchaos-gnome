@@ -245,6 +245,18 @@ color-scheme='prefer-dark'
 # its stock default (false).
 clock-show-weekday=true
 
+# Real macOS reference comparison, 2026-09-25: the new weather
+# indicator (parcha-global-menu) needs real location data via Geoclue
+# to work at all, matching real macOS's own out-of-the-box menu-bar
+# weather. GNOME's own stock default for this is off (a real,
+# deliberate privacy default upstream) -- enabling it here is a
+# genuine user-facing tradeoff this profile is choosing to make for
+# the built-in weather feature, not a silent override; a user who
+# doesn't want it can turn it back off in Settings like any other
+# GNOME install.
+[org/gnome/system/location]
+enabled=true
+
 [org/gnome/desktop/wm/preferences]
 theme='MacTahoe-Dark'
 button-layout='close,minimize,maximize:'

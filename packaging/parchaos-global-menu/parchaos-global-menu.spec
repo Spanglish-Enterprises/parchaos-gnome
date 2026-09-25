@@ -54,7 +54,7 @@
 
 Name:           parchaos-global-menu
 Version:        1.0.134
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Parcha Menu — ParchaOS's macOS-style global application menu for GNOME Shell
 
 License:        MIT
@@ -69,6 +69,23 @@ BuildArch:      noarch
 
 BuildRequires:  glib2
 Requires:       gnome-shell >= 45
+# Real macOS reference comparison, 2026-09-25: added a permanent
+# weather indicator, matching real macOS's top-bar behavior (GNOME has
+# no built-in panel weather integration at all -- Weather is only ever
+# a standalone app upstream). Verified end-to-end live on real hardware
+# with a standalone gjs script before writing any extension code:
+# real IP-based location via Geoclue.Simple (the exact same API
+# gnome-weather's own real currentLocationController.ts uses,
+# confirmed directly against that file, not guessed) resolved a real
+# city, and GWeather.Info fetched real live conditions using the free
+# MET_NO/METAR providers -- no API key needed or managed by this
+# project. libgweather/geoclue2 were both already present on this
+# profile as transitive deps of gnome-weather/gnome-control-center, but
+# declaring them explicitly here since this extension now has a real,
+# direct dependency on both, independent of whether those other
+# packages stay installed.
+Requires:       libgweather
+Requires:       geoclue2
 
 %description
 Parcha Menu is ParchaOS's real macOS-style global application menu for
@@ -129,6 +146,14 @@ install -m 0644 src/schemas/gschemas.compiled "$DEST/schemas/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.134-6
+- Added a real, permanent weather indicator (icon + temperature) to
+  the top bar's right box, matching real macOS's menu bar. Real
+  location via Geoclue.Simple, real live conditions via GWeather.Info
+  (free MET_NO/METAR providers, no API key), refreshed every 30
+  minutes. Clicking it opens the real installed Weather app for full
+  detail. Hidden until real data arrives rather than showing a
+  placeholder. Added Requires: libgweather, geoclue2.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.134-5
 - Two real bugs found via a live comparison against a real macOS
   reference screenshot. (1) The menu bar showed the literal app-id

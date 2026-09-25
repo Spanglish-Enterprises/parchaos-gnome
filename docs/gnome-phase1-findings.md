@@ -1197,6 +1197,53 @@ scale of everything else already in that extension, not a bug fix.
 Flagged for an explicit decision on scope before starting, given it
 also means picking a real weather data source/API to depend on.
 
+## Update 2026-09-25: weather indicator built and confirmed working live
+
+User confirmed the scope and said to continue. Verified the real API
+end to end with a standalone `gjs -m` script *before* writing any
+extension code (same discipline as the sidebar-icon lesson earlier
+today -- confirm the real mechanism first): `Geoclue.Simple` (the exact
+API `gnome-weather`'s own real `currentLocationController.ts` uses,
+fetched and read directly, not guessed) resolved this machine's real
+IP-based location to Fort Worth, TX, and `GWeather.Info` fetched real
+live conditions (91°F, few clouds) using the free `MET_NO`/`METAR`
+providers -- no API key needed or managed by this project.
+
+Added a real `WeatherIndicator` (`PanelMenu.Button` subclass) to
+`parcha-global-menu`, registered at the leftmost position of the top
+bar's right box, matching real macOS ordering. Hidden until real data
+arrives (no placeholder/guessed state); refreshes every 30 minutes;
+clicking it opens the real installed Weather app (`org.gnome.Weather`)
+for full detail rather than building a custom detail popup. Two real
+supporting gaps found and fixed along the way:
+
+- `org.gnome.system.location enabled` was `false` (GNOME's real,
+  deliberate stock privacy default) -- without it Geoclue never serves
+  a location to any client, weather or otherwise. Enabled it in
+  `customize.sh` as an explicit, documented user-facing tradeoff for
+  this built-in feature, not a silent override.
+- `libgweather`/`geoclue2` were both already present as transitive
+  dependencies of already-installed packages, but `parcha-global-menu`
+  now has a real, direct dependency on both -- added explicit
+  `Requires:` for them rather than relying on other packages to keep
+  pulling them in.
+
+`parcha-global-menu` Release 6. Confirmed live via screenshot after a
+fresh logout/login (JS module reload, same lesson as every other
+extension change today): a real sun icon and "91 °F" rendering in the
+top bar, leftmost among the status icons.
+
+**Follow-up idea raised, not started**: a full macOS-style Weather
+*app* (reskinning the real, already-installed `gnome-weather` app's
+UI to match macOS's visual language -- gradient condition backgrounds,
+hourly strip, 10-day forecast, data tiles), consistent with this
+project's established pattern of patching/reskinning real upstream
+apps rather than building from scratch. Flagged: "macOS 27 Golden
+Gate" (the fictional future version in the user's reference
+screenshot) has no real Weather-app screenshot to clone precisely, so
+this would target current/recent real macOS Weather design language
+unless a real reference image is provided.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
