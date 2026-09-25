@@ -1,6 +1,45 @@
 # ParchaOS (GNOME variant) — pearOS/Pulsar OS on Fedora
 
-**Status as of 2026-09-24: past "verified in a VM" — a real disk install, reboot, and login has now happened on the actual physical machine this variant ships to (MSI B650 GAMING PLUS WIFI / AM5 desktop), including working wired networking, working WiFi, and all of Pulsar OS's ported apps (dock, global menu, Parcher/Nautilus, macOS keyboard remap, cloud drives, focus schedule, auto light/dark, TMOG, Pafari) installed and process-verified. See `docs/gnome-phase1-findings.md` for the real-hardware crisis this took to get there (a long chain of real bugs: boot/GRUB, locale, fonts, Bluetooth/WiFi firmware, a missing NetworkManager subpackage, and a genuinely subtle system-clock/signature-verification bug) and `docs/gnome-phase0-findings.md` for everything before that. This file's roadmap sections below are the ORIGINAL plan from the fork and are now stale in most particulars; the phase docs have the current, accurate picture. If you are an agent picking this up, read all three before touching code.**
+**Status as of 2026-09-25**: a real disk install, reboot, and login has
+happened on the actual physical machine this variant ships to (MSI B650
+GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
+ships 25 real custom packages plus the full Fedora base — dock, global
+menu, Finder (Nautilus fork), GTK/icon/Plymouth/wallpaper theming
+(light + dark), a Chromium-based browser alongside the WebKitGTK one,
+macOS keyboard remap, cloud drives, focus schedule, auto light/dark,
+TMOG, a hosts-file ad-blocker, a real live/video wallpaper, Desktop
+Icons NG, and 12 of Pulsar OS's own real GNOME Shell extensions for
+macOS-style polish (traffic-light window buttons, genie minimize
+effect, top-right notification banners, blur, and more). The KDE-only
+cruft this repo inherited from its original fork (`profiles/pearos/`
+and its packaging) has been fully removed.
+
+**If you're an agent picking this up, read the phase docs before
+touching code** — they are the authoritative, chronological record of
+what's real, what's verified, and what's still open, and this README's
+job is now just to orient you to them, not to duplicate their detail:
+- `docs/gnome-phase0-findings.md` — the original GRUB/boot/disk-install
+  saga and early packaging work.
+- `docs/gnome-phase1-findings.md` — the real-hardware crisis (boot,
+  locale, fonts, WiFi/Bluetooth firmware, a clock/signature-verification
+  bug) plus everything from the theming/extension-polish pass: traffic
+  lights, light mode, the browser, app renames, the GDM logo, and a
+  full extension-parity pass against Pulsar OS's own real config.
+- `docs/gnome-phase2-findings.md` — a full licensing audit of Pulsar
+  OS's remaining from-scratch ports. Real finding: most of Inled's own
+  original work (not their forks of established GPL projects) has no
+  actual LICENSE file anywhere, a systemic gap, not a one-off. A single
+  outreach email to Inled covering everything blocked is drafted but
+  **not yet sent** — that's the single highest-leverage next step if
+  you're picking this up fresh.
+- `docs/gnome-phase3-findings.md` — scoping and shipping the three
+  "bigger feature" gaps that don't depend on Inled's answer
+  (`gnome-software`, a real hosts-file ad-blocker, a real Wayland-native
+  live wallpaper) and closing the last extension gap (Desktop Icons
+  NG). Also documents a real five-bug dependency chain found in the
+  existing `pafari` package while adding `gnome-software` — worth
+  reading before touching RPM `Epoch`/`Provides`/`Obsoletes` on any
+  package in this repo.
 
 ## What this repo is
 
@@ -8,190 +47,140 @@ This is a **GNOME-based** sibling of [`alexgalicea/parchaos`](https://github.com
 (the original, working, KDE Plasma–based ParchaOS — a Fedora port of
 [pearOS](https://github.com/pearOS-archlinux), a macOS-styled Linux distro).
 
-**Why a second repo instead of continuing the KDE one**: mid-session
-investigation (2026-09-22) discovered that pearOS's own macOS-mimicry is
-itself downstream of a much larger, more mature, more complete project
-called **Pulsar OS "Bitten Fruit"** (https://bittenfruit.inled.es/,
-source at [`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG),
-GNOME-based, MIT-INLED + GPL-3.0). Pulsar OS already has working, polished,
-actively-maintained implementations of nearly everything on this project's
-remaining roadmap: a real macOS-style global menu, a real Dash-to-Dock fork
-with Liquid Glass blur, a heavily patched Nautilus ("Finder" — real traffic
-lights, Tags sidebar, iCloud-style cloud drive integration), Spotlight
-search, Time Machine-style backups, a Siri-like AI assistant ("Sayri"),
-Circle-to-Search, and full theme/SDDM/GRUB/Plymouth/rEFInd macOS asset
-packs. All of it is GNOME Shell-extension-based, so **none of it runs
-under KDE Plasma** — hence a separate repo rather than trying to bolt GNOME
-Shell extensions onto the existing KDE build.
+**Why a second repo instead of continuing the KDE one**: pearOS's own
+macOS-mimicry is itself downstream of a much larger, more mature, more
+complete project called **Pulsar OS "Bitten Fruit"**
+(https://bittenfruit.inled.es/, source at
+[`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG),
+GNOME-based). Pulsar OS already has working, polished,
+actively-maintained implementations of nearly everything on this
+project's roadmap. All of it is GNOME Shell-extension-based, so **none
+of it runs under KDE Plasma** — hence a separate repo rather than
+trying to bolt GNOME Shell extensions onto the existing KDE build.
 
 **The KDE repo (`alexgalicea/parchaos`) is being kept as-is, working,
-untouched** — it is a real, verified-working, installable OS (live boot,
-disk install, full branding, all confirmed on real hardware/VMs this
-project has access to). Do not assume this GNOME repo supersedes it; they
-are parallel products until/unless the user decides otherwise. If you're
-unsure which repo a task belongs in, ask.
+untouched** — a real, verified-working, installable OS in its own
+right. Do not assume this GNOME repo supersedes it; they are parallel
+products until/unless the user decides otherwise. If you're unsure
+which repo a task belongs in, ask.
 
-## What carries over from the KDE repo vs. what doesn't
+**A real, important caveat on Pulsar OS's own licensing** (see
+`docs/gnome-phase2-findings.md` for the full audit): their own
+project's license claims don't hold up against the real repos in most
+places. Their fork of Nautilus (used as this project's own Finder) has
+a real, confirmed license. Almost everything else original to Inled —
+Sayri, Time Machine, Welcome, Cloud, the keyboard remapper, the
+Plymouth/Calamares/sound themes, Spotlight, Circle-to-Search, Control
+Center, Dynamic Island, the app store, the driver manager — has **no
+LICENSE file anywhere**, regardless of what a PKGBUILD or
+`DEBIAN/control` claims. Don't take any license field in their repos at
+face value; check for a real LICENSE file the way this project's own
+audit did, and don't package anything from that list until Inled
+responds to the outreach email.
 
-This repo was created via `git push --mirror`-equivalent from the KDE
-repo's `claude/new-session-eqcw68` branch (pushed to this repo's `main`),
-so **all of the KDE repo's history and files are currently present here
-unchanged**. Most of it needs to be replaced or removed as this repo
-diverges. Concretely:
-
-**Carries over almost unchanged (desktop-environment-agnostic):**
-- `engine/build-iso.sh` — the whole live-ISO build pipeline (dracut, GRUB,
-  xorriso/El Torito assembly, Secure Boot shim signing). This was the
-  hardest, highest-risk part of the original project (see
-  `docs/phase1-findings.md` and `docs/phase4-findings.md` in the KDE repo
-  for the full saga: GRUB relocator bugs, dmsquash-live, kernel-install-on-target,
-  BIOS boot partition flags). None of it is KDE-specific.
-- `packaging/pearos-calamares-config` — the Calamares installer branding +
-  the real partitioning/kernel-install fixes that got a real disk install
-  booting end-to-end. Only the visual branding assets (splash/logo) need
-  re-pointing to new theme assets.
-- Ploader / UEFI Secure Boot signing chain.
-- `packaging/parchaos-focus-schedule` (D-Bus `Notifications.Inhibit`, works
-  under any desktop implementing the freedesktop.org notifications spec).
-- Likely `packaging/parchaos-yin-yang` (already has a `gtk` plugin
-  upstream; may need less adaptation than it did for KDE, where a
-  `parchaos-appmenu-gtk-module` bridge was needed just to get GTK apps'
-  menus to show up at all — under GNOME that whole problem disappears).
-
-**Needs full replacement (KDE/KWin/Plasma-specific — will not run under GNOME):**
-- `packaging/pearos-dock` (Plasma 6 QML applet) → replace with Pulsar OS's
-  `pulsar-dock@inled.es` (their Dash-to-Dock fork,
-  [`Inled-Pulsar-OS/dash-to-dock`](https://github.com/Inled-Pulsar-OS/dash-to-dock)),
-  packaged as part of `pulsaros-gnome`.
-- `packaging/pearos-liquidgel` (KWin blur effect) → replace with Pulsar
-  OS's "Liquid Glass" GNOME Shell extension
-  ([`ryohsuke1231/liquid-glass`](https://github.com/ryohsuke1231/liquid-glass),
-  bundled via `pulsaros-gnome`).
-- The Aurorae window-decoration theme, the Plasma SVG desktop theme, and
-  all `Pear*` plasmoids (`PearAppTitle`, `PearClock`, `PearPrivacy`,
-  `PearControlCentre`, `PearWeather`, `PearCalendar`) → GNOME doesn't have
-  a direct equivalent to Plasma's desktop-widget system; the global menu
-  and top-bar experience come from `pulsaros-global-menu` (a GNOME Shell
-  extension with a real Apple-menu + File/Edit/View/Window/Help bar and
-  power-off dialogs) instead. Desktop calendar/weather widgets may need a
-  separate solution or may just not exist in the GNOME variant — not yet
-  investigated.
-- `packaging/parchaos-appmenu-gtk-module` → becomes unnecessary entirely
-  once everything is GTK-native under GNOME.
-- `packaging/parchaos-whitesur-lookandfeel` (KDE Plasma look-and-feel
-  KPackage) → not applicable; GNOME theming comes from `pulsaros-theme`
-  (MacTahoe GTK + icon theme).
-- Most of `packaging/pearos-settings` (skel `kdeglobals`/`kwinrc`/
-  `plasma-org.kde.plasma.desktop-appletsrc`, Kvantum theme) → all
-  KDE-config-format specific, meaningless under GNOME. The panel-layout
-  bugs fixed there this session (see the KDE repo's own commit history,
-  2026-09-22: broken icon-theme reference, non-expanding panel spacer,
-  dead-code idle-menu-text path) are KDE-repo-only fixes and do **not**
-  need porting here.
-- `packaging/pearos-icon-theme`, `pearos-gtk-theme`, `pearos-sddm-theme`,
-  `pearos-grub-theme`, `pearos-wallpapers` → replace wholesale with Pulsar
-  OS's own theme packages (`pulsaros-theme`, `pulsaros-sddm` [Apple Tahoe
-  SDDM theme], `pulsaros-grub`, `pulsaros-refind`, `pulsaros-plymouth`,
-  `pulsaros-live-wallpaper`), all already built and working — this is
-  **repackaging already-proven software for Fedora**, not inventing new
-  themes from scratch.
-
-**Real, substantial from-scratch ports** (Pulsar OS has these built, but
-they're full standalone apps, not "install-and-go" — expect multi-day
-effort each, same shape as the KDE repo's `liquid-gel`/`pearos-dock`
-ports):
-- [`Inled-Pulsar-OS/finder`](https://github.com/Inled-Pulsar-OS/finder) —
-  the patched Nautilus ("Finder"). GPL-3.0, real `LICENSE` file confirmed
-  present (2026-09-24, see `docs/gnome-phase2-findings.md`) — genuinely
-  clear to port. Meson/ninja build, depends on
-  GTK4/libadwaita/gexiv2/tinysparql — check Fedora's package versions
-  match what the PKGBUILD expects (it already needed one sed patch for a
-  `gexiv2` pkgconfig naming difference between distros, see
-  `arch/pkgbuilds/nautilus/PKGBUILD` in the `Inled-Pulsar-OS/PKG` repo).
-  **This was approved and in-progress investigation when this repo was
-  created — pick this up first.**
-- `sayri`, `pulsaros-timemachine`, `pulsaros-welcome`, `pulsaros-cloud`,
-  `gnome-macos-remap-wayland` — **all blocked as of 2026-09-24**: none of
-  these have a real LICENSE file anywhere (repo root or subdirectory),
-  regardless of what their PKGBUILD/`DEBIAN/control` metadata claims
-  (GPL3, GPL-3.0-or-later, or "custom" — none backed by an actual license
-  text). This is a systemic gap in Inled's own original work, not a
-  one-off — see `docs/gnome-phase2-findings.md` for the full audit and the
-  recommended single outreach to Inled (`info@inled.es`) covering all five
-  at once. Do not start packaging any of these until that's resolved.
-  Brief descriptions for when it is: `sayri` (Siri-like AI assistant,
-  Python/GTK4, whisper.cpp + Piper), `pulsaros-timemachine` (Btrfs
-  snapshots + restic, GTK4/Libadwaita), `pulsaros-welcome` (Tauri
-  Rust+React first-boot app), `pulsaros-cloud` (rclone wrapper for
-  Finder's cloud-drives sidebar), `gnome-macos-remap-wayland` (built on
-  `xremap`, genuinely DE-agnostic key remapper).
-
-**Full Pulsar OS package reference**: see
-[`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG)'s own
-README — it has a complete table of every package, what it does, and
-exactly which upstream project it derives from. **Caveat, confirmed
-2026-09-24** (see `docs/gnome-phase2-findings.md`): their README's own
-license claims (MIT-INLED for original work, GPL-3.0 for forks like
-Nautilus) don't actually hold up against the real repos — only the
-Nautilus fork has a real LICENSE file backing its claim; every original
-Inled component checked so far has no LICENSE file anywhere despite
-PKGBUILD metadata claiming one. Don't take this README's license column at
-face value — check the actual repo for a LICENSE file the way this
-project's own audit did, the same "verify against the real upstream
-source, don't assume" rule as everything else here. Their `arch/pkgbuilds/`
-directory does have real, working `PKGBUILD`s for every component's
-dependencies and build steps, which remain a reliable technical reference
-even where the license field isn't.
-
-## Layout (inherited from the KDE repo, to be reorganized)
+## Layout
 
 ```
-engine/                     Reusable Fedora build engine — keep as-is
-profiles/pearos/            KDE-specific profile — needs a new
-                             profiles/<gnome-flavor-name>/ alongside or
-                             instead of this
-packaging/                  Mix of reusable (Calamares, focus-schedule)
-                             and KDE-only (dock, liquidgel, plasmoids,
-                             settings) packages — needs to be sorted
-docs/                       KDE repo's phase-history docs — historical
-                             reference only, doesn't describe this repo's
-                             own (not-yet-started) history
+engine/            Reusable Fedora ISO build engine (dracut, GRUB,
+                    xorriso/El Torito, Secure Boot shim signing) —
+                    desktop-environment-agnostic, shared with the KDE
+                    repo's own history.
+profiles/pulsaros/  This variant's only profile. packages.list (stock
+                    Fedora packages), packages.sh (this project's own
+                    25 custom packages, PROFILE_REPO_PACKAGES),
+                    customize.sh (branding + dconf defaults),
+                    repo.sh, profile.conf.
+packaging/          One directory per custom package, each with a
+                    real .spec and (where the source isn't fetched
+                    from a pinned upstream commit) a files/ tree.
+                    Every package's own spec has a banner comment
+                    explaining what it is, why it exists, and the
+                    real bugs found building/shipping it — read the
+                    spec before assuming what a package does.
+docs/               gnome-phase{0,1,2,3}-findings.md — see above.
+                    pearos-ui-reference/ — historical KDE-era design
+                    reference, not this repo's own history.
 ```
 
-## Next steps for whoever picks this up
+## What's actually shipped (see the phase docs for the "why" and the real bugs behind each)
 
-1. Decide on a profile name (`profiles/pearos/` is KDE-branded; this
-   variant should probably be its own name, matching whatever product
-   identity gets chosen — "ParchaOS" itself, or something distinguishing
-   it from the KDE line).
-2. Finish the Finder/Nautilus port (in progress — real upstream source
-   identified, license confirmed GPL-3.0, build system is meson/ninja,
-   dependencies listed above).
-3. Get a minimal GNOME session booting via `engine/build-iso.sh` first
-   (swap `livesys_session="kde"` → `"gnome"` in the engine, add GNOME
-   packages to a new profile's `packages.list`) before layering on any
-   Pulsar OS branding — establish the same "unbranded baseline" checkpoint
-   the KDE repo used in its own Phase 1.
-4. Work through the "needs full replacement" list above roughly in order
-   of user-visible impact: theme/icon/SDDM assets first (highest
-   visual-impact-to-effort ratio, since Pulsar OS already built and tested
-   all of them), then dock + global menu (the two biggest "does this
-   actually feel like macOS" pieces), then the standalone apps
-   (Finder → Sayri → Time Machine → Welcome, in roughly that priority
-   order based on what the user has asked about so far).
-5. Write real phase-findings docs as you go (`docs/phase0-findings.md`
-   etc., following the KDE repo's own convention) — that repo's docs are
-   what let this session's work restart cleanly after context resets, and
-   this repo needs the same for whichever agent works on it next.
+**Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, genie minimize
+effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (real
+macOS-style menu bar), `parchaos-gtk-theme`/`parchaos-icon-theme`
+(MacTahoe, both light and dark), `parchaos-gnome-wallpaper`,
+`parchaos-gnome-plymouth-theme` (currently a safe no-op guard, see
+"Still deferred" below), `parchaos-gdm-logo`, `parchaos-desktop-icons`
+(DING), `parchaos-hanabi` (real video wallpaper), plus 8 more
+independently-licensed GNOME Shell extensions for polish
+(`blur-my-shell`, Just Perfection, No Overview, AppIndicator,
+`parchaos-notification-position`, `parchaos-wiggle`,
+`parchaos-ui-tune`) — 12 of Pulsar OS's own real ~15-extension list in
+total.
+
+**Apps**: `parchaos-finder` (real Nautilus fork, GPL-3.0, genuinely
+clear to redistribute), `pafari` (WebKitGTK/Epiphany fork), `parchaos-browser`
+(thin Chromium rebrand for full Google-service compatibility),
+`parchaos-app-renames` (Loupe → Preview, Clocks → Clock, Geary → Mail),
+`parchaos-tmog`, `parchaos-cloud` (rclone wrapper — **deprioritized**,
+see phase2/phase3 docs; already shipped before this project's own
+licensing-audit habit started, same missing-LICENSE gap as the rest of
+Inled's work, being replaced with ParchaOS's own implementation rather
+than maintained further), `parchaos-focus-schedule`, `parchaos-yin-yang`
+(auto light/dark), `parchaos-macos-remap` (Cmd↔Ctrl via xremap),
+`parchaos-hblock` (real hosts-file ad-blocker).
+
+**Installer**: `parchaos-gnome-calamares-config` — a real disk install
+that boots, with the real partitioning/kernel-install/EFI fixes this
+took (see phase0/phase1 docs for the full saga: BIOS boot partitions,
+kernel-install-on-target, EFI System Partition population, a Calamares
+app-removal cascade-removal regression caught and fixed twice).
+
+**OTA mechanism**: `parchaos-desktop`, a no-content meta-package whose
+`Requires:` list names every package above — installing/updating it is
+what makes a plain `sudo dnf update` on an already-installed system
+pick up packages added to this profile after the user's own install,
+not just upgrade ones already present. **Must be kept in sync by hand**
+whenever `packages.sh`'s `PROFILE_REPO_PACKAGES` changes — bump its
+`Release` and add the new `Requires:` line, or a real user's `dnf
+update` silently won't pick up the new package. This has bitten this
+project's own real hardware more than once; see phase1/phase3 docs.
+
+## Still deferred (explicit user calls, not forgotten)
+
+- Deeper Calamares macOS-esque installer skinning (real QML/UI work,
+  not started — could be done as this project's own original work,
+  doesn't need Pulsar's blocked `calamares-themes`).
+- A real Plymouth boot-splash theme (`parcha-plymouth` doesn't exist
+  yet; the theme-switch step is a safe no-op in the meantime).
+- A "Liquid Glass" blur/glass GNOME Shell extension equivalent (real
+  source already identified: `ryohsuke1231/liquid-glass`, not started).
+- `parchaos-cloud`'s replacement (see above).
+
+## Blocked on Inled (one email would unblock all of it)
+
+Sayri, `pulsaros-timemachine`, `pulsaros-welcome`, `pulsaros-cloud`,
+`gnome-macos-remap-wayland`, `plymouth-macoslike`, `calamares-themes`,
+`pulsar-pear-sound-theme`, `pulsaros-spotlight-launcher`,
+`pulsar-circle-to-search`, a Control Center replica, a Dynamic
+Island-style notification UI, an app store, a driver manager. See
+`docs/gnome-phase2-findings.md` and `docs/gnome-phase3-findings.md` for
+the full audit and the drafted (unsent) outreach email.
 
 ## A note on working style, for any agent picking this up
 
-The KDE repo's whole history (see its `docs/*.md` and commit log) is a
-useful model for how this project expects work to happen: **verify against
-real hands-on results, not assumptions** — every "should work" claim in
-this project's history that wasn't actually tested turned out to hide a
-real bug (a missing RPM `Release` bump silently no-op'ing a fix, a
-dead-code QML path, a non-expanding panel spacer, a wrong git tag, wrong
-dependency pins, ambiguous shebangs, and more, all listed in the KDE
-repo's commit history from 2026-09-22 alone). Build it, install it, run
-it, and look at a real screenshot before calling something done.
+**Verify against real hands-on results, not assumptions.** This
+project's whole history (this repo's own phase docs, and the KDE
+repo's before it) is one long demonstration that "should work" claims
+hide real bugs: a missing RPM `Release` bump silently no-op'ing a fix,
+an RPM `Epoch` mismatch quietly defeating a `Provides`/`Obsoletes`
+declaration, a build-time macro getting expanded inside what was meant
+to be a plain shell comment, a package's own install script silently
+skipping a step because a build sandbox lacked a binary it assumed was
+present, a license field in a PKGBUILD with no real LICENSE file behind
+it. Every one of these was caught by actually building it, installing
+it on real hardware, and reading the real output — not by asking
+whether it should work. Do the same. Check licenses against a real
+LICENSE file, not a claim. Check real package/service state with real
+commands, not memory. Build it, install it, run it, and look at a real
+screenshot (or a real `dnf`/`systemctl`/`gsettings` result) before
+calling something done.
