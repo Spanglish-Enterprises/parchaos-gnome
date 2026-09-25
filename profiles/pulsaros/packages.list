@@ -397,3 +397,10 @@ gnome-shell-extension-blur-my-shell
 gnome-shell-extension-just-perfection
 gnome-shell-extension-no-overview
 gnome-shell-extension-appindicator
+
+# GUI update tool -- covers this need with zero packaging work at all,
+# confirmed via real `dnf list --available` this is a genuine official
+# Fedora package (50.4-1.fc44). Same real job as Pulsar OS's own
+# pulsaros-update (blocked, no LICENSE file), without needing any of
+# their code.
+gnome-software

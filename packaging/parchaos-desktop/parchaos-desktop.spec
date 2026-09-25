@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -89,6 +89,7 @@ Requires:       parchaos-magic-lamp-effect
 Requires:       parchaos-wiggle
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
+Requires:       parchaos-hblock
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -109,6 +110,10 @@ mkdir -p %{buildroot}
 %files
 
 %changelog
+* Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-8
+- Added Requires: parchaos-hblock -- real, independent hosts-file
+  ad-blocker, one of the phase3-scoped "bigger feature" gaps that
+  doesn't depend on Inled's licensing answer.
 * Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-7
 - Added Requires: parchaos-gdm-logo -- real user feedback, GDM login
   screen still showed Fedora's logo.

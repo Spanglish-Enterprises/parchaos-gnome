@@ -190,6 +190,13 @@ PROFILE_REPO_PACKAGES=(
     # ("the login logo is still fedora").
     parchaos-gdm-logo
 
+    # Hosts-file ad-blocker (packaging/parchaos-hblock/) -- one of the
+    # three "bigger feature" gaps that doesn't depend on Inled's
+    # licensing answer (docs/gnome-phase3-findings.md). Built from the
+    # real, independent hectorm/hblock upstream directly, not Pulsar
+    # OS's own (blocked) pulsaros-hblock.
+    parchaos-hblock
+
     # ParchaOS desktop meta-package (packaging/parchaos-desktop/) -- a
     # real, standard-pattern no-content package whose only job is a
     # Requires: line naming every package above. Exists in direct
