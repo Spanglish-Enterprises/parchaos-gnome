@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# parchaos-cloud — mount cloud storage remotes (Google Drive, OneDrive,
+# any of rclone's real backends) under ~/Cloud/<name>, via a systemd user
+# template unit running `rclone mount`. Original implementation; see
+# docs/cloud-rewrite-spec.md in the main repo.
+set -euo pipefail
+
+CLOUD_DIR="${HOME}/Cloud"
+UNIT_PREFIX="parchaos-cloud"
+
+usage() {
+    cat <<'EOF'
+usage: parchaos-cloud <command> [name]
+
+  choose              ask graphical or terminal setup, then run it
+  add | setup         configure a new remote and mount it
+  mount <name>        start the mount for an existing remote
+  unmount <name>      stop the mount for a remote
+  list                show configured remotes and their mount state
+  reconnect <name>    refresh an expired remote's authorization
+  open <name>         open the mounted folder in the file manager
+EOF
+}
+
+is_mounted() {
+    local name="$1"
+    mountpoint -q "${CLOUD_DIR}/${name}" 2>/dev/null
+}
+
+cmd_list() {
+    local remotes
+    remotes="$(rclone listremotes 2>/dev/null || true)"
+    if [[ -z "$remotes" ]]; then
+        echo "No cloud accounts configured yet. Run 'parchaos-cloud add' to add one."
+        return 0
+    fi
+    while IFS= read -r remote; do
+        local name="${remote%:}"
+        if is_mounted "$name"; then
+            echo "${name}  (mounted at ${CLOUD_DIR}/${name})"
+        else
+            echo "${name}  (not mounted)"
+        fi
+    done <<<"$remotes"
+}
+
+cmd_mount() {
+    local name="$1"
+    mkdir -p "${CLOUD_DIR}/${name}"
+    systemctl --user enable --now "${UNIT_PREFIX}@${name}.service"
+    sleep 1
+    if is_mounted "$name"; then
+        echo "Mounted ${name} at ${CLOUD_DIR}/${name}"
+    else
+        echo "Not mounted yet; check 'journalctl --user -u ${UNIT_PREFIX}@${name}'."
+    fi
+}
+
+cmd_unmount() {
+    local name="$1"
+    systemctl --user disable --now "${UNIT_PREFIX}@${name}.service" 2>/dev/null || true
+    echo "Unmounted ${name}."
+}
+
+cmd_add() {
+    echo "Opening rclone's setup wizard. Follow the prompts to add a new"
+    echo "cloud storage account (Google Drive, OneDrive, or any other"
+    echo "rclone-supported provider)."
+    rclone config
+    local name
+    read -rp "Name of the remote you just configured (as shown in 'rclone config'): " name
+    if [[ -n "$name" ]]; then
+        cmd_mount "$name"
+    fi
+}
+
+cmd_reconnect() {
+    local name="$1"
+    rclone config reconnect "${name}:"
+    systemctl --user restart "${UNIT_PREFIX}@${name}.service" 2>/dev/null || true
+    echo "Reconnected ${name}."
+}
+
+cmd_open() {
+    local name="$1"
+    if ! is_mounted "$name"; then
+        cmd_mount "$name"
+    fi
+    exec gio open "${CLOUD_DIR}/${name}"
+}
+
+cmd_choose() {
+    if command -v zenity >/dev/null 2>&1; then
+        local choice
+        choice=$(zenity --list --title="Add Cloud Account" \
+            --text="How would you like to set up your cloud account?" \
+            --column="Option" "Graphical setup (rclone web UI)" "Terminal setup" \
+            2>/dev/null || true)
+        case "$choice" in
+            "Graphical setup"*)
+                exec rclone config --auto-confirm 2>/dev/null || exec gnome-terminal -- bash -lc 'parchaos-cloud add'
+                ;;
+            *)
+                exec gnome-terminal -- bash -lc 'parchaos-cloud add'
+                ;;
+        esac
+    else
+        exec gnome-terminal -- bash -lc 'parchaos-cloud add'
+    fi
+}
+
+main() {
+    local command="${1:-}"
+    local name="${2:-}"
+
+    case "$command" in
+        choose) cmd_choose ;;
+        add|setup) cmd_add ;;
+        mount)
+            [[ -n "$name" ]] || { echo "usage: parchaos-cloud mount <name>" >&2; exit 1; }
+            cmd_mount "$name"
+            ;;
+        unmount)
+            [[ -n "$name" ]] || { echo "usage: parchaos-cloud unmount <name>" >&2; exit 1; }
+            cmd_unmount "$name"
+            ;;
+        list) cmd_list ;;
+        reconnect)
+            [[ -n "$name" ]] || { echo "usage: parchaos-cloud reconnect <name>" >&2; exit 1; }
+            cmd_reconnect "$name"
+            ;;
+        open)
+            [[ -n "$name" ]] || { echo "usage: parchaos-cloud open <name>" >&2; exit 1; }
+            cmd_open "$name"
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
