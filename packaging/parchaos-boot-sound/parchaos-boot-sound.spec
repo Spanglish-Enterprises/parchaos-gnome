@@ -1,5 +1,5 @@
 # ==============================================================================
-# A macOS-style "startup chime" — same real feature as
+# A "startup chime" — same real feature as
 # Pear-Project/pearos-boot-sound, but NOT a direct port of that repo's
 # own content or mechanism:
 #
@@ -39,8 +39,8 @@
 
 Name:           parchaos-boot-sound
 Version:        1.0.0
-Release:        1%{?dist}
-Summary:        Plays a startup sound on login (macOS-style boot chime)
+Release:        2%{?dist}
+Summary:        Plays a startup chime on login
 
 License:        NOASSERTION
 URL:            https://github.com/Pear-Project/pearos-boot-sound
@@ -77,6 +77,9 @@ cp -a usr %{buildroot}/
 %{_prefix}/lib/systemd/user-preset/90-parchaos-boot-sound.preset
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Tue Sep 22 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Verified the service file's target path
   (/usr/share/sounds/pearOS-sounds/stereo/desktop-login.oga) exists in

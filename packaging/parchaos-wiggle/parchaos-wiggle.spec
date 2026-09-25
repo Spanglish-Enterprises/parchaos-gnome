@@ -1,6 +1,6 @@
 # ==============================================================================
-# Wiggle -- magnifies the cursor when the mouse is moved rapidly (a real
-# macOS feature, "shake to locate cursor", ported to GNOME). Part of the
+# Wiggle -- magnifies the cursor when the mouse is moved rapidly ("shake
+# to locate cursor", ported to GNOME). Part of the
 # same extension-polish pass as parcha-dock/blur-my-shell/etc.
 #
 # Real, independently-maintained third-party extension (mechtifs/wiggle),
@@ -25,8 +25,8 @@
 
 Name:           parchaos-wiggle
 Version:        5
-Release:        1%{?dist}
-Summary:        Cursor-magnification-on-shake GNOME Shell extension (macOS "shake to locate cursor")
+Release:        2%{?dist}
+Summary:        Cursor-magnification-on-shake GNOME Shell extension ("shake to locate cursor")
 
 License:        GPL-2.0-only
 URL:            https://github.com/mechtifs/wiggle
@@ -43,7 +43,7 @@ Requires:       dconf
 %description
 A real, independently-maintained (not Inled-original) GNOME Shell
 extension that magnifies the mouse cursor when shaken/moved rapidly --
-the same "shake to locate cursor" behavior macOS ships. Same real
+"shake to locate cursor". Same real
 upstream Pulsar OS's own config uses. See this spec's own banner
 comment for the license diligence and the compatibility gap it relies
 on customize.sh to work around.
@@ -68,6 +68,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/wiggle@mechtifs/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 5-2
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Thu Sep 24 2026 ParchaOS packaging - 5-1
 - Initial package, part of the extension-polish gap-closing pass. Real
   upstream, real GPL-2.0 LICENSE.txt confirmed before packaging.

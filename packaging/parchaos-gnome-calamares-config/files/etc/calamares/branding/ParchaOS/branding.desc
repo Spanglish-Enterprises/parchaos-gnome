@@ -178,7 +178,7 @@ style:
    SidebarBackground:        "#1f1f1f"   # fundal sidebar gri închis
    SidebarText:              "#e0e0e0"   # text gri deschis
    SidebarTextCurrent:       "#1f1f1f"   # text închis pe accent deschis
-   SidebarBackgroundCurrent: "#0a84ff"   # accent albastru tip macOS
+   SidebarBackgroundCurrent: "#0a84ff"   # accent albastru
 ### SLIDESHOW
 #
 # The slideshow is displayed during execution steps (e.g. when the

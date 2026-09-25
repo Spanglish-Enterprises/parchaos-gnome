@@ -1,9 +1,9 @@
 # ==============================================================================
 # Notification banner positioning -- a real GNOME Shell extension letting a
-# user move where notification popups appear on screen (macOS shows them
-# top-right, GNOME's own default is top-center; this is what closes that
-# gap). Prioritized by real user request (2026-09-24) as part of the
-# broader macOS-polish extension pass (see customize.sh's own comment for
+# user move where notification popups appear on screen (ParchaOS wants
+# them top-right, GNOME's own default is top-center; this is what closes
+# that gap). Prioritized by real user request (2026-09-24) as part of the
+# broader desktop-polish extension pass (see customize.sh's own comment for
 # the other four added in that same pass).
 #
 # Real upstream picked with the same license diligence this project
@@ -41,7 +41,7 @@
 
 Name:           parchaos-notification-position
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Notification banner position/animation customization for GNOME Shell
 
 License:        GPL-2.0-only
@@ -60,8 +60,8 @@ Requires:       dconf
 A real GNOME Shell extension (GPL-2.0, marcinjakubowski's actively
 maintained fork of brunodrugowick's original) letting the user
 customize where notification banners appear on screen and how they
-animate in -- the piece needed for ParchaOS's default top-right,
-macOS-style notification position. See this spec's own banner comment
+animate in -- the piece needed for ParchaOS's default top-right
+notification position. See this spec's own banner comment
 for the real license diligence and compatibility gap this was checked
 against before packaging.
 
@@ -84,6 +84,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/notification-banner-reloaded@marcinjakubowski.github.com/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Thu Sep 24 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Real user request (priority: notification
   positioning). See banner comment for the license diligence that

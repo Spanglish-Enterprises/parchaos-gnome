@@ -1,5 +1,5 @@
 # ==============================================================================
-# ParchaOS's global menu -- a macOS-style global application menu in the
+# ParchaOS's global menu -- a global application menu in the
 # GNOME top bar (an app-name menu with About/Hide/Quit, standard
 # File/Edit/View/Go/Window/Help menus, a system logo menu with real power
 # actions, and a weather indicator).
@@ -13,7 +13,7 @@
 # competition," a clause requiring any derivative work to stay licensed
 # exclusively under MIT-INLED, and a clause requiring derivative works to
 # grant "all rights and benefits exclusively to the original authors."
-# ParchaOS is a directly competing macOS-styled Linux product, so
+# ParchaOS is a directly competing Linux desktop product, so
 # continuing to ship a fork of their code was real, live exposure, not a
 # theoretical one.
 #
@@ -33,8 +33,8 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        1%{?dist}
-Summary:        ParchaOS's macOS-style global application menu for GNOME Shell
+Release:        2%{?dist}
+Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
 URL:            https://github.com/alexgalicea/parchaos-gnome
@@ -46,8 +46,8 @@ Source3:        parchaos-menu-icon.png
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 45
-# Real macOS reference comparison, 2026-09-25: a permanent weather
-# indicator, matching real macOS's top-bar behavior (GNOME has no
+# Reference comparison, 2026-09-25: a permanent weather indicator in
+# the top bar, like the reference desktop's (GNOME has no
 # built-in panel weather integration at all -- Weather is only ever a
 # standalone app upstream). Verified end-to-end live on real hardware
 # with a standalone gjs script before writing any extension code: real
@@ -61,7 +61,7 @@ Requires:       libgweather
 Requires:       geoclue2
 
 %description
-ParchaOS's macOS-style global application menu bar for GNOME Shell: an
+ParchaOS's global application menu bar for GNOME Shell: an
 app-name menu with About/Hide/Quit, standard File/Edit/View/Go/Window/
 Help menus, a system logo menu with real power actions, and a weather
 indicator. An original implementation -- see this spec's own banner
@@ -75,7 +75,7 @@ cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
 
 %build
 # Nothing to compile: plain JS/JSON/CSS, no gschema in this version (the
-# old fork's one settings key, macOS-style fullscreen-spaces auto-hide,
+# old fork's one settings key, fullscreen-spaces auto-hide,
 # isn't implemented by this rewrite -- see the spec doc's "explicitly
 # not in scope" section. A future genuinely-original implementation of
 # that feature would add its own schema back.)
@@ -93,6 +93,9 @@ install -m 0644 src/parchaos-menu-icon.png "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-2
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-1
 - Added "Report a Bug or Feature Request..." to the Help menu, linking
   to the website's new /support page (backed by the Spanglish Tickets

@@ -1,7 +1,7 @@
 /**
  * ParchaOS Global Menu
  *
- * A macOS-style global application menu bar for GNOME Shell: an app-name
+ * A global application menu bar for GNOME Shell: an app-name
  * label with About/Hide/Quit, standard File/Edit/View/Go/Window/Help
  * menus, a system logo menu with real power actions, and a weather
  * indicator.

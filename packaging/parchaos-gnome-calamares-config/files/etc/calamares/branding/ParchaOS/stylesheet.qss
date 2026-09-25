@@ -54,7 +54,7 @@ QPushButton { background-color: green; }
 
 QWidget {
     font: 13px;
-    background-color: #1f1f1f;   /* gri închis, stil dark macOS */
+    background-color: #1f1f1f;   /* gri închis, stil dark */
     color: #e0e0e0;              /* gri deschis pentru text */
 }
 
@@ -95,7 +95,7 @@ QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
 
 QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus,
 QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
-    border: 1px solid #0a84ff;   /* accent albastru tip macOS */
+    border: 1px solid #0a84ff;   /* accent albastru */
     background-color: #2b2b2b;
 }
 
@@ -132,7 +132,7 @@ QHeaderView::section {
     border: 1px solid #333333;
 }
 
-/* Butoane tipice, stil plat, rotunjit, macOS-like */
+/* Butoane tipice, stil plat, rotunjit */
 QPushButton {
     background-color: #2a2a2a;
     color: #e0e0e0;

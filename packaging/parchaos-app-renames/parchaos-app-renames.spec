@@ -6,9 +6,9 @@
 # org.gnome.Calculator.svg, org.gnome.Calendar.svg, org.gnome.Weather.svg,
 # org.gnome.Contacts.svg, io.bassi.Amberol.svg all already exist in the
 # theme this profile ships), but whose GNOME-project display NAME doesn't
-# match the macOS-equivalent app name a "looks like macOS" desktop should
-# show. Calculator/Calendar/Weather/Contacts already match their macOS
-# equivalents closely enough as-is -- only Loupe, GNOME Clocks, and Geary
+# match the short, familiar app name this desktop should show.
+# Calculator/Calendar/Weather/Contacts already have short names
+# as-is -- only Loupe, GNOME Clocks, and Geary
 # needed a rename here.
 #
 # Mechanism: %post sed on the real installed .desktop file, not a
@@ -34,8 +34,8 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        2%{?dist}
-Summary:        ParchaOS display-name overrides for stock GNOME apps with a macOS-equivalent name
+Release:        3%{?dist}
+Summary:        ParchaOS display-name overrides for stock GNOME apps (Preview, Clock, Mail)
 
 License:        NOASSERTION
 URL:            https://github.com/alexgalicea/parchaos-gnome
@@ -48,7 +48,7 @@ Requires(post): sed
 
 %description
 Renames a handful of stock GNOME apps' launcher display names to their
-macOS-equivalent names (Loupe -> Preview, GNOME Clocks -> Clock, Geary ->
+short, familiar names (Loupe -> Preview, GNOME Clocks -> Clock, Geary ->
 Mail), via a %post sed on the real installed .desktop file. Their icons
 already come from the MacTahoe icon theme with no changes needed -- see
 this spec's own banner comment for the full reasoning and what was
@@ -79,6 +79,9 @@ sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Mail/;s/^GenericName=.*/GenericNam
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Thu Sep 24 2026 ParchaOS packaging - 1.0.0-2
 - Real bug found live on real hardware immediately after Release 1
   shipped: the unrestricted sed clobbered Geary's own Desktop Action

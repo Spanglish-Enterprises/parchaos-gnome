@@ -1,7 +1,7 @@
 # ==============================================================================
 # ParchaOS's dock — a real fork of the well-known GNOME Shell extension
 # Dash-to-Dock (micheleg/dash-to-dock, GPL-2.0), further forked by Pulsar
-# OS as "Pulsar Dock" (Inled-Pulsar-OS/dash-to-dock) with macOS-style
+# OS as "Pulsar Dock" (Inled-Pulsar-OS/dash-to-dock) with
 # hover magnification, launch bounce animations, a downloads-folder
 # stack, and live minimized-window previews — real, substantial
 # functional additions on top of stock Dash-to-Dock, not just a
@@ -54,7 +54,7 @@
 # cause, confirmed against GNOME Shell's own real appDisplay.js: the
 # Hot-Key number-overlay badge (_numberOverlayBin) is added as a
 # sibling of the icon inside _iconContainer, not a descendant of the
-# icon graphic itself -- but this fork's custom macOS-style hover
+# icon graphic itself -- but this fork's custom hover
 # magnification (_onDockMotionEvent) only ever applies its scale/
 # translation transform to the icon graphic (icon._iconBin), never to
 # that sibling badge, so the badge stayed visually fixed while the
@@ -65,8 +65,8 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        5%{?dist}
-Summary:        Parcha Dock — ParchaOS's macOS-styled fork of the Dash-to-Dock GNOME Shell extension
+Release:        6%{?dist}
+Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
 URL:            https://github.com/Inled-Pulsar-OS/dash-to-dock
@@ -86,7 +86,7 @@ Requires:       gnome-shell >= 45
 Requires:       dconf
 
 %description
-Parcha Dock is ParchaOS's build of a real macOS-style fork of the
+Parcha Dock is ParchaOS's build of a real fork of the
 well-known Dash-to-Dock GNOME Shell extension: hover magnification,
 launch bounce animations, a downloads-folder stack, and live
 minimized-window previews. Enabled by default as ParchaOS's dock.
@@ -152,6 +152,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-6
+- Reworded summary/description/comments to describe features instead of
+  naming macOS, per the project's trademark-caution naming policy.
 * Fri Sep 25 2026 ParchaOS packaging - 106-5
 - Fixed a second real bug found via log-based live testing (same
   Patch0): the dock's notification/Hot-Key number-overlay badge stayed
