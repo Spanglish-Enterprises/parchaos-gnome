@@ -1,6 +1,6 @@
 # ParchaOS (GNOME variant) — pearOS/Pulsar OS on Fedora
 
-**Status as of 2026-09-23: no longer "just forked" — a real, installable, end-to-end verified GNOME live ISO exists (theme, icons, dock, Parcher/Nautilus, global menu, Calamares branding + install, Plymouth, wallpaper, macOS-style keyboard remap), and a real disk install + reboot + login has been confirmed working. See `docs/gnome-phase0-findings.md` for the full story — this file's roadmap sections below are the ORIGINAL plan from the fork and are now partly stale; the phase doc has the current, accurate picture. If you are an agent picking this up, read both before touching code.**
+**Status as of 2026-09-24: past "verified in a VM" — a real disk install, reboot, and login has now happened on the actual physical machine this variant ships to (MSI B650 GAMING PLUS WIFI / AM5 desktop), including working wired networking, working WiFi, and all of Pulsar OS's ported apps (dock, global menu, Parcher/Nautilus, macOS keyboard remap, cloud drives, focus schedule, auto light/dark, TMOG, Pafari) installed and process-verified. See `docs/gnome-phase1-findings.md` for the real-hardware crisis this took to get there (a long chain of real bugs: boot/GRUB, locale, fonts, Bluetooth/WiFi firmware, a missing NetworkManager subpackage, and a genuinely subtle system-clock/signature-verification bug) and `docs/gnome-phase0-findings.md` for everything before that. This file's roadmap sections below are the ORIGINAL plan from the fork and are now stale in most particulars; the phase docs have the current, accurate picture. If you are an agent picking this up, read all three before touching code.**
 
 ## What this repo is
 
@@ -101,29 +101,47 @@ they're full standalone apps, not "install-and-go" — expect multi-day
 effort each, same shape as the KDE repo's `liquid-gel`/`pearos-dock`
 ports):
 - [`Inled-Pulsar-OS/finder`](https://github.com/Inled-Pulsar-OS/finder) —
-  the patched Nautilus ("Finder"). GPL-3.0. Meson/ninja build, depends on
+  the patched Nautilus ("Finder"). GPL-3.0, real `LICENSE` file confirmed
+  present (2026-09-24, see `docs/gnome-phase2-findings.md`) — genuinely
+  clear to port. Meson/ninja build, depends on
   GTK4/libadwaita/gexiv2/tinysparql — check Fedora's package versions
   match what the PKGBUILD expects (it already needed one sed patch for a
   `gexiv2` pkgconfig naming difference between distros, see
   `arch/pkgbuilds/nautilus/PKGBUILD` in the `Inled-Pulsar-OS/PKG` repo).
   **This was approved and in-progress investigation when this repo was
   created — pick this up first.**
-- `sayri` — Siri-like AI assistant, Python/GTK4, whisper.cpp + Piper.
-- `pulsaros-timemachine` — Btrfs snapshots + restic, GTK4/Libadwaita.
-- `pulsaros-welcome` — Tauri (Rust+React) first-boot app.
-- `pulsaros-cloud` — rclone wrapper for Finder's cloud-drives sidebar.
-- `gnome-macos-remap-wayland` — built on `xremap`, genuinely
-  DE-agnostic key remapper; likely the easiest of this group.
+- `sayri`, `pulsaros-timemachine`, `pulsaros-welcome`, `pulsaros-cloud`,
+  `gnome-macos-remap-wayland` — **all blocked as of 2026-09-24**: none of
+  these have a real LICENSE file anywhere (repo root or subdirectory),
+  regardless of what their PKGBUILD/`DEBIAN/control` metadata claims
+  (GPL3, GPL-3.0-or-later, or "custom" — none backed by an actual license
+  text). This is a systemic gap in Inled's own original work, not a
+  one-off — see `docs/gnome-phase2-findings.md` for the full audit and the
+  recommended single outreach to Inled (`info@inled.es`) covering all five
+  at once. Do not start packaging any of these until that's resolved.
+  Brief descriptions for when it is: `sayri` (Siri-like AI assistant,
+  Python/GTK4, whisper.cpp + Piper), `pulsaros-timemachine` (Btrfs
+  snapshots + restic, GTK4/Libadwaita), `pulsaros-welcome` (Tauri
+  Rust+React first-boot app), `pulsaros-cloud` (rclone wrapper for
+  Finder's cloud-drives sidebar), `gnome-macos-remap-wayland` (built on
+  `xremap`, genuinely DE-agnostic key remapper).
 
 **Full Pulsar OS package reference**: see
 [`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG)'s own
 README — it has a complete table of every package, what it does, and
-exactly which upstream project it derives from (important for license
-tracking: most original Inled work is MIT-INLED, forks of GPL projects
-like Nautilus/Nautilus stay GPL-3.0). Their `arch/pkgbuilds/` directory has
-real, working `PKGBUILD`s for every component — use these as the reference
-for dependencies and build steps the way this project always has (verify
-against the real upstream source, don't assume).
+exactly which upstream project it derives from. **Caveat, confirmed
+2026-09-24** (see `docs/gnome-phase2-findings.md`): their README's own
+license claims (MIT-INLED for original work, GPL-3.0 for forks like
+Nautilus) don't actually hold up against the real repos — only the
+Nautilus fork has a real LICENSE file backing its claim; every original
+Inled component checked so far has no LICENSE file anywhere despite
+PKGBUILD metadata claiming one. Don't take this README's license column at
+face value — check the actual repo for a LICENSE file the way this
+project's own audit did, the same "verify against the real upstream
+source, don't assume" rule as everything else here. Their `arch/pkgbuilds/`
+directory does have real, working `PKGBUILD`s for every component's
+dependencies and build steps, which remain a reliable technical reference
+even where the license field isn't.
 
 ## Layout (inherited from the KDE repo, to be reorganized)
 

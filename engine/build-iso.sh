@@ -31,7 +31,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)"
 REPO_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
 # ---- defaults ----------------------------------------------------------------
-PROFILE="pearos"
+# Real bug found 2026-09-24 (see docs/gnome-phase0-findings.md's "KDE-only
+# cruft" section): this used to default to "pearos" when --profile was
+# omitted, which silently built the wrong product for any invocation that
+# forgot the flag, and made it unsafe to ever delete profiles/pearos/ (a
+# future omitted --profile would just silently break instead of failing
+# loudly). No default now — --profile is required, see the check below.
+PROFILE=""
 BRANCH="42"          # a Fedora release number ("42", "41", ...) or "rawhide"
 LOCAL=0               # install profile RPMs from build/local-rpms/ instead of COPR
 CLEAN_BASE=0          # wipe and rebuild the dnf --installroot base cache
@@ -49,7 +55,7 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [options]
 
-  --profile <name>     Profile under profiles/ to build (default: $PROFILE)
+  --profile <name>     Profile under profiles/ to build (required, no default)
   --branch <ver>        Fedora release to target: a number or "rawhide"
                          (default: $BRANCH)
   --local                Install profile RPMs from build/local-rpms/ instead
@@ -95,6 +101,12 @@ while [ $# -gt 0 ]; do
         *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
 done
+
+if [ -z "$PROFILE" ]; then
+    echo "Error: --profile is required (no default — see usage below)." >&2
+    usage
+    exit 1
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Re-executing under sudo (dnf --installroot and chroot need root)..."

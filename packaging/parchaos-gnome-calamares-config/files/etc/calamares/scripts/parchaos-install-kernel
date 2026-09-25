@@ -54,15 +54,40 @@ mkdir -p /boot/grub2
 # on scriptlets firing -- this also means calamares' own `bootloader`
 # module (efiBootLoader: "sb-shim") has real files to point shim/efibootmgr
 # at when it runs later in the sequence.
-GRUB_EFI_SRC="$(find /usr/lib/efi/grub2 -maxdepth 2 -name fedora -type d 2>/dev/null | head -1)"
-SHIM_EFI_SRC="$(find /usr/lib/efi/shim -maxdepth 2 -name fedora -type d 2>/dev/null | head -1)"
+#
+# CORRECTION (2026-09-23): -maxdepth 2 was wrong -- found via a real
+# end-to-end UEFI install test (this profile's very first, since every
+# earlier VM test used BIOS/legacy boot, where this whole block is a
+# harmless no-op). The real on-disk layout is
+# /usr/lib/efi/grub2/<epoch:version>/EFI/fedora/ and
+# /usr/lib/efi/shim/<version>/EFI/fedora/ -- "fedora" is at depth 3
+# from /usr/lib/efi/grub2 (version dir, then EFI, then fedora), not
+# depth 2. With -maxdepth 2 both finds always returned empty, so this
+# block was silently skipped every time and hit the else branch's
+# warning (which goes to a stderr stream Calamares' shellprocess
+# module doesn't capture into its own session log, so it never showed
+# up anywhere) -- confirmed directly: the real ESP and the real
+# target's /boot/efi both came up completely empty, no /EFI directory
+# at all, and grub2-mkconfig then failed with "grub.cfg.new: No such
+# file or directory" since /boot/efi/EFI/fedora was never created.
+GRUB_EFI_SRC="$(find /usr/lib/efi/grub2 -maxdepth 3 -name fedora -type d 2>/dev/null | head -1)"
+SHIM_EFI_SRC="$(find /usr/lib/efi/shim -maxdepth 3 -name fedora -type d 2>/dev/null | head -1)"
 if [ -n "$GRUB_EFI_SRC" ] && [ -n "$SHIM_EFI_SRC" ]; then
+    # Real bug found via the same real UEFI VM test that caught the
+    # -maxdepth issue above: `cp -a` preserves hard links between
+    # source files (shim-x64 ships shimx64.efi and shim.efi
+    # hard-linked to the same inode), but the destination here is the
+    # FAT32 ESP, which cannot represent hard links at all -- `cp -a`
+    # failed outright with "cannot create hard link ... Operation not
+    # permitted". FAT32 has no permissions/ownership to preserve
+    # either, so plain `cp -r` (no link/mode/ownership preservation)
+    # is both sufficient and correct here, not just a workaround.
     mkdir -p /boot/efi/EFI/fedora /boot/efi/EFI/BOOT
-    cp -a "$GRUB_EFI_SRC/." /boot/efi/EFI/fedora/
-    cp -a "$SHIM_EFI_SRC/." /boot/efi/EFI/fedora/
-    cp -a /boot/efi/EFI/fedora/shimx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
-    [ -f /boot/efi/EFI/fedora/mmx64.efi ] && cp -a /boot/efi/EFI/fedora/mmx64.efi /boot/efi/EFI/BOOT/mmx64.efi
-    [ -f /boot/efi/EFI/fedora/fbx64.efi ] && cp -a /boot/efi/EFI/fedora/fbx64.efi /boot/efi/EFI/BOOT/fbx64.efi
+    cp -r "$GRUB_EFI_SRC/." /boot/efi/EFI/fedora/
+    cp -r "$SHIM_EFI_SRC/." /boot/efi/EFI/fedora/
+    cp -r /boot/efi/EFI/fedora/shimx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
+    [ -f /boot/efi/EFI/fedora/mmx64.efi ] && cp -r /boot/efi/EFI/fedora/mmx64.efi /boot/efi/EFI/BOOT/mmx64.efi
+    [ -f /boot/efi/EFI/fedora/fbx64.efi ] && cp -r /boot/efi/EFI/fedora/fbx64.efi /boot/efi/EFI/BOOT/fbx64.efi
 else
     echo "parchaos-install-kernel: grub2-efi-x64/shim-x64 master EFI files not found under /usr/lib/efi -- ESP not populated, UEFI boot will not work" >&2
 fi
@@ -77,5 +102,28 @@ if [ ! -f "/boot/vmlinuz-$KVER" ]; then
     echo "parchaos-install-kernel: /boot/vmlinuz-$KVER missing, nothing to install" >&2
     exit 1
 fi
+
+# Real bug found via a full install+reboot test in a VM with the ISO's
+# own disk still attached (2026-09-23): this script runs chrooted
+# inside the LIVE session, and systemd's kernel-install falls back to
+# the CURRENTLY RUNNING kernel's /proc/cmdline for the new BLS entry's
+# options whenever /etc/kernel/cmdline doesn't already exist in the
+# target -- which it never does on a fresh unpackfs-copied rootfs. That
+# live /proc/cmdline is dracut-live's own
+# "root=live:CDLABEL=... rd.live.image ...", so the installed system's
+# own generated boot entry was booting with those SAME live-image
+# parameters, silently re-mounting the live squashfs overlay as / on
+# every boot instead of the real installed btrfs partition -- verified
+# directly: `findmnt /` on a "successfully installed and rebooted"
+# system showed the LiveOS overlayfs, not the real disk. On real
+# hardware without the install media still attached this would fail to
+# boot at all. Fixed by writing the real target's root= (its own
+# already-chroot-mounted partition, subvol=@root, discovered via
+# `findmnt`, not guessed) to /etc/kernel/cmdline before kernel-install
+# runs, so it has real target parameters to use instead of inheriting
+# the live session's.
+ROOT_UUID=$(findmnt -no UUID /)
+ROOT_SUBVOL=$(findmnt -no OPTIONS / | tr ',' '\n' | grep '^subvol=' | cut -d= -f2-)
+echo "root=UUID=${ROOT_UUID} rootflags=subvol=${ROOT_SUBVOL} rw quiet" > /etc/kernel/cmdline
 
 kernel-install add "$KVER" "/boot/vmlinuz-$KVER"

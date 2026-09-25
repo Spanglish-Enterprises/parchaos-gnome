@@ -219,6 +219,14 @@ perform could not be mechanically exercised end-to-end from this
 control setup. Real hardware with a real mouse does not share this
 limitation.
 
+**Update 2026-09-24, closed**: confirmed on real hardware overnight
+(see `docs/gnome-phase1-findings.md`) — a real user, real mouse, real
+install. The full launcher chain (Activities search → click → polkit
+Authenticate → Calamares window → full install → reboot → real
+authenticated desktop) completed successfully, multiple times, on the
+actual machine this variant is meant to ship to. No longer an open
+question.
+
 ## A note on pacing ISO rebuilds
 
 Two full ISO rebuild+reboot-test cycles happened in quick succession this
@@ -238,21 +246,51 @@ rule as everything else in this project's history.
 
 ## What's next (see README's own roadmap for full detail)
 
-- Fold `parchaos-macos-remap`, `parchaos-cloud`, `parchaos-focus-schedule`,
-  `parchaos-yin-yang`, `parchaos-tmog`, and `pafari` into a rebuild;
-  real-boot-test the Cmd<->Ctrl swap and the per-app remaps (Parcher,
-  GNOME Terminal) on an actual keyboard, the cloud-mount flow
-  (`parchaos-cloud choose` → rclone auth → mount appearing under
-  `~/Cloud` in Parcher), pafari actually launching and rendering a real
-  page, TMOG's first-run download, and the notification
-  inhibit actually suppressing a real popup during the scheduled
-  window, and Yin-Yang's GTK/icon/wallpaper plugins actually switching
-  ParchaOS's own MacTahoe theme variants — none of these six have
-  been exercised beyond a build/dependency check yet.
-- Confirm the Calamares launcher fix's last unverified step (real mouse
-  click → Authenticate → Calamares window) on whatever hardware actually
-  ran tonight's install, and close the loop here if it needs anything
-  further.
+- **Deeper Calamares macOS-esque skinning** (explicit user ask,
+  2026-09-23, deliberately deferred — "to complete much later"): the
+  current branding pass (logo/icon/welcome/slideshow images,
+  stylesheet, page copy) reads as a reskinned generic Linux installer
+  wizard, not a real macOS Installer.app look-alike. Calamares'
+  branding.desc + QML view files (`main.qml` and each page's own .qml
+  under `/usr/share/calamares/...` or an override under
+  `/etc/calamares/branding/ParchaOS/`) are the real place to push this
+  further — page transitions, a real macOS-style sidebar/progress
+  layout instead of the stock top-tab bar, window chrome, font choices
+  — all overridable there. Not started; this is real QML/UI work, not
+  a config-value fix like tonight's bugs, so budget real time for it
+  separately rather than folding it into a future crisis-driven
+  session.
+- **A real Plymouth boot-splash theme with the ParchaOS/passion-fruit
+  logo** (explicit user ask, 2026-09-23, deliberately deferred, same
+  "later" bucket as the Calamares skinning item above): this is
+  already a known, previously-identified gap, not a new one --
+  parchaos-finalize-install's own Plymouth theme-switch step already
+  has a `[ -d ... ]` existence guard specifically because
+  `parcha-plymouth` doesn't exist yet, making it a safe no-op in the
+  meantime (see that script's own comment and this project's earlier
+  KDE-variant history for the pear-plymouth theme it was modeled on).
+  Real work needed: build an actual `parcha-plymouth` Plymouth theme
+  package (image assets + a `.plymouth` theme script, most likely
+  following the same simple "spinner"/"two-step" theme style Fedora's
+  own default theme uses) and package/wire it in the same way the KDE
+  variant's theme eventually was. Not started.
+- **Update 2026-09-24, mostly done** — see `docs/gnome-phase1-findings.md`
+  for the full story: all six packages plus `parchaos-desktop` are now
+  wired into `packages.sh` and confirmed present in a real built ISO
+  (v19), and were installed and process-level-verified directly on
+  real hardware (`pafari`/`yin_yang` launch and stay running, the
+  `parchaos-macos-remap.service` xremap daemon and its GNOME Shell
+  extension are both active). **Still needs a human**: does Cmd
+  actually act as Ctrl on a real keypress, does pafari visually render
+  a page correctly, does yin-yang's theme switch actually look right,
+  does TMOG's real download complete, does the cloud-mount flow work
+  end to end with real OAuth, does the focus-schedule notification
+  inhibit actually suppress a real popup at 22:00/08:00. All the
+  plumbing is confirmed working; the remaining checks are genuinely
+  interactive/visual ones only a person at the keyboard can do.
+- ~~Confirm the Calamares launcher fix's last unverified step~~ —
+  **closed**, see the update inlined above in "The Calamares GNOME
+  launcher saga" section.
 - The README's "Real, substantial from-scratch ports" list is now
   partly out of date: **`pulsaros-cloud` is done** (`parchaos-cloud`,
   above) — it turned out much smaller in practice than the README's
@@ -299,10 +337,23 @@ rule as everything else in this project's history.
   `PROFILE="pearos"` as its default when `--profile` isn't passed on
   the command line — deleting `profiles/pearos/` outright would
   silently break any future build invocation that omits `--profile
-  pulsaros`. Real cleanup here means changing that default (and
-  probably auditing every place that still assumes it) *before*
-  deleting anything, not deleting first. Deliberately not done as part
-  of this pass — `engine/build-iso.sh` is the same script that built
-  the ISO used for tonight's real install, and this is exactly the
-  kind of low-payoff, non-zero-risk change not worth touching on that
-  timeline. Real cleanup, still not yet done.
+  pulsaros`.
+  **Update 2026-09-24**: the prerequisite is done — `--profile` is now
+  a required argument in both `engine/build-iso.sh` and the (untested,
+  non-functional-anyway) GitHub Actions workflow, no silent default
+  anywhere anymore, verified directly (omitting `--profile` now fails
+  loudly with a usage message, before ever reaching the sudo re-exec).
+  **Update 2026-09-24, deletion done**: with the `--profile` safety
+  net confirmed in place, the user approved deleting the cruft
+  (`profiles/pearos/`, `pearos-dock`, `pearos-liquidgel`,
+  `pearos-launchpad`, `pearos-settings`,
+  `parchaos-whitesur-lookandfeel`, `parchaos-appmenu-gtk-module`,
+  `pearos-branding`, `pearos-calamares-config` — 153 files). Removed
+  via `git rm -r`, cross-checked beforehand that no functional
+  (non-comment) references to any of it existed outside
+  `profiles/pearos/` itself. `packaging/parchaos-boot-sound/` was
+  explicitly kept — it's a real deferred *feature* blocked on a
+  licensing gap in its `pearos-sounds` dependency, not dead KDE-only
+  cruft. **Staged but not yet committed** — this project's standing
+  rule is to never commit without being explicitly asked, so this is
+  sitting in the working tree until that word is given.

@@ -151,6 +151,45 @@ PROFILE_REPO_PACKAGES=(
     # plumbing this project hasn't established yet.
     pafari
 
+    # Parcha Browser (packaging/parchaos-browser/) -- a thin ParchaOS
+    # rebrand of Fedora's own real `chromium` package, for real-world
+    # Google services (Gmail chief among them) that are tuned for
+    # Chrome/Blink and can behave worse on pafari's WebKitGTK engine.
+    # Requires: chromium pulls the actual browser engine in from
+    # packages.list's base set.
+    parchaos-browser
+
+    # ParchaOS app-display-name overrides (packaging/parchaos-app-renames/)
+    # -- Loupe -> Preview, GNOME Clocks -> Clock, Geary -> Mail. Their
+    # icons already come from the MacTahoe icon theme for free; this is
+    # display-name-only, via a %post sed on the real installed .desktop
+    # files (see the spec's own banner comment for why, and for Amberol/
+    # Music being deliberately left out -- no native Fedora RPM).
+    parchaos-app-renames
+
+    # Notification banner positioning (packaging/parchaos-notification-position/)
+    # -- real user priority request. Real upstream picked with the same
+    # license diligence used everywhere else (Pulsar OS's own real
+    # extension has no LICENSE file at all -- see the spec's own
+    # banner comment for the full story and the real fork used
+    # instead).
+    parchaos-notification-position
+
+    # Three more real, licensed third-party extensions matching Pulsar
+    # OS's own config exactly (packaging/parchaos-magic-lamp-effect/,
+    # packaging/parchaos-wiggle/, packaging/parchaos-ui-tune/) -- the
+    # genie/magic-lamp minimize effect, cursor-magnify-on-shake, and
+    # Overview UI tuning. See each spec's own banner comment for the
+    # license diligence.
+    parchaos-magic-lamp-effect
+    parchaos-wiggle
+    parchaos-ui-tune
+
+    # ParchaOS's real logo on the GDM login screen, replacing Fedora's
+    # default (packaging/parchaos-gdm-logo/) -- real user feedback
+    # ("the login logo is still fedora").
+    parchaos-gdm-logo
+
     # ParchaOS desktop meta-package (packaging/parchaos-desktop/) -- a
     # real, standard-pattern no-content package whose only job is a
     # Requires: line naming every package above. Exists in direct

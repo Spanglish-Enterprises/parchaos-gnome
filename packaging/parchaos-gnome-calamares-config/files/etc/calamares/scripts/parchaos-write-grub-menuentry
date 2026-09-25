@@ -1,0 +1,61 @@
+#!/bin/bash
+# Real bug found via repeated real full install + reboot tests on
+# actual UEFI hardware, reproduced in a VM (2026-09-23): even after
+# Release 14's fix (setting @root as the filesystem's default btrfs
+# subvolume, confirmed correct at the raw block level -- a plain
+# `mount /dev/sdX3 /mnt` with no -o subvol= option correctly showed
+# @root's real content, including /boot/loader/entries), GRUB's own
+# generated grub.cfg (which uses `blscfg` to dynamically read
+# /boot/loader/entries/*.conf at real boot time) still produced a menu
+# with no OS entry at all, only the auto-generated "UEFI Firmware
+# Settings" fallback. GRUB's own built-in btrfs filesystem driver is a
+# separate, from-scratch reimplementation (not the Linux kernel's own
+# btrfs driver/VFS mount logic) and evidently does not resolve the
+# on-disk default-subvolume pointer the same way a real `mount` does
+# -- confirmed by the entry still not appearing even after the
+# default-subvolume fix that fixed the same raw partition when
+# inspected via a normal kernel mount.
+#
+# Rather than continue chasing exactly which internal blscfg/GRUB-
+# btrfs-driver behavior is responsible, this bypasses blscfg's dynamic
+# discovery entirely: it reads the same, already-correct BLS entry
+# kernel-install wrote (title/linux/initrd/options, already using the
+# real /@root/-prefixed paths GRUB needs for this subvolume layout --
+# see kernel-install's own real output for the "why" of that prefix)
+# and writes it out as a real, static `menuentry` block into
+# custom.cfg, which this profile's grub.cfg (via its own stock
+# /etc/grub.d/41_custom template section) already sources
+# unconditionally from the same directory as grub.cfg itself. A static
+# menuentry needs no dynamic BLS discovery at all, so whatever GRUB's
+# own blscfg/btrfs-subvolume resolution gap actually is becomes
+# irrelevant.
+set -e
+
+BLS_ENTRY="$(ls /boot/loader/entries/*.conf 2>/dev/null | head -1)"
+if [ -z "$BLS_ENTRY" ]; then
+    echo "parchaos-write-grub-menuentry: no BLS entry found under /boot/loader/entries" >&2
+    exit 1
+fi
+
+TITLE="$(awk -F'title ' '/^title /{print $2}' "$BLS_ENTRY")"
+LINUX_PATH="$(awk -F'linux ' '/^linux /{print $2}' "$BLS_ENTRY")"
+INITRD_PATH="$(awk -F'initrd ' '/^initrd /{print $2}' "$BLS_ENTRY")"
+OPTIONS="$(awk -F'options ' '/^options /{print $2}' "$BLS_ENTRY")"
+
+if [ -z "$LINUX_PATH" ] || [ -z "$INITRD_PATH" ]; then
+    echo "parchaos-write-grub-menuentry: could not parse linux/initrd from $BLS_ENTRY" >&2
+    exit 1
+fi
+
+ROOT_UUID="$(findmnt -no UUID /)"
+
+mkdir -p /boot/efi/EFI/fedora
+cat > /boot/efi/EFI/fedora/custom.cfg <<EOF
+insmod part_gpt
+insmod btrfs
+menuentry '${TITLE:-ParchaOS}' {
+    search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
+    linux ${LINUX_PATH} ${OPTIONS}
+    initrd ${INITRD_PATH}
+}
+EOF

@@ -31,7 +31,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Dock — ParchaOS's macOS-styled fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -78,6 +78,26 @@ DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST"
 cp -a _build/* "$DEST"/
 
+# Real bug found on real hardware 2026-09-24: the extension was
+# installed and enabled (present in dconf's enabled-extensions) but
+# never actually rendered -- `gnome-extensions show` reported
+# `State: ERROR`, and journalctl showed GLib.FileError: Failed to open
+# "$UUID/schemas/gschemas.compiled": No such file or directory,
+# thrown from docking.js's DockManager constructor the moment
+# extension.js called enable(). Root cause, confirmed directly against
+# the real upstream Makefile: `make _build`'s _build target only
+# copies the RAW schemas/*.gschema.xml into _build/schemas/ -- the
+# actual compiled binary GNOME Shell loads at runtime is produced by a
+# separate `extension:`/`./schemas/gschemas.compiled:` target that
+# only the Makefile's own `install`/`install-local` targets depend on,
+# and this spec's %install never called either of those, just a plain
+# `cp -a _build/*`. Fixed the same way Fedora's own GNOME extension
+# packages do it: compile the schema directly into place here, so the
+# extension is fully self-contained (works the same whether GNOME
+# Shell resolves schemas from the extension's own directory or not,
+# no dependency on a system-wide glib-2.0/schemas install+recompile).
+glib-compile-schemas "$DEST/schemas"
+
 # Ship the dock's own translations system-wide so the "dashtodock"
 # gettext domain resolves (same real upstream mechanism the actual
 # Pulsar OS package uses, confirmed via its own prepare-assets.sh).
@@ -97,6 +117,14 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Thu Sep 24 2026 ParchaOS packaging - 106-2
+- Real bug found on real hardware: the dock was enabled in dconf but
+  crashed at enable() with State: ERROR (missing
+  schemas/gschemas.compiled -- the upstream Makefile's _build target
+  never produces it, only its install/install-local targets do, which
+  this spec never called). Added an explicit `glib-compile-schemas`
+  call in %install. See the comment above %install for the full
+  root-cause trace.
 * Wed Sep 23 2026 ParchaOS packaging - 106-1
 - Initial package, real upstream fork (Inled-Pulsar-OS/dash-to-dock,
   itself a real fork of micheleg/dash-to-dock, pinned to commit

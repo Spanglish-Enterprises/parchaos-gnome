@@ -1,0 +1,22 @@
+#!/bin/bash
+# Real bug found via a real install failure on actual hardware
+# (2026-09-24): an earlier attempt at this same fix put `dnf -y remove
+# calamares` inside parchaos-finalize-install, which runs very early
+# in the install sequence (right before dracut, so the Plymouth theme
+# takes effect before the initramfs is built). This package itself
+# (parchaos-gnome-calamares-config) `Requires: calamares` in its own
+# spec, so removing "calamares" cascade-removed this package too --
+# wiping every remaining file under /etc/calamares/scripts/ mid-install
+# and causing every LATER shellprocess step in settings.conf's exec
+# sequence (parchaos-disable-blscfg, parchaos-fix-efi-bootentry,
+# parchaos-write-grub-menuentry) to fail with "No such file or
+# directory" (confirmed directly: Calamares' own error dialog reported
+# exactly that for parchaos-disable-blscfg, exit code 127). Fixed by
+# splitting this into its own script that runs as the LAST shellprocess
+# step in the exec sequence, after every other script that lives in
+# this same package has already executed -- see settings.conf.
+set -e
+
+rm -f /usr/local/bin/parchaos-launch-calamares
+rm -f /usr/local/share/applications/calamares.desktop
+dnf -y remove calamares --noautoremove 2>/dev/null || true

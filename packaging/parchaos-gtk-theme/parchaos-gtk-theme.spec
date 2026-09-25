@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -139,12 +139,39 @@ fi
 mkdir -p %{buildroot}%{_datadir}/themes
 ./install.sh -c dark -d %{buildroot}%{_datadir}/themes --silent-mode
 
+# Real gap found 2026-09-24 (real user feedback: "we don't seem to have
+# a light mode and we should provide both"): install.sh's own
+# COMMAND_COLOR_VARIANTS (libs/lib-core.sh) is
+# ('light' 'dark') -- light was always a real, fully-supported
+# upstream variant (a genuine gtk-Light.scss compile path, not a
+# reskin of dark), this spec just never built it. The banner comment
+# above this %install section even already flagged "dark variant only"
+# as a known gap before this. Building it as a second, separate
+# install.sh invocation rather than passing both colors to one call:
+# install.sh's own default behavior when given multiple -c values is
+# to build every combination of ALL variant axes (opacity/theme-accent/
+# scheme) for EACH color, multiplying build time and output size far
+# beyond what this profile ships (only the default Tahoe-style,
+# standard-scheme, normal-opacity combination) -- two separate calls,
+# each still implicitly scoped to that one default combination, stay
+# fast and produce exactly MacTahoe-Dark and MacTahoe-Light, nothing
+# more.
+./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
+
 %files
 %license COPYING
 %doc README.md
 %{_datadir}/themes/*
 
 %changelog
+* Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-8
+- Real user feedback: no light mode was ever shipped. Confirmed
+  upstream's own libs/lib-core.sh has always supported a real 'light'
+  color variant (COMMAND_COLOR_VARIANTS=('light' 'dark')) -- this spec
+  only ever built 'dark'. Added a second install.sh -c light
+  invocation; %files' existing %{_datadir}/themes/* wildcard already
+  picks up the new MacTahoe-Light output with no further changes
+  needed.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-7
 - Real fifth root cause found -- this time not from a COPR build (which
   doesn't resolve Requires:), but from the ISO build's own package

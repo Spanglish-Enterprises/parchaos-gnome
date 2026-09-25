@@ -1,0 +1,93 @@
+# ==============================================================================
+# Cosmetic display-name overrides for stock GNOME apps whose real icon is
+# already covered for free by the MacTahoe icon theme (confirmed via
+# `find /usr/share/icons/MacTahoe -iname` on real hardware, 2026-09-24 --
+# org.gnome.Loupe.svg, org.gnome.clocks.svg, org.gnome.Geary.svg,
+# org.gnome.Calculator.svg, org.gnome.Calendar.svg, org.gnome.Weather.svg,
+# org.gnome.Contacts.svg, io.bassi.Amberol.svg all already exist in the
+# theme this profile ships), but whose GNOME-project display NAME doesn't
+# match the macOS-equivalent app name a "looks like macOS" desktop should
+# show. Calculator/Calendar/Weather/Contacts already match their macOS
+# equivalents closely enough as-is -- only Loupe, GNOME Clocks, and Geary
+# needed a rename here.
+#
+# Mechanism: %post sed on the real installed .desktop file, not a
+# replacement file shipped in %files -- shipping a file at the exact same
+# path as one already owned by loupe/gnome-clocks/geary would be an RPM
+# file conflict. Requires(post) on each target package guarantees dnf
+# orders this package's %post after that file actually exists in the
+# transaction. %postun intentionally does NOT revert the rename on
+# removal of this package -- if this package is removed but
+# loupe/gnome-clocks/geary stay installed, leaving the friendlier name in
+# place is harmless, and reverting it would need to distinguish "user
+# never touched it" from "user customized it further," which isn't worth
+# the complexity for a cosmetic rename.
+#
+# Amberol (Music.app equivalent) deliberately NOT included here --
+# confirmed via `dnf list --available amberol` on real hardware that it
+# has no native Fedora RPM at all (GNOME Circle apps are often
+# Flatpak-only). Renaming it would need a different mechanism (a Flatpak
+# override, not an RPM %post), and this profile's ISO build doesn't
+# currently pre-seed any Flatpak apps at build time -- flagged as a
+# separate, not-yet-started piece of work, not silently skipped.
+# ==============================================================================
+
+Name:           parchaos-app-renames
+Version:        1.0.0
+Release:        2%{?dist}
+Summary:        ParchaOS display-name overrides for stock GNOME apps with a macOS-equivalent name
+
+License:        NOASSERTION
+URL:            https://github.com/alexgalicea/parchaos-gnome
+BuildArch:      noarch
+
+Requires(post): loupe
+Requires(post): gnome-clocks
+Requires(post): geary
+Requires(post): sed
+
+%description
+Renames a handful of stock GNOME apps' launcher display names to their
+macOS-equivalent names (Loupe -> Preview, GNOME Clocks -> Clock, Geary ->
+Mail), via a %post sed on the real installed .desktop file. Their icons
+already come from the MacTahoe icon theme with no changes needed -- see
+this spec's own banner comment for the full reasoning and what was
+deliberately left out (Amberol/Music, no native Fedora RPM).
+
+%prep
+
+%build
+
+%install
+
+%files
+
+%post
+# Real bug found 2026-09-24, fixed here: an earlier version of this sed
+# had no line-range restriction, so on org.gnome.Geary.desktop (which,
+# unlike Loupe/Clocks, has [Desktop Action ...] blocks for "Compose
+# Message" and "New Window") it clobbered THOSE actions' own Name= lines
+# too, turning them into "Mail" as well. Restricting each sed to the
+# range before the first "[Desktop Action" line (GNU sed's `0,/re/`
+# range form) keeps it scoped to just the main [Desktop Entry] section's
+# Name=/GenericName=, matching what actually shipped correctly for
+# Loupe/Clocks (which have no action blocks at all, so the unrestricted
+# version happened to be harmless for them).
+sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Preview/;s/^GenericName=.*/GenericName=Image Viewer/}' /usr/share/applications/org.gnome.Loupe.desktop 2>/dev/null || true
+sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Clock/;s/^GenericName=.*/GenericName=Clock/}' /usr/share/applications/org.gnome.clocks.desktop 2>/dev/null || true
+sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Mail/;s/^GenericName=.*/GenericName=Mail Client/}' /usr/share/applications/org.gnome.Geary.desktop 2>/dev/null || true
+update-desktop-database %{_datadir}/applications &>/dev/null || true
+
+%changelog
+* Thu Sep 24 2026 ParchaOS packaging - 1.0.0-2
+- Real bug found live on real hardware immediately after Release 1
+  shipped: the unrestricted sed clobbered Geary's own Desktop Action
+  labels ("Compose Message", "New Window" both became "Mail" too).
+  Restricted each sed to the range before the first [Desktop Action
+  line. See the updated %post comment for the full explanation.
+* Thu Sep 24 2026 ParchaOS packaging - 1.0.0-1
+- Initial package. Real user request ("what other apps can we do
+  similar with" re: the browser rebrand) plus a real theming audit
+  finding: the icon theme already covers these apps for free, only
+  the display name needed fixing. See banner comment for full
+  reasoning, including why Amberol was left out.

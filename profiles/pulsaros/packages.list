@@ -24,10 +24,121 @@ systemd
 systemd-udev
 systemd-pam
 NetworkManager
+# Real bug found via research the same night investigating the
+# "unmanaged" WiFi device symptom: Fedora splits NetworkManager's
+# actual per-medium device-management code into separate plugin
+# subpackages (NetworkManager-wifi, NetworkManager-wwan, etc.) --
+# confirmed via `dnf repoquery NetworkManager-*` that NetworkManager-
+# wifi is a real, distinct package, and this profile's list only had
+# NetworkManager-adsl (further down, likely copied from the KDE
+# profile without checking relevance). Without NetworkManager-wifi,
+# NetworkManager has no WiFi device-management code loaded at all --
+# this is a more fundamental gap than wpa_supplicant (below): a device
+# would show "unmanaged" regardless of whether a supplicant backend is
+# present, since NM never gets far enough to need one.
+NetworkManager-wifi
+# `iw` (modern wireless config/diagnostic tool) and
+# NetworkManager-config-connectivity-fedora (default connectivity-
+# check endpoint, needed for the network icon to correctly show
+# "connected" vs "connected, no internet") were both missing too --
+# neither is a hard dependency of NetworkManager or gnome-shell,
+# confirmed present on a full Fedora Workstation install but absent
+# from this minimal profile.
+iw
+NetworkManager-config-connectivity-fedora
+# Real bug found via a real installed system on actual hardware
+# (2026-09-24): WiFi hardware/driver/firmware all loaded correctly
+# (confirmed via dmesg -- mt7921e initializes cleanly, wlp15s0 gets
+# created) but `nmcli device status` showed it as "unmanaged" and
+# `nmcli device wifi list`/rescan failed with "Error: No Wi-Fi device
+# found." NetworkManager cannot actually control a WiFi device without
+# a supplicant backend (wpa_supplicant, or iwd) -- confirmed via `dnf
+# repoquery --requires NetworkManager` that this is NOT a hard package
+# dependency (so a minimal installroot bootstrap never pulls it in),
+# even though it's required at runtime for WiFi to function at all.
+wpa_supplicant
+# Real bug found the same night: this ISO was missing several basic
+# diagnostic tools (`lspci`/`ethtool`/`ip link` worked but `ethtool`
+# and `lspci` themselves were both "command not found"), which made
+# debugging real hardware issues over a live session significantly
+# harder than it needed to be. Adding as standard tooling for a
+# daily-driver distro, not just for this specific investigation.
+ethtool
+pciutils
+# openssh-server is not installed/enabled by default on this
+# Workstation-style spin. Included so users can enable remote access
+# for troubleshooting without needing a full package download cycle.
+openssh-server
+# Real bug found via research the same night, after wpa_supplicant
+# alone did not resolve a WiFi device still showing "unmanaged":
+# wireless-regdb provides /usr/lib/firmware/regulatory.db, which
+# cfg80211 (the kernel's generic wireless layer, sitting below the
+# mt7921e driver) needs to set a regulatory domain. Without it, dmesg
+# shows "cfg80211: failed to load regulatory.db" and the wifi device
+# can be left in a state NetworkManager won't fully manage, even with
+# a working supplicant installed. Well-documented issue across
+# multiple distros or minimal installs that skip this package. Cheap,
+# safe to include regardless of whether it's the full explanation for
+# this specific board.
+wireless-regdb
 kernel-core
 kernel-modules
 kernel-modules-extra
 linux-firmware
+# Real bug found via user report on real AMD hardware (2026-09-23, RX
+# 6750, still stuck at 800x600 even after mesa-dri-drivers was added):
+# Fedora split linux-firmware into per-vendor subpackages, and the
+# plain "linux-firmware" metapackage does NOT pull in
+# linux-firmware-amdgpu (confirmed via `dnf repoquery --requires
+# linux-firmware` on a real Fedora 44 system -- no amdgpu dependency,
+# and `rpm -q linux-firmware-amdgpu` shows it's a real, separate,
+# not-installed-by-default package). Without the actual GPU firmware
+# blobs, amdgpu can't complete real KMS initialization on this
+# RDNA2/Navi22 card, so the kernel falls back to the generic EFI
+# framebuffer console resolution instead of the monitor's real native
+# EDID mode -- mesa-dri-drivers (userspace OpenGL) was necessary but
+# not sufficient; this is the actual kernel-side gap.
+#
+# CORRECTION: the real Fedora 44 package name is "amd-gpu-firmware",
+# not "linux-firmware-amdgpu" -- confirmed via `dnf provides
+# '/usr/lib/firmware/amdgpu/*'` after the first guess broke the build
+# outright ("No match for argument: linux-firmware-amdgpu").
+amd-gpu-firmware
+# Real bug found via a real installed system on actual hardware
+# (2026-09-24): a Realtek RTL8125 (2.5GbE) wired NIC and a MediaTek
+# MT7922 WiFi/Bluetooth combo card both showed hardware present but
+# non-functional (wired: link negotiated fine but DHCP never
+# completed; Bluetooth: dmesg flooded with "Direct firmware load for
+# mediatek/BT_RAM_CODE_MT7922_1_1_hdr.bin failed with error -2" every
+# ~0.5s, forever). Confirmed via `rpm -qf` on a real Fedora 44 system
+# that the RTL8125 firmware ships inside the base linux-firmware
+# package (already listed above, so NOT the cause of the wired NIC
+# issue -- that one remains unexplained and still needs real
+# lspci/dmesg data from a live network to diagnose properly), but the
+# MT7922 Bluetooth/WiFi firmware lives in a separate "mt7xxx-firmware"
+# subpackage that linux-firmware's own dependencies do NOT pull in --
+# same per-vendor-subpackage split pattern as amd-gpu-firmware above.
+mt7xxx-firmware
+# Real bug found via a real installed system on actual hardware
+# (2026-09-24): GNOME Terminal and Nautilus (Files) both failed to
+# open -- Terminal showed an endless loading-cursor spinner with no
+# window ever appearing, Files silently did nothing. Root-caused via
+# the installed system's own journal (mounted read-only from the
+# hypervisor via qemu-nbd, read offline): gnome-terminal-server exits
+# immediately with "Locale not supported." (status 9) because
+# en_US.UTF-8 -- the locale Calamares' localecfg module writes to
+# /etc/locale.conf based on the Welcome page's language selection --
+# was never actually generated on this system; Fedora ships locale
+# data split per-language into glibc-langpack-<lang> RPMs rather than
+# generating it on demand, and none were ever installed. This also
+# explains the "-bash: warning: setlocale: LC_NUMERIC/LC_TIME: cannot
+# change locale (en_US.UTF-8): No such file or directory" warnings
+# seen on every single login all night, and is the most likely cause
+# of Nautilus's repeated ABRT crashes (dbus-:1.2-org.gnome.Nautilus
+# service exiting with status=6/core-dump) seen in the same journal
+# window, though that failure mode wasn't directly isolated to the
+# locale as precisely as Terminal's was.
+glibc-langpack-en
 dracut
 dracut-live
 
@@ -155,6 +266,23 @@ touchegg
 # --- Fonts / basics needed for the branding layer to render correctly ---
 google-noto-sans-fonts
 google-noto-emoji-fonts
+# Real bug found via a real installed system on actual hardware
+# (2026-09-24): user reported "strange letter spacing" in the Terminal
+# app. Root-caused live on a fresh install: `gsettings get
+# org.gnome.desktop.interface font-name` returns "Adwaita Sans 11" and
+# the terminal/monospace default is "Adwaita Mono" (both GNOME's own
+# current-generation system font family), but neither font was ever
+# actually installed -- `fc-match 'Adwaita Mono'` fell back to "Noto
+# Sans" (a PROPORTIONAL font substituted for a monospace request,
+# which is what produced the visibly wrong, uneven letter spacing in
+# VTE's fixed-width cell layout), and `fc-match 'Adwaita Sans'` fell
+# back to "Cantarell" -- meaning every window title, menu, and label
+# across the ENTIRE desktop was silently rendering in the wrong font,
+# not just the terminal. Confirmed via `dnf provides` on a real
+# Fedora 44 system that these are real, separate packages that were
+# simply never added to this list.
+adwaita-sans-fonts
+adwaita-mono-fonts
 
 # Real bug found via the first real branded build attempt (2026-09-23):
 # customize.sh's flathub remote-add step failed with "execv(flatpak)
@@ -162,3 +290,110 @@ google-noto-emoji-fonts
 # this profile's own package list at all (present in the KDE profile's
 # packages.list, missed when adapting it for GNOME).
 flatpak
+
+# --- Broad hardware/media support + standard utilities ---
+# Real gap found via research the same night as the WiFi
+# investigation (2026-09-24): this profile's package list is hand-
+# curated rather than built from Fedora's own comps.xml groups (a
+# deliberate choice, see this file's header -- switching to the full
+# official spin bundle now would roughly double image size and
+# conflict with branding already built against this minimal base).
+# But diffing against comps.xml's own "standard" and "hardware-
+# support" groups (`dnf group info standard hardware-support` on a
+# real Fedora system) surfaced real, relevant gaps beyond just the
+# WiFi ones already fixed above -- most notably filesystem drivers for
+# removable media (exfatprogs/ntfs-3g/dosfstools), which likely
+# explains part of tonight's earlier USB-drive mounting trouble, and
+# firmware for WiFi/audio/GPU vendors OTHER than this specific
+# machine's AMD/MediaTek/Realtek hardware -- relevant for this being a
+# general-purpose daily-driver distro, not just this one board.
+# Server/enterprise-oriented standard-group packages (sssd-proxy,
+# realmd, nfs-utils, quota, crontabs, mcelog, sos) deliberately
+# excluded as not relevant to a desktop/gaming rig.
+usbutils
+# Real bug found on the real machine this was all debugged on tonight
+# (2026-09-24): offline all evening (the whole point of tonight's
+# crisis), its clock drifted ~5 hours behind real time with nothing to
+# correct it once network finally came up. That stale clock then made
+# rpm reject a freshly COPR-signed package's signature as "not live
+# yet" (signature validity is time-window-based) -- looked exactly
+# like a GPG trust/corruption problem at first, wasted real
+# troubleshooting time before the actual cause (no NTP client at all)
+# was found. `chrony` was on Fedora's own "standard" comps group (see
+# the block below) but got missed in that curation pass -- important
+# enough on its own, not just a subset of that group, to call out
+# separately here. Every future device that's offline for a while
+# before first getting network will hit this same failure without it.
+chrony
+net-tools
+dosfstools
+exfatprogs
+ntfs-3g
+ntfsprogs
+tcpdump
+mtr
+traceroute
+nmap-ncat
+rsync
+unzip
+zip
+tree
+lsof
+smartmontools
+wget2-wget
+# Firmware for hardware other than this specific machine's own
+# AMD/MediaTek/Realtek combo -- Intel/Atheros/Broadcom/Marvell WiFi,
+# Cirrus/Intel audio, Intel/NVIDIA GPU -- so this ISO works reasonably
+# well on other real hardware too, not just the board this was
+# debugged on tonight.
+alsa-sof-firmware
+alsa-firmware
+atheros-firmware
+brcmfmac-firmware
+cirrus-audio-firmware
+intel-audio-firmware
+intel-gpu-firmware
+iwlegacy-firmware
+iwlwifi-dvm-firmware
+iwlwifi-mvm-firmware
+libertas-firmware
+nvidia-gpu-firmware
+nxpwireless-firmware
+realtek-firmware
+tiwilink-firmware
+usb_modeswitch
+# Real gap found 2026-09-24: parcha-dock and every other GNOME Shell
+# extension this profile ships ARE enabled by default (see
+# customize.sh's dconf enabled-extensions default), but modern GNOME
+# (45+) has no built-in way to open an extension's preferences dialog
+# -- that's exclusively the job of the official Extensions app
+# (org.gnome.Extensions). Without it there was no gear icon, no menu
+# entry, nothing: a working extension's real settings (dock size,
+# position, autohide, magnification, etc.) were completely
+# unreachable from the desktop. `gnome-extensions prefs <uuid>` from a
+# terminal always worked, which is how this got missed until a real
+# user asked "where are the dock's options."
+gnome-extensions-app
+# Chromium/Blink engine for parchaos-browser (packages.sh). Confirmed
+# via real `dnf list --available` on real hardware 2026-09-24:
+# `chromium-freeworld` (RPM Fusion) doesn't exist for this Fedora
+# release -- this is Fedora's own plain `chromium`, which has shipped
+# with Google API keys already stripped since 2021 (no baked-in
+# Sign-in/Sync nagging). H.264 support comes from the
+# fedora-cisco-openh264 repo this profile already enables.
+chromium
+# Mail.app equivalent -- confirmed via real `dnf repoquery -l geary` on
+# real hardware that this ships org.gnome.Geary.desktop (renamed to
+# "Mail" by parchaos-app-renames, packages.sh).
+geary
+# Clock.app equivalent -- renamed to "Clock" by parchaos-app-renames.
+gnome-clocks
+
+# Real macOS-polish extensions, matching Pulsar OS's own real config
+# (see customize.sh's 00-parchaos-extensions comment for the full
+# reasoning) -- confirmed via real `dnf list --available` these are
+# genuine official Fedora packages with the same UUIDs Pulsar OS uses.
+gnome-shell-extension-blur-my-shell
+gnome-shell-extension-just-perfection
+gnome-shell-extension-no-overview
+gnome-shell-extension-appindicator

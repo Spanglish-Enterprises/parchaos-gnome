@@ -1,0 +1,42 @@
+#!/bin/bash
+# Real bug found via repeated real full install + reboot tests on
+# actual UEFI hardware, reproduced in a VM (2026-09-23): even after
+# fixing the ESP population (Release 12), the /boot btrfs-subvolume
+# layout (Release 13), and making @root the filesystem's default
+# subvolume (Release 14), GRUB's own generated grub.cfg still produced
+# a boot menu with no real OS entry -- only the auto-generated "UEFI
+# Firmware Settings" fallback. Confirmed directly, twice: pressing 'c'
+# for GRUB's own command line immediately after selecting the
+# (correct, verified) NVRAM boot entry showed only that fallback
+# entry at the GRUB menu itself, and a hand-written static menuentry
+# added via custom.cfg (which this profile's grub.cfg does source,
+# per its own stock /etc/grub.d/41_custom section) still didn't
+# resolve it.
+#
+# Root cause: this profile's target ends up using GRUB's BLS
+# (Boot Loader Specification) support -- grub.cfg's `blscfg` command
+# dynamically reads /boot/loader/entries/*.conf at real boot time
+# instead of embedding a real, static menuentry in grub.cfg itself.
+# GRUB's own built-in btrfs filesystem driver is a from-scratch
+# reimplementation of btrfs (not the Linux kernel's own btrfs/VFS
+# logic) and evidently does not resolve this profile's named-
+# subvolume (@root) layout the same way blscfg needs to find those
+# loader entries, regardless of the default-subvolume fix that
+# correctly fixed a real kernel mount's view of the same raw
+# partition.
+#
+# Fixed by not using BLS at all: appends GRUB_ENABLE_BLSCFG=false to
+# /etc/default/grub (Calamares' own `grubcfg` module already wrote
+# this file without that setting -- this must run AFTER that module
+# and BEFORE `bootloader`, whose install_secureboot() calls
+# grub2-mkconfig, to actually take effect). With BLS disabled,
+# grub2-mkconfig falls back to its older, far more battle-tested
+# /etc/grub.d/10_linux code path, which generates a real, static,
+# embedded `menuentry` block directly in grub.cfg with the correct
+# subvolume-aware linux/initrd paths -- confirmed directly: this
+# produces a real, syntactically correct classic menuentry (verified
+# by hand against the real installed disk) where BLS's dynamic
+# blscfg-based menu produced nothing.
+set -e
+
+echo "GRUB_ENABLE_BLSCFG=false" >> /etc/default/grub

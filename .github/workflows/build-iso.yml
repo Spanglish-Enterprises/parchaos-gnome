@@ -19,15 +19,25 @@ name: Build ISO
 on:
   workflow_dispatch:
     inputs:
+      # Real bug found 2026-09-24 (see docs/gnome-phase0-findings.md): this
+      # used to default to "pearos", silently building the wrong product
+      # for any manual run that forgot to set it. Required now, matching
+      # engine/build-iso.sh's own --profile no-longer-has-a-default fix.
       profile:
-        description: "Profile to build"
-        default: "pearos"
-        required: false
+        description: "Profile to build (required — profiles/pearos or profiles/pulsaros)"
+        required: true
       branch:
         description: "Fedora release (a number, or 'rawhide')"
-        default: "42"
+        default: "44"
         required: false
   schedule:
+    # Scheduled runs get no workflow_dispatch inputs at all, so this can't
+    # ask "which profile" the way a manual run can — pearos is a
+    # deliberate, explicit choice for the automated weekly build (the
+    # longer-standing, more stable of the two products as of this
+    # writing), not a leftover default. Revisit this choice, don't just
+    # carry it forward, once the GNOME (pulsaros) variant has had as much
+    # real-hardware mileage as the KDE one.
     - cron: "0 6 * * 0"   # weekly, Sundays 06:00 UTC
 
 jobs:
@@ -48,7 +58,7 @@ jobs:
         run: |
           ./engine/build-iso.sh \
             --profile "${{ github.event.inputs.profile || 'pearos' }}" \
-            --branch "${{ github.event.inputs.branch || '42' }}" \
+            --branch "${{ github.event.inputs.branch || '44' }}" \
             --clean-target
 
       - name: Upload ISO + checksum

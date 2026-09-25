@@ -1,0 +1,82 @@
+#!/bin/bash
+# Real bug found via a real UEFI install on actual hardware (2026-09-23):
+# install completed with no error, but on reboot the firmware reported
+# "no bootable device" -- reproduced and root-caused in a VM by running
+# Calamares' own bootloader module logic by hand (chrooted, with a real
+# ESP mounted at /boot/efi and efivarfs bind-mounted in, exactly matching
+# how Calamares' own job executes): Calamares' stock
+# /usr/lib64/calamares/modules/bootloader/main.py's install_secureboot()
+# calls `efibootmgr -c ... -l <rootMountPoint><efiDirectory>/shimx64.efi`
+# -- i.e. the FULL chroot-relative Linux path
+# ("/boot/efi/EFI/fedora/shimx64.efi"), not a path relative to the ESP
+# filesystem itself. efibootmgr does NOT strip the mountpoint prefix --
+# confirmed directly: that exact command produces a real NVRAM entry
+# whose UEFI device path literally embeds
+# "\boot\efi\EFI\fedora\shimx64.efi", which does not exist ON THE ESP
+# (the ESP's own root only has \EFI\fedora\shimx64.efi -- "\boot\efi\"
+# is a Linux mountpoint artifact, not a real path on that FAT32
+# filesystem). Firmware sees a registered boot entry, fails to load it,
+# and falls through to nothing -- "no bootable device". Confirmed the
+# real fix by hand too: the exact same efibootmgr command with
+# `-l /EFI/fedora/shimx64.efi` (ESP-relative, no mountpoint prefix)
+# produces a correct entry.
+#
+# This is a real bug in Calamares' own upstream code for this exact
+# usage pattern, not something in this project's own scripts -- rather
+# than patching a packaged file that could silently regress on a
+# Calamares update, this runs AFTER the (broken) `bootloader` module in
+# settings.conf's exec sequence and adds a second, correct entry.
+# efibootmgr's `-c` prepends new entries to BootOrder, so this
+# corrected entry ends up ahead of Calamares' own broken one, taking
+# priority at boot; the broken entry is left in place as harmless
+# clutter rather than risk deleting the wrong thing.
+set -e
+
+if [ ! -d /sys/firmware/efi ]; then
+    echo "parchaos-fix-efi-bootentry: BIOS/legacy boot, no ESP boot entry needed, skipping" >&2
+    exit 0
+fi
+
+ESP_PART="$(findmnt -no SOURCE /boot/efi)"
+if [ -z "$ESP_PART" ]; then
+    echo "parchaos-fix-efi-bootentry: /boot/efi is not a separate mount, nothing to fix" >&2
+    exit 1
+fi
+
+if [[ "$ESP_PART" =~ p[0-9]+$ ]]; then
+    # nvme/mmcblk-style device names: /dev/nvme0n1p1 -> disk /dev/nvme0n1, part 1
+    ESP_DISK="${ESP_PART%p*}"
+    ESP_PARTNUM="${ESP_PART##*p}"
+else
+    # sd-style device names: /dev/sda1 -> disk /dev/sda, part 1
+    ESP_PARTNUM="$(echo "$ESP_PART" | grep -o '[0-9]*$')"
+    ESP_DISK="${ESP_PART%$ESP_PARTNUM}"
+fi
+
+efibootmgr -c -w -L "ParchaOS" -d "$ESP_DISK" -p "$ESP_PARTNUM" -l '\EFI\fedora\shimx64.efi' >/dev/null
+
+# Real bug found via a real installed system on actual hardware
+# (2026-09-24): after a full install (dual-boot disk, pre-existing
+# Windows Boot Manager entry), BootOrder came out as "0000,0003" --
+# the stale Windows entry BEFORE the freshly-created ParchaOS entry --
+# contrary to this script's original assumption that efibootmgr -c
+# always prepends. Don't rely on that; explicitly move the ParchaOS
+# entry to the front of BootOrder, keeping every other existing entry
+# (Windows or otherwise) in place afterward rather than deleting
+# anything, since a dual-boot user may still want that other OS
+# reachable from the firmware's own boot menu even if not default.
+# (Note: on the specific board this was found on, even this explicit
+# reorder didn't survive a reboot -- traced to that board's "Fast
+# Boot" firmware setting re-forcing Windows first on every POST, which
+# is a firmware-level quirk with no software fix. Doing this correctly
+# here is still right for every board that doesn't have that quirk.)
+PARCHA_NUM="$(efibootmgr | awk -F'[ *]+' '/ParchaOS$/ {print substr($1,5,4)}' | tail -1)"
+CURRENT_ORDER="$(efibootmgr | awk -F': ' '/^BootOrder/ {print $2}')"
+if [ -n "$PARCHA_NUM" ] && [ -n "$CURRENT_ORDER" ]; then
+    REST="$(echo ",$CURRENT_ORDER," | sed "s/,$PARCHA_NUM,/,/" | sed 's/^,//;s/,$//')"
+    if [ -n "$REST" ]; then
+        efibootmgr -o "$PARCHA_NUM,$REST"
+    else
+        efibootmgr -o "$PARCHA_NUM"
+    fi
+fi
