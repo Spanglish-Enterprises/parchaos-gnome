@@ -404,3 +404,8 @@ gnome-shell-extension-appindicator
 # pulsaros-update (blocked, no LICENSE file), without needing any of
 # their code.
 gnome-software
+# Real runtime dependency for parchaos-hanabi (packages.sh) -- Hanabi's
+# own README documents `gtk4paintablesink` (this package) as its
+# default video sink for the live-wallpaper renderer. Confirmed as a
+# real Fedora package via `dnf list --available` on real hardware.
+gstreamer1-plugin-gtk4

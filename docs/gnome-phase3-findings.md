@@ -145,6 +145,57 @@ Fedora package. `pafari` is now at `1:26.8-6`, confirmed installed
 alongside `gnome-software` and `parchaos-hblock` with zero file
 conflicts and the ad-blocker timer active on real hardware.
 
+## Update: the third item, live/video wallpaper, also shipped
+
+Checked Pulsar OS's own live-wallpaper analog first (the same real
+upstream this profile's `notification-position` alternative wasn't --
+`Si11-ibrahim/gnome-video-wallpaper-screensaver`), and its own README
+rules it out cleanly: the actual wallpaper feature needs `xwinwrap`,
+an X11-only trick (Wayland has no equivalent "the desktop background
+window" the way X11 exposes one), and this profile's real GNOME Shell
+runs on Wayland. Packaging it would have shipped a feature that
+silently does nothing on this profile's real target session.
+
+Used `jeffshee/gnome-ext-hanabi`'s `main` branch instead -- real
+GPL-3.0, explicitly "targeting GNOME 50+, Wayland only" per its own
+README, actively maintained (pushed the day before this was
+packaged). Packaged as `parchaos-hanabi`.
+
+Real build problem found before packaging: the `main` branch is
+TypeScript, needing `npm install` to fetch type-definition
+devDependencies from the registry before `esbuild` can bundle the
+runtime JS -- and COPR's mock chroot has no network access, the same
+wall this project already hit once packaging `parchaos-gtk-theme`.
+Rather than try to vendor the whole dependency tree, built it once on
+the COPR build host itself (which does have real network access,
+after installing `nodejs`/`npm` there) and shipped the resulting
+static bundle directly, the same "prebuilt content, no build step in
+the RPM" approach already used for the simpler flat-JS extensions
+earlier in this session.
+
+Real runtime dependency confirmed from the upstream README's own
+troubleshooting section (`gtk4paintablesink`, i.e. the real Fedora
+package `gstreamer1-plugin-gtk4`) and a real, documented interaction
+with an extension this profile already ships: Hanabi's README states
+that `blur-my-shell`'s "Applications blur -> Enable all by default"
+(already set in `customize.sh`) makes its renderer window
+semi-transparent unless its app ID is blacklisted -- added
+`io.github.jeffshee.HanabiRenderer` to `blur-my-shell`'s applications
+blacklist in `customize.sh`.
+
+Confirmed installed and correctly wired on real hardware: extension
+files present, schema compiled and registered system-wide (matching
+upstream's own convention, not this project's usual self-contained
+per-extension schema pattern), blur-my-shell blacklist applied,
+extension added to `enabled-extensions`. Same as every other extension
+tonight, actually seeing it render requires the pending reboot/session
+restart (real hardware still needs a video file chosen in its
+preferences too, once it's visible).
+
+All three phase3-scoped "bigger feature" gaps that don't depend on
+Inled's answer are now done: `gnome-software`, `parchaos-hblock`,
+`parchaos-hanabi`.
+
 ## What's next
 
 Recommended order, per user direction to prioritize the three

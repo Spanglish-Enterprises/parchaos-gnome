@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -90,6 +90,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
 Requires:       parchaos-hblock
+Requires:       parchaos-hanabi
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -110,6 +111,9 @@ mkdir -p %{buildroot}
 %files
 
 %changelog
+* Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-9
+- Added Requires: parchaos-hanabi -- the third and final phase3-scoped
+  "bigger feature" gap, real live/video wallpaper for GNOME Wayland.
 * Thu Sep 24 2026 ParchaOS packaging - 2026.09.23-8
 - Added Requires: parchaos-hblock -- real, independent hosts-file
   ad-blocker, one of the phase3-scoped "bigger feature" gaps that

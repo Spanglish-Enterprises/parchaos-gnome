@@ -197,6 +197,16 @@ PROFILE_REPO_PACKAGES=(
     # OS's own (blocked) pulsaros-hblock.
     parchaos-hblock
 
+    # Live/video wallpaper (packaging/parchaos-hanabi/) -- the third
+    # "bigger feature" gap that doesn't depend on Inled's licensing
+    # answer (docs/gnome-phase3-findings.md). Built from the real,
+    # actively-maintained jeffshee/gnome-ext-hanabi upstream, picked
+    # over Pulsar OS's own live-wallpaper analog after confirming that
+    # one needs X11-only xwinwrap and doesn't work on this profile's
+    # real Wayland session at all -- see the spec's own banner comment
+    # for the full diligence.
+    parchaos-hanabi
+
     # ParchaOS desktop meta-package (packaging/parchaos-desktop/) -- a
     # real, standard-pattern no-content package whose only job is a
     # Requires: line naming every package above. Exists in direct
