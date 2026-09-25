@@ -618,6 +618,18 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         });
         helpBtn.menu.addMenuItem(helpItem);
 
+        helpBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        const reportBugItem = new PopupMenu.PopupMenuItem('Report a Bug or Feature Request…');
+        reportBugItem.connect('activate', () => {
+            try {
+                Gio.AppInfo.launch_default_for_uri('https://parchaos-website.vercel.app/support', null);
+            } catch (e) {
+                console.error('[ParchaOSGlobalMenu] Failed to open support link:', e);
+            }
+        });
+        helpBtn.menu.addMenuItem(reportBugItem);
+
         this._menuBarButtons.push(helpBtn);
     }
 }

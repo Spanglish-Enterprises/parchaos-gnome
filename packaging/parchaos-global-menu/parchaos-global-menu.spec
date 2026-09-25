@@ -32,7 +32,7 @@
 # ==============================================================================
 
 Name:           parchaos-global-menu
-Version:        2.0.0
+Version:        2.1.0
 Release:        1%{?dist}
 Summary:        ParchaOS's macOS-style global application menu for GNOME Shell
 
@@ -93,6 +93,12 @@ install -m 0644 src/parchaos-menu-icon.png "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-1
+- Added "Report a Bug or Feature Request..." to the Help menu, linking
+  to the website's new /support page (backed by the Spanglish Tickets
+  system). No secret token is embedded here -- the OS only opens a
+  browser link; the website's server-side route holds the token.
+
 * Fri Sep 25 2026 ParchaOS packaging - 2.0.0-1
 - Rewritten from scratch as an original implementation, replacing the
   previous fork of Inled's pulsaros-global-menu. See this spec's own
