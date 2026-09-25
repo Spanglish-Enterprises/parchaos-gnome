@@ -1,0 +1,46 @@
+diff --git a/yin_yang/plugins/icons.py b/yin_yang/plugins/icons.py
+index 0000000..0000001 100644
+--- a/yin_yang/plugins/icons.py
++++ b/yin_yang/plugins/icons.py
+@@ -18,6 +18,13 @@ class Icons(PluginDesktopDependent):
+                 super().__init__(_Cinnamon())
+             case Desktop.BUDGIE:
+                 super().__init__(_Budgie())
++            case Desktop.GNOME:
++                # GNOME's icon-theme key lives in the exact same schema
++                # Budgie uses (org.gnome.desktop.interface) -- Budgie is
++                # itself GNOME-Shell-based, so its plugin already does
++                # exactly what plain GNOME needs. Reused directly rather
++                # than duplicating it.
++                super().__init__(_Budgie())
+             case Desktop.KDE:
+                 super().__init__(_Kde())
+             case _:
+diff --git a/yin_yang/plugins/gtk.py b/yin_yang/plugins/gtk.py
+index 0000000..0000001 100644
+--- a/yin_yang/plugins/gtk.py
++++ b/yin_yang/plugins/gtk.py
+@@ -61,6 +61,23 @@ class _Gnome(PluginCommandline):
+     def available(self) -> bool:
+         return test_gnome_availability(self.command)
+
++    def set_theme(self, theme: str):
++        # gtk-theme alone only affects legacy GTK3 CSS theme selection --
++        # GTK4/libadwaita apps (Nautilus, Calculator, Settings, etc.)
++        # read color-scheme instead and don't react to gtk-theme at all.
++        # Without this, half of a "real" GNOME system would silently
++        # ignore yin-yang's light/dark switch. Same fix pattern _Kde's
++        # own xsettingsd fallback already uses further down this file.
++        super().set_theme(theme)
++
++        if not (self.available and self.enabled):
++            return
++
++        color_scheme = 'prefer-dark' if theme == self.theme_dark else 'prefer-light'
++        helpers.check_call(
++            ['gsettings', 'set', 'org.gnome.desktop.interface', 'color-scheme', color_scheme]
++        )
++
+
+ class _Budgie(PluginCommandline):
+     name = 'GTK'

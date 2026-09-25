@@ -58,7 +58,7 @@ Name:           parchaos-yin-yang
 # versioning inconsistency, not a typo on this end), confirmed by
 # checking pyproject.toml's content at the v4.0.1 ref directly.
 Version:        4.0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Automatic light/dark theme switching with real sunrise/sunset support
 
 License:        MIT
@@ -85,6 +85,25 @@ Source1:        parchaos-yin-yang-files.tar.gz
 # they surface, not assumed impossible.
 Patch0:         0001-relax-fedora-package-version-pins.patch
 Patch1:         0002-fix-broken-relative-resource-paths.patch
+# Real gap found via real desktop usage 2026-09-25 (user: "use the
+# desktop to find bugs" -- launching yin_yang directly showed "Plugin
+# Colors has no support for your desktop environment yet!" and the
+# same for "Icons"). Checked the real upstream source before assuming
+# anything was broken on our end: Colors is genuinely KDE-only by
+# design upstream (plasma-apply-colorscheme has no GNOME equivalent
+# concept, not a gap worth patching around). Icons, though, has real,
+# working GNOME-Shell-based implementations for MATE/Cinnamon/Budgie
+# via plain `gsettings set org.gnome.desktop.interface icon-theme` --
+# upstream simply never wired up a `Desktop.GNOME` case despite
+# Budgie's own implementation being identical to what plain GNOME
+# needs. Separately, even the GTK plugin (which DID report working)
+# only sets gtk-theme, never color-scheme -- meaning GTK4/libadwaita
+# apps (Nautilus, Calculator, Settings, half of a real GNOME desktop)
+# would silently ignore yin-yang's light/dark switch even when the
+# plugin "worked". Both fixed with a real patch, not a packaging
+# workaround, following this package's own established pattern of
+# patching real upstream gaps (see Patch0/Patch1's own history).
+Patch2:         0003-add-gnome-icons-support-and-color-scheme-sync.patch
 
 BuildArch:      noarch
 BuildRequires:  python3-devel
@@ -164,6 +183,14 @@ install -m 0644 usr/share/parchaos-yin-yang/resources/yin_yang.timer \
 %{_datadir}/parchaos-yin-yang/resources/yin_yang.timer
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 4.0.1-2
+- Real bug found via real desktop usage: the Icons plugin never had a
+  GNOME case wired up upstream (Budgie's identical implementation was
+  right there unused), and the GTK plugin never set color-scheme
+  alongside gtk-theme, silently leaving GTK4/libadwaita apps out of
+  yin-yang's light/dark switch. Patch0003 fixes both. Colors staying
+  unsupported is confirmed a real, deliberate KDE-only upstream design,
+  not something to patch around.
 * Tue Sep 22 2026 ParchaOS packaging - 4.0.1-1
 - Initial package. Verified all runtime dependencies except suntime
   are real Fedora packages -- packaged python3-suntime separately for

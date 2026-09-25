@@ -699,6 +699,97 @@ pick a real video via its own preferences themselves. Applied live
 (disabled the extension, removed it from the live `enabled-extensions`
 value) in addition to the ISO-config fix.
 
+## Update 2026-09-25: a real "use the desktop to find bugs" pass
+
+Real user instruction: "you can use the desktop to find bugs." Logged
+into the real machine directly (unlocked the screen and, later, logged
+back in after an explicitly user-approved test logout, both via
+`ydotool` synthetic keyboard input over SSH -- the only way to drive a
+real GNOME session without a physical keyboard) and exercised real
+apps and D-Bus interfaces rather than waiting for more user reports.
+
+**Screenshots turned out to be genuinely blocked, not a missing tool.**
+Read GNOME Shell's own real source (`js/ui/screenshot.js` on the
+`gnome-50`/`main` branch) to confirm rather than guess: the
+`org.gnome.Shell.Screenshot` D-Bus method hard-checks the sender
+against an allow-list containing only
+`org.freedesktop.impl.portal.desktop.gnome` -- no session-, lock-, or
+settings-state changes anything, no other real screenshot tool
+(gnome-screenshot, Flameshot, Spectacle, etc.) can get around it either
+since they all go through the same restricted call or the same portal
+flow. Tried the actual portal API
+(`org.freedesktop.portal.Screenshot`) directly too -- got a real
+request object back once, but the async response never arrived
+(almost certainly stuck waiting on an interactive consent dialog with
+nobody there to answer it), and a retry with `interactive: false`
+still didn't complete even after restarting the portal service. Also
+tried direct kernel-level capture (`ffmpeg -f kmsgrab` against both
+`/dev/dri/card0` and `card1`) to bypass Wayland/the portal entirely --
+both failed with "No usable planes found," consistent with Mutter's
+DRM-atomic master lease not exposing plane state to a second reader.
+Enabling GNOME Shell's `Eval` debug interface
+(`org.gnome.shell.development-tools`) was also tried as a way to run
+trusted-context code that could call the screenshot internals
+directly, but that specific interface requires the `--unsafe-mode`
+Mutter startup flag, which isn't something a runtime setting can
+toggle -- confirmed by testing it in a genuinely fresh post-login Shell
+process (logged out and back in) and still getting rejected. Given the
+real breadth of what was tried, this is a hard wall, not something
+worth spending more time on without a fundamentally different
+approach (e.g. a real VNC/RDP server, or physically screenshotting and
+sharing the file).
+
+**Two real, useful non-screenshot findings came out of this pass
+anyway** -- proving the functional/log-based approach is worth doing
+on its own merits, not just as a fallback:
+
+- **Desktop Icons NG throws a real, reproducible (but non-fatal) JS
+  error**: `TypeError: icon.setNumberOverlay is not a function`, every
+  time it creates its desktop icon grids. Icons still render and are
+  clickable; this is cosmetic/log-noise, not a functional break. Not
+  yet root-caused to a specific interaction (suspected: something in
+  DING's own dash/dock integration path assumes a
+  `setNumberOverlay()` method GNOME Shell 50's dash icon API doesn't
+  have) -- flagged for a future pass, not fixed in this one.
+- **Yin-Yang's auto light/dark switching was more broken than a first
+  glance suggested, and the real cause was upstream, not this
+  project's packaging.** Read the actual upstream plugin source
+  (`yin_yang/plugins/{colors,icons,gtk}.py` at the exact pinned v4.0.1
+  tag, not just assumed from a log message) before concluding
+  anything: the "Colors" plugin is genuinely KDE-only by design
+  (`plasma-apply-colorscheme` has no GNOME analogue, not a gap worth
+  patching). The "Icons" plugin, though, has a real, working
+  GNOME-Shell-compatible implementation already written for
+  Budgie -- upstream simply never wired a `Desktop.GNOME` case to use
+  it, a genuine, small oversight. Separately, and more impactful: even
+  the "GTK" plugin, which reported as working, only ever sets
+  `gtk-theme` -- it never touches `color-scheme`, so every
+  GTK4/libadwaita app (Nautilus, Calculator, Settings, roughly half a
+  real GNOME desktop) would silently ignore yin-yang's light/dark
+  switching even though the plugin itself reported success. Fixed both
+  with a real source patch
+  (`0003-add-gnome-icons-support-and-color-scheme-sync.patch`),
+  following this package's own established pattern (see
+  Patch0/Patch1's history) of patching real upstream gaps rather than
+  working around them. Verified live: re-running `yin_yang` directly
+  now only reports Colors as unsupported, exactly the expected,
+  correct state.
+
+**Also confirmed, not fixed (nothing to fix)**: `pafari` briefly looked
+like it might have a real crash ("Web process crashed") on first test,
+but that was a testing-environment artifact -- the first test ran over
+raw SSH with no real Wayland session variables set
+(`WAYLAND_DISPLAY`/`XDG_CURRENT_DESKTOP`/etc.), and retesting with the
+correct environment launched it cleanly with no crash. Worth
+remembering for future live-testing: always set the full real session
+environment (`DBUS_SESSION_BUS_ADDRESS`, `XDG_RUNTIME_DIR`,
+`WAYLAND_DISPLAY`, `XDG_CURRENT_DESKTOP`, `XDG_SESSION_DESKTOP`,
+`XDG_SESSION_TYPE`) before trusting a "it crashed" result from a
+command run over bare SSH -- this exact gap produced two false alarms
+in this same session (`pafari`, and an early, incomplete read of
+yin-yang's own error output) before the real, narrower Icons/GTK
+finding above was isolated.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
