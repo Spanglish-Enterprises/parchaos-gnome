@@ -1277,6 +1277,22 @@ show-banners`) and only undoes it in the morning if the schedule turned it
 on. Verified both paths on the live session: DND off -> start -> `false` ->
 end -> `true`; DND already on -> start -> end -> stays `false`.
 
+**Rest of the checklist, same session:**
+- *Cmd acts as Ctrl*: verified at the input-event level. Injected
+  Meta+A through `ydotool` (whose virtual device xremap grabs like a real
+  keyboard) and captured xremap's own output device with
+  `libinput debug-events --show-keycodes`: it emitted `KEY_LEFTCTRL` +
+  `KEY_A`. The GNOME Terminal-specific rules (`Ctrl-C` -> `Shift-Super-C`
+  etc.) line up with the shipped terminal keybindings
+  (`copy='<Shift><Super>c'` etc.), and GNOME Terminal (not Ptyxis) is
+  what's installed, so the `org.gnome.Terminal` app-id rules do match.
+- *TMOG first-run download*: completed (35MB AppImage in
+  `~/.local/share/parchaos-tmog/`, a real ELF); the launcher starts it and
+  it stays running.
+- *Pafari renders a page*: still unverified visually -- screenshots from a
+  non-desktop process are refused by GNOME Shell (`AccessDenied`).
+- *parchaos-cloud OAuth -> mount*: still needs a person (browser sign-in).
+
 **Testing trap worth remembering:** isolating yin-yang's config with
 `XDG_CONFIG_HOME=<scratch>` also hides dconf's user database
 (`$XDG_CONFIG_HOME/dconf/user`) from every `gsettings get` in that
