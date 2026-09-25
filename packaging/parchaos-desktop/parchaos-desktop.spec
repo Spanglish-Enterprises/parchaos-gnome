@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -76,7 +76,7 @@ Requires:       parchaos-gtk-theme
 Requires:       parchaos-icon-theme
 Requires:       parchaos-gnome-plymouth-theme
 Requires:       parchaos-gnome-wallpaper
-Requires:       parchaos-macos-remap
+Requires:       parchaos-keyboard-remap
 Requires:       parchaos-cloud
 Requires:       parchaos-focus-schedule
 Requires:       parchaos-yin-yang
@@ -112,6 +112,8 @@ mkdir -p %{buildroot}
 %files
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-11
+- Require parchaos-keyboard-remap, the new name of parchaos-macos-remap.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-10
 - Added Requires: parchaos-desktop-icons -- real Desktop Icons NG,
   closing another gap from the earlier Pulsar-config extension diff.

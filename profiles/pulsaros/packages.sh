@@ -76,8 +76,8 @@ PROFILE_REPO_PACKAGES=(
     # customize.sh's dconf override.
     parchaos-gnome-wallpaper
 
-    # ParchaOS's macOS-style keyboard remap (packaging/parchaos-macos-remap/)
-    # -- swaps Cmd<->Ctrl and layers on macOS keyboard conventions
+    # ParchaOS's keyboard remap (packaging/parchaos-keyboard-remap/, formerly
+    # parchaos-macos-remap) -- swaps Cmd<->Ctrl and layers on Cmd-key conventions
     # (Cmd-Left/Right as Home/End, Cmd-C/V/T/N/W/Q/F in the terminal,
     # Parcher's Cmd-based file shortcuts, Cmd-Tab app switching) via
     # xremap + its companion GNOME Shell extension, repackaged from
@@ -86,7 +86,7 @@ PROFILE_REPO_PACKAGES=(
     # interactive per-user install script -- see the spec's own banner
     # comment. The xremap@k0kubun.com extension it ships is enabled by
     # default via customize.sh.
-    parchaos-macos-remap
+    parchaos-keyboard-remap
 
     # ParchaOS's cloud drives (packaging/parchaos-cloud/) -- rclone-backed
     # cloud storage (Google Drive, OneDrive, iCloud, or any other rclone

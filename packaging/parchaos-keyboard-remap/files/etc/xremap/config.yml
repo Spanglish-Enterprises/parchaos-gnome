@@ -1,0 +1,47 @@
+keypress_delay_ms: 10
+
+# `modmap` section: key-to-key remapping (no combinations).
+modmap:
+  - name: Make Cmd act as Ctrl
+    remap:
+      LeftCtrl: LeftMeta
+      LeftMeta: LeftCtrl
+      RightCtrl: RightMeta
+      RightMeta: RightCtrl
+
+# `keymap` section: remapping a sequence of key combinations to another.
+keymap:
+  - name: Make Cmd-Left/Right work as Home/End (with Shift for selection)
+    remap:
+      Ctrl-Left: Home
+      Ctrl-Right: End
+      Shift-Ctrl-Left: Shift-Home
+      Shift-Ctrl-Right: Shift-End
+  - name: Delete word
+    remap:
+      Alt-Backspace: Ctrl-Backspace
+  - name: Delete complete line
+    application:
+      not: org.gnome.Terminal
+    remap:
+      Ctrl-K: Ctrl-D
+  - name: Parcher (Files) shortcuts
+    application:
+      only: org.gnome.Nautilus
+    remap:
+      Ctrl-Up: Alt-Up          # Go Up
+      Ctrl-Down: Enter         # Go Down (Alt-Down doesn't open files)
+      Ctrl-Backspace: Delete   # Move to Trash
+      Shift-Ctrl-Dot: Ctrl-H   # Show/Hide Hidden Files
+      Shift-Ctrl-G: Ctrl-L     # Enter Location
+  - name: Terminal copy/paste and window management
+    application:
+      only: org.gnome.Terminal
+    remap:
+      Ctrl-C: Shift-Super-C
+      Ctrl-V: Shift-Super-V
+      Ctrl-T: Shift-Super-T
+      Ctrl-N: Shift-Super-N
+      Ctrl-W: Shift-Super-W
+      Ctrl-Q: Shift-Super-Q
+      Ctrl-F: Shift-Super-F

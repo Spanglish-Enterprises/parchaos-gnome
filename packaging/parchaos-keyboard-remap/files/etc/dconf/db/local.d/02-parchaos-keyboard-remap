@@ -1,0 +1,46 @@
+# Keybinding defaults to pair with xremap's Cmd<->Ctrl swap
+# (config.yml). Ported from Pulsar OS's gnome-macos-remap-wayland
+# install.sh gsettings calls into this project's existing system-wide
+# dconf db mechanism (see profiles/pulsaros/customize.sh) rather than
+# running gsettings at first-login -- declarative, applies to every
+# user, and survives a real disk install the same way the theme
+# defaults do.
+[org/gnome/desktop/input-sources]
+xkb-options=@as []
+
+[org/gnome/mutter]
+overlay-key=''
+
+[org/gnome/desktop/wm/keybindings]
+minimize=@as []
+show-desktop=['<Control>d']
+switch-applications=['<Control>Tab']
+switch-applications-backward=['<Shift><Control>Tab']
+switch-group=['<Control>grave']
+switch-group-backward=['<Shift><Control>grave']
+switch-to-workspace-left=['<Super>Left']
+switch-to-workspace-right=['<Super>Right']
+
+[org/gnome/mutter/keybindings]
+toggle-tiled-left=@as []
+toggle-tiled-right=@as []
+
+[org/gnome/shell/keybindings]
+toggle-message-tray=@as []
+toggle-overview=['LaunchA']
+toggle-application-view=['<Primary>space', 'LaunchB']
+screenshot=['<Shift><Control>3']
+show-screenshot-ui=['<Shift><Control>4']
+screenshot-window=['<Shift><Control>5']
+
+[org/gnome/settings-daemon/plugins/media-keys]
+screensaver=@as []
+
+[org/gnome/terminal/legacy/keybindings]
+copy='<Shift><Super>c'
+paste='<Shift><Super>v'
+new-tab='<Shift><Super>t'
+new-window='<Shift><Super>n'
+close-tab='<Shift><Super>w'
+close-window='<Shift><Super>q'
+find='<Shift><Super>f'

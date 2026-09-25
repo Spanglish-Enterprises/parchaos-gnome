@@ -126,7 +126,7 @@ see phase2/phase3 docs; already shipped before this project's own
 licensing-audit habit started, same missing-LICENSE gap as the rest of
 Inled's work, being replaced with ParchaOS's own implementation rather
 than maintained further), `parchaos-focus-schedule`, `parchaos-yin-yang`
-(auto light/dark), `parchaos-macos-remap` (Cmd↔Ctrl via xremap),
+(auto light/dark), `parchaos-keyboard-remap` (Cmd↔Ctrl via xremap),
 `parchaos-hblock` (real hosts-file ad-blocker).
 
 **Installer**: `parchaos-gnome-calamares-config` — a real disk install

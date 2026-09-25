@@ -1,0 +1,13 @@
+[Unit]
+Description=ParchaOS keyboard remap: Cmd as Ctrl and friends (xremap)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/xremap /etc/xremap/config.yml
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical-session.target
