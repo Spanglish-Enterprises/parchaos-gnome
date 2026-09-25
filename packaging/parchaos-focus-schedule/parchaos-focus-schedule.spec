@@ -28,13 +28,21 @@
 # parchaos-appmenu-gtk-module's KWin protocol binding. Flagged
 # honestly rather than claimed as fully proven.
 #
+# GNOME correction (2026-09-25, found on real hardware): everything above
+# was verified against Plasma only. GNOME Shell does not implement
+# Notifications.Inhibit at all ("No such method"), so on the GNOME variant
+# focus-start failed every night and never silenced anything. 1.0.0-2
+# switches to GNOME's own Do Not Disturb switch
+# (org.gnome.desktop.notifications show-banners), and only undoes it in
+# the morning if the schedule is what turned it on.
+#
 # parchaos-* since this is a product-original addition with no pearOS
 # upstream relationship at all.
 # ==============================================================================
 
 Name:           parchaos-focus-schedule
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
 License:        NOASSERTION
@@ -48,12 +56,10 @@ BuildRequires:  systemd-rpm-macros
 
 %description
 Two systemd --user timers (parchaos-focus-start.timer at 22:00,
-parchaos-focus-end.timer at 08:00) that call the real
-freedesktop.org Notifications Inhibit/UnInhibit D-Bus methods on a
-schedule, silencing notification popups overnight -- KDE Plasma itself
-has no recurring DND schedule feature (manual/trigger-based only), and
-no third-party fix exists, so this reaches the practical result
-without waiting on upstream.
+parchaos-focus-end.timer at 08:00) that turn GNOME's own Do Not
+Disturb on overnight and back off in the morning, silencing
+notification popups during those hours. A Do Not Disturb the user
+switched on themselves is left alone.
 
 %prep
 %setup -q -c -n %{name}-%{version}
@@ -82,6 +88,13 @@ chmod 0755 %{buildroot}%{_bindir}/parchaos-focus-end
 %{_prefix}/lib/systemd/user-preset/90-parchaos-focus-schedule.preset
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Real bug found on real hardware: GNOME Shell has no
+  Notifications.Inhibit method, so focus-start failed every night and
+  nothing was ever silenced. Switched to GNOME's Do Not Disturb setting
+  (show-banners), leaving a user's own Do Not Disturb untouched. Verified
+  by running both services on the live session and reading show-banners
+  back, including the already-on case.
 * Tue Sep 22 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Verified the Inhibit/UnInhibit D-Bus calls succeed
   and are idempotent against a real running Plasma session (the build VM) --

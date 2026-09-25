@@ -1266,6 +1266,17 @@ Verified by building the RPM locally, installing it, and toggling the real
 toggle. Wallpaper is deliberately left out: ParchaOS ships one wallpaper
 for both modes.
 
+**Same checklist, second real bug: focus-schedule never worked on GNOME.**
+"Does the focus-schedule's notification inhibit actually suppress a real
+popup?" -- it never even got that far. `parchaos-focus-start.service` fails
+outright: GNOME Shell's `org.freedesktop.Notifications` has no `Inhibit`
+method (`UnknownMethod`). That's a Plasma extension, carried over from the
+KDE repo where this package was verified. `parchaos-focus-schedule` 1.0.0-2
+switches to GNOME's own Do Not Disturb (`org.gnome.desktop.notifications
+show-banners`) and only undoes it in the morning if the schedule turned it
+on. Verified both paths on the live session: DND off -> start -> `false` ->
+end -> `true`; DND already on -> start -> end -> stays `false`.
+
 **Testing trap worth remembering:** isolating yin-yang's config with
 `XDG_CONFIG_HOME=<scratch>` also hides dconf's user database
 (`$XDG_CONFIG_HOME/dconf/user`) from every `gsettings get` in that
