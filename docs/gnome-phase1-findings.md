@@ -648,6 +648,57 @@ that have a Fedora-buildable path -- the only remaining gaps
 (`pulsaros-spotlight-launcher`, `pulsar-circle-to-search`) are blocked
 on Inled's licensing answer, not a packaging question.
 
+## Update 2026-09-25: three real bugs from actual desktop usage
+
+The first real hands-on usage since the reboot queue cleared surfaced
+three genuine bugs, all found and fixed the same session:
+
+**Nautilus/Finder crashed on every single launch.** Real user report:
+clicking the desktop's Home folder icon and trying to open the file
+browser both failed silently. `coredumpctl`/`journalctl` showed the
+real cause: `nautilus_global_preferences_init` SIGABRTs immediately,
+every time, with `Settings schema
+'org.freedesktop.Tracker3.Miner.Files' is not installed` printed right
+before each crash -- GLib's `g_settings_new()` fatally aborts when a
+schema it's given doesn't exist anywhere in the compiled schema
+database, and Nautilus's own preferences init unconditionally
+instantiates one for Tracker's file-indexing miner. Confirmed via
+`dnf provides` that the real Fedora package is `localsearch` (Fedora's
+rename of `tracker-miners`) -- never installed here, another real
+casualty of this profile's own deliberate choice not to pull in
+Fedora's full comps.xml bundle. Added `Requires: localsearch` to
+`parchaos-finder.spec` (Release 4); reproduced the exact fix live
+(launched nautilus directly, confirmed no crash, no new coredump).
+
+**The GDM login-screen logo was huge.** Real user report, and a very
+specific, useful one: "It should be the text logo with the icon like
+it's currently in the lock screen... that's the perfect size."
+Release 1 of `parchaos-gdm-logo` had shipped the raw 572x572 square
+app icon completely unscaled into GDM's login-screen logo slot.
+Checked Fedora's own real, working `fedora-gdm-logo.png` (extracted
+directly from the real `fedora-logos` RPM, not guessed): 149x43, a
+compact wordmark (small icon + text), not a square icon at all --
+GDM's logo slot is built for that shape. Generated a real wordmark to
+match (the same real icon asset plus "ParchaOS" in Nunito Sans,
+~197x48, matching Fedora's real proportions) with Pillow, visually
+checked before shipping. `parchaos-gdm-logo` Release 2.
+
+**Hanabi (live wallpaper) auto-launched and failed at every login.**
+Real user report: "not a good user experience." `journalctl` showed
+the renderer launching automatically the moment the extension was
+enabled, regardless of `change-wallpaper` (confirmed `false` by
+default) or `video-path` (confirmed empty by default), immediately
+failing with `GstPlay.PlayError: Failed to play undefined` and
+retrying every couple seconds. This project has no default video asset
+to ship (a real licensing/size question of its own), so rather than
+chase the extension's internal launch-gating logic, removed
+`hanabi-extension@jeffshee.github.io` from `customize.sh`'s default
+`enabled-extensions` -- it's still installed (`packages.sh`), just not
+auto-enabled on a fresh install. A user who wants it can enable it and
+pick a real video via its own preferences themselves. Applied live
+(disabled the extension, removed it from the live `enabled-extensions`
+value) in addition to the ISO-config fix.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper

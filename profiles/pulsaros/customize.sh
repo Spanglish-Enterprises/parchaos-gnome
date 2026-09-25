@@ -91,7 +91,22 @@ EOF
     # was, not done in this pass.
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'hanabi-extension@jeffshee.github.io', 'ding@rastersoft.com']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
+# Real bug found live on real hardware 2026-09-25 (user report: "the
+# hanabi extension is auto popping up at login, not a good user
+# experience"): hanabi-extension@jeffshee.github.io launches its
+# renderer at enable-time regardless of the change-wallpaper toggle
+# (confirmed false by default) or video-path (empty by default) --
+# with nothing configured, it repeatedly fails at login with
+# `GstPlay.PlayError: Failed to play undefined` (a literal JS
+# `undefined` video path), retrying every couple seconds. This project
+# has no default video asset to ship (a real video file is a real
+# licensing/size question this project hasn't solved), so rather than
+# ship a live-wallpaper extension that visibly fails on every fresh
+# install, it's deliberately NOT in the default enabled-extensions list
+# above -- parchaos-hanabi is still installed (packages.sh), just not
+# auto-enabled. A user who wants it can enable it and pick a real video
+# file via its own preferences (GNOME Extensions app) themselves.
 disable-user-extensions=false
 # Real compatibility gap found 2026-09-24 (packaging/parchaos-notification-position/'s
 # own spec has the full story): that extension's metadata.json only
