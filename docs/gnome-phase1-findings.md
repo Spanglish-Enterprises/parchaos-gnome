@@ -1064,6 +1064,46 @@ are also missing in the top-right cluster; both are backend-dependent
 (a real weather provider + location services; confirmed Bluetooth
 hardware) rather than a quick extension fix, also not started.
 
+## Update 2026-09-25: Chromium's rounded window corners leak background, confirmed real upstream limitation
+
+Real user report with a live screenshot: "if you look closely at the
+curved corners there's a remaining background." Confirmed visually --
+zoomed into `parchaos-browser`'s (Chromium) top-left and top-right
+window corners and found a real, consistent, blocky artifact: a sliver
+of the window's own rectangular background color visible just outside
+the rounded curve, on both corners. Compared directly against a native
+GTK4 app's window (Parcher) in an earlier screenshot from the same
+session -- its rounded corner is clean, no artifact.
+
+Root-caused, not guessed: confirmed via `pgrep -af chromium |
+grep ozone-platform` that this instance runs `ozone-platform=wayland`
+(real native Wayland, not XWayland), ruling out an Mutter/X11
+window-manager decoration theme as the cause. `parchaos-browser`
+itself is confirmed to be nothing more than a thin `.desktop`-file
+rebrand of Fedora's stock `chromium` package (`packaging/
+parchaos-browser/parchaos-browser.spec` has no custom flags, CSS, or
+launch wrapper at all) -- so this isn't something this project's own
+packaging introduced. A web search confirmed this matches a real,
+documented class of bug: Chromium's Wayland CSD rounded-corner
+rendering depends on the window surface negotiating real translucent/
+alpha compositing for the corner regions outside the rounded rect; when
+that doesn't line up, the rectangular surface's own background shows
+through at the corners. Electron hits an identical symptom on Wayland
+(top corners follow CSD rounding, bottom corners stay square) --
+confirms this is a real, known limitation in this whole class of
+Chromium-based rendering, not something specific to this one profile
+or machine.
+
+**Not fixed, correctly deferred**: this lives inside Chromium's own
+compiled Ozone/Wayland backend, unreachable from packaging, theme
+files, or launch flags. A from-scratch Chromium rebuild to patch it
+would be the many-hour, 30+GB-disk compile this package's own spec
+banner already rules out as unsuited to this project's fast COPR
+pipeline. Worth re-checking whenever this profile's `chromium` package
+version bumps, since this is exactly the kind of upstream rendering bug
+that gets fixed in later Chromium releases without any action needed
+here.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
