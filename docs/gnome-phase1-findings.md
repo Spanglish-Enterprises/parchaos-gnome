@@ -616,6 +616,38 @@ doc for the dock and notification-position specifically. The rest of
 tonight's queue (keyboard remap, the other extensions, GDM logo, light
 mode, app renames) still awaits the same kind of direct confirmation.
 
+## Update 2026-09-25: Desktop Icons NG shipped, extension list now complete
+
+The one extension gap left open above (`ding`, Desktop Icons NG) turned
+out much simpler than feared once actually read: no npm/TypeScript
+toolchain at all, just plain JS and a normal meson build (unlike
+`parchaos-hanabi`'s TypeScript build, which genuinely needed the
+prebuild-on-a-network-host workaround). Packaged as
+`parchaos-desktop-icons`.
+
+Two real things found by reading the source directly instead of
+assuming: (1) DING has a real, hard runtime dependency on a literal
+`nautilus` binary -- it spawns `nautilus --version` at startup and
+shows a blocking "mandatory" error if that fails. Confirmed
+`parchaos-finder` (this profile's real nautilus replacement) installs
+its binary at the literal path `/usr/bin/nautilus` and matches
+`nautilus`'s own Epoch 0, so `Requires: nautilus` resolves correctly
+via its Provides with no repeat of the pafari/epiphany-runtime epoch
+saga from earlier tonight. (2) `apparmor/meson.build` installs an
+AppArmor profile whenever the prefix is `/usr` -- dropped it in
+`%install`, since Fedora uses SELinux, not AppArmor; that file could
+never do anything on this distro.
+
+Also carried over Pulsar OS's own real `blur-my-shell` blacklist
+entries for DING (`ding`, `DING`, `org.gnome.Shell.Extensions.DING`
+and wildcard variants) alongside the Hanabi renderer exception already
+added, matching their proven config rather than guessing new values.
+
+This profile now ships all of Pulsar OS's real, licensed extensions
+that have a Fedora-buildable path -- the only remaining gaps
+(`pulsaros-spotlight-launcher`, `pulsar-circle-to-search`) are blocked
+on Inled's licensing answer, not a packaging question.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper

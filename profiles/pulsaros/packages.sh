@@ -207,6 +207,14 @@ PROFILE_REPO_PACKAGES=(
     # for the full diligence.
     parchaos-hanabi
 
+    # Desktop Icons NG (packaging/parchaos-desktop-icons/) -- real
+    # icons on the desktop background, one more piece of Pulsar OS's
+    # extension list this profile didn't ship yet
+    # (docs/gnome-phase1-findings.md's extension-polish pass flagged
+    # it as needing a heavier meson build; turned out simpler than
+    # feared once actually read -- see the spec's own banner comment).
+    parchaos-desktop-icons
+
     # ParchaOS desktop meta-package (packaging/parchaos-desktop/) -- a
     # real, standard-pattern no-content package whose only job is a
     # Requires: line naming every package above. Exists in direct

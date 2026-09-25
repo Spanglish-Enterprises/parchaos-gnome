@@ -91,7 +91,7 @@ EOF
     # was, not done in this pass.
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'hanabi-extension@jeffshee.github.io']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'hanabi-extension@jeffshee.github.io', 'ding@rastersoft.com']
 disable-user-extensions=false
 # Real compatibility gap found 2026-09-24 (packaging/parchaos-notification-position/'s
 # own spec has the full story): that extension's metadata.json only
@@ -132,8 +132,13 @@ sigma=23
 # blurred by default), Hanabi's own renderer window (the live-wallpaper
 # extension, packaging/parchaos-hanabi/) gets caught by that blanket
 # rule and goes semi-transparent -- Hanabi's own README says exactly
-# this and names the fix (its renderer's real app ID).
-blacklist=['io.github.jeffshee.HanabiRenderer']
+# this and names the fix (its renderer's real app ID). The
+# ding/DING/org.gnome.Shell.Extensions.DING entries match Pulsar OS's
+# own real, working config exactly (same fetch used for the
+# button-layout/blur-my-shell defaults throughout this project) --
+# Desktop Icons NG's own desktop-grid window needs the same exception,
+# not re-derived independently here.
+blacklist=['io.github.jeffshee.HanabiRenderer', 'ding', 'DING', 'org.gnome.Shell.Extensions.DING', '*ding*', '*DING*']
 
 [org/gnome/shell/extensions/blur-my-shell/dash-to-dock]
 blur=true
