@@ -1147,6 +1147,56 @@ correct all along), and no other part of the reverted diff represented
 an independent, still-valid fix -- there is nothing left to salvage or
 re-apply from it.
 
+## Update 2026-09-25: Bluetooth hardware was real but the whole stack was missing
+
+Continuing the flagged items from the macOS reference comparison.
+Checked whether the missing Bluetooth status icon was a real gap or
+another false assumption before touching anything: `rfkill list`
+confirmed a genuine `hci0: Bluetooth` radio, not soft/hard blocked --
+real hardware, part of the same MediaTek MT7922 combo card whose
+Bluetooth *firmware* was already fixed earlier this project
+(`mt7xxx-firmware`, see the 2026-09-24 entry above). But `bluez` (the
+actual Bluetooth daemon) and `gnome-bluetooth` (GNOME's integration
+library) were never installed at all -- the firmware loaded cleanly
+into a radio nothing ever talked to. Added both to `packages.list`;
+confirmed live (`systemctl enable --now bluetooth` -> active).
+
+**Learned the real reason no icon appears, from GNOME Shell's own
+source, before assuming the package install alone would fix the
+visual gap** (after the sidebar-icon mistake earlier today, checking
+the actual mechanism first rather than assuming): fetched
+`js/ui/status/bluetooth.js` from the real `gnome-50` branch --
+`this._indicator.visible = nConnectedDevices > 0`, hardcoded, no
+`gsettings` override anywhere in the file. GNOME's top-bar Bluetooth
+icon only ever appears once a device is actively connected; real
+macOS shows a permanent icon regardless of connection state. Confirmed
+via a fresh logout/login (new Shell process, so bluez's presence would
+be picked up if that were the blocker) that installing the stack alone
+does not make an icon appear with nothing paired -- expected, matches
+the source exactly, not a bug.
+
+**Real, valuable fix either way**: Bluetooth now actually works on
+this hardware for the first time (pairing, the Settings panel, etc.),
+independent of the icon-visibility question. Making the icon always
+show, macOS-style, would need a small custom indicator (a new panel
+element, likely in `parcha-global-menu` alongside its existing
+custom icons) rather than a GNOME Shell patch -- a real, scoped,
+buildable follow-up, not started in this pass.
+
+**Weather status icon, checked for feasibility, not started**:
+`geoclue2` (location) and `gnome-weather` (the standalone app) are
+already installed on this profile; `libgweather4` is not. But the
+real, structural gap is bigger than a missing package: GNOME Shell has
+no built-in top-bar weather indicator at all, by design -- Weather is
+only ever a standalone app upstream, never panel-integrated. Getting a
+real macOS-style "☀️ 59°F" in the menu bar means building new custom
+functionality into `parcha-global-menu` itself (querying geoclue2 for
+location, querying a weather data source, rendering and periodically
+refreshing an icon+temperature) -- a genuinely new feature on the
+scale of everything else already in that extension, not a bug fix.
+Flagged for an explicit decision on scope before starting, given it
+also means picking a real weather data source/API to depend on.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper

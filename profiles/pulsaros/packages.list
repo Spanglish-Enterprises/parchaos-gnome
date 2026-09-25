@@ -119,6 +119,26 @@ amd-gpu-firmware
 # subpackage that linux-firmware's own dependencies do NOT pull in --
 # same per-vendor-subpackage split pattern as amd-gpu-firmware above.
 mt7xxx-firmware
+# Real gap found via a live macOS reference comparison 2026-09-25,
+# investigating why no Bluetooth status icon ever appears: the
+# MT7922 combo card's Bluetooth radio is real and working at the
+# kernel level (confirmed live via `rfkill list` -- a genuine
+# `hci0: Bluetooth` device, not soft/hard blocked, firmware loading
+# cleanly since mt7xxx-firmware was added above), but nothing in this
+# profile ever installs the actual Bluetooth stack -- no `bluez`
+# daemon, no GNOME integration library -- so the hardware has never
+# been usable at all, independent of whether any status icon shows
+# for it. Added both; confirmed live (`systemctl enable --now
+# bluetooth` -> active). Separately confirmed via GNOME Shell's own
+# real source (js/ui/status/bluetooth.js) that the top-bar icon only
+# ever appears once a device is actively connected
+# (`this._indicator.visible = nConnectedDevices > 0`, hardcoded, no
+# gsettings override) -- real macOS shows a permanent Bluetooth icon
+# regardless of connection state, a genuine GNOME-vs-macOS design
+# difference, not a bug this package addition fixes by itself. See
+# docs/gnome-phase1-findings.md for the full trace.
+bluez
+gnome-bluetooth
 # Real bug found via a real installed system on actual hardware
 # (2026-09-24): GNOME Terminal and Nautilus (Files) both failed to
 # open -- Terminal showed an endless loading-cursor spinner with no
