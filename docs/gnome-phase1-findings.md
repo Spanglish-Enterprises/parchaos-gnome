@@ -1104,6 +1104,49 @@ version bumps, since this is exactly the kind of upstream rendering bug
 that gets fixed in later Chromium releases without any action needed
 here.
 
+## Correction, 2026-09-25: the sidebar colored-icons item above was wrong
+
+The "deliberately not done" note above claiming "real macOS sidebar
+uses full-color icons throughout" was never actually checked against
+the real reference screenshot the user provided at the start of this
+comparison pass -- it was a general assumption about macOS, and a
+wrong one. A real patch was written and shipped on that assumption
+(`parchaos-finder` 48.7-7: renamed the sidebar's `-symbolic` icon
+constants and `g_*_get_symbolic_icon()` calls to their non-symbolic
+equivalents, added a `nautilus_trash_monitor_get_icon()` sibling
+function, rebound user bookmarks to a non-symbolic icon property).
+When the user pushed back ("If you compare to macos screenshot the
+sidebar is monochrome I believe") and the actual reference image was
+re-cropped and re-examined directly, every single sidebar icon in it
+-- Applications, Desktop, Documents, Downloads, iCloud Drive, Dropbox,
+the home folder, Macintosh HD, AirDrop, Network, Trash -- is
+monochrome or accent-tinted, not full-color. This is real, current
+macOS design (Big Sur onward moved away from the older colorful 3D
+folder icons to flat monochrome/tinted glyphs); GNOME's existing
+`-symbolic` icon convention was already correct and already matched
+it. The patch was reverted in full (`parchaos-finder` 48.7-8, `Patch0`
+and its file removed, `%%autosetup` back to its plain unpatched form)
+before it reached wider use.
+
+**The real lesson, not just the specific mistake**: a UI-fidelity claim
+("real macOS does X") needs to be checked against the actual reference
+material in hand, not answered from general/default assumptions about
+what a version of macOS looks like -- exactly the same discipline this
+project already applies to code (verify against real hands-on results,
+not assumptions), just missed here because the claim felt visually
+obvious rather than technical. Leaving the original wrong note above in
+place rather than deleting it, per this project's own convention of
+not silently rewriting an unverified claim once it's shown to be
+wrong.
+
+**Two things from that reverted patch are still real** even though the
+patch itself was wrong to ship: the color question aside,
+`update_trash_icon()`'s call to the symbolic-only getter was always
+consistent with the rest of the file (not a bug, since symbolic was
+correct all along), and no other part of the reverted diff represented
+an independent, still-valid fix -- there is nothing left to salvage or
+re-apply from it.
+
 ## What's next
 
 See `docs/gnome-phase0-findings.md`'s own still-deferred items (deeper
