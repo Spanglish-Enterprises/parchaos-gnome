@@ -65,14 +65,27 @@
 # expect it.
 # ==============================================================================
 
+# Corresponding source (GPL-3.0): the bundled JS (files/.../extension.js,
+# prefs.js, renderer/renderer.js) is esbuild output of upstream commit
+# hanabi_commit below, whose source tarball is Source1, so every SRPM
+# carries it. To reproduce the bundle exactly (verified 2026-09-26: the
+# same SHA-256 for all three files):
+#   git clone https://github.com/jeffshee/gnome-ext-hanabi
+#   cd gnome-ext-hanabi && git checkout <hanabi_commit>
+#   npm ci && npm run build        # output in src/_build/
+%global hanabi_commit b18e0414447a7b5eb472c6ede7b32782f972c4ae
+%global hanabi_shortcommit %(c=%{hanabi_commit}; echo ${c:0:7})
+
 Name:           parchaos-hanabi
 Version:        1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Live video wallpaper for GNOME Shell (Wayland)
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/jeffshee/gnome-ext-hanabi
 Source0:        parchaos-hanabi-files.tar.gz
+# Upstream source of the bundled JS (see above); shipped in the SRPM only.
+Source1:        %{url}/archive/%{hanabi_commit}/gnome-ext-hanabi-%{hanabi_shortcommit}.tar.gz
 
 BuildArch:      noarch
 BuildRequires:  glib2
@@ -110,6 +123,9 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1-2
+- Ship the upstream source (commit b18e041) in the SRPM and record how
+  the bundled JS is reproduced from it.
 * Thu Sep 24 2026 ParchaOS packaging - 1-1
 - Initial package, the third phase3-scoped "bigger feature" gap. See
   banner comment for the Wayland-compatibility diligence that ruled
