@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -75,12 +75,32 @@ for theme in MacTahoe MacTahoe-dark; do
     done
 done
 
+# Drop MacTahoe's weather-*-large/-small condition icons. GNOME Weather
+# draws these at ~200px, and most of MacTahoe's embed small raster
+# images, so they came out dotted/pixelated. Without them the lookup
+# falls through to hicolor, where GNOME Weather ships crisp scalable
+# originals. The *-symbolic weather icons are untouched.
+find %{buildroot}%{_datadir}/icons/MacTahoe* \
+    \( -name 'weather-*-large.svg' -o -name 'weather-*-small.svg' \) \
+    \( -type f -o -type l \) -delete
+
+# install.sh built icon-theme.cache before the edits above; rebuild it so
+# it matches what we actually ship.
+for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+    gtk-update-icon-cache -f -q %{buildroot}%{_datadir}/icons/$theme
+done
+
 %files
 %license COPYING
 %doc README.md
 %{_datadir}/icons/*
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-5
+- Remove MacTahoe's weather condition icons (-large/-small), which
+  embed low-resolution raster images and looked pixelated in GNOME
+  Weather; the app's own scalable icons from hicolor are used instead.
+- Regenerate icon-theme.cache after the spec's icon changes.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-4
 - Icon v2: redraw Parcher, Parcha Store and Parcha Browser in the
   MacTahoe palette (folder blues, white tiles, soft violet) so they sit
