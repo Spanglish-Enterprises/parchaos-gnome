@@ -3,20 +3,20 @@ Version=1.0
 Name=Parcha Browser
 GenericName=Web Browser
 Comment=Browse the web
-Exec=/usr/bin/chromium-browser %U
+Exec=env CHROME_DESKTOP=es.parchaos.Browser.desktop /usr/bin/chromium-browser %U
 Terminal=false
 Type=Application
 Icon=es.parchaos.Browser
 Categories=Network;WebBrowser;
 MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;
-StartupWMClass=Chromium-browser
+StartupWMClass=es.parchaos.Browser
 Keywords=web;browser;internet;
 Actions=new-window;new-private-window;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=/usr/bin/chromium-browser %U
+Exec=env CHROME_DESKTOP=es.parchaos.Browser.desktop /usr/bin/chromium-browser %U
 
 [Desktop Action new-private-window]
 Name=New Private Window
-Exec=/usr/bin/chromium-browser --incognito %U
+Exec=env CHROME_DESKTOP=es.parchaos.Browser.desktop /usr/bin/chromium-browser --incognito %U

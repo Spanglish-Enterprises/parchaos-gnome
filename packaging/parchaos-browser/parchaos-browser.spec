@@ -47,7 +47,7 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -96,6 +96,11 @@ install -Dm 0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/
 %{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
+- Launch with CHROME_DESKTOP=es.parchaos.Browser.desktop so Chromium
+  uses es.parchaos.Browser as its Wayland app ID; the dock and app
+  switcher now show its windows as Parcha Browser instead of matching
+  them to Chromium's own launcher entry.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
 - Icon v2: fruit-globe on a white tile with a soft violet rind, matching
   the MacTahoe palette (same artwork as parchaos-icon-theme).
