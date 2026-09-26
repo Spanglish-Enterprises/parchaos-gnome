@@ -44,6 +44,7 @@ CLEAN_BASE=0          # wipe and rebuild the dnf --installroot base cache
 CLEAN_TARGET=0        # wipe and re-clone the working rootfs from the base cache
 DROP_TO_CHROOT=0      # drop into an interactive shell in the target rootfs
 NVIDIA=0              # pull in akmod-nvidia + friends from RPM Fusion
+ACCEPT_NVIDIA=0       # --nvidia needs an explicit acknowledgement (see usage)
 SKIP_BRANDING=0       # skip Phase 5 (repo+PROFILE_REPO_PACKAGES) and Phase 5.5
                       # (profile_customize) entirely — builds packages.list's
                       # plain base only. This is the Phase 1 "unbranded
@@ -65,6 +66,11 @@ Usage: $(basename "$0") [options]
   --chroot               Drop into a shell in the target rootfs before
                          packaging, instead of building the ISO
   --nvidia               Include RPM Fusion's proprietary NVIDIA packages
+  --i-accept-nvidia-redistribution
+                         Required with --nvidia: NVIDIA's driver and RPM Fusion's
+                         non-free packages may not be redistributed in a public
+                         image. Such builds are for private use only and skip
+                         the release gate (scripts/check-image.sh).
   --skip-branding         Skip repo setup, PROFILE_REPO_PACKAGES, and
                          profile_customize — build packages.list's plain
                          base only (doesn't need the profile's COPR to
@@ -95,6 +101,7 @@ while [ $# -gt 0 ]; do
         --clean-target) CLEAN_TARGET=1; shift ;;
         --chroot) DROP_TO_CHROOT=1; shift ;;
         --nvidia) NVIDIA=1; shift ;;
+        --i-accept-nvidia-redistribution) ACCEPT_NVIDIA=1; shift ;;
         --skip-branding) SKIP_BRANDING=1; shift ;;
         --version|-v) ISO_VERSION="$2"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
@@ -167,6 +174,11 @@ ROOTFS_TARGET="$BUILD_DIR/rootfs-$PROFILE-$BRANCH"
 ISO_WORKDIR="$BUILD_DIR/iso-$PROFILE-$BRANCH"
 mkdir -p "$BUILD_DIR"
 
+if [ "$NVIDIA" -eq 1 ] && [ "$ACCEPT_NVIDIA" -eq 0 ]; then
+    echo "ERROR: --nvidia builds include non-free, non-redistributable software." >&2
+    echo "       Pass --i-accept-nvidia-redistribution to build one for private use." >&2
+    exit 1
+fi
 echo "=== ParchaOS build: profile=$PROFILE branch=$BRANCH nvidia=$NVIDIA local=$LOCAL ==="
 
 # ---- Phase 2: base cache (dnf --installroot bootstrap) ------------------------
@@ -360,7 +372,9 @@ rm -rf "$ROOTFS_TARGET"/var/cache/libdnf5/* "$ROOTFS_TARGET"/var/cache/dnf/*
 # a hard stop if it contains anything ParchaOS can't redistribute (see
 # scripts/check-image.sh). --skip-branding builds are test-only and skip it.
 PACKAGES_TSV="$BUILD_DIR/.packages.tsv"
-if [ "$SKIP_BRANDING" -eq 0 ]; then
+if [ "$NVIDIA" -eq 1 ]; then
+    echo "WARNING: --nvidia build: NOT FOR RELEASE, skipping the release gate" >&2
+elif [ "$SKIP_BRANDING" -eq 0 ]; then
     "$REPO_ROOT/scripts/check-image.sh" "$ROOTFS_TARGET" "$PACKAGES_TSV"
 fi
 

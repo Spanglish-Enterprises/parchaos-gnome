@@ -4,22 +4,22 @@
 # Defines profile_setup_repo() / profile_teardown_repo(). Skipped entirely
 # by --skip-branding (used for the unbranded-baseline checkpoint).
 #
-# Separate COPR project from the KDE (pearos) profile's
-# alexgalicea/parchaos — keeps GNOME-specific packages (ported Pulsar OS
-# components) from mixing with the KDE-specific ones, same reasoning a
-# second GitHub repo got created for the source. NOT YET CREATED as of
-# 2026-09-22 — create via `copr-cli create alexgalicea/parchaos-gnome
-# --chroot fedora-44-x86_64` before this profile can build with
-# --skip-branding removed. Until then, always build with --skip-branding.
+# Release images use only Fedora's repositories, Cisco's openh264 repo
+# (enabled by fedora-release; the image itself ships the noopenh264 stub)
+# and ParchaOS's COPR. RPM Fusion is only enabled for --nvidia builds,
+# which are for private use and never released (scripts/check-image.sh
+# rejects any RPM Fusion package).
 # ==============================================================================
 
 PROFILE_COPR="alexgalicea/parchaos-gnome"
 
 profile_setup_repo() {
-    echo "--- Enabling RPM Fusion (free + nonfree) ---"
-    run_in_target dnf -y install \
-        "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$BRANCH.noarch.rpm" \
-        "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$BRANCH.noarch.rpm"
+    if [ "${NVIDIA:-0}" -eq 1 ]; then
+        echo "--- Enabling RPM Fusion (free + nonfree) for the NVIDIA build ---"
+        run_in_target dnf -y install \
+            "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$BRANCH.noarch.rpm" \
+            "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$BRANCH.noarch.rpm"
+    fi
 
     echo "--- Enabling ParchaOS GNOME COPR ($PROFILE_COPR) ---"
     run_in_target dnf -y install dnf5-plugins

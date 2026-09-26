@@ -9,8 +9,9 @@
 #     from Cisco (the ISO carries Fedora's noopenh264 stub instead)
 #   - fedora-logos: Fedora's logos are for official Fedora media only
 #     (the ISO carries generic-logos instead)
-#   - packages built by RPM Fusion (patent-encumbered or non-free);
-#     only its repo-definition packages are tolerated
+#   - anything from RPM Fusion, including its repo definitions
+#     (patent-encumbered or non-free software; release images don't
+#     enable it)
 #   - packages ParchaOS dropped: pafari, pearos-*, parchaos-finder,
 #     parchaos-macos-remap, parchaos-tmog
 # It also fails if noopenh264 or generic-logos is missing.
@@ -34,11 +35,8 @@ while IFS=$'\t' read -r name _license vendor; do
             fail=1 ;;
     esac
     if [ "$vendor" = "RPM Fusion" ]; then
-        case "$name" in
-            rpmfusion-free-release|rpmfusion-nonfree-release) ;;
-            *) echo "check-image: $name comes from RPM Fusion" >&2
-               fail=1 ;;
-        esac
+        echo "check-image: $name comes from RPM Fusion" >&2
+        fail=1
     fi
 done < "$out"
 
