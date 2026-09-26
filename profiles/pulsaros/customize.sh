@@ -89,7 +89,8 @@ EOF
     # gnome-ui-tune, ding) has no Fedora package -- would need
     # individual packaging from extensions.gnome.org the way parcha-dock
     # was, not done in this pass.
-    cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
+    # The default enabled-extensions list (00-parchaos-extensions) now ships
+    # in parchaos-desktop, so existing installs get changes over OTA too.
 [org/gnome/shell]
 always-show-log-out=true
 enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']

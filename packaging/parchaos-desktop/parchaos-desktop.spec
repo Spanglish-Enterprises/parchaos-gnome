@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -113,6 +113,20 @@ with packages.sh, bump Release on every change).
 mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/pulsaros/customize.sh only affects freshly built ISOs).
+# Default extensions for new user accounts. Previously written only by the
+# ISO build (customize.sh), so older installs kept an outdated list. Plain
+# (non-%%config) file so RPM replaces the old unowned copy on upgrade.
+# hanabi-extension is installed but deliberately not enabled: with no
+# video configured it fails and retries at every login.
+# disable-extension-version-validation lets extensions whose metadata
+# stops at an older GNOME version (e.g. notification-position) load.
+cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
+[org/gnome/shell]
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
+disable-user-extensions=false
+disable-extension-version-validation=true
+DCONF
+
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop <<'DCONF'
 # GNOME hides "Log Out" from the system menu on single-user machines;
 # a desktop OS should always offer it.
@@ -135,9 +149,15 @@ dconf update >/dev/null 2>&1 || :
 dconf update >/dev/null 2>&1 || :
 
 %files
+%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-17
+- Ship the default enabled-extensions list (00-parchaos-extensions),
+  previously written only by the ISO build: older installs gave new user
+  accounts just the dock, global menu and theme. customize.sh no longer
+  writes it.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-16
 - Require parchaos-controls, the new Parcha Controls control center.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-15
