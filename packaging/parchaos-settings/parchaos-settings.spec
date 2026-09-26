@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -45,6 +45,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7
+- Choosing Classic also switches the GTK and Shell themes to MacTahoe's
+  solid variants (and Glass back to the normal ones), keeping light or
+  dark; other themes are left alone.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Build the window from Adw.ApplicationWindow with a page switcher
   instead of the deprecated Adw.PreferencesWindow; same pages and
