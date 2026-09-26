@@ -1,0 +1,1298 @@
+--- a/src/nautilus-tag-manager.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-tag-manager.c	2026-09-19 05:47:39.000000000 -0500
+@@ -40,6 +40,7 @@
+     TrackerSparqlStatement *query_file_is_starred;
+ 
+     GHashTable *starred_file_uris;
++    GHashTable *colored_file_colors;
+     GFile *home;
+ 
+     GList *pending_changed_files;
+@@ -65,6 +66,7 @@
+ enum
+ {
+     STARRED_CHANGED,
++    COLORS_CHANGED,
+     LAST_SIGNAL
+ };
+ 
+@@ -82,8 +84,16 @@
+         "        nautilus:starred true . " \
+         "}"
+ 
++/* Keyfile group used to persist the folder color registry. */
++#define FOLDER_COLORS_GROUP "FolderColors"
++
+ static guint signals[LAST_SIGNAL];
+ 
++/* One-time startup migration: seed the folder-color registry from legacy
++ * gvfs metadata (metadata::folder-color / custom-icon-name) on starred items,
++ * so old colored items show up in tag views without re-tagging. */
++static void migrate_legacy_colored_metadata (NautilusTagManager *self);
++
+ static void
+ start_query_or_update (TrackerSparqlConnection *db,
+                        GString                 *query,
+@@ -147,6 +157,21 @@
+             g_object_unref (undo_info);
+         }
+ 
++        for (GList *l = data->selection; l != NULL; l = l->next)
++        {
++            NautilusFile *f = NAUTILUS_FILE (l->data);
++            g_autofree gchar *u = nautilus_file_get_uri (f);
++            if (data->star)
++            {
++                g_hash_table_add (data->tag_manager->starred_file_uris, g_strdup (u));
++            }
++            else
++            {
++                g_hash_table_remove (data->tag_manager->starred_file_uris, u);
++            }
++        }
++        g_signal_emit_by_name (data->tag_manager, "starred-changed", data->selection);
++
+         g_task_return_boolean (data->task, TRUE);
+         g_object_unref (data->task);
+     }
+@@ -227,6 +252,10 @@
+         }
+ 
+         g_clear_object (&cursor);
++
++        /* The initial starred list is complete: migrate legacy colors now. */
++        migrate_legacy_colored_metadata (self);
++
+         return;
+     }
+ 
+@@ -363,6 +392,302 @@
+     return g_hash_table_contains (self->starred_file_uris, file_uri);
+ }
+ 
++static gchar *
++get_folder_colors_store_path (void)
++{
++    return g_build_filename (g_get_user_data_dir (), "nautilus", "folder-colors.conf", NULL);
++}
++
++static void
++save_colored_files (NautilusTagManager *self)
++{
++    g_autofree gchar *store_path = NULL;
++    g_autoptr (GKeyFile) keyfile = NULL;
++    GHashTableIter iter;
++    gpointer key, value;
++
++    keyfile = g_key_file_new ();
++    g_hash_table_iter_init (&iter, self->colored_file_colors);
++    while (g_hash_table_iter_next (&iter, &key, &value))
++    {
++        g_key_file_set_string (keyfile, FOLDER_COLORS_GROUP, key, value);
++    }
++
++    store_path = get_folder_colors_store_path ();
++    if (!g_key_file_save_to_file (keyfile, store_path, NULL))
++    {
++        g_warning ("Could not save folder colors to %s", store_path);
++    }
++}
++
++static void
++load_colored_files (NautilusTagManager *self)
++{
++    g_autofree gchar *store_path = NULL;
++    g_autoptr (GKeyFile) keyfile = NULL;
++    g_auto (GStrv) uris = NULL;
++    gsize n_uris = 0;
++    g_autoptr (GError) error = NULL;
++
++    store_path = get_folder_colors_store_path ();
++    if (!g_file_test (store_path, G_FILE_TEST_EXISTS))
++    {
++        return;
++    }
++
++    keyfile = g_key_file_new ();
++    if (!g_key_file_load_from_file (keyfile, store_path, G_KEY_FILE_NONE, &error))
++    {
++        g_warning ("Could not load folder colors from %s: %s", store_path, error->message);
++        return;
++    }
++
++    if (!g_key_file_has_group (keyfile, FOLDER_COLORS_GROUP))
++    {
++        return;
++    }
++
++    uris = g_key_file_get_keys (keyfile, FOLDER_COLORS_GROUP, &n_uris, &error);
++    if (error != NULL)
++    {
++        g_warning ("Could not read folder colors group from %s: %s", store_path, error->message);
++        return;
++    }
++
++    for (gsize i = 0; i < n_uris; i++)
++    {
++        g_autofree gchar *color = g_key_file_get_string (keyfile, FOLDER_COLORS_GROUP,
++                                                         uris[i], NULL);
++        if (color != NULL && *color != '\0')
++        {
++            g_hash_table_replace (self->colored_file_colors,
++                                  g_strdup (uris[i]),
++                                  g_steal_pointer (&color));
++        }
++    }
++}
++
++typedef struct
++{
++    NautilusTagManager *tag_manager;
++    guint pending;
++    GPtrArray *colored_uris;
++} MigrateData;
++
++static void
++migrate_check_done (MigrateData *data)
++{
++    NautilusTagManager *self = data->tag_manager;
++    GList *changed_files = NULL;
++
++    if (data->pending > 0)
++    {
++        return;
++    }
++
++    for (guint i = 0; i < data->colored_uris->len; i++)
++    {
++        const gchar *uri = g_ptr_array_index (data->colored_uris, i);
++        g_autoptr (GFile) location = g_file_new_for_uri (uri);
++
++        changed_files = g_list_prepend (changed_files, nautilus_file_get (location));
++    }
++
++    save_colored_files (self);
++
++    if (changed_files != NULL)
++    {
++        g_signal_emit_by_name (self, "colors-changed", changed_files);
++    }
++
++    nautilus_file_list_free (changed_files);
++    g_ptr_array_unref (data->colored_uris);
++    g_free (data);
++}
++
++static void
++on_migrate_info_ready (GObject      *source,
++                       GAsyncResult *result,
++                       gpointer      user_data)
++{
++    MigrateData *data = user_data;
++    NautilusTagManager *self = data->tag_manager;
++    g_autoptr (GFileInfo) info = NULL;
++    const gchar *uri;
++    const gchar *color;
++
++    info = g_file_query_info_finish (G_FILE (source), result, NULL);
++
++    if (info != NULL)
++    {
++        color = g_file_info_get_attribute_string (info, "metadata::folder-color");
++
++        /* Legacy fallback: the tint was also stored as custom icon name. */
++        if (color == NULL || *color == '\0')
++        {
++            const gchar *icon = g_file_info_get_attribute_string (info,
++                                                                  "metadata::custom-icon-name");
++            if (icon != NULL && g_str_has_prefix (icon, "folder-"))
++            {
++                color = icon + strlen ("folder-");
++            }
++        }
++
++        if (color != NULL && *color != '\0')
++        {
++            uri = g_file_get_uri (G_FILE (source));
++
++            if (g_hash_table_lookup (self->colored_file_colors, uri) == NULL)
++            {
++                g_hash_table_replace (self->colored_file_colors,
++                                      g_strdup (uri),
++                                      g_strdup (color));
++                g_ptr_array_add (data->colored_uris, g_strdup (uri));
++            }
++        }
++    }
++
++    data->pending--;
++    migrate_check_done (data);
++}
++
++static void
++migrate_legacy_colored_metadata (NautilusTagManager *self)
++{
++    MigrateData *data;
++    GHashTableIter iter;
++    gpointer key;
++    g_autofree gchar *store_path = get_folder_colors_store_path ();
++
++    if (!self->database_ok || g_file_test (store_path, G_FILE_TEST_EXISTS))
++    {
++        return;
++    }
++
++    data = g_new0 (MigrateData, 1);
++    data->tag_manager = self;
++    data->colored_uris = g_ptr_array_new_with_free_func (g_free);
++
++    g_hash_table_iter_init (&iter, self->starred_file_uris);
++    while (g_hash_table_iter_next (&iter, &key, NULL))
++    {
++        const gchar *uri = key;
++        g_autoptr (GFile) location = NULL;
++
++        if (g_hash_table_lookup (self->colored_file_colors, uri) != NULL)
++        {
++            continue;
++        }
++
++        location = g_file_new_for_uri (uri);
++        data->pending++;
++        g_file_query_info_async (location,
++                                 "metadata::folder-color,metadata::custom-icon-name",
++                                 G_FILE_QUERY_INFO_NONE,
++                                 G_PRIORITY_DEFAULT,
++                                 self->cancellable,
++                                 on_migrate_info_ready,
++                                 data);
++    }
++
++    migrate_check_done (data);
++}
++
++/**
++ * nautilus_tag_manager_file_get_color:
++ * @self: The tag manager singleton
++ * @file_uri: The URI of the file
++ *
++ * Returns: (transfer none) (nullable): the color assigned to the file, or
++ * %NULL if the file has no color. The string is owned by the tag manager and
++ * is valid until the color of the file changes.
++ */
++const gchar *
++nautilus_tag_manager_file_get_color (NautilusTagManager *self,
++                                     const gchar        *file_uri)
++{
++    return g_hash_table_lookup (self->colored_file_colors, file_uri);
++}
++
++/**
++ * nautilus_tag_manager_get_colored_files:
++ * @self: The tag manager singleton
++ * @color: (nullable): the color to filter by, or %NULL to get all colored files.
++ *
++ * Returns: (element-type NautilusFile) (transfer full): A list of the colored NautilusFile.
++ */
++GList *
++nautilus_tag_manager_get_colored_files (NautilusTagManager *self,
++                                        const gchar        *color)
++{
++    GHashTableIter iter;
++    gpointer key, value;
++    GList *colored_files = NULL;
++
++    g_hash_table_iter_init (&iter, self->colored_file_colors);
++    while (g_hash_table_iter_next (&iter, &key, &value))
++    {
++        const gchar *uri = key;
++        g_autoptr (GFile) location = NULL;
++        NautilusFile *file;
++
++        if (color != NULL && g_strcmp0 (value, color) != 0)
++        {
++            continue;
++        }
++
++        location = g_file_new_for_uri (uri);
++        file = nautilus_file_get (location);
++
++        if (file != NULL)
++        {
++            colored_files = g_list_prepend (colored_files, file);
++        }
++    }
++
++    return colored_files;
++}
++
++/**
++ * nautilus_tag_manager_set_files_color:
++ * @self: The tag manager singleton
++ * @files: (element-type NautilusFile): list of files to color
++ * @color: (nullable): the color to assign, or %NULL to remove the color
++ */
++void
++nautilus_tag_manager_set_files_color (NautilusTagManager *self,
++                                      GList              *files,
++                                      const gchar        *color)
++{
++    GList *changed_files = NULL;
++
++    for (GList *l = files; l != NULL; l = l->next)
++    {
++        NautilusFile *file = NAUTILUS_FILE (l->data);
++        g_autofree gchar *uri = nautilus_file_get_uri (file);
++
++        changed_files = g_list_prepend (changed_files, nautilus_file_ref (file));
++
++        if (color == NULL || *color == '\0' || g_strcmp0 (color, "none") == 0)
++        {
++            g_hash_table_remove (self->colored_file_colors, uri);
++        }
++        else
++        {
++            g_hash_table_replace (self->colored_file_colors,
++                                  g_strdup (uri),
++                                  g_strdup (color));
++        }
++    }
++
++    save_colored_files (self);
++
++    if (changed_files != NULL)
++    {
++        g_signal_emit_by_name (self, "colors-changed", changed_files);
++    }
++}
++
+ void
+ nautilus_tag_manager_star_files (NautilusTagManager  *self,
+                                  GObject             *object,
+@@ -539,6 +864,7 @@
+     g_clear_pointer (&self->pending_changed_files, nautilus_file_list_free);
+ 
+     g_hash_table_destroy (self->starred_file_uris);
++    g_hash_table_destroy (self->colored_file_colors);
+     g_clear_object (&self->home);
+ 
+     G_OBJECT_CLASS (nautilus_tag_manager_parent_class)->finalize (object);
+@@ -563,6 +889,17 @@
+                                              G_TYPE_NONE,
+                                              1,
+                                              G_TYPE_POINTER);
++
++    signals[COLORS_CHANGED] = g_signal_new ("colors-changed",
++                                            NAUTILUS_TYPE_TAG_MANAGER,
++                                            G_SIGNAL_RUN_LAST,
++                                            0,
++                                            NULL,
++                                            NULL,
++                                            g_cclosure_marshal_VOID__POINTER,
++                                            G_TYPE_NONE,
++                                            1,
++                                            G_TYPE_POINTER);
+ }
+ 
+ /**
+@@ -623,13 +960,31 @@
+     g_autoptr (GFile) store = NULL;
+     g_autoptr (GFile) ontology = NULL;
+ 
+-    /* Open private database to store nautilus:starred property. */
+-
+     datadir = NAUTILUS_DATADIR;
+ 
+     store_path = g_build_filename (g_get_user_data_dir (), "nautilus", "tags", NULL);
+     ontology_path = g_build_filename (datadir, "ontology", NULL);
+ 
++    if (!g_file_test (ontology_path, G_FILE_TEST_IS_DIR))
++    {
++        const gchar *try_paths[] = {
++            "/home/jaime/Documentos/pulsar/PKG/nautilus/data/ontology",
++            "/usr/local/share/nautilus/ontology",
++            "/usr/share/nautilus/ontology"
++        };
++        for (guint p_i = 0; p_i < G_N_ELEMENTS (try_paths); p_i++)
++        {
++            if (g_file_test (try_paths[p_i], G_FILE_TEST_IS_DIR))
++            {
++                g_free (ontology_path);
++                ontology_path = g_strdup (try_paths[p_i]);
++                break;
++            }
++        }
++    }
++
++    g_message ("nautilus-tag-manager: Using ontology path: %s", ontology_path);
++
+     store = g_file_new_for_path (store_path);
+     ontology = g_file_new_for_path (ontology_path);
+ 
+@@ -678,8 +1033,14 @@
+                                                      (GDestroyNotify) g_free,
+                                                      /* values are keys */
+                                                      NULL);
++    self->colored_file_colors = g_hash_table_new_full (g_str_hash,
++                                                       g_str_equal,
++                                                       (GDestroyNotify) g_free,
++                                                       (GDestroyNotify) g_free);
+     self->home = g_file_new_for_path (g_get_home_dir ());
+ 
++    load_colored_files (self);
++
+     if (make_dummy_instance)
+     {
+         /* Skip database initiation for nautilus_tag_manager_new_dummy(). */
+--- a/src/nautilus-tag-manager.h	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-tag-manager.h	2026-09-19 05:47:39.000000000 -0500
+@@ -50,6 +50,18 @@
+ gboolean            nautilus_tag_manager_file_is_starred   (NautilusTagManager *self,
+                                                             const gchar        *file_uri);
+ 
++/* Folder color registry (independent from starring). */
++
++const gchar*        nautilus_tag_manager_file_get_color   (NautilusTagManager *self,
++                                                           const gchar        *file_uri);
++
++GList*              nautilus_tag_manager_get_colored_files (NautilusTagManager *self,
++                                                            const gchar        *color);
++
++void                nautilus_tag_manager_set_files_color   (NautilusTagManager *self,
++                                                            GList              *files,
++                                                            const gchar        *color);
++
+ gboolean            nautilus_tag_manager_can_star_contents (NautilusTagManager *self,
+                                                             GFile              *directory);
+ gboolean            nautilus_tag_manager_can_star_location (NautilusTagManager *self,
+--- a/src/nautilus-file.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-file.c	2026-09-19 05:47:39.000000000 -0500
+@@ -754,9 +754,10 @@
+     parent = g_file_get_parent (location);
+ 
+     self_owned = FALSE;
+-    if (parent == NULL)
++    if (parent == NULL || g_file_has_uri_scheme (location, SCHEME_STARRED))
+     {
+         self_owned = TRUE;
++        g_clear_object (&parent);
+         parent = g_object_ref (location);
+     }
+ 
+--- a/src/nautilus-grid-cell.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-grid-cell.c	2026-09-19 05:47:39.000000000 -0500
+@@ -6,6 +6,8 @@
+ 
+ #include "nautilus-grid-cell.h"
+ 
++#include <glib/gi18n.h>
++
+ #include "nautilus-global-preferences.h"
+ #include "nautilus-tag-manager.h"
+ #include "nautilus-thumbnails.h"
+@@ -25,6 +27,9 @@
+     GtkWidget *first_caption;
+     GtkWidget *second_caption;
+     GtkWidget *third_caption;
++    GtkWidget *star_button;
++    GtkWidget *star_revealer;
++    gboolean pointer_over;
+ };
+ 
+ G_DEFINE_TYPE (NautilusGridCell, nautilus_grid_cell, NAUTILUS_TYPE_VIEW_CELL)
+@@ -104,12 +109,10 @@
+     GtkWidget *child;
+     GtkIconTheme *theme;
+     g_autolist (GIcon) emblems = NULL;
+-    g_autofree gchar *file_uri = NULL;
+ 
+     item = nautilus_view_cell_get_item (NAUTILUS_VIEW_CELL (self));
+     g_return_if_fail (item != NULL);
+     file = nautilus_view_item_get_file (item);
+-    file_uri = nautilus_file_get_uri (file);
+ 
+     /* Remove old emblems. */
+     while ((child = gtk_widget_get_first_child (self->emblems_box)) != NULL)
+@@ -117,11 +120,8 @@
+         gtk_box_remove (GTK_BOX (self->emblems_box), child);
+     }
+ 
+-    if (nautilus_tag_manager_file_is_starred (nautilus_tag_manager_get (), file_uri))
+-    {
+-        gtk_box_append (GTK_BOX (self->emblems_box),
+-                        gtk_image_new_from_icon_name ("starred-symbolic"));
+-    }
++    /* The starring state is shown by the interactive star button overlay,
++     * so no static star emblem is added here (it would be duplicated). */
+ 
+     theme = gtk_icon_theme_get_for_display (gdk_display_get_default ());
+     emblems = nautilus_file_get_emblem_icons (file);
+@@ -141,11 +141,94 @@
+ }
+ 
+ static void
++update_star_button (NautilusGridCell *self)
++{
++    g_autoptr (NautilusViewItem) item = NULL;
++    NautilusFile *file;
++    g_autofree gchar *file_uri = NULL;
++    gboolean is_starred;
++    gboolean show;
++
++    item = nautilus_view_cell_get_item (NAUTILUS_VIEW_CELL (self));
++    if (item == NULL)
++    {
++        return;
++    }
++    file = nautilus_view_item_get_file (item);
++    file_uri = nautilus_file_get_uri (file);
++
++    is_starred = nautilus_tag_manager_file_is_starred (nautilus_tag_manager_get (),
++                                                       file_uri);
++
++    show = is_starred || self->pointer_over;
++    gtk_revealer_set_reveal_child (GTK_REVEALER (self->star_revealer), show);
++
++    gtk_button_set_icon_name (GTK_BUTTON (self->star_button),
++                              is_starred ? "starred-symbolic" : "non-starred-symbolic");
++    gtk_widget_set_tooltip_text (self->star_button,
++                                 is_starred ? _("Unstar") : _("Star"));
++}
++
++static void
++on_star_button_clicked (NautilusGridCell *self)
++{
++    NautilusTagManager *tag_manager = nautilus_tag_manager_get ();
++    g_autoptr (NautilusViewItem) item = NULL;
++    NautilusFile *file;
++    g_autofree gchar *uri = NULL;
++
++    item = nautilus_view_cell_get_item (NAUTILUS_VIEW_CELL (self));
++    g_return_if_fail (item != NULL);
++    file = nautilus_view_item_get_file (item);
++    uri = nautilus_file_get_uri (file);
++
++    if (nautilus_tag_manager_file_is_starred (tag_manager, uri))
++    {
++        nautilus_tag_manager_unstar_files (tag_manager,
++                                           G_OBJECT (item),
++                                           &(GList){ .data = file },
++                                           NULL,
++                                           NULL);
++    }
++    else
++    {
++        nautilus_tag_manager_star_files (tag_manager,
++                                         G_OBJECT (item),
++                                         &(GList){ .data = file },
++                                         NULL,
++                                         NULL);
++    }
++}
++
++static void
++on_grid_cell_motion_enter (GtkEventControllerMotion *controller,
++                           gdouble                   x,
++                           gdouble                   y,
++                           gpointer                  user_data)
++{
++    NautilusGridCell *self = NAUTILUS_GRID_CELL (user_data);
++
++    self->pointer_over = TRUE;
++    update_star_button (self);
++}
++
++static void
++on_grid_cell_motion_leave (GtkEventControllerMotion *controller,
++                           gpointer                  user_data)
++{
++    NautilusGridCell *self = NAUTILUS_GRID_CELL (user_data);
++
++    self->pointer_over = FALSE;
++    update_star_button (self);
++}
++
++static void
+ on_file_changed (NautilusGridCell *self)
+ {
+     update_icon (self);
+     update_emblems (self);
+     update_captions (self);
++    update_star_button (self);
+ }
+ 
+ static void
+@@ -203,28 +286,6 @@
+ }
+ 
+ static void
+-on_starred_changed (NautilusTagManager *tag_manager,
+-                    GList              *changed_files,
+-                    gpointer            user_data)
+-{
+-    NautilusGridCell *self = NAUTILUS_GRID_CELL (user_data);
+-    g_autoptr (NautilusViewItem) item = NULL;
+-    NautilusFile *file;
+-
+-    item = nautilus_view_cell_get_item (NAUTILUS_VIEW_CELL (self));
+-    if (item == NULL)
+-    {
+-        return;
+-    }
+-
+-    file = nautilus_view_item_get_file (item);
+-    if (g_list_find (changed_files, file))
+-    {
+-        update_emblems (self);
+-    }
+-}
+-
+-static void
+ on_map_changed (GtkWidget *widget,
+                 gpointer   user_data)
+ {
+@@ -281,8 +342,11 @@
+     gtk_widget_class_bind_template_child (widget_class, NautilusGridCell, first_caption);
+     gtk_widget_class_bind_template_child (widget_class, NautilusGridCell, second_caption);
+     gtk_widget_class_bind_template_child (widget_class, NautilusGridCell, third_caption);
++    gtk_widget_class_bind_template_child (widget_class, NautilusGridCell, star_button);
++    gtk_widget_class_bind_template_child (widget_class, NautilusGridCell, star_revealer);
+ 
+     gtk_widget_class_bind_template_callback (widget_class, on_label_query_tooltip);
++    gtk_widget_class_bind_template_callback (widget_class, on_star_button_clicked);
+ 
+     gtk_widget_class_set_accessible_role (widget_class, GTK_ACCESSIBLE_ROLE_GRID_CELL);
+ }
+@@ -290,6 +354,8 @@
+ static void
+ nautilus_grid_cell_init (NautilusGridCell *self)
+ {
++    GtkEventController *motion_controller;
++
+     gtk_widget_init_template (GTK_WIDGET (self));
+ 
+     g_signal_connect (self, "map", G_CALLBACK (on_map_changed), GINT_TO_POINTER (TRUE));
+@@ -297,8 +363,12 @@
+     g_signal_connect (self, "notify::icon-size",
+                       G_CALLBACK (on_icon_size_changed), NULL);
+ 
+-    g_signal_connect_object (nautilus_tag_manager_get (), "starred-changed",
+-                             G_CALLBACK (on_starred_changed), self, G_CONNECT_DEFAULT);
++    motion_controller = gtk_event_controller_motion_new ();
++    g_signal_connect (motion_controller, "enter",
++                      G_CALLBACK (on_grid_cell_motion_enter), self);
++    g_signal_connect (motion_controller, "leave",
++                      G_CALLBACK (on_grid_cell_motion_leave), self);
++    gtk_widget_add_controller (GTK_WIDGET (self), motion_controller);
+ 
+     g_signal_connect_object (nautilus_preferences, "changed::" NAUTILUS_PREFERENCES_DATE_TIME_FORMAT,
+                              G_CALLBACK (update_captions), self,
+--- a/src/resources/ui/nautilus-grid-cell.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-grid-cell.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -11,35 +11,60 @@
+             <property name="orientation">vertical</property>
+             <property name="spacing">6</property>
+             <child>
+-              <object class="GtkBox" id="fixed_height_box">
+-                <property name="orientation">horizontal</property>
++              <object class="GtkOverlay" id="fixed_height_box">
+                 <property name="halign">center</property>
+                 <property name="margin-start">18</property>
+                 <child>
+-                  <object class="AdwClamp" id="icon_bin">
+-                    <property name="maximum-size">0</property>
+-                    <property name="child">
+-                      <object class="GtkPicture" id="icon">
+-                        <property name="halign">center</property>
+-                        <property name="hexpand">True</property>
+-                        <property name="valign">center</property>
+-                        <property name="vexpand">True</property>
+-                        <property name="can-shrink">False</property>
+-                        <property name="content-fit">cover</property>
++                  <object class="GtkBox">
++                    <property name="orientation">horizontal</property>
++                    <child>
++                      <object class="AdwClamp" id="icon_bin">
++                        <property name="maximum-size">0</property>
++                        <property name="child">
++                          <object class="GtkPicture" id="icon">
++                            <property name="halign">center</property>
++                            <property name="hexpand">True</property>
++                            <property name="valign">center</property>
++                            <property name="vexpand">True</property>
++                            <property name="can-shrink">False</property>
++                            <property name="content-fit">cover</property>
++                          </object>
++                        </property>
+                       </object>
+-                    </property>
++                    </child>
++                    <child>
++                      <object class="GtkBox" id="emblems_box">
++                        <property name="orientation">vertical</property>
++                        <property name="halign">end</property>
++                        <property name="spacing">6</property>
++                        <property name="margin-start">2</property>
++                        <property name="width-request">16</property>
++                        <style>
++                          <class name="dim-label"/>
++                        </style>
++                      </object>
++                    </child>
+                   </object>
+                 </child>
+-                <child>
+-                  <object class="GtkBox" id="emblems_box">
+-                    <property name="orientation">vertical</property>
++                <child type="overlay">
++                  <object class="GtkRevealer" id="star_revealer">
++                    <property name="transition-type">crossfade</property>
+                     <property name="halign">end</property>
+-                    <property name="spacing">6</property>
+-                    <property name="margin-start">2</property>
+-                    <property name="width-request">16</property>
+-                    <style>
+-                      <class name="dim-label"/>
+-                    </style>
++                    <property name="valign">start</property>
++                    <property name="reveal-child">False</property>
++                    <property name="child">
++                      <object class="GtkButton" id="star_button">
++                        <property name="icon-name">non-starred-symbolic</property>
++                        <property name="has-frame">False</property>
++                        <signal name="clicked" handler="on_star_button_clicked" swapped="true"/>
++                        <style>
++                          <class name="dim-label"/>
++                          <class name="star"/>
++                          <class name="circular"/>
++                          <class name="grid-star"/>
++                        </style>
++                      </object>
++                    </property>
+                   </object>
+                 </child>
+               </object>
+--- a/src/nautilus-files-view.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-files-view.c	2026-09-19 05:47:39.000000000 -0500
+@@ -49,6 +49,7 @@
+ #include "nautilus-compress-dialog.h"
+ #include "nautilus-dbus-launcher.h"
+ #include "nautilus-directory.h"
++#include "nautilus-directory-notify.h"
+ #include "nautilus-dnd.h"
+ #include "nautilus-enums.h"
+ #include "nautilus-error-reporting.h"
+@@ -796,6 +797,16 @@
+  * link and paste operations.
+  */
+ 
++GActionGroup *
++nautilus_files_view_get_action_group (NautilusFilesView *view)
++{
++    g_return_val_if_fail (NAUTILUS_IS_FILES_VIEW (view), NULL);
++
++    NautilusFilesViewPrivate *priv = nautilus_files_view_get_instance_private (view);
++
++    return priv->view_action_group;
++}
++
+ char *
+ nautilus_files_view_get_backing_uri (NautilusFilesView *view)
+ {
+@@ -1793,6 +1804,86 @@
+ }
+ 
+ static void
++action_set_folder_color (GSimpleAction *action,
++                         GVariant      *parameter,
++                         gpointer       user_data)
++{
++    NautilusFilesView *view;
++    g_autolist (NautilusFile) selection = NULL;
++    const gchar *color = NULL;
++    NautilusFilesViewPrivate *priv;
++    gboolean clear_color;
++    GList *targets = NULL;
++
++    if (parameter != NULL)
++    {
++        color = g_variant_get_string (parameter, NULL);
++    }
++
++    view = NAUTILUS_FILES_VIEW (user_data);
++    priv = nautilus_files_view_get_instance_private (view);
++    selection = nautilus_view_get_selection (NAUTILUS_VIEW (view));
++
++    /* With no selection, act on the current folder itself. */
++    if (selection != NULL)
++    {
++        targets = nautilus_file_list_copy (selection);
++    }
++    else if (priv->location != NULL &&
++             g_file_has_uri_scheme (priv->location, "file"))
++    {
++        NautilusFile *directory_as_file = nautilus_file_get_existing (priv->location);
++
++        if (directory_as_file != NULL)
++        {
++            targets = g_list_prepend (NULL, directory_as_file);
++        }
++    }
++
++    if (targets == NULL)
++    {
++        return;
++    }
++
++    clear_color = (color == NULL || g_strcmp0 (color, "none") == 0 || g_strcmp0 (color, "") == 0);
++
++    g_debug ("set-folder-color: '%s' on %d targets",
++             clear_color ? "(clear)" : color,
++             g_list_length (targets));
++
++    /* Tags and starring are fully independent: coloring an item must never
++     * change its starred state (Finder-like semantics). */
++
++    for (GList *l = targets; l != NULL; l = l->next)
++    {
++        NautilusFile *file = NAUTILUS_FILE (l->data);
++        if (clear_color)
++        {
++            nautilus_file_set_metadata (file, NAUTILUS_METADATA_KEY_CUSTOM_ICON_NAME, NULL, NULL);
++            nautilus_file_set_metadata (file, "folder-color", NULL, NULL);
++        }
++        else
++        {
++            g_autofree gchar *icon_name = g_strdup_printf ("folder-%s", color);
++            nautilus_file_set_metadata (file, NAUTILUS_METADATA_KEY_CUSTOM_ICON_NAME, NULL, icon_name);
++            nautilus_file_set_metadata (file, "folder-color", NULL, color);
++        }
++        nautilus_file_invalidate_all_attributes (file);
++        nautilus_file_changed (file);
++    }
++
++    /* Register the color so that tag views list every colored item,
++     * starred or not. */
++    nautilus_tag_manager_set_files_color (nautilus_tag_manager_get (),
++                                          targets,
++                                          clear_color ? NULL : color);
++
++    nautilus_file_list_free (targets);
++}
++
++
++
++static void
+ action_restore_from_trash (GSimpleAction *action,
+                            GVariant      *state,
+                            gpointer       user_data)
+@@ -7213,6 +7304,7 @@
+     { .name = "delete-from-trash", .activate = action_delete },
+     { .name = "star", .activate = action_star},
+     { .name = "unstar", .activate = action_unstar},
++    { .name = "set-folder-color", .activate = action_set_folder_color, .parameter_type = "s" },
+     /* We separate the shortcut and the menu item since we want the shortcut
+      * to always be available, but we don't want the menu item shown if not
+      * completely necesary. Since the visibility of the menu item is based on
+--- a/src/nautilus-files-view.h	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-files-view.h	2026-09-19 05:47:39.000000000 -0500
+@@ -120,6 +120,7 @@
+  * that observers might want to connect with.
+  */
+ gboolean            nautilus_files_view_get_loading                      (NautilusFilesView *view);
++GActionGroup *      nautilus_files_view_get_action_group                 (NautilusFilesView *view);
+ 
+ /* Hooks for subclasses to call. These are normally called only by
+  * NautilusFilesView and its subclasses
+--- a/src/resources/ui/nautilus-files-view-context-menus.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-files-view-context-menus.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -270,6 +270,55 @@
+         <attribute name="hidden-when">action-disabled</attribute>
+       </item>
+     </section>
++    <section id="tags-colors-section">
++      <submenu>
++        <attribute name="label" translatable="yes">Folder Color &amp; Tags</attribute>
++        <section>
++          <item>
++            <attribute name="label" translatable="yes">🔴 Red</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">red</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">🟠 Orange</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">orange</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">🟡 Yellow</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">yellow</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">🟢 Green</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">green</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">🔵 Blue</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">blue</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">🟣 Purple</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">purple</attribute>
++          </item>
++          <item>
++            <attribute name="label" translatable="yes">⚪ Gray</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">grey</attribute>
++          </item>
++        </section>
++        <section>
++          <item>
++            <attribute name="label" translatable="yes">Reset Color &amp; Tags</attribute>
++            <attribute name="action">view.set-folder-color</attribute>
++            <attribute name="target">none</attribute>
++          </item>
++        </section>
++      </submenu>
++    </section>
+     <section id="selection-extensions-section"/>
+     <section>
+       <item>
+--- a/src/nautilus-starred-directory.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-starred-directory.c	2026-09-19 05:47:39.000000000 -0500
+@@ -23,6 +23,7 @@
+ #include "nautilus-file-utilities.h"
+ #include "nautilus-internal-place-file.h"
+ #include "nautilus-tag-manager.h"
++#include "nautilus-metadata.h"
+ #include "nautilus-scheme.h"
+ #include <glib/gi18n.h>
+ 
+@@ -35,6 +36,10 @@
+     GList *monitor_list;
+     GList *callback_list;
+     GList *pending_callback_list;
++
++    /* Color suffix of the starred:///<color> URI, or NULL for the plain
++     * starred view. Owned string. */
++    gchar *target_color;
+ };
+ 
+ typedef struct
+@@ -96,11 +101,13 @@
+     }
+ }
+ 
++static gboolean nautilus_starred_directory_matches_file (NautilusFavoriteDirectory *self,
++                                                         NautilusFile              *file);
++
+ static void
+ nautilus_starred_directory_update_files (NautilusFavoriteDirectory *self,
+                                          GList                     *changed_files)
+ {
+-    NautilusTagManager *tag_manager = nautilus_tag_manager_get ();
+     GList *monitor_list;
+     FavoriteMonitor *monitor;
+     g_autoptr (GHashTable) uri_table = NULL;
+@@ -122,18 +129,17 @@
+     {
+         NautilusFile *file = l->data;
+         g_autofree char *uri = nautilus_file_get_uri (file);
++        gboolean matches = nautilus_starred_directory_matches_file (self, file);
+ 
+         next = l->next;
+-        if (g_hash_table_contains (uri_table, uri) &&
+-            !nautilus_tag_manager_file_is_starred (tag_manager, uri))
++        if (g_hash_table_contains (uri_table, uri) && !matches)
+         {
+             disconnect_and_unmonitor_file (file, self);
+             nautilus_file_unref (file);
+             files_removed = g_list_prepend (files_removed, nautilus_file_ref (file));
+             self->files = g_list_remove (self->files, file);
+         }
+-        else if (!g_hash_table_contains (uri_table, uri) &&
+-                 nautilus_tag_manager_file_is_starred (tag_manager, uri))
++        else if (!g_hash_table_contains (uri_table, uri) && matches)
+         {
+             for (monitor_list = self->monitor_list; monitor_list; monitor_list = monitor_list->next)
+             {
+@@ -167,6 +173,9 @@
+     }
+ }
+ 
++/* This handler is connected to both "starred-changed" and "colors-changed":
++ * both signals carry the list of affected files which get re-evaluated
++ * against the current view. */
+ static void
+ on_starred_files_changed (NautilusTagManager *tag_manager,
+                           GList              *changed_files,
+@@ -195,15 +204,70 @@
+                                         NULL));
+ }
+ 
++static gchar *
++nautilus_starred_directory_get_target_color (NautilusFavoriteDirectory *self)
++{
++    g_autofree gchar *uri = nautilus_directory_get_uri (NAUTILUS_DIRECTORY (self));
++    if (uri != NULL)
++    {
++        const gchar *after_scheme = uri + strlen (SCHEME_STARRED "://");
++        while (*after_scheme == '/')
++        {
++            after_scheme++;
++        }
++        if (*after_scheme != '\0')
++        {
++            return g_strdup (after_scheme);
++        }
++    }
++    return NULL;
++}
++
+ static gboolean
+-real_contains_file (NautilusDirectory *directory,
+-                    NautilusFile      *file)
++nautilus_starred_directory_matches_file (NautilusFavoriteDirectory *self,
++                                        NautilusFile              *file)
+ {
+     g_autofree gchar *uri = NULL;
++    const gchar *target_color = self->target_color;
+ 
+     uri = nautilus_file_get_uri (file);
+ 
+-    return nautilus_tag_manager_file_is_starred (nautilus_tag_manager_get (), uri);
++    /* Plain starred view: only starred files belong here. */
++    if (target_color == NULL || *target_color == '\0')
++    {
++        return nautilus_tag_manager_file_is_starred (nautilus_tag_manager_get (), uri);
++    }
++
++    /* Color view: any file with the color, starred or not. The registry is
++     * authoritative, metadata is a fallback for legacy colored items. */
++    if (g_strcmp0 (nautilus_tag_manager_file_get_color (nautilus_tag_manager_get (), uri),
++                   target_color) == 0)
++    {
++        return TRUE;
++    }
++
++    const gchar *folder_color = nautilus_file_get_metadata (file, "folder-color", NULL);
++    if (folder_color != NULL && g_strcmp0 (folder_color, target_color) == 0)
++    {
++        return TRUE;
++    }
++
++    /* Check custom-icon-name as fallback e.g. folder-red */
++    const gchar *custom_icon = nautilus_file_get_metadata (file, NAUTILUS_METADATA_KEY_CUSTOM_ICON_NAME, NULL);
++    g_autofree gchar *expected_icon = g_strdup_printf ("folder-%s", target_color);
++    if (custom_icon != NULL && g_strcmp0 (custom_icon, expected_icon) == 0)
++    {
++        return TRUE;
++    }
++
++    return FALSE;
++}
++
++static gboolean
++real_contains_file (NautilusDirectory *directory,
++                    NautilusFile      *file)
++{
++    return nautilus_starred_directory_matches_file (NAUTILUS_STARRED_DIRECTORY (directory), file);
+ }
+ 
+ static gboolean
+@@ -422,30 +486,67 @@
+ nautilus_starred_directory_set_files (NautilusFavoriteDirectory *self)
+ {
+     g_autolist (NautilusFile) starred_files = NULL;
+-    GList *l;
++    g_autolist (NautilusFile) colored_files = NULL;
++    g_autoptr (GHashTable) seen_uris = NULL;
+     GList *file_list;
+     FavoriteMonitor *monitor;
+     GList *monitor_list;
+ 
+-    file_list = NULL;
+-
++    /* Candidate universe: starred files plus (for color views) every file in
++     * the color registry. This makes color views list colored items even when
++     * they are not starred. */
+     starred_files = nautilus_tag_manager_get_starred_files (nautilus_tag_manager_get ());
++    if (self->target_color != NULL && *self->target_color != '\0')
++    {
++        colored_files = nautilus_tag_manager_get_colored_files (nautilus_tag_manager_get (),
++                                                                self->target_color);
++    }
++
++    seen_uris = g_hash_table_new_full (g_str_hash,
++                                       g_str_equal,
++                                       (GDestroyNotify) g_free,
++                                       NULL);
++
++    file_list = NULL;
+ 
+-    for (l = starred_files; l != NULL; l = l->next)
+     {
+-        NautilusFile *file = l->data;
++        GList *all_sources[3];
+ 
+-        g_signal_connect (file, "changed", G_CALLBACK (file_changed), self);
++        all_sources[0] = starred_files;
++        all_sources[1] = colored_files;
++        all_sources[2] = NULL;
+ 
+-        for (monitor_list = self->monitor_list; monitor_list; monitor_list = monitor_list->next)
++        for (guint s = 0; s < 2; s++)
+         {
+-            monitor = monitor_list->data;
++            for (GList *iter = all_sources[s]; iter != NULL; iter = iter->next)
++            {
++                NautilusFile *file = iter->data;
++                g_autofree gchar *uri = nautilus_file_get_uri (file);
+ 
+-            /* Add monitors */
+-            nautilus_file_monitor_add (file, monitor, monitor->monitor_attributes);
+-        }
++                if (g_hash_table_contains (seen_uris, uri))
++                {
++                    continue;
++                }
++                g_hash_table_add (seen_uris, g_steal_pointer (&uri));
++
++                if (!nautilus_starred_directory_matches_file (self, file))
++                {
++                    continue;
++                }
++
++                g_signal_connect (file, "changed", G_CALLBACK (file_changed), self);
++
++                for (monitor_list = self->monitor_list; monitor_list; monitor_list = monitor_list->next)
++                {
++                    monitor = monitor_list->data;
++
++                    /* Add monitors */
++                    nautilus_file_monitor_add (file, monitor, monitor->monitor_attributes);
++                }
+ 
+-        file_list = g_list_prepend (file_list, nautilus_file_ref (file));
++                file_list = g_list_prepend (file_list, nautilus_file_ref (file));
++            }
++        }
+     }
+ 
+     self->files = file_list;
+@@ -476,6 +577,7 @@
+                                           self);
+ 
+     nautilus_file_list_free (self->files);
++    g_clear_pointer (&self->target_color, g_free);
+ 
+     G_OBJECT_CLASS (nautilus_starred_directory_parent_class)->finalize (object);
+ }
+@@ -507,6 +609,27 @@
+ }
+ 
+ static void
++nautilus_starred_directory_constructed (GObject *object)
++{
++    NautilusFavoriteDirectory *self = NAUTILUS_STARRED_DIRECTORY (object);
++
++    G_OBJECT_CLASS (nautilus_starred_directory_parent_class)->constructed (object);
++
++    self->target_color = nautilus_starred_directory_get_target_color (self);
++
++    g_signal_connect (nautilus_tag_manager_get (),
++                      "starred-changed",
++                      (GCallback) on_starred_files_changed,
++                      self);
++    g_signal_connect (nautilus_tag_manager_get (),
++                      "colors-changed",
++                      (GCallback) on_starred_files_changed,
++                      self);
++
++    nautilus_starred_directory_set_files (self);
++}
++
++static void
+ nautilus_starred_directory_class_init (NautilusFavoriteDirectoryClass *klass)
+ {
+     GObjectClass *oclass;
+@@ -515,6 +638,7 @@
+     oclass = G_OBJECT_CLASS (klass);
+     directory_class = NAUTILUS_DIRECTORY_CLASS (klass);
+ 
++    oclass->constructed = nautilus_starred_directory_constructed;
+     oclass->finalize = nautilus_starred_directory_finalize;
+     oclass->dispose = nautilus_starred_directory_dispose;
+ 
+@@ -544,10 +668,4 @@
+ static void
+ nautilus_starred_directory_init (NautilusFavoriteDirectory *self)
+ {
+-    g_signal_connect (nautilus_tag_manager_get (),
+-                      "starred-changed",
+-                      (GCallback) on_starred_files_changed,
+-                      self);
+-
+-    nautilus_starred_directory_set_files (self);
+ }
+--- a/src/nautilus-internal-place-file.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-internal-place-file.c	2026-09-19 05:47:39.000000000 -0500
+@@ -166,7 +166,53 @@
+     }
+     else if (NAUTILUS_IS_STARRED_DIRECTORY (file->details->directory))
+     {
+-        nautilus_file_set_display_name (file, _("Starred"), NULL, TRUE);
++        g_autofree gchar *dir_uri = nautilus_directory_get_uri (file->details->directory);
++        const gchar *tag_color = NULL;
++        if (dir_uri != NULL)
++        {
++            const gchar *after_scheme = dir_uri + strlen (SCHEME_STARRED "://");
++            while (*after_scheme == '/')
++            {
++                after_scheme++;
++            }
++            if (*after_scheme != '\0')
++            {
++                tag_color = after_scheme;
++            }
++        }
++
++        if (tag_color != NULL && g_strcmp0 (tag_color, "red") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Red"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && g_strcmp0 (tag_color, "orange") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Orange"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && g_strcmp0 (tag_color, "yellow") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Yellow"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && g_strcmp0 (tag_color, "green") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Green"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && g_strcmp0 (tag_color, "blue") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Blue"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && g_strcmp0 (tag_color, "purple") == 0)
++        {
++            nautilus_file_set_display_name (file, _("Purple"), NULL, TRUE);
++        }
++        else if (tag_color != NULL && (g_strcmp0 (tag_color, "grey") == 0 || g_strcmp0 (tag_color, "gray") == 0))
++        {
++            nautilus_file_set_display_name (file, _("Gray"), NULL, TRUE);
++        }
++        else
++        {
++            nautilus_file_set_display_name (file, _("Starred"), NULL, TRUE);
++        }
+     }
+ 
+     file->details->got_file_info = TRUE;

@@ -54,17 +54,25 @@
 
 Name:           parcher
 Version:        48.7
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Inled-Pulsar-OS/finder
-# Pinned to a specific commit (real upstream repo has no tags/releases as
-# of 2026-09-22 — confirmed via `gh api repos/Inled-Pulsar-OS/finder/tags`
-# and `/releases`, both empty) rather than tracking a moving branch.
-%global commit  351f6655d4cf8b9a41019f4c81310aa91bce7fb4
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
-Source0:        %{url}/archive/%{commit}/finder-%{shortcommit}.tar.gz
+# Built from the GNOME Nautilus release Pulsar OS's Finder forked, plus
+# Finder's changes as one patch per feature (split from Inled-Pulsar-OS/
+# finder commit 351f6655, which is exactly Nautilus 48.7 plus these), so
+# each feature can be ported to newer Nautilus on its own
+# (docs/parcher-rebase-plan.md).
+Source0:        https://download.gnome.org/sources/nautilus/48/nautilus-%{version}.tar.xz
+# Color tags: live folder tinting and per-color filters.
+Patch0:         0001-color-tags.patch
+# Sidebar sections (colors, cloud drives).
+Patch1:         0002-sidebar-sections.patch
+# Toolbar and window layout.
+Patch2:         0003-toolbar-window-layout.patch
+# App identity.
+Patch3:         0004-app-identity.patch
 
 BuildArch:      x86_64
 
@@ -178,7 +186,7 @@ Pulsar OS's own "Finder" branding) to avoid trademark exposure ahead of
 a planned public release — see this spec's own banner comment.
 
 %prep
-%autosetup -n finder-%{commit}
+%autosetup -n nautilus-%{version} -p1
 # Same real fix the upstream PKGBUILD itself applies (see BuildRequires
 # comment above) — gexiv2's pkgconfig name changed upstream, meson.build
 # didn't catch up.
@@ -248,6 +256,11 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 %{_datadir}/nautilus/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 48.7-14
+- Build from the GNOME Nautilus 48.7 release plus Pulsar OS Finder's
+  changes as one patch per feature (color tags, sidebar sections,
+  toolbar and window layout, app identity); the result is the same
+  source tree as before.
 * Sat Sep 26 2026 ParchaOS packaging - 48.7-13
 - Obsolete any Fedora nautilus before 51, so a newer Fedora nautilus
   can't replace Parcher before its rebase.

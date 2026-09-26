@@ -1,0 +1,808 @@
+--- a/src/nautilus-toolbar.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-toolbar.c	2026-09-19 05:47:39.000000000 -0500
+@@ -29,6 +29,7 @@
+ #include "nautilus-bookmark.h"
+ #include "nautilus-global-preferences.h"
+ #include "nautilus-history-controls.h"
++#include "nautilus-files-view.h"
+ #include "nautilus-location-entry.h"
+ #include "nautilus-pathbar.h"
+ #include "nautilus-view-controls.h"
+@@ -579,6 +580,27 @@
+     nautilus_path_bar_show_current_location_menu (NAUTILUS_PATH_BAR (self->path_bar));
+ }
+ 
++static void
++toolbar_sync_view_actions (NautilusToolbar *self)
++{
++    GActionGroup *group = NULL;
++
++    if (self->window_slot != NULL)
++    {
++        NautilusView *view = nautilus_window_slot_get_current_view (self->window_slot);
++
++        if (NAUTILUS_IS_FILES_VIEW (view))
++        {
++            group = nautilus_files_view_get_action_group (NAUTILUS_FILES_VIEW (view));
++        }
++    }
++
++    /* Header bar popovers are not descendants of the file view widget, so the
++     * "view" action group must also be resolvable from the toolbar subtree
++     * (e.g. for the tag color menu). */
++    gtk_widget_insert_action_group (GTK_WIDGET (self), "view", group);
++}
++
+ /* Called from on_window_slot_destroyed(), since bindings and signal handlers
+  * are automatically removed once the slot goes away.
+  */
+@@ -588,6 +610,8 @@
+ {
+     self->window_slot = slot;
+ 
++    toolbar_sync_view_actions (self);
++
+     if (self->window_slot != NULL)
+     {
+         g_object_weak_ref (G_OBJECT (self->window_slot),
+--- a/src/resources/ui/nautilus-toolbar.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-toolbar.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -1,9 +1,82 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <interface>
+   <requires lib="gtk" version="4.0"/>
++  <menu id="tags_menu">
++    <section>
++      <attribute name="display-hint">inline-buttons</attribute>
++      <item>
++        <attribute name="label" translatable="yes">🔴 Red</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">red</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">🟠 Orange</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">orange</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">🟡 Yellow</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">yellow</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">🟢 Green</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">green</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">🔵 Blue</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">blue</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">🟣 Purple</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">purple</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">⚪ Gray</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">grey</attribute>
++      </item>
++    </section>
++    <section>
++      <item>
++        <attribute name="label" translatable="yes">Reset Color &amp; Tags</attribute>
++        <attribute name="action">view.set-folder-color</attribute>
++        <attribute name="target">none</attribute>
++      </item>
++    </section>
++  </menu>
+   <template class="NautilusToolbar" parent="AdwBin">
+     <child>
+       <object class="AdwHeaderBar">
++        <!-- Navigation Controls: Sidebar Toggle & Back / Forward (< >) -->
++        <child type="start">
++          <object class="GtkToggleButton" id="show_sidebar_button">
++            <property name="visible" bind-source="NautilusToolbar" bind-property="show-sidebar-button" bind-flags="bidirectional|sync-create"/>
++            <property name="active" bind-source="NautilusToolbar" bind-property="sidebar-button-active" bind-flags="bidirectional|sync-create"/>
++            <property name="tooltip-text" translatable="yes">Show Sidebar</property>
++            <property name="icon-name">sidebar-show-symbolic</property>
++          </object>
++        </child>
++        <child type="start">
++          <object class="GtkStack" id="history_controls_stack">
++            <property name="visible" bind-source="NautilusToolbar" bind-property="show-history-controls" bind-flags="sync-create"/>
++            <property name="hhomogeneous">true</property>
++            <property name="transition-type">crossfade</property>
++            <child>
++              <object class="NautilusHistoryControls" id="history_controls">
++                <property name="window-slot" bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
++              </object>
++            </child>
++            <child>
++              <object class="AdwBin" id="history_controls_placeholder"/>
++            </child>
++          </object>
++        </child>
++
++        <!-- Finder Title (Folder Name) / Location / Search in Center -->
+         <child type="title">
+           <object class="GtkBox" id="header_toolbar">
+             <property name="spacing">6</property>
+@@ -58,69 +131,89 @@
+                 </child>
+               </object>
+             </child>
++          </object>
++        </child>
++
++        <!-- Right Side: 4 Segmented Views (Icons, List, Column, Gallery) + Sort Dropdown -->
++        <child type="end">
++          <object class="GtkStack" id="search_button_stack">
++            <property name="hhomogeneous">true</property>
++            <property name="transition-type">crossfade</property>
+             <child>
+-              <object class="GtkStack" id="search_button_stack">
+-                <property name="hhomogeneous">true</property>
+-                <property name="transition-type">crossfade</property>
+-                <child>
+-                  <object class="GtkToggleButton" id="search_button">
+-                    <property name="tooltip_text" translatable="yes">Search Current Folder</property>
+-                    <property name="halign">center</property>
+-                    <property name="valign">center</property>
+-                    <property name="action_name">slot.search-visible</property>
+-                    <property name="icon_name">nautilus-folder-search-symbolic</property>
+-                    <binding name="active">
+-                      <lookup name="search-visible">
+-                        <lookup name="window-slot">NautilusToolbar</lookup>
+-                      </lookup>
+-                    </binding>
+-                  </object>
+-                </child>
+-                <child>
+-                  <object class="AdwBin" id="search_button_placeholder"/>
+-                </child>
++              <object class="GtkToggleButton" id="search_button">
++                <property name="tooltip_text" translatable="yes">Search</property>
++                <property name="halign">center</property>
++                <property name="valign">center</property>
++                <property name="action_name">slot.search-visible</property>
++                <property name="icon_name">edit-find-symbolic</property>
++                <binding name="active">
++                  <lookup name="search-visible">
++                    <lookup name="window-slot">NautilusToolbar</lookup>
++                  </lookup>
++                </binding>
+               </object>
+             </child>
++            <child>
++              <object class="AdwBin" id="search_button_placeholder"/>
++            </child>
+           </object>
+         </child>
+-        <child type="start">
+-          <object class="GtkToggleButton" id="show_sidebar_button">
+-            <property name="visible" bind-source="NautilusToolbar" bind-property="show-sidebar-button" bind-flags="bidirectional|sync-create"/>
+-            <property name="active" bind-source="NautilusToolbar" bind-property="sidebar-button-active" bind-flags="bidirectional|sync-create"/>
+-            <property name="tooltip-text" translatable="yes">Show Sidebar</property>
+-            <property name="icon-name">sidebar-show-symbolic</property>
++
++        <!-- Actions Menu (...) -->
++        <child type="end">
++          <object class="GtkButton" id="new_folder_button">
++            <property name="visible" bind-source="NautilusToolbar" bind-property="show-new-folder-button" bind-flags="sync-create"/>
++            <property name="icon-name">view-more-symbolic</property>
++            <property name="tooltip_text" translatable="yes">Actions</property>
++            <property name="action-name">view.new-folder</property>
++            <property name="focus-on-click">false</property>
+           </object>
+         </child>
+-        <child type="start">
+-          <object class="GtkStack" id="history_controls_stack">
+-            <property name="visible" bind-source="NautilusToolbar" bind-property="show-history-controls" bind-flags="sync-create"/>
+-            <property name="hhomogeneous">true</property>
+-            <property name="transition-type">crossfade</property>
++
++        <!-- Share + Tags unified pill -->
++        <child type="end">
++          <object class="GtkBox" id="share_tags_pill">
++            <property name="valign">center</property>
++            <style>
++              <class name="finder-pill-segmented"/>
++            </style>
+             <child>
+-              <object class="NautilusHistoryControls" id="history_controls">
+-                <property name="window-slot" bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
++              <object class="GtkButton" id="share_button">
++                <property name="icon-name">emblem-shared-symbolic</property>
++                <property name="tooltip-text" translatable="yes">Share</property>
++                <property name="action-name">view.send-email</property>
++                <property name="focus-on-click">false</property>
++                <style>
++                  <class name="flat"/>
++                </style>
+               </object>
+             </child>
+             <child>
+-              <object class="AdwBin" id="history_controls_placeholder"/>
++              <object class="GtkMenuButton" id="tag_button">
++                <property name="icon-name">tag-symbolic</property>
++                <property name="tooltip-text" translatable="yes">Tags</property>
++                <property name="always-show-arrow">false</property>
++                <property name="focus-on-click">false</property>
++                <style>
++                  <class name="flat"/>
++                </style>
++                <property name="popover">
++                  <object class="GtkPopoverMenu">
++                    <property name="menu-model">tags_menu</property>
++                  </object>
++                </property>
++              </object>
+             </child>
+           </object>
+         </child>
++
++        <!-- 4-Mode View Switcher -->
+         <child type="end">
+           <object class="NautilusViewControls">
+             <property name="visible" bind-source="NautilusToolbar" bind-property="show-view-controls" bind-flags="sync-create"/>
+             <property name="window-slot" bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
+           </object>
+         </child>
+-        <child type="end">
+-          <object class="GtkButton" id="new_folder_button">
+-            <property name="visible" bind-source="NautilusToolbar" bind-property="show-new-folder-button" bind-flags="sync-create"/>
+-            <property name="icon-name">folder-new-symbolic</property>
+-            <property name="tooltip_text" translatable="yes">New Folder</property>
+-            <property name="action-name">view.new-folder</property>
+-            <property name="focus-on-click">false</property>
+-          </object>
+-        </child>
+       </object>
+     </child>
+   </template>
+--- a/src/nautilus-window.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-window.c	2026-09-19 05:47:39.000000000 -0500
+@@ -1724,20 +1724,11 @@
+     g_autofree gchar *module_names = nautilus_module_get_installed_module_names ();
+     g_autofree gchar *debug_info = NULL;
+ 
+-    const gchar *designers[] =
+-    {
+-        _("The GNOME Project"),
+-        NULL
+-    };
+     const gchar *developers[] =
+     {
+-        _("The GNOME Project"),
+-        NULL
+-    };
+-    const gchar *documenters[] =
+-    {
+-        _("The GNOME Project"),
+-        "Sun Microsystems",
++        "JaimeGH (Inled)",
++        "Pulsar OS contributors (see list on os.inled.es)",
++        "The GNOME Project (Upstream Nautilus Authors)",
+         NULL
+     };
+ 
+@@ -1748,23 +1739,22 @@
+     else
+     {
+         debug_info = g_strconcat (_("Currently installed plugins:"), "\n\n",
+-                                  module_names, "\n\n",
+-                                  _("For bug testing only, the following command can be used:"), "\n"
+-                                  "NAUTILUS_DISABLE_PLUGINS=TRUE nautilus", NULL);
++                                  module_names, NULL);
+     }
+ 
+-    dialog = adw_about_dialog_new_from_appdata ("/org/gnome/nautilus/appdata", NULL);
+-
++    dialog = adw_about_dialog_new ();
++    adw_about_dialog_set_application_name (ADW_ABOUT_DIALOG (dialog), "Finder");
++    adw_about_dialog_set_application_icon (ADW_ABOUT_DIALOG (dialog), "system-file-manager");
+     adw_about_dialog_set_version (ADW_ABOUT_DIALOG (dialog), VERSION);
+-    adw_about_dialog_set_debug_info (ADW_ABOUT_DIALOG (dialog), debug_info);
+-    adw_about_dialog_set_copyright (ADW_ABOUT_DIALOG (dialog), "© 1999 The Files Authors");
++    adw_about_dialog_set_comments (ADW_ABOUT_DIALOG (dialog),
++                                   _("File manager for Pulsar OS, a derivative work based on GNOME Files (Nautilus)."));
++    adw_about_dialog_set_website (ADW_ABOUT_DIALOG (dialog), "https://github.com/Inled-Pulsar-OS/finder");
++    adw_about_dialog_set_issue_url (ADW_ABOUT_DIALOG (dialog), "https://github.com/Inled-Pulsar-OS/finder/issues");
++    adw_about_dialog_set_support_url (ADW_ABOUT_DIALOG (dialog), "https://os.inled.es");
++    adw_about_dialog_set_license_type (ADW_ABOUT_DIALOG (dialog), GTK_LICENSE_GPL_3_0);
++    adw_about_dialog_set_copyright (ADW_ABOUT_DIALOG (dialog), "© 2026 Inled / Pulsar OS Contributors\n© 1999-2026 The Nautilus Authors");
+     adw_about_dialog_set_developers (ADW_ABOUT_DIALOG (dialog), developers);
+-    adw_about_dialog_set_designers (ADW_ABOUT_DIALOG (dialog), designers);
+-    adw_about_dialog_set_documenters (ADW_ABOUT_DIALOG (dialog), documenters);
+-    adw_about_dialog_set_support_url (ADW_ABOUT_DIALOG (dialog), "https://discourse.gnome.org/tag/nautilus");
+-    /* Translators should localize the following string which will be displayed at the bottom of
+-     * the about box to give credit to the translator(s). */
+-    adw_about_dialog_set_translator_credits (ADW_ABOUT_DIALOG (dialog), _("translator-credits"));
++    adw_about_dialog_set_debug_info (ADW_ABOUT_DIALOG (dialog), debug_info);
+ 
+     adw_dialog_present (dialog, window ? GTK_WIDGET (window) : NULL);
+ }
+--- a/src/resources/ui/nautilus-window.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-window.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -41,7 +41,7 @@
+         <attribute name="action">app.help</attribute>
+       </item>
+       <item>
+-        <attribute name="label" translatable="yes">_About Files</attribute>
++        <attribute name="label" translatable="yes">_About Finder</attribute>
+         <attribute name="action">app.about</attribute>
+       </item>
+     </section>
+@@ -111,16 +111,9 @@
+                               bind-flags="sync-create"/>
+                     <child type="top">
+                       <object class="AdwHeaderBar">
+-                        <child type="start">
+-                          <object class="GtkToggleButton">
+-                            <property name="tooltip_text" translatable="yes">Search Everywhere</property>
+-                            <property name="action_name">slot.search-global</property>
+-                            <property name="icon_name">edit-find-symbolic</property>
+-                          </object>
+-                        </child>
+                         <property name="title-widget">
+                           <object class="AdwWindowTitle">
+-                            <property name="title" translatable="yes">Files</property>
++                            <property name="title" translatable="yes">Finder</property>
+                           </object>
+                         </property>
+                         <child type="end">
+--- a/src/resources/ui/nautilus-history-controls.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-history-controls.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -5,13 +5,20 @@
+   <template class="NautilusHistoryControls" parent="AdwBin">
+     <property name="child">
+       <object class="GtkBox">
+-        <property name="spacing">6</property>
++        <property name="spacing">0</property>
++        <property name="valign">center</property>
++        <style>
++          <class name="finder-pill-segmented"/>
++        </style>
+         <child>
+           <object class="GtkButton" id="back_button">
+             <property name="tooltip_text" translatable="yes">Back</property>
+             <property name="valign">center</property>
+             <property name="action_name">slot.back</property>
+             <property name="icon_name">go-previous-symbolic</property>
++            <style>
++              <class name="flat"/>
++            </style>
+           </object>
+         </child>
+         <child>
+@@ -20,6 +27,9 @@
+             <property name="valign">center</property>
+             <property name="action_name">slot.forward</property>
+             <property name="icon_name">go-next-symbolic</property>
++            <style>
++              <class name="flat"/>
++            </style>
+           </object>
+         </child>
+       </object>
+--- a/src/resources/ui/nautilus-view-controls.ui	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/ui/nautilus-view-controls.ui	2026-09-19 05:47:39.000000000 -0500
+@@ -37,48 +37,77 @@
+   </menu>
+   <template class="NautilusViewControls" parent="AdwBin">
+     <property name="child">
+-      <object class="AdwSplitButton" id="view_split_button">
+-        <property name="halign">center</property>
++      <object class="GtkBox">
++        <property name="orientation">horizontal</property>
++        <property name="spacing">6</property>
+         <property name="valign">center</property>
+-        <property name="dropdown-tooltip" translatable="yes" comments="Translators: This is a noun, meaning the options pertaining to the view.">View Options</property>
+-        <property name="action_name">slot.files-view-mode-toggle</property>
+-        <property name="popover">
+-          <object class="GtkPopoverMenu">
+-            <property name="menu-model">view_menu</property>
+-            <child type="zoom-out">
+-              <object class="GtkButton">
+-                <property name="icon-name">zoom-out-symbolic</property>
+-                <property name="action-name">view.zoom-out</property>
+-                <property name="tooltip-text" translatable="yes">Zoom Out</property>
++
++        <!-- Segmented Finder Views (Icons, List, Sort) with macOS pill container -->
++        <child>
++          <object class="GtkBox">
++            <style>
++              <class name="finder-pill-segmented"/>
++            </style>
++            <child>
++              <object class="GtkToggleButton" id="icon_view_button">
++                <property name="icon-name">view-grid-symbolic</property>
++                <property name="tooltip-text" translatable="yes">as Icons</property>
++                <property name="action-name">slot.files-view-mode</property>
++                <property name="action-target">uint32 2</property>
+                 <style>
+                   <class name="flat"/>
+-                  <class name="circular"/>
+                 </style>
+               </object>
+             </child>
+-            <child type="zoom-in">
+-              <object class="GtkButton">
+-                <property name="icon-name">zoom-in-symbolic</property>
+-                <property name="action-name">view.zoom-in</property>
+-                <property name="tooltip-text" translatable="yes">Zoom In</property>
++            <child>
++              <object class="GtkToggleButton" id="list_view_button">
++                <property name="icon-name">view-list-symbolic</property>
++                <property name="tooltip-text" translatable="yes">as List</property>
++                <property name="action-name">slot.files-view-mode</property>
++                <property name="action-target">uint32 1</property>
+                 <style>
+                   <class name="flat"/>
+-                  <class name="circular"/>
+                 </style>
+               </object>
+             </child>
++            <child>
++              <object class="GtkMenuButton" id="view_split_button">
++                <property name="icon-name">view-sort-descending-symbolic</property>
++                <property name="tooltip-text" translatable="yes">View &amp; Grouping Options</property>
++                <style>
++                  <class name="flat"/>
++                </style>
++                <property name="popover">
++                  <object class="GtkPopoverMenu">
++                    <property name="menu-model">view_menu</property>
++                    <child type="zoom-out">
++                      <object class="GtkButton">
++                        <property name="icon-name">zoom-out-symbolic</property>
++                        <property name="action-name">view.zoom-out</property>
++                        <property name="tooltip-text" translatable="yes">Zoom Out</property>
++                        <style>
++                          <class name="flat"/>
++                          <class name="circular"/>
++                        </style>
++                      </object>
++                    </child>
++                    <child type="zoom-in">
++                      <object class="GtkButton">
++                        <property name="icon-name">zoom-in-symbolic</property>
++                        <property name="action-name">view.zoom-in</property>
++                        <property name="tooltip-text" translatable="yes">Zoom In</property>
++                        <style>
++                          <class name="flat"/>
++                          <class name="circular"/>
++                        </style>
++                      </object>
++                    </child>
++                  </object>
++                </property>
++              </object>
++            </child>
+           </object>
+-        </property>
+-        <binding name="icon-name">
+-          <lookup name="icon-name">
+-            <lookup name="window-slot">NautilusViewControls</lookup>
+-          </lookup>
+-        </binding>
+-        <binding name="tooltip-text">
+-          <lookup name="tooltip">
+-            <lookup name="window-slot">NautilusViewControls</lookup>
+-          </lookup>
+-        </binding>
++        </child>
+       </object>
+     </property>
+   </template>
+--- a/src/resources/style.css	2026-03-16 06:34:21.000000000 -0500
++++ b/src/resources/style.css	2026-09-19 05:47:39.000000000 -0500
+@@ -36,43 +36,61 @@
+ 
+ /* Path bar */
+ 
+-#NautilusPathBar {
+-  background-color: color-mix(in srgb, currentColor 10%, transparent);
+-  border-radius: 9px;
++#NautilusPathBar,
++NautilusPathBar,
++headerbar NautilusPathBar,
++headerbar #path_bar {
++  background: transparent;
++  background-color: transparent;
++  border: none;
++  box-shadow: none;
+ }
+-#NautilusPathBar > menubutton {
++#NautilusPathBar > menubutton,
++#NautilusPathBar > menubutton > button {
+   margin: 0px;
++  background: transparent;
++  background-color: transparent;
++  border: none;
++  box-shadow: none;
+ }
+ 
+-#NautilusPathBar > scrolledwindow undershoot.left {
+-  background: linear-gradient(to right, var(--headerbar-shade-color) 6px, transparent 24px);
+-  border-left: solid 1px var(--border-color);
+-}
++#NautilusPathBar > scrolledwindow undershoot.left,
+ #NautilusPathBar > scrolledwindow undershoot.right {
+-  background: linear-gradient(to left, var(--headerbar-shade-color) 6px, transparent 24px);
+-  border-right: solid 1px var(--border-color);
++  background: none;
++  border: none;
+ }
+ 
+ /* Match sidebar's rounded corners on the "start" side. */
+-#NautilusPathBar > scrolledwindow:dir(ltr) undershoot.left {
+-  border-radius: 9px 0px 0px 9px;
+-}
++#NautilusPathBar > scrolledwindow:dir(ltr) undershoot.left,
+ #NautilusPathBar > scrolledwindow:dir(rtl) undershoot.right {
+-  border-radius: 0px 9px 9px 0px;
++  border-radius: 0;
+ }
+ 
+ #NautilusPathButton {
+-  margin: 3px;
++  margin: 0 2px;
+   min-width: 8px;
+-  border-radius: 7px;
++  border-radius: 6px;
+   padding-top: 0px;
+   padding-bottom: 0px;
++  background: transparent;
++  background-color: transparent;
++  border: none;
++  box-shadow: none;
+ }
+ 
+ #NautilusPathButton:not(:hover),
+-#NautilusPathButton.current-dir
+-{
++#NautilusPathButton.current-dir {
+   background: none;
++  background-color: transparent;
++  border: none;
++  box-shadow: none;
++}
++
++#NautilusPathButton:hover {
++  background: alpha(currentColor, 0.08);
++  background-color: alpha(currentColor, 0.08);
++  border: none;
++  box-shadow: none;
+ }
+ 
+ #NautilusPathButton:not(.current-dir):not(:backdrop):hover label,
+@@ -293,6 +311,21 @@
+   opacity: 1;
+ }
+ 
++/* Star button overlay in grid (icon) view */
++.nautilus-grid-view button.grid-star {
++  min-height: 22px;
++  min-width: 22px;
++  padding: 0;
++  margin: 3px;
++  opacity: 0.75;
++}
++.nautilus-grid-view button.grid-star:hover {
++  opacity: 1;
++}
++.nautilus-grid-view button.grid-star.starred image {
++  color: var(--accent-bg-color, #f5c211);
++}
++
+ @keyframes rotate_star {
+   from { -gtk-icon-transform: rotate(-72deg); }
+   to {}
+@@ -358,3 +391,203 @@
+ .toolbar.no-bottom-padding {
+   padding-bottom: 0px;
+ }
++
++/* ==========================================================================
++   Apple macOS Finder Styling & MacTahoe Theme Compatibility
++   ========================================================================== */
++
++/* Finder Window Base */
++.nautilus-window {
++  border-radius: 12px;
++}
++
++/* Sidebar Section Headers */
++.sidebar-section-header label {
++  font-size: 11px;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.5px;
++  opacity: 0.55;
++}
++
++/* Finder Color Tags in Sidebar */
++row.tag-red image {
++  color: #ff453a;
++}
++row.tag-orange image {
++  color: #ff9f0a;
++}
++row.tag-yellow image {
++  color: #ffd60a;
++}
++row.tag-green image {
++  color: #30d158;
++}
++row.tag-blue image {
++  color: #0a84ff;
++}
++row.tag-purple image {
++  color: #bf5af2;
++}
++row.tag-gray image {
++  color: #8e8e93;
++}
++
++/* Finder Pill View Switcher & Segmented Controls */
++NautilusViewControls,
++NautilusViewControls > box,
++NautilusHistoryControls,
++NautilusHistoryControls > box,
++#share_tags_pill {
++  background: transparent;
++  background-color: transparent;
++  border: none;
++  box-shadow: none;
++}
++
++/* Outer unified pill container: exactly 28px height */
++.finder-pill-segmented,
++headerbar .finder-pill-segmented,
++headerbar box.finder-pill-segmented,
++headerbar windowhandle box.finder-pill-segmented {
++  background-color: alpha(currentColor, 0.08);
++  background-image: none;
++  border: 1px solid alpha(currentColor, 0.12);
++  border-radius: 9999px;
++  padding: 1px 2px;
++  margin: 0;
++  min-height: 28px;
++  box-shadow: none;
++}
++
++/* Completely strip individual button borders, circles, outlines, shadows and default Adwaita backgrounds */
++.finder-pill-segmented button,
++.finder-pill-segmented button.flat,
++.finder-pill-segmented button.image-button,
++.finder-pill-segmented button.circular,
++.finder-pill-segmented button.toggle,
++.finder-pill-segmented menubutton,
++.finder-pill-segmented menubutton > button,
++.finder-pill-segmented menubutton.flat > button,
++headerbar .finder-pill-segmented button,
++headerbar .finder-pill-segmented button.flat,
++headerbar .finder-pill-segmented button.image-button,
++headerbar .finder-pill-segmented button.circular,
++headerbar .finder-pill-segmented button.toggle,
++headerbar .finder-pill-segmented menubutton,
++headerbar .finder-pill-segmented menubutton > button,
++headerbar .finder-pill-segmented menubutton.flat > button,
++headerbar windowhandle .finder-pill-segmented button,
++headerbar windowhandle .finder-pill-segmented menubutton > button {
++  background: transparent;
++  background-color: transparent;
++  background-image: none;
++  border: none;
++  border-color: transparent;
++  border-radius: 9999px;
++  box-shadow: none;
++  text-shadow: none;
++  outline: none;
++  min-height: 24px;
++  min-width: 24px;
++  padding: 2px 6px;
++  margin: 0;
++  transition: none;
++}
++
++/* Hover state inside pill: subtle flat highlight */
++.finder-pill-segmented button:hover:not(:checked):not(:active),
++.finder-pill-segmented menubutton:hover > button:not(:checked):not(:active),
++headerbar .finder-pill-segmented button:hover:not(:checked):not(:active),
++headerbar .finder-pill-segmented menubutton:hover > button:not(:checked):not(:active) {
++  background: alpha(currentColor, 0.08);
++  background-color: alpha(currentColor, 0.08);
++  background-image: none;
++  border: none;
++  box-shadow: none;
++  text-shadow: none;
++}
++
++/* Active / Checked state inside pill: elegant inner fill without shadow */
++.finder-pill-segmented button:checked,
++.finder-pill-segmented button:active,
++.finder-pill-segmented menubutton:checked > button,
++.finder-pill-segmented menubutton > button:checked,
++headerbar .finder-pill-segmented button:checked,
++headerbar .finder-pill-segmented button:active,
++headerbar .finder-pill-segmented menubutton:checked > button,
++headerbar .finder-pill-segmented menubutton > button:checked {
++  background: alpha(currentColor, 0.22);
++  background-color: alpha(currentColor, 0.22);
++  background-image: none;
++  border: none;
++  box-shadow: none;
++  text-shadow: none;
++}
++
++/* Focus states inside pill: no focus outline ring */
++.finder-pill-segmented button:focus,
++.finder-pill-segmented button:focus-visible,
++.finder-pill-segmented menubutton > button:focus,
++.finder-pill-segmented menubutton > button:focus-visible,
++headerbar .finder-pill-segmented button:focus,
++headerbar .finder-pill-segmented button:focus-visible,
++headerbar .finder-pill-segmented menubutton > button:focus,
++headerbar .finder-pill-segmented menubutton > button:focus-visible {
++  outline: none;
++  box-shadow: none;
++}
++
++/* History buttons (< and >) compact height */
++NautilusHistoryControls button,
++headerbar NautilusHistoryControls button,
++#back_button,
++#forward_button {
++  min-height: 24px;
++  min-width: 24px;
++  padding: 2px 5px;
++}
++
++/* Match search entry and location entry capsule height (28px) */
++headerbar entry,
++.finder-toolbar entry,
++#location_entry {
++  min-height: 28px;
++  border-radius: 9999px;
++  padding: 0 8px;
++  box-shadow: none;
++}
++
++headerbar entry:not(:focus-within),
++.finder-toolbar entry:not(:focus-within),
++#location_entry:not(:focus-within) {
++  background: transparent;
++  background-color: transparent;
++  border: 1px solid transparent;
++  box-shadow: none;
++}
++
++headerbar entry:focus-within,
++.finder-toolbar entry:focus-within,
++#location_entry:focus-within {
++  background-color: alpha(currentColor, 0.10);
++  border: 1px solid alpha(currentColor, 0.15);
++  box-shadow: none;
++}
++
++/* MacTahoe Toolbar & Navigation Elements */
++.finder-toolbar,
++headerbar {
++  border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
++}
++
++/* Finder Bottom Status & Path bar */
++.finder-pathbar-container {
++  border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent);
++  background-color: color-mix(in srgb, var(--view-bg-color, @theme_bg_color) 90%, transparent);
++  min-height: 28px;
++  padding-left: 8px;
++  padding-right: 8px;
++}
++
++

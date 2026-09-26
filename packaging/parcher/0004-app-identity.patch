@@ -1,0 +1,16 @@
+--- a/src/nautilus-application.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/nautilus-application.c	2026-09-19 05:47:39.000000000 -0500
+@@ -1227,6 +1227,13 @@
+         maybe_migrate_gtk_filechooser_preferences ();
+     }
+ 
++    GtkCssProvider *css_provider = gtk_css_provider_new ();
++    gtk_css_provider_load_from_resource (css_provider, "/org/gnome/nautilus/style.css");
++    gtk_style_context_add_provider_for_display (gdk_display_get_default (),
++                                                GTK_STYLE_PROVIDER (css_provider),
++                                                GTK_STYLE_PROVIDER_PRIORITY_USER);
++    g_object_unref (css_provider);
++
+     g_signal_connect (self, "shutdown", G_CALLBACK (on_application_shutdown), NULL);
+ 
+     g_signal_connect_object (gtk_icon_theme_get_for_display (gdk_display_get_default ()),

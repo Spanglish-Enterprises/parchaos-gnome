@@ -1,0 +1,372 @@
+--- a/src/gtk/nautilusgtkplacessidebar.c	2026-03-16 06:34:21.000000000 -0500
++++ b/src/gtk/nautilusgtkplacessidebar.c	2026-09-19 05:47:39.000000000 -0500
+@@ -334,7 +334,9 @@
+ {
+   NautilusGtkPlacesSectionType row_section_type;
+   NautilusGtkPlacesSectionType before_section_type;
+-  GtkWidget *separator;
++  GtkWidget *header_box;
++  GtkWidget *label;
++  const char *title = NULL;
+ 
+   gtk_list_box_row_set_header (row, NULL);
+ 
+@@ -350,8 +352,47 @@
+ 
+   if (before && before_section_type != row_section_type)
+     {
+-      separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
+-      gtk_list_box_row_set_header (row, separator);
++      switch (row_section_type)
++        {
++          case NAUTILUS_GTK_PLACES_SECTION_DEFAULT_LOCATIONS:
++          case NAUTILUS_GTK_PLACES_SECTION_BOOKMARKS:
++            title = _("Favorites");
++            break;
++          case NAUTILUS_GTK_PLACES_SECTION_CLOUD:
++            title = _("iCloud & Cloud Drives");
++            break;
++          case NAUTILUS_GTK_PLACES_SECTION_MOUNTS:
++            title = _("Locations");
++            break;
++          case NAUTILUS_GTK_PLACES_SECTION_TAGS:
++            title = _("Tags");
++            break;
++          default:
++            break;
++        }
++
++      if (title != NULL)
++        {
++          header_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
++          gtk_widget_set_margin_top (header_box, 10);
++          gtk_widget_set_margin_bottom (header_box, 4);
++          gtk_widget_set_margin_start (header_box, 12);
++          gtk_widget_set_margin_end (header_box, 12);
++          gtk_widget_add_css_class (header_box, "sidebar-section-header");
++
++          label = gtk_label_new (title);
++          gtk_label_set_xalign (GTK_LABEL (label), 0.0);
++          gtk_widget_add_css_class (label, "caption-heading");
++          gtk_widget_add_css_class (label, "dim-label");
++          gtk_box_append (GTK_BOX (header_box), label);
++
++          gtk_list_box_row_set_header (row, header_box);
++        }
++      else
++        {
++          GtkWidget *separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
++          gtk_list_box_row_set_header (row, separator);
++        }
+     }
+ }
+ 
+@@ -619,6 +660,18 @@
+ #endif
+ 
+ static void
++launch_cloud_add_terminal (void)
++{
++  GError *error = NULL;
++
++  if (!g_spawn_command_line_async ("pulsar-cloud choose", &error))
++    {
++      g_warning ("Unable to launch the cloud account setup: %s", error->message);
++      g_error_free (error);
++    }
++}
++
++static void
+ update_places (NautilusGtkPlacesSidebar *sidebar)
+ {
+   GList *mounts, *l, *ll;
+@@ -660,7 +713,19 @@
+ 
+   network_mounts = network_volumes = NULL;
+ 
+-  /* add built-in places */
++  /* add built-in places - Finder Favorites style */
++
++  /* Recent Files (Top of Finder Favorites) */
++  if (should_show_recent (sidebar))
++    {
++      start_icon = g_themed_icon_new_with_default_fallbacks ("document-open-recent-symbolic");
++      add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++                 NAUTILUS_GTK_PLACES_SECTION_DEFAULT_LOCATIONS,
++                 _("Recents"), start_icon, NULL, SCHEME_RECENT ":///",
++                 NULL, NULL, NULL, NULL, 0,
++                 _("Recent Files"));
++      g_object_unref (start_icon);
++    }
+ 
+   /* home folder */
+   home_uri = get_home_directory_uri ();
+@@ -673,17 +738,6 @@
+   g_object_unref (start_icon);
+   g_free (home_uri);
+ 
+-  if (should_show_recent (sidebar))
+-    {
+-      start_icon = g_themed_icon_new_with_default_fallbacks ("document-open-recent-symbolic");
+-      add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
+-                 NAUTILUS_GTK_PLACES_SECTION_DEFAULT_LOCATIONS,
+-                 _("Recent"), start_icon, NULL, SCHEME_RECENT ":///",
+-                 NULL, NULL, NULL, NULL, 0,
+-                 _("Recent Files"));
+-      g_object_unref (start_icon);
+-    }
+-
+   start_icon = g_themed_icon_new_with_default_fallbacks ("starred-symbolic");
+   add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
+              NAUTILUS_GTK_PLACES_SECTION_DEFAULT_LOCATIONS,
+@@ -709,15 +763,6 @@
+         }
+     }
+ 
+-  /* Network view */
+-  start_icon = g_themed_icon_new_with_default_fallbacks (ICON_NAME_NETWORK_VIEW);
+-  add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
+-             NAUTILUS_GTK_PLACES_SECTION_DEFAULT_LOCATIONS,
+-             _("Network"), start_icon, NULL, SCHEME_NETWORK_VIEW ":///",
+-             NULL, NULL, NULL, NULL, 0,
+-             _("Open Network Locations"));
+-  g_object_unref (start_icon);
+-
+   /* Trash */
+   if (sidebar->show_trash)
+     {
+@@ -732,7 +777,40 @@
+       g_object_unref (start_icon);
+     }
+ 
+-  /* Cloud providers */
++  /* Cloud Providers & Cloud Folders (Google Drive, OneDrive, iCloud) */
++  {
++    const char *home_dir = g_get_home_dir ();
++    struct {
++      const char *rel_path;
++      const char *name;
++      const char *icon_name;
++    } cloud_candidates[] = {
++      { "iCloud", "iCloud Drive", "folder-remote-symbolic" },
++      { "iCloud Drive", "iCloud Drive", "folder-remote-symbolic" },
++      { "Google Drive", "Google Drive", "folder-remote-symbolic" },
++      { "GoogleDrive", "Google Drive", "folder-remote-symbolic" },
++      { "OneDrive", "OneDrive", "folder-remote-symbolic" },
++      { "Nextcloud", "Nextcloud", "folder-remote-symbolic" },
++      { "Dropbox", "Dropbox", "folder-remote-symbolic" },
++    };
++
++    for (guint c_idx = 0; c_idx < G_N_ELEMENTS (cloud_candidates); c_idx++)
++      {
++        g_autofree char *c_path = g_build_filename (home_dir, cloud_candidates[c_idx].rel_path, NULL);
++        if (g_file_test (c_path, G_FILE_TEST_IS_DIR))
++          {
++            g_autofree char *c_uri = g_filename_to_uri (c_path, NULL, NULL);
++            GIcon *c_icon = g_themed_icon_new_with_default_fallbacks (cloud_candidates[c_idx].icon_name);
++            add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++                       NAUTILUS_GTK_PLACES_SECTION_CLOUD,
++                       cloud_candidates[c_idx].name, c_icon, NULL, c_uri,
++                       NULL, NULL, NULL, NULL, 0,
++                       cloud_candidates[c_idx].name);
++            g_object_unref (c_icon);
++          }
++      }
++  }
++
+ #ifdef HAVE_CLOUDPROVIDERS
+   cloud_providers = cloud_providers_collector_get_providers (sidebar->cloud_manager);
+   for (l = sidebar->unready_accounts; l != NULL; l = l->next)
+@@ -770,6 +848,15 @@
+     }
+ #endif
+ 
++  /* Network view */
++  start_icon = g_themed_icon_new_with_default_fallbacks (ICON_NAME_NETWORK_VIEW);
++  add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++             NAUTILUS_GTK_PLACES_SECTION_MOUNTS,
++             _("Network"), start_icon, NULL, SCHEME_NETWORK_VIEW ":///",
++             NULL, NULL, NULL, NULL, 0,
++             _("Open Network Locations"));
++  g_object_unref (start_icon);
++
+   /* go through all connected drives */
+   drives = g_volume_monitor_get_connected_drives (sidebar->volume_monitor);
+ 
+@@ -1060,8 +1147,20 @@
+       mount_uri = g_file_get_uri (root);
+       name = g_mount_get_name (mount);
+       tooltip = g_file_get_parse_name (root);
++      NautilusGtkPlacesSectionType mount_section = NAUTILUS_GTK_PLACES_SECTION_MOUNTS;
++      if (g_str_has_prefix (mount_uri, "google-drive://") ||
++          g_str_has_prefix (mount_uri, "onedrive://") ||
++          g_str_has_prefix (mount_uri, "icloud://") ||
++          g_str_has_prefix (mount_uri, "nextcloud://") ||
++          g_str_has_prefix (mount_uri, "owncloud://") ||
++          g_str_has_prefix (mount_uri, "dav://") ||
++          g_str_has_prefix (mount_uri, "davs://"))
++        {
++          mount_section = NAUTILUS_GTK_PLACES_SECTION_CLOUD;
++        }
++
+       add_place (sidebar, NAUTILUS_GTK_PLACES_EXTERNAL_MOUNT,
+-                 NAUTILUS_GTK_PLACES_SECTION_MOUNTS,
++                 mount_section,
+                  name, start_icon, NULL, mount_uri,
+                  NULL, NULL, mount, NULL, 0, tooltip);
+       g_object_unref (root);
+@@ -1075,6 +1174,106 @@
+   g_list_free_full (network_volumes, g_object_unref);
+   g_list_free_full (network_mounts, g_object_unref);
+ 
++  /* rclone-backed drives managed by pulsar-cloud (Google Drive, OneDrive…). */
++  {
++    g_autofree gchar *conf_path = g_build_filename (g_get_home_dir (),
++                                                    ".config", "rclone", "rclone.conf",
++                                                    NULL);
++    g_autoptr (GKeyFile) keyfile = g_key_file_new ();
++    g_auto (GStrv) groups = NULL;
++    gsize n_groups = 0;
++
++    if (g_file_test (conf_path, G_FILE_TEST_EXISTS) &&
++        g_key_file_load_from_file (keyfile, conf_path, G_KEY_FILE_NONE, NULL))
++      {
++        groups = g_key_file_get_groups (keyfile, &n_groups);
++        for (gsize i = 0; i < n_groups; i++)
++          {
++            const char *name = groups[i];
++            g_autofree char *backend = NULL;
++            const char *label = name;
++            const char *icon_name = "pulsar-cloud-symbolic";
++            GIcon *icon;
++            g_autofree char *remote_uri = NULL;
++
++            backend = g_key_file_get_string (keyfile, name, "type", NULL);
++
++            if (g_strcmp0 (backend, "drive") == 0)
++              {
++                label = _("Google Drive");
++                icon_name = "google-drive";
++              }
++            else if (g_strcmp0 (backend, "onedrive") == 0)
++              {
++                label = _("OneDrive");
++                icon_name = "onedrive";
++              }
++            else if (g_strcmp0 (backend, "dropbox") == 0)
++              {
++                label = _("Dropbox");
++                icon_name = "dropbox";
++              }
++            else if (g_strcmp0 (backend, "iclouddrive") == 0)
++              {
++                label = _("iCloud");
++                icon_name = "pulsar-cloud-symbolic";
++              }
++
++            icon = g_themed_icon_new_with_default_fallbacks (icon_name);
++            remote_uri = g_strdup_printf ("pulsar-cloud://%s", name);
++            add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++                       NAUTILUS_GTK_PLACES_SECTION_CLOUD,
++                       label, icon, NULL, remote_uri,
++                       NULL, NULL, NULL, NULL, 0,
++                       label);
++            g_object_unref (icon);
++          }
++      }
++  }
++
++  /* Entry point to configure any cloud account supported by rclone.
++   * Activating the row opens a terminal running 'pulsar-cloud add'. */
++  {
++    GIcon *add_icon = g_themed_icon_new_with_default_fallbacks ("list-add-symbolic");
++    add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++               NAUTILUS_GTK_PLACES_SECTION_CLOUD,
++               _("Add Cloud Account…"), add_icon, NULL,
++               "pulsar-cloud://add",
++               NULL, NULL, NULL, NULL, 0,
++               _("Add Cloud Account…"));
++    g_object_unref (add_icon);
++  }
++
++  /* Add macOS style Tags Section */
++  {
++    struct {
++      const char *name;
++      const char *color_class;
++      const char *color_code;
++    } mac_tags[] = {
++      { N_("Red"), "tag-red", "red" },
++      { N_("Orange"), "tag-orange", "orange" },
++      { N_("Yellow"), "tag-yellow", "yellow" },
++      { N_("Green"), "tag-green", "green" },
++      { N_("Blue"), "tag-blue", "blue" },
++      { N_("Purple"), "tag-purple", "purple" },
++      { N_("Gray"), "tag-gray", "grey" },
++    };
++
++    for (guint t_idx = 0; t_idx < G_N_ELEMENTS (mac_tags); t_idx++)
++      {
++        GIcon *tag_icon = g_themed_icon_new_with_default_fallbacks ("media-record-symbolic");
++        g_autofree gchar *tag_uri = g_strdup_printf (SCHEME_STARRED ":///%s", mac_tags[t_idx].color_code);
++        GtkWidget *t_row = add_place (sidebar, NAUTILUS_GTK_PLACES_BUILT_IN,
++                                      NAUTILUS_GTK_PLACES_SECTION_TAGS,
++                                      _(mac_tags[t_idx].name), tag_icon, NULL, tag_uri,
++                                      NULL, NULL, NULL, NULL, (int)t_idx,
++                                      _(mac_tags[t_idx].name));
++        gtk_widget_add_css_class (t_row, mac_tags[t_idx].color_class);
++        g_object_unref (tag_icon);
++      }
++  }
++
+   /* We want this hidden by default, but need to do it after the show_all call */
+   nautilus_gtk_sidebar_row_hide (NAUTILUS_GTK_SIDEBAR_ROW (sidebar->new_bookmark_row), TRUE);
+ 
+@@ -1818,6 +2017,37 @@
+                 "volume", &volume,
+                 NULL);
+ 
++  /* The "add" pseudo-remote must be handled before the generic
++   * pulsar-cloud://<remote> branch below. */
++  if (uri != NULL && g_str_has_prefix (uri, "pulsar-cloud://add"))
++    {
++      launch_cloud_add_terminal ();
++
++      g_object_unref (sidebar);
++      g_free (uri);
++      return;
++    }
++
++  if (uri != NULL && g_str_has_prefix (uri, "pulsar-cloud://"))
++    {
++      const char *remote = uri + strlen ("pulsar-cloud://");
++      g_autofree char *command = NULL;
++      GError *spawn_error = NULL;
++
++      command = g_strdup_printf ("pulsar-cloud open %s", remote);
++
++      g_object_unref (sidebar);
++      g_free (uri);
++
++      if (!g_spawn_command_line_async (command, &spawn_error))
++        {
++          g_warning ("Unable to open cloud drive '%s': %s", remote,
++                     spawn_error->message);
++          g_error_free (spawn_error);
++        }
++      return;
++    }
++
+   if (uri != NULL)
+     {
+       open_uri (sidebar, uri, open_flags);
+--- a/src/gtk/nautilusgtkplacessidebarprivate.h	2026-03-16 06:34:21.000000000 -0500
++++ b/src/gtk/nautilusgtkplacessidebarprivate.h	2026-09-19 05:47:39.000000000 -0500
+@@ -64,6 +64,7 @@
+   NAUTILUS_GTK_PLACES_SECTION_BOOKMARKS,
+   NAUTILUS_GTK_PLACES_SECTION_CLOUD,
+   NAUTILUS_GTK_PLACES_SECTION_MOUNTS,
++  NAUTILUS_GTK_PLACES_SECTION_TAGS,
+   NAUTILUS_GTK_PLACES_N_SECTIONS
+ } NautilusGtkPlacesSectionType;
+ 
