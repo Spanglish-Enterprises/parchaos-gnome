@@ -304,9 +304,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     _createLogoMenu() {
         const logoBtn = new PanelMenu.Button(0.0, 'ParchaOS', false);
         logoBtn.roleId = 'logo';
+        // Symbolic vector logo drawn for 16 px: crisp, follows the panel's
+        // text color, and centered like the menu labels next to it.
         const icon = new St.Icon({
-            gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon.png`),
+            gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon-symbolic.svg`),
             style_class: 'parchaos-menubar-logo-icon',
+            y_align: Clutter.ActorAlign.CENTER,
         });
         logoBtn.add_child(icon);
 

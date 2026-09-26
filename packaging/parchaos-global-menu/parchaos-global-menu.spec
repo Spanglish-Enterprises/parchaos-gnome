@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -41,7 +41,7 @@ URL:            https://github.com/alexgalicea/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
-Source3:        parchaos-menu-icon.png
+Source3:        parchaos-menu-icon-symbolic.svg
 
 BuildArch:      noarch
 
@@ -87,12 +87,16 @@ mkdir -p "$DEST"
 install -m 0644 src/extension.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
-install -m 0644 src/parchaos-menu-icon.png "$DEST/"
+install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 
 %files
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-4
+- Menu bar logo is now a symbolic SVG drawn for 16 px (was a 570 px PNG
+  scaled down): crisp edges, follows the panel text color, and vertically
+  centered with the menu labels.
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-3
 - Fix Log Out/Restart/Shut Down doing nothing: ConfirmDialog subclassed
   ModalDialog without GObject.registerClass, so constructing it threw
