@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -193,6 +193,10 @@ mkdir -p %{buildroot}%{_datadir}/themes
 # package can silently paper over.
 mkdir -p %{buildroot}%{_sysconfdir}/skel
 HOME=%{buildroot}%{_sysconfdir}/skel ./install.sh -l -c dark --silent-mode
+# install.sh also drops a "GNOME-GTK-Theme" switcher app into ~/.local; it
+# would show up in every new user's launcher, and ParchaOS sets the theme
+# itself, so it isn't shipped.
+rm -rf %{buildroot}%{_sysconfdir}/skel/.local
 
 # config_gtk4() creates gtk.css/gtk-dark.css as symlinks built from the
 # literal $HOME we passed above -- since that $HOME IS the buildroot
@@ -231,9 +235,11 @@ done
 # entries are normal desktop-Linux conventions), so packaged as-is
 # rather than fighting upstream's own bundling.
 %{_sysconfdir}/skel/.themes/
-%{_sysconfdir}/skel/.local/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-17
+- Don't ship the upstream theme switcher app in /etc/skel/.local; it
+  showed up in every new user's launcher.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-16
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.
