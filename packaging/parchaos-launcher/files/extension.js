@@ -429,6 +429,9 @@ const Launcher = GObject.registerClass({
                 GLib.source_remove(this._scrollLockId);
             this._dotsIdleId = this._scrollLockId = 0;
             this._cancelDrag();
+            // Helper replies can arrive after the launcher is gone.
+            this._destroyed = true;
+            this._confirm = null;
         });
         this._backdrop.add_child(new St.Widget({
             style_class: 'parchaos-launcher-backdrop',
@@ -1054,7 +1057,7 @@ const Launcher = GObject.registerClass({
     _allTiles() {
         const tiles = [...this._tiles];
         this._folderView?._tiles?.forEach(t => tiles.push(t));
-        return tiles.filter(t => t.item.type === 'app' && !t.is_finalized?.());
+        return tiles.filter(t => t.item.type === 'app' && t.get_parent() !== null);
     }
 
     // Edit mode: icons pulse, removable apps show a badge. Which apps are
@@ -1075,7 +1078,7 @@ const Launcher = GObject.registerClass({
                 it.apps.forEach(a => ids.add(a.get_id()));
         }
         runAsync([this._helper, 'removable', ...ids]).then(({ok, stdout}) => {
-            if (!ok || !this._editing)
+            if (!ok || this._destroyed || !this._editing)
                 return;
             try {
                 this._removable = new Set(JSON.parse(stdout));
@@ -1135,7 +1138,7 @@ const Launcher = GObject.registerClass({
             this._uninstall(app);
         });
         runAsync([this._helper, 'plan', app.get_id()]).then(({stdout}) => {
-            if (this._confirm !== shade)
+            if (this._destroyed || this._confirm !== shade)
                 return;
             let result = {};
             try {

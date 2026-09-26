@@ -89,6 +89,27 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        if (launcher) {
+            // Helper replies (removable apps, uninstall plan) arriving after
+            // the launcher closed must not touch it.
+            await this._check('launcher closed during edit mode and uninstall check', async () => {
+                launcher.toggle();
+                await sleep(600);
+                const view = launcher._launcher;
+                view._setEditing(true);
+                view.close();
+                await sleep(400);
+                launcher.toggle();
+                await sleep(600);
+                const again = launcher._launcher;
+                const app = again._tiles.find(t => t.item.type === 'app')?.item.app;
+                if (app)
+                    again._confirmRemove(app);
+                again.close();
+                await sleep(2500);
+            });
+        }
+
         const menu = ext('parchaos-global-menu@parchaos.org')?.stateObj;
         if (menu) {
             await this._check('about card', async () => {

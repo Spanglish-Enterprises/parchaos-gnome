@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -56,6 +56,9 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
+- Closing the launcher while edit mode or the uninstall check is still
+  loading no longer touches the closed launcher.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
 - Drag to rearrange: other icons make room, holding at a page edge turns
   the page, holding over an app makes a folder and over a folder adds to
