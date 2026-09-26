@@ -67,11 +67,12 @@ jobs:
           grep -aq "Fedora" /tmp/grubx64.efi
           echo "UEFI boot image: signed shim -> Fedora GRUB"
 
-      - name: Upload ISO + checksum
+      - name: Upload ISO, checksum and package list
         uses: actions/upload-artifact@v4
         with:
           name: parchaos-iso
           path: |
             build/*.iso
             build/*.iso.sha256
+            build/*.iso.packages.tsv
           retention-days: 14

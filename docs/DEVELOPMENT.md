@@ -173,6 +173,26 @@ a notification island, an app store and a driver manager from Pulsar OS
 have no LICENSE file. ParchaOS writes its own versions instead where it
 needs them (Parcha Controls, the launcher, Welcome).
 
+## Release image gate
+
+`engine/build-iso.sh` runs `scripts/check-image.sh` on the finished
+rootfs, just before compressing it. The script writes every installed
+package (name, license, vendor) to `build/<iso>.packages.tsv`, which is
+published with the ISO, and fails the build if the image contains
+something ParchaOS can't redistribute or no longer ships: `openh264`
+(Cisco's license only covers downloads from Cisco), `fedora-logos`
+(Fedora's logos are for official Fedora media), any package built by RPM
+Fusion other than its repo definitions, or `pafari`, `pearos-*`,
+`parchaos-finder`, `parchaos-macos-remap`, `parchaos-tmog`. It also fails
+if `noopenh264` or `generic-logos` is missing. `--skip-branding` test
+builds skip it.
+
+The swap itself is in `profiles/parchaos/customize.sh`. Cisco's
+`openh264` obsoletes `noopenh264`, and dnf honors that for the installed
+package too, so the profile removes `openh264` with `rpm -e --nodeps`
+and then installs `noopenh264` with the Cisco repo disabled, in a single
+container call.
+
 ## License
 
 - **Code, packaging and docs** written for ParchaOS: **GPL-3.0-or-later**

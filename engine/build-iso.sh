@@ -356,6 +356,14 @@ mkdir -p "$ISO_WORKDIR/LiveOS" "$ISO_WORKDIR/EFI/BOOT" "$ISO_WORKDIR/boot"
 # metadata on first use anyway.
 rm -rf "$ROOTFS_TARGET"/var/cache/libdnf5/* "$ROOTFS_TARGET"/var/cache/dnf/*
 
+# Release gate: the image's package list, published next to the ISO, and
+# a hard stop if it contains anything ParchaOS can't redistribute (see
+# scripts/check-image.sh). --skip-branding builds are test-only and skip it.
+PACKAGES_TSV="$BUILD_DIR/.packages.tsv"
+if [ "$SKIP_BRANDING" -eq 0 ]; then
+    "$REPO_ROOT/scripts/check-image.sh" "$ROOTFS_TARGET" "$PACKAGES_TSV"
+fi
+
 echo "Compressing rootfs as SquashFS (this is the slow part)..."
 # The x86 BCJ filter and 1 MiB blocks compress binaries noticeably
 # better than plain xz defaults.
@@ -643,6 +651,7 @@ else
 fi
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
+[ -f "$PACKAGES_TSV" ] && mv -f "$PACKAGES_TSV" "$BUILD_DIR/$ISO_NAME.packages.tsv"
 
 # Releases are published as GitHub release assets, which must be under
 # 2 GiB each.
