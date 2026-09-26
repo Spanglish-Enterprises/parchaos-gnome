@@ -43,7 +43,9 @@ while IFS=$'\t' read -r name _license vendor; do
 done < "$out"
 
 for required in noopenh264 generic-logos; do
-    if ! cut -f1 "$out" | grep -qx "$required"; then
+    # awk reads the whole file: `cut | grep -q` under pipefail can report a
+    # present package as missing when grep exits early (SIGPIPE).
+    if ! awk -F'\t' -v n="$required" '$1 == n { found = 1 } END { exit !found }' "$out"; then
         echo "check-image: $required is missing from the image" >&2
         fail=1
     fi
