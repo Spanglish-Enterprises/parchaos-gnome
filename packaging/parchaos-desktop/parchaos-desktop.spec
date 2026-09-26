@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -95,6 +95,7 @@ Requires:       parchaos-hanabi
 Requires:       parchaos-desktop-icons
 Requires:       parchaos-launcher
 Requires:       parchaos-controls
+Requires:       parchaos-settings
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -153,6 +154,8 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-18
+- Require parchaos-settings (ParchaOS Settings app).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-17
 - Ship the default enabled-extensions list (00-parchaos-extensions),
   previously written only by the ISO build: older installs gave new user

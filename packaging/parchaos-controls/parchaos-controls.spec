@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,10 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
+- Remove the "Super as Ctrl" tile: it's a set-once preference, now in
+  ParchaOS Settings (parchaos-settings), keeping Controls for things
+  toggled often.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
 - Add a "Super as Ctrl" tile: switches the current user between the
   Super-as-Ctrl keyboard style and standard key roles (runs

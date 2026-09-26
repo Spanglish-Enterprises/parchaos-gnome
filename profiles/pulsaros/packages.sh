@@ -42,6 +42,10 @@ PROFILE_REPO_PACKAGES=(
     # customize.sh.
     parchaos-controls
 
+    # ParchaOS Settings -- preferences GNOME Settings has no place for
+    # (packaging/parchaos-settings/), e.g. Super as Ctrl.
+    parchaos-settings
+
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # MacTahoe-gtk-theme (MIT), dark variant. Installs as

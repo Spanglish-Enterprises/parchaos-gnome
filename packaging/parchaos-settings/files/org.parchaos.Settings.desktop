@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ParchaOS Settings
+Comment=Preferences specific to ParchaOS, like how the Super key works
+Exec=parchaos-settings
+Icon=preferences-desktop-symbolic
+Categories=GTK;Settings;DesktopSettings;
+Keywords=keyboard;super;ctrl;command;shortcuts;parchaos;
+StartupNotify=true
+DBusActivatable=false
