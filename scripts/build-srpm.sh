@@ -36,10 +36,8 @@ for name in "$@"; do
     mkdir -p "$top/SOURCES"
 
     # Standard license texts any spec can list as a Source for %license:
-    # LICENSE (GPL-3.0), LICENSE-ARTWORK (CC BY-SA 4.0), GPL-2.0.txt and
-    # LOGO-CREDITS.md (the logo's CC BY 3.0 attribution).
+    # LICENSE (GPL-3.0), LICENSE-ARTWORK (CC BY-SA 4.0) and GPL-2.0.txt.
     cp LICENSE LICENSE-ARTWORK LICENSES/GPL-2.0.txt "$top/SOURCES/"
-    cp branding/logo/CREDITS.md "$top/SOURCES/LOGO-CREDITS.md"
     # The legal and privacy notice installed by parchaos-release.
     cp docs/LEGAL.md docs/SOURCES.md "$top/SOURCES/"
 

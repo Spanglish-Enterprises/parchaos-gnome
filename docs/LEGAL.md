@@ -34,9 +34,8 @@ their owners and are used only to identify those projects and services.
 
 ## Credits
 
-- **The ParchaOS logo** is based on "Passion Fruit" by LUTFI GANI AL
-  ACHMAD, from the Noun Project, licensed CC BY 3.0
-  (https://creativecommons.org/licenses/by/3.0/).
+- **The ParchaOS logo** is original artwork, (c) Spanglish Enterprises
+  LLC, licensed CC BY-SA 4.0.
 - **Themes:** the GTK and icon themes are based on MacTahoe by
   vinceliuice (https://github.com/vinceliuice), with ParchaOS's own icons
   and changes.

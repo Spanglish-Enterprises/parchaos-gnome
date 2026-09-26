@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <!-- ParchaOS fruit for the menu bar, drawn on the 16 px grid: a round
-       body, a solid 2 px stem on whole pixels, and a bold leaf, so no
-       part renders as a faint half-pixel line at menu-bar size. -->
-  <circle fill="#bebebe" cx="8" cy="9.75" r="5.75"/>
-  <rect fill="#bebebe" x="7" y="1" width="2" height="4"/>
-  <path fill="#bebebe" d="M9 4.6C9 1.6 11.5 0 15 0.4C14.9 3.6 12.6 5.2 9 4.6Z"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path class="ParchaOS-mark" fill="#2e3436" fill-rule="evenodd" d="M0.500 8.000a7.500 7.500 0 1 0 15.000 0a7.500 7.500 0 1 0 -15.000 0zM1.900 8.000a6.100 6.100 0 1 0 12.200 0a6.100 6.100 0 1 0 -12.200 0zM2.900 8.000a5.100 5.100 0 1 0 10.200 0a5.100 5.100 0 1 0 -10.200 0zM7.100 8.000a0.900 0.900 0 1 0 1.800 0a0.900 0.900 0 1 0 -1.800 0zM8.000 3.850A1.150 0.720 -90.00 1 0 8.000 6.150A1.150 0.720 -90.00 1 0 8.000 3.850zM11.594 5.925A1.150 0.720 -30.00 1 0 9.602 7.075A1.150 0.720 -30.00 1 0 11.594 5.925zM11.594 10.075A1.150 0.720 30.00 1 0 9.602 8.925A1.150 0.720 30.00 1 0 11.594 10.075zM8.000 12.150A1.150 0.720 90.00 1 0 8.000 9.850A1.150 0.720 90.00 1 0 8.000 12.150zM4.406 10.075A1.150 0.720 150.00 1 0 6.398 8.925A1.150 0.720 150.00 1 0 4.406 10.075zM4.406 5.925A1.150 0.720 210.00 1 0 6.398 7.075A1.150 0.720 210.00 1 0 4.406 5.925z"/></svg>

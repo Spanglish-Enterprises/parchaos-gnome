@@ -148,8 +148,8 @@ ParchaOS stands on the shoulders of:
 - **[MacTahoe](https://github.com/vinceliuice/MacTahoe-gtk-theme)** themes by
   vinceliuice, **Dash to Dock**, **xremap**, and the GNOME Shell extension
   authors credited in each package.
-- The passion-fruit logo: "Passion Fruit" by LUTFI GANI AL ACHMAD from
-  the Noun Project, CC BY 3.0 ([details](branding/logo/CREDITS.md)).
+- The ParchaOS logo is original artwork, CC BY-SA 4.0
+  ([details](branding/logo/CREDITS.md)).
 
 *Parcha* is a Spanish name for passion fruit, used in Puerto Rico and Venezuela.
 

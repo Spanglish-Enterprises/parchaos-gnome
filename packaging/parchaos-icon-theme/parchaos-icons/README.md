@@ -34,4 +34,4 @@ corresponding Apple design: ParchaOS keeps the familiar layout but has its
 own look.
 
 Motif: passion fruit (purple rind, golden pulp, dark seeds, green leaf).
-The seed pattern is drawn procedurally, not taken from the CC BY 3.0 logo.
+The seed pattern is drawn procedurally.
