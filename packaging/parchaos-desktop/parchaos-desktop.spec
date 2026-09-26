@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -94,6 +94,7 @@ Requires:       parchaos-hblock
 Requires:       parchaos-hanabi
 Requires:       parchaos-desktop-icons
 Requires:       parchaos-launcher
+Requires:       parchaos-controls
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -137,6 +138,8 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-16
+- Require parchaos-controls, the new Parcha Controls control center.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-15
 - Require parchaos-launcher, the new full-screen app launcher.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-14

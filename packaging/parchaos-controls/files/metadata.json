@@ -1,0 +1,11 @@
+{
+  "uuid": "parchaos-controls@parchaos.org",
+  "name": "Parcha Controls",
+  "description": "ParchaOS's control center: a tiled panel for Wi-Fi, Bluetooth, Focus, dark mode, display brightness, sound and now playing, opened from the top bar status icons in place of Quick Settings.",
+  "shell-version": [
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/alexgalicea/parchaos-gnome"
+}

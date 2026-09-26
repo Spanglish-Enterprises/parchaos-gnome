@@ -37,6 +37,11 @@ PROFILE_REPO_PACKAGES=(
     # default via customize.sh.
     parchaos-launcher
 
+    # Parcha Controls -- control center replacing the Quick Settings
+    # menu (packaging/parchaos-controls/). Enabled by default via
+    # customize.sh.
+    parchaos-controls
+
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # MacTahoe-gtk-theme (MIT), dark variant. Installs as

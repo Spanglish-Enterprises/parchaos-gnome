@@ -1,0 +1,163 @@
+/* Parcha Controls */
+
+/* The popup itself is invisible; the panel draws the glass. */
+.parchaos-controls-popup .popup-menu-content,
+.parchaos-controls-popup.popup-menu-content {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.parchaos-controls-popup .popup-menu-arrow {
+  width: 0;
+}
+
+.parchaos-controls-panel {
+  padding: 12px;
+  border-radius: 26px;
+  background-color: rgba(34, 34, 38, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.parchaos-controls-tile {
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.parchaos-controls-connectivity-box {
+  padding: 8px 10px;
+  spacing: 10px;
+}
+
+.parchaos-controls-row {
+  spacing: 10px;
+}
+
+.parchaos-controls-row-text {
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.parchaos-controls-row-text:hover .parchaos-controls-title {
+  color: #ffffff;
+}
+
+.parchaos-controls-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.parchaos-controls-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.parchaos-controls-circle {
+  border-radius: 999px;
+  padding: 0;
+  background-color: rgba(255, 255, 255, 0.16);
+  transition-duration: 120ms;
+}
+
+.parchaos-controls-circle:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+.parchaos-controls-circle:checked {
+  background-color: #0a84ff;
+}
+
+.parchaos-controls-circle:checked:hover {
+  background-color: #2b95ff;
+}
+
+.parchaos-controls-circle-icon {
+  icon-size: 16px;
+  color: #ffffff;
+}
+
+.parchaos-controls-small-label {
+  padding-top: 6px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 68px;
+}
+
+.parchaos-controls-focus > StBoxLayout {
+  padding: 0 10px;
+  spacing: 10px;
+}
+
+.parchaos-controls-slider-tile > StBoxLayout {
+  padding: 8px 12px;
+  spacing: 6px;
+}
+
+.parchaos-controls-slider-row {
+  spacing: 8px;
+}
+
+.parchaos-controls-slider-icon {
+  padding: 0;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.parchaos-controls-slider-icon StIcon {
+  icon-size: 16px;
+}
+
+.parchaos-controls-slider {
+  height: 22px;
+  -barlevel-height: 22px;
+  -barlevel-background-color: rgba(255, 255, 255, 0.16);
+  -barlevel-active-background-color: rgba(255, 255, 255, 0.92);
+  -barlevel-border-width: 0;
+  -barlevel-overdrive-color: #ff9f0a;
+  -barlevel-overdrive-separator-width: 0;
+  -slider-handle-radius: 11px;
+  -slider-handle-border-width: 1px;
+  -slider-handle-border-color: rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+.parchaos-controls-media-box {
+  padding: 10px;
+  spacing: 6px;
+}
+
+.parchaos-controls-media-top {
+  spacing: 10px;
+}
+
+.parchaos-controls-media-art {
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.parchaos-controls-media-controls {
+  spacing: 14px;
+}
+
+.parchaos-controls-media-button {
+  padding: 6px;
+  border-radius: 999px;
+  background: none;
+  color: #ffffff;
+}
+
+.parchaos-controls-media-button:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.parchaos-controls-media-button StIcon {
+  icon-size: 18px;
+}
