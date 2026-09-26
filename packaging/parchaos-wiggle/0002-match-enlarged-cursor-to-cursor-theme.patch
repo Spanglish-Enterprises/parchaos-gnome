@@ -1,0 +1,41 @@
+diff --git a/effect.js b/effect.js
+index 4cb3509..83a9926 100644
+--- a/effect.js
++++ b/effect.js
+@@ -38,7 +38,26 @@ export default class Effect extends St.Icon {
+     }
+ 
+     set cursorPath(path) {
+-        this.gicon = Gio.Icon.new_for_string(path || GLib.path_get_dirname(import.meta.url.slice(7)) + '/icons/cursor.svg');
++        this._userPath = path;
++        this._syncIcon();
++    }
++
++    // With no custom path, draw the enlarged cursor from an image that
++    // matches the active cursor theme, so shaking doesn't swap the arrow
++    // for a different-looking one. MacTahoe cursors ship as
++    // icons/cursor-<theme>.svg; other themes use the generic arrow.
++    _syncIcon() {
++        const dir = GLib.path_get_dirname(import.meta.url.slice(7));
++        let path = this._userPath;
++        if (!path) {
++            this._interface ??= new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
++            const themed = `${dir}/icons/cursor-${this._interface.get_string('cursor-theme')}.svg`;
++            path = GLib.file_test(themed, GLib.FileTest.EXISTS) ? themed : `${dir}/icons/cursor.svg`;
++        }
++        if (path !== this._iconPath) {
++            this._iconPath = path;
++            this.gicon = Gio.Icon.new_for_string(path);
++        }
+     }
+ 
+     move(x, y) {
+@@ -53,6 +72,8 @@ export default class Effect extends St.Icon {
+         this.remove_all_transitions();
+ 
+         this.isWiggling = true;
++        // The cursor theme may have changed (light/dark switch).
++        this._syncIcon();
+         if (!this.get_parent())
+             Main.uiGroup.add_child(this);
+         if (this.isHidden) {
