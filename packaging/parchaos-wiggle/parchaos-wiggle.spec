@@ -25,7 +25,7 @@
 
 Name:           parchaos-wiggle
 Version:        5
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Cursor-magnification-on-shake GNOME Shell extension ("shake to locate cursor")
 
 License:        GPL-2.0-only
@@ -33,6 +33,14 @@ URL:            https://github.com/mechtifs/wiggle
 %global commit  db1bec361d292ae0c465eca25db4854e422ad5e4
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/archive/%{commit}/wiggle-%{shortcommit}.tar.gz
+# GNOME 49+ removed Meta.CursorTracker.set_pointer_visible(), so hiding
+# the real pointer threw mid-magnify and showing it threw mid-cleanup,
+# stranding the big cursor on screen (user report: it stayed large after a
+# quick movement). Also: unmagnify only cleaned up in onComplete, which an
+# interrupted animation never reaches. Patch0 ports to
+# inhibit/uninhibit_cursor_visibility(), cleans up in onStopped, orders
+# magnify() so it can't be undone by a stopped shrink, and adds a watchdog.
+Patch0:         0001-fix-stuck-magnified-cursor-on-gnome-50.patch
 
 BuildArch:      noarch
 BuildRequires:  glib2
@@ -49,7 +57,7 @@ comment for the license diligence and the compatibility gap it relies
 on customize.sh to work around.
 
 %prep
-%autosetup -n wiggle-%{commit}
+%autosetup -p1 -n wiggle-%{commit}
 
 %build
 
@@ -68,6 +76,13 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/wiggle@mechtifs/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 5-3
+- Fix the magnified cursor getting stuck on screen: port cursor hiding to
+  GNOME 49+'s inhibit/uninhibit_cursor_visibility() (set_pointer_visible
+  no longer exists and threw), clean up in onStopped, make re-magnify
+  during a shrink safe, add a watchdog. Verified in an isolated headless
+  gnome-shell with repeated shake/stop cycles: every cycle returns to
+  normal and the real pointer is visible again.
 * Fri Sep 25 2026 ParchaOS packaging - 5-2
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.

@@ -1,0 +1,175 @@
+diff --git a/cursor.js b/cursor.js
+index b0bb0a1..2479028 100644
+--- a/cursor.js
++++ b/cursor.js
+@@ -4,7 +4,8 @@ import Clutter from 'gi://Clutter';
+ 
+ export default class Cursor {
+     constructor() {
+-        this._tracker = global.backend.get_cursor_tracker(global.display);
++        this._tracker = global.backend.get_cursor_tracker();
++        this._hidden = false;
+     }
+ 
+     get hot() {
+@@ -22,8 +23,16 @@ export default class Cursor {
+             seat.uninhibit_unfocus();
+         }
+ 
+-        this._tracker.disconnectObject(this);
+-        this._tracker.set_pointer_visible(true);
++        if (!this._hidden)
++            return;
++        this._hidden = false;
++        if (this._tracker.uninhibit_cursor_visibility) {
++            // GNOME 49+: visibility is reference-counted inhibition
++            this._tracker.uninhibit_cursor_visibility();
++        } else {
++            this._tracker.disconnectObject(this);
++            this._tracker.set_pointer_visible(true);
++        }
+     }
+ 
+     hide() {
+@@ -33,15 +42,25 @@ export default class Cursor {
+             seat.inhibit_unfocus();
+         }
+ 
+-        this._tracker.set_pointer_visible(false);
+-        this._tracker.disconnectObject(this);
+-        this._tracker.connectObject(
+-            'visibility-changed', () => {
+-                if (this._tracker.get_pointer_visible()) {
+-                    this._tracker.set_pointer_visible(false);
+-                }
+-            },
+-            this
+-        );
++        if (this._hidden)
++            return;
++        this._hidden = true;
++        if (this._tracker.inhibit_cursor_visibility) {
++            // GNOME 49+ removed set_pointer_visible(); inhibiting keeps the
++            // pointer hidden until the matching uninhibit, so the old
++            // visibility-changed workaround isn't needed.
++            this._tracker.inhibit_cursor_visibility();
++        } else {
++            this._tracker.set_pointer_visible(false);
++            this._tracker.disconnectObject(this);
++            this._tracker.connectObject(
++                'visibility-changed', () => {
++                    if (this._tracker.get_pointer_visible()) {
++                        this._tracker.set_pointer_visible(false);
++                    }
++                },
++                this
++            );
++        }
+     }
+ }
+diff --git a/effect.js b/effect.js
+index f35c356..4cb3509 100644
+--- a/effect.js
++++ b/effect.js
+@@ -46,15 +46,21 @@ export default class Effect extends St.Icon {
+     }
+ 
+     magnify() {
++        // Cancel any pending or running shrink *before* starting to grow:
++        // stopping its transition runs its cleanup, which must not undo
++        // the state set up below.
++        this._cancelUnmagnify();
++        this.remove_all_transitions();
++
+         this.isWiggling = true;
+-        Main.uiGroup.add_child(this);
++        if (!this.get_parent())
++            Main.uiGroup.add_child(this);
+         if (this.isHidden) {
+             this.cursor.hide();
+         }
+-        this.remove_all_transitions();
+         this.ease({
+             duration: this.magnifyDuration,
+-            transition: Clutter.AnimationMode.EASE_IN_QUAD,
++            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+             scale_x: 1.0,
+             scale_y: 1.0,
+             pivot_point: this._pivot,
+@@ -67,6 +73,7 @@ export default class Effect extends St.Icon {
+         }
+         this._isInTransition = true;
+         this._unmagnifyDelayId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.unmagnifyDelay, () => {
++            this._unmagnifyDelayId = null;
+             this.remove_all_transitions();
+             this.ease({
+                 duration: this.unmagnifyDuration,
+@@ -74,23 +81,58 @@ export default class Effect extends St.Icon {
+                 scale_x: 1.0 / this._ratio,
+                 scale_y: 1.0 / this._ratio,
+                 pivot_point: this._pivot,
+-                onComplete: () => {
+-                    Main.uiGroup.remove_child(this);
+-                    if (this.isHidden) {
+-                        this.cursor.show();
+-                    }
+-                    this.isWiggling = false;
+-                    this._isInTransition = false;
+-                },
++                // onStopped, not onComplete: an interrupted shrink never
++                // "completes", which used to leave the big cursor stuck on
++                // screen with every later unmagnify() ignored.
++                onStopped: () => this._finishUnmagnify(),
+             });
+-            this._unmagnifyDelayId = null;
++            // Watchdog: a transition whose actor isn't on any stage view
++            // never advances; don't let that strand the big cursor either.
++            this._watchdogId = GLib.timeout_add(GLib.PRIORITY_DEFAULT,
++                this.unmagnifyDuration + 500, () => {
++                    this._watchdogId = null;
++                    if (this._isInTransition) {
++                        this.remove_all_transitions();
++                        this._finishUnmagnify();
++                    }
++                    return GLib.SOURCE_REMOVE;
++                });
+             return GLib.SOURCE_REMOVE;
+         });
+     }
+ 
+-    destroy() {
++    _finishUnmagnify() {
++        if (!this._isInTransition)
++            return;
++        this._cancelUnmagnify();
++        if (this.get_parent())
++            Main.uiGroup.remove_child(this);
++        if (this.isHidden) {
++            this.cursor.show();
++        }
++        this.isWiggling = false;
++        this._isInTransition = false;
++    }
++
++    _cancelUnmagnify() {
+         if (this._unmagnifyDelayId) {
+             GLib.Source.remove(this._unmagnifyDelayId);
++            this._unmagnifyDelayId = null;
++        }
++        if (this._watchdogId) {
++            GLib.Source.remove(this._watchdogId);
++            this._watchdogId = null;
+         }
++        this._isInTransition = false;
++    }
++
++    destroy() {
++        this._cancelUnmagnify();
++        this.remove_all_transitions();
++        if (this.get_parent())
++            Main.uiGroup.remove_child(this);
++        if (this.isWiggling && this.isHidden)
++            this.cursor.show();
++        this.isWiggling = false;
+     }
+ }
