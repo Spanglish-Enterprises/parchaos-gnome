@@ -173,9 +173,12 @@ we name or write ourselves: package names, app/feature names, package
 summaries/descriptions, and docs prose. Describe the feature instead (dock,
 global menu bar, traffic-light window controls, hover magnification,
 Cmd-as-Ctrl) or say "the reference desktop". Renamed so far:
-`parchaos-macos-remap` -> `parchaos-keyboard-remap`, "Finder" -> "Parcher".
-Still needing ParchaOS names before they're ported: Spotlight, Time
-Machine, the "Apple Tahoe" SDDM theme.
+`parchaos-macos-remap` -> `parchaos-keyboard-remap`, "Finder" -> "Parcher",
+Software -> "Parcha Store" ("App Store" is itself a trademark). Approved names for
+upcoming features: Parcha Time (backups), Parcha Controls (control center),
+ParchaOS Recovery.
+Still needing ParchaOS names before they're ported: Spotlight and the
+"Apple Tahoe" SDDM theme.
 
 Deliberately kept: upstream project names and URLs (e.g. `MacTahoe` --
 confirmed by the project owner 2026-09-25 to stay as-is, credited, not renamed;

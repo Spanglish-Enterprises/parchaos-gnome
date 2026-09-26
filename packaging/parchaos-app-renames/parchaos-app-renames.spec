@@ -34,7 +34,7 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Preview, Clock, Mail)
 
 License:        NOASSERTION
@@ -59,8 +59,31 @@ deliberately left out (Amberol/Music, no native Fedora RPM).
 %build
 
 %install
+mkdir -p %{buildroot}%{_libexecdir}
+cat > %{buildroot}%{_libexecdir}/parchaos-app-renames <<'RENAMES'
+#!/bin/sh
+# Re-applies ParchaOS display names to stock apps' .desktop files. Each
+# sed is limited to the main [Desktop Entry] section (before the first
+# "[Desktop Action"), so action names like "New Window" stay untouched.
+apps=/usr/share/applications
+rename() { # file name generic
+    [ -f "$apps/$1" ] || return 0
+    sed -i "0,/^\[Desktop Action/{s/^Name=.*/Name=$2/;s/^GenericName=.*/GenericName=$3/}" "$apps/$1"
+}
+rename org.gnome.Loupe.desktop 'Preview' 'Image Viewer'
+rename org.gnome.clocks.desktop 'Clock' 'Clock'
+rename org.gnome.Geary.desktop 'Mail' 'Mail Client'
+rename org.gnome.Software.desktop 'Parcha Store' 'Software Store'
+# "Parcha Store" is a brand name: drop the translated Name[xx]= lines in
+# the main section so every language shows it, not a translated "Software".
+[ -f "$apps/org.gnome.Software.desktop" ] && \
+    sed -i '0,/^\[Desktop Action/{/^Name\[[^]]*\]=/d}' "$apps/org.gnome.Software.desktop"
+exit 0
+RENAMES
+chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-renames
 
 %files
+%{_libexecdir}/parchaos-app-renames
 
 %post
 # Real bug found 2026-09-24, fixed here: an earlier version of this sed
@@ -73,12 +96,23 @@ deliberately left out (Amberol/Music, no native Fedora RPM).
 # Name=/GenericName=, matching what actually shipped correctly for
 # Loupe/Clocks (which have no action blocks at all, so the unrestricted
 # version happened to be harmless for them).
-sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Preview/;s/^GenericName=.*/GenericName=Image Viewer/}' /usr/share/applications/org.gnome.Loupe.desktop 2>/dev/null || true
-sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Clock/;s/^GenericName=.*/GenericName=Clock/}' /usr/share/applications/org.gnome.clocks.desktop 2>/dev/null || true
-sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Mail/;s/^GenericName=.*/GenericName=Mail Client/}' /usr/share/applications/org.gnome.Geary.desktop 2>/dev/null || true
+# Every rename lives in one script, run at install and again whenever the
+# renamed app's own package is updated (an update replaces its .desktop
+# file and silently drops the rename -- %%triggerin re-applies it).
+%{_libexecdir}/parchaos-app-renames
+update-desktop-database %{_datadir}/applications &>/dev/null || true
+
+%triggerin -- loupe, gnome-clocks, geary, gnome-software
+%{_libexecdir}/parchaos-app-renames
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
+- Rename Software to "Parcha Store" so users recognize the app store
+  (translated Name[xx]= lines dropped: it's a brand name).
+- Renames now live in one script run at install and from %%triggerin on
+  loupe/gnome-clocks/geary/gnome-software: an update of those packages
+  replaced their .desktop files and silently dropped the renames.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.
