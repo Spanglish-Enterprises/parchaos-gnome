@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 16 16">
+  <!-- ParchaOS mark (same drawing as the menu-bar glyph), replacing the
+       shell theme's Apple-logo activities button. -->
+  <circle fill="#fff" cx="8" cy="9.75" r="5.75"/>
+  <rect fill="#fff" x="7" y="1" width="2" height="4"/>
+  <path fill="#fff" d="M9 4.6C9 1.6 11.5 0 15 0.4C14.9 3.6 12.6 5.2 9 4.6Z"/>
+</svg>

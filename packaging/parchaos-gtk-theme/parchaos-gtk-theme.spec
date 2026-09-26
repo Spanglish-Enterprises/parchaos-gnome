@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -44,6 +44,9 @@ URL:            https://github.com/vinceliuice/MacTahoe-gtk-theme
 %global commit  09198632e789f72ed46574812ef6d389a53809f0
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/archive/%{commit}/MacTahoe-gtk-theme-%{shortcommit}.tar.gz
+# The ParchaOS mark for the shell theme's activities button (upstream
+# draws the Apple logo there).
+Source1:        parchaos-activities.svg
 
 BuildArch:      noarch
 
@@ -202,6 +205,14 @@ GTK4_SKEL=%{buildroot}%{_sysconfdir}/skel/.config/gtk-4.0
 ln -sf gtk-Dark.css "$GTK4_SKEL/gtk.css"
 ln -sf gtk-Dark.css "$GTK4_SKEL/gtk-dark.css"
 
+# Replace the Apple-logo activities button in every shell theme variant
+# (system-wide and the per-user copies in /etc/skel).
+find %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel -path '*/gnome-shell/assets/*' \
+    \( -name 'activities.svg' -o -name 'activities-white.svg' \) |
+while read -r f; do
+    install -m 0644 %{SOURCE1} "$f"
+done
+
 %files
 %license COPYING
 %doc README.md
@@ -220,6 +231,8 @@ ln -sf gtk-Dark.css "$GTK4_SKEL/gtk-dark.css"
 %{_sysconfdir}/skel/.local/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-13
+- Replace the Apple-logo activities button in every shell theme variant with the ParchaOS mark.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.
