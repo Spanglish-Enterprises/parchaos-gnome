@@ -15,6 +15,7 @@ import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
+import * as Background from 'resource:///org/gnome/shell/ui/background.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as OverviewControls from 'resource:///org/gnome/shell/ui/overviewControls.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -112,27 +113,19 @@ const AppTile = GObject.registerClass({
                 width: iconSize,
                 height: iconSize,
                 style: `border-radius: ${Math.round(iconSize * 0.23)}px;`,
-                layout_manager: new Clutter.GridLayout({
-                    row_homogeneous: true,
-                    column_homogeneous: true,
-                }),
             });
-            const pad = Math.floor(iconSize * 0.1);
-            const sub = Math.floor((iconSize - 2 * pad) / 3 * 0.9);
-            icon.set_style(`${icon.get_style()} padding: ${pad}px;`);
-            // Always a full 3x3 grid, so a folder with few apps still
-            // lays its icons out from the top-left like a full one.
-            for (let i = 0; i < 9; i++) {
-                const app = item.apps[i];
-                const bin = new St.Bin({
-                    child: app ? app.create_icon_texture(sub) : null,
-                    width: sub,
-                    height: sub,
-                    x_expand: true,
-                    y_expand: true,
-                });
-                icon.layout_manager.attach(bin, i % 3, Math.floor(i / 3), 1, 1);
-            }
+            // A 3x3 grid of mini icons filling the tile, laid out from the
+            // top-left like a full folder even when it holds fewer apps.
+            const pad = Math.round(iconSize * 0.1);
+            const cell = (iconSize - 2 * pad) / 3;
+            const sub = Math.floor(cell * 0.9);
+            item.apps.slice(0, 9).forEach((app, i) => {
+                const mini = app.create_icon_texture(sub);
+                mini.set_size(sub, sub);
+                mini.x = Math.round(pad + (i % 3) * cell + (cell - sub) / 2);
+                mini.y = Math.round(pad + Math.floor(i / 3) * cell + (cell - sub) / 2);
+                icon.add_child(mini);
+            });
         }
         icon.x_align = Clutter.ActorAlign.CENTER;
         this._icon = icon;
@@ -176,15 +169,45 @@ const Launcher = GObject.registerClass({
         this._scrollAccum = 0;
         this._folderView = null;
 
+        // Blur the wallpaper alone (a clone of the background group), not
+        // whatever windows are open on top of it.
         this._backdrop = new St.Widget({
-            style_class: 'parchaos-launcher-backdrop',
+            width: monitor.width,
+            height: monitor.height,
+            clip_to_allocation: true,
+        });
+        // Solid base: the blurred clone isn't fully opaque, and windows
+        // behind the launcher must never show through it.
+        this._backdrop.add_child(new St.Widget({
+            style: 'background-color: #101014;',
+            width: monitor.width,
+            height: monitor.height,
+        }));
+        // Our own wallpaper actor (like the overview's): a clone of the
+        // desktop's would copy the holes mutter leaves under windows.
+        const wallpaper = new St.Widget({
             width: monitor.width,
             height: monitor.height,
         });
-        this._backdrop.add_effect(new Shell.BlurEffect({
-            radius: 90,
-            brightness: 0.62,
-            mode: Shell.BlurMode.BACKGROUND,
+        this._bgManager = new Background.BackgroundManager({
+            container: wallpaper,
+            monitorIndex: monitor.index,
+            vignette: false,
+        });
+        wallpaper.add_effect(new Shell.BlurEffect({
+            radius: 100,
+            brightness: 0.78,
+            mode: Shell.BlurMode.ACTOR,
+        }));
+        this._backdrop.add_child(wallpaper);
+        this.connect('destroy', () => {
+            this._bgManager?.destroy();
+            this._bgManager = null;
+        });
+        this._backdrop.add_child(new St.Widget({
+            style_class: 'parchaos-launcher-backdrop',
+            width: monitor.width,
+            height: monitor.height,
         }));
         this.add_child(this._backdrop);
 
@@ -283,6 +306,43 @@ const Launcher = GObject.registerClass({
         this._dots.visible = this._nPages > 1;
         this._page = Math.min(this._page, this._nPages - 1);
         this._setPage(this._page, false);
+        this._select(-1);
+    }
+
+    // Keyboard selection: a highlighted tile that arrows move and Enter
+    // opens. Moving past the last or first tile of a page flips the page.
+    _select(index) {
+        this._tiles[this._selected]?.remove_style_pseudo_class('selected');
+        this._selected = index;
+        const tile = this._tiles[index];
+        if (!tile)
+            return;
+        tile.add_style_pseudo_class('selected');
+        const page = Math.floor(index / (COLUMNS * ROWS));
+        if (page !== this._page)
+            this._setPage(page);
+    }
+
+    _moveSelection(sym) {
+        const n = this._tiles.length;
+        if (n === 0)
+            return;
+        const perPage = COLUMNS * ROWS;
+        let i = this._selected;
+        if (i === undefined || i < 0 || !this._tiles[i]) {
+            this._select(Math.min(this._page * perPage, n - 1));
+            return;
+        }
+        const pos = i % perPage;
+        if (sym === Clutter.KEY_Right)
+            i += 1;
+        else if (sym === Clutter.KEY_Left)
+            i -= 1;
+        else if (sym === Clutter.KEY_Down)
+            i = pos + COLUMNS < perPage ? i + COLUMNS : i;
+        else if (sym === Clutter.KEY_Up)
+            i = pos - COLUMNS >= 0 ? i - COLUMNS : i;
+        this._select(Math.max(0, Math.min(n - 1, i)));
     }
 
     _setPage(page, animate = true) {
@@ -353,15 +413,19 @@ const Launcher = GObject.registerClass({
                 this.close();
             return Clutter.EVENT_STOP;
         }
-        if (this._entry.get_text() === '' && !this._folderView) {
-            if (sym === Clutter.KEY_Right || sym === Clutter.KEY_Page_Down) {
-                this._setPage(this._page + 1);
-                return Clutter.EVENT_STOP;
-            }
-            if (sym === Clutter.KEY_Left || sym === Clutter.KEY_Page_Up) {
-                this._setPage(this._page - 1);
-                return Clutter.EVENT_STOP;
-            }
+        if (this._folderView)
+            return Clutter.EVENT_PROPAGATE;
+        if (sym === Clutter.KEY_Page_Down) {
+            this._setPage(this._page + 1);
+            return Clutter.EVENT_STOP;
+        }
+        if (sym === Clutter.KEY_Page_Up) {
+            this._setPage(this._page - 1);
+            return Clutter.EVENT_STOP;
+        }
+        if ([Clutter.KEY_Left, Clutter.KEY_Right, Clutter.KEY_Up, Clutter.KEY_Down].includes(sym)) {
+            this._moveSelection(sym);
+            return Clutter.EVENT_STOP;
         }
         return Clutter.EVENT_PROPAGATE;
     }
@@ -388,9 +452,16 @@ const Launcher = GObject.registerClass({
         }
         this._page = 0;
         this._buildPages(results);
+        if (results.length > 0)
+            this._select(0);
     }
 
     _activateFirst() {
+        const selected = this._tiles[this._selected];
+        if (selected) {
+            this._activateItem(selected.item, selected);
+            return;
+        }
         const first = this._tiles.find(t => t.item.type === 'app');
         if (this._entry.get_text().trim() !== '' && first)
             this._activateItem(first.item, first);

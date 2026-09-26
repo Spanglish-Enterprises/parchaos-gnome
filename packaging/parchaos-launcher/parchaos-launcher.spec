@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,13 @@ install -m 0644 src/stylesheet.css "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Background is the blurred wallpaper only, from the launcher's own
+  background actor; open windows no longer show through.
+- Folder tiles are the same size as app icons, with a proper 3x3 grid
+  of mini icons.
+- Keyboard selection: arrow keys move a highlight (flipping pages at the
+  edges), Enter opens it; search preselects the first result.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Verified in an isolated headless gnome-shell: opens
   from the dock's Show Apps button (from the desktop and from inside the
