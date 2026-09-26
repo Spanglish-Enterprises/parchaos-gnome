@@ -29,6 +29,7 @@ import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 const DEFAULT_APP_NAME = 'Parcher';
 const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
@@ -205,6 +206,8 @@ const WeatherIndicator = GObject.registerClass({
         this._weatherInfo = null;
         this._weatherUpdatedId = 0;
         this._geoclueSimple = null;
+        this._locationId = 0;
+        this._cancellable = new Gio.Cancellable();
         this._updateTimerId = 0;
 
         this.connect('button-press-event', () => {
@@ -226,9 +229,9 @@ const WeatherIndicator = GObject.registerClass({
         const cb = (_src, result) => this._onGeoclueSimpleReady(result);
         try {
             if (Geoclue.Simple.new_with_thresholds)
-                Geoclue.Simple.new_with_thresholds(appId, Geoclue.AccuracyLevel.CITY, 0, 100, null, cb);
+                Geoclue.Simple.new_with_thresholds(appId, Geoclue.AccuracyLevel.CITY, 0, 100, this._cancellable, cb);
             else
-                Geoclue.Simple.new(appId, Geoclue.AccuracyLevel.CITY, null, cb);
+                Geoclue.Simple.new(appId, Geoclue.AccuracyLevel.CITY, this._cancellable, cb);
         } catch (e) {
             console.error('[ParchaOSGlobalMenu] Failed to start Geoclue for weather:', e);
         }
@@ -238,10 +241,12 @@ const WeatherIndicator = GObject.registerClass({
         try {
             this._geoclueSimple = Geoclue.Simple.new_finish(result);
         } catch (e) {
-            console.error('[ParchaOSGlobalMenu] Geoclue unavailable for weather:', e);
+            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                console.error('[ParchaOSGlobalMenu] Geoclue unavailable for weather:', e);
             return;
         }
-        this._geoclueSimple.connect('notify::location', () => this._onLocationUpdated());
+        this._locationId = this._geoclueSimple.connect('notify::location',
+            () => this._onLocationUpdated());
         this._onLocationUpdated();
     }
 
@@ -290,8 +295,15 @@ const WeatherIndicator = GObject.registerClass({
             GLib.source_remove(this._updateTimerId);
             this._updateTimerId = 0;
         }
+        // A Geoclue client that's still starting would otherwise call back
+        // into this destroyed indicator.
+        this._cancellable.cancel();
+        if (this._geoclueSimple && this._locationId)
+            this._geoclueSimple.disconnect(this._locationId);
+        this._locationId = 0;
         if (this._weatherInfo && this._weatherUpdatedId)
             this._weatherInfo.disconnect(this._weatherUpdatedId);
+        this._weatherUpdatedId = 0;
         this._weatherInfo = null;
         this._geoclueSimple = null;
     }
@@ -501,7 +513,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         if (!app)
             return;
         const dialog = new ModalDialog.ModalDialog({ styleClass: 'parchaos-about-dialog' });
-        const box = new St.BoxLayout({ vertical: true, x_align: Clutter.ActorAlign.CENTER });
+        const box = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_align: Clutter.ActorAlign.CENTER });
         box.add_child(app.create_icon_texture(96));
         box.add_child(new St.Label({ text: app.get_name(), style: 'font-weight: bold; font-size: 1.3em; text-align: center;' }));
         const description = app.get_description();
@@ -514,10 +526,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
     _showAboutDialog() {
         const dialog = new ModalDialog.ModalDialog({ styleClass: 'parchaos-about-dialog' });
-        const box = new St.BoxLayout({ vertical: true, style_class: 'parchaos-about-box' });
+        const box = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'parchaos-about-box' });
 
+        // The full-color mark from parchaos-release, or the menu glyph.
         const logo = new St.Icon({
-            gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon-symbolic.svg`),
+            icon_name: 'parchaos-logo',
+            fallback_gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon-symbolic.svg`),
             icon_size: 88,
             style_class: 'parchaos-about-logo',
             x_align: Clutter.ActorAlign.CENTER,
@@ -530,7 +544,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             style_class: 'parchaos-about-title',
             x_align: Clutter.ActorAlign.CENTER,
         }));
-        const gnome = this._commandOutput(['gnome-shell', '--version']).replace(/^GNOME Shell\s*/, '');
+        const gnome = Config.PACKAGE_VERSION;
         const version = [osRelease.version ? `Version ${osRelease.version}` : null,
             gnome ? `GNOME ${gnome}` : null].filter(v => v).join(' · ');
         box.add_child(new St.Label({
@@ -548,11 +562,25 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             if (!value)
                 continue;
             const l = new St.Label({ text: label, style_class: 'parchaos-about-spec-label', x_align: Clutter.ActorAlign.END });
-            const v = new St.Label({ text: value, style_class: 'parchaos-about-spec-value', x_expand: true });
+            const v = new St.Label({ style_class: 'parchaos-about-spec-value', x_expand: true });
             v.clutter_text.line_wrap = true;
             specs.layout_manager.attach(l, 0, row, 1, 1);
             specs.layout_manager.attach(v, 1, row, 1, 1);
             row++;
+            if (typeof value === 'string') {
+                v.text = value;
+                continue;
+            }
+            // Filled in when the lookup finishes; hidden if it finds nothing.
+            l.hide();
+            v.hide();
+            value.then(text => {
+                if (!text || !v.get_parent())
+                    return;
+                v.text = text;
+                l.show();
+                v.show();
+            }).catch(() => {});
         }
         box.add_child(specs);
 
@@ -580,13 +608,24 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         dialog.open();
     }
 
+    // Runs argv without blocking the compositor; resolves to its stdout.
     _commandOutput(argv) {
-        try {
-            const [ok, out] = GLib.spawn_command_line_sync(argv.map(a => GLib.shell_quote(a)).join(' '));
-            return ok && out ? new TextDecoder().decode(out).trim() : '';
-        } catch (e) {
-            return '';
-        }
+        return new Promise(resolve => {
+            try {
+                const proc = Gio.Subprocess.new(argv,
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+                proc.communicate_utf8_async(null, null, (p, res) => {
+                    try {
+                        const [, out] = p.communicate_utf8_finish(res);
+                        resolve(p.get_successful() ? (out ?? '').trim() : '');
+                    } catch (e) {
+                        resolve('');
+                    }
+                });
+            } catch (e) {
+                resolve('');
+            }
+        });
     }
 
     _readFile(path) {
@@ -611,7 +650,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             .replace(/\(R\)|\(TM\)/g, '').replace(/\s+/g, ' ').trim();
 
         // Graphics: the main display controller (discrete before integrated).
-        const gpus = this._commandOutput(['lspci', '-mm']).split('\n')
+        const gpu = this._commandOutput(['lspci', '-mm']).then(out => out.split('\n')
             .filter(l => /"(VGA compatible controller|3D controller|Display controller)"/.test(l))
             .map(l => {
                 const f = [...l.matchAll(/"([^"]*)"/g)].map(m => m[1]);
@@ -619,7 +658,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                 const brand = /AMD|ATI/.test(f[1]) ? 'AMD' : /NVIDIA/i.test(f[1]) ? 'NVIDIA' : /Intel/i.test(f[1]) ? 'Intel' : '';
                 return `${brand} ${name}`.trim();
             })
-            .sort((a, b) => /Graphics$/.test(a) - /Graphics$/.test(b));
+            .sort((a, b) => /Graphics$/.test(a) - /Graphics$/.test(b))[0] ?? '');
 
         const memKb = Number(this._readFile('/proc/meminfo').match(/^MemTotal:\s*(\d+)/m)?.[1] ?? 0);
         // MemTotal excludes memory the kernel reserves; round up to the
@@ -638,10 +677,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         return [
             ['Computer', model],
             ['Processor', cpu],
-            ['Graphics', gpus[0] ?? ''],
+            ['Graphics', gpu],
             ['Memory', memGb ? `${memGb} GB` : ''],
             ['Storage', storage],
-            ['Kernel', this._commandOutput(['uname', '-r'])],
+            ['Kernel', this._readFile('/proc/sys/kernel/osrelease')],
         ];
     }
 
