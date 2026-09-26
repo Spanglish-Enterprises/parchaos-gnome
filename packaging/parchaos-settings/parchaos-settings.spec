@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -45,6 +45,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
+- Build the window from Adw.ApplicationWindow with a page switcher
+  instead of the deprecated Adw.PreferencesWindow; same pages and
+  layout.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
 - Use the new keyboard style names (super-ctrl, standard); requires
   parchaos-keyboard-remap 0.15.13-6.

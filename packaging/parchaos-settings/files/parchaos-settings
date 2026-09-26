@@ -25,11 +25,20 @@ def keyboard_style():
         return None
 
 
-class Window(Adw.PreferencesWindow):
+class Window(Adw.ApplicationWindow):
+    # A header bar with a page switcher over a stack of preference pages
+    # (what Adw.PreferencesWindow drew, which libadwaita deprecated).
     def __init__(self, app):
         super().__init__(application=app, title='ParchaOS Settings')
-        self.set_default_size(620, 480)
-        self.set_search_enabled(False)
+        self.set_default_size(620, 560)
+
+        self._stack = Adw.ViewStack()
+        header = Adw.HeaderBar(title_widget=Adw.ViewSwitcher(
+            stack=self._stack, policy=Adw.ViewSwitcherPolicy.WIDE))
+        view = Adw.ToolbarView(content=self._stack)
+        view.add_top_bar(header)
+        self._toasts = Adw.ToastOverlay(child=view)
+        self.set_content(self._toasts)
 
         self.add(self._general_page())
         self.add(self._appearance_page())
@@ -55,6 +64,13 @@ class Window(Adw.PreferencesWindow):
         self._super_row.connect('notify::active', self._on_super_toggled)
         group.add(self._super_row)
         self.add(page)
+
+    def add(self, page):
+        self._stack.add_titled_with_icon(page, page.get_title(), page.get_title(),
+                                         page.get_icon_name())
+
+    def add_toast(self, toast):
+        self._toasts.add_toast(toast)
 
     def _desktop_settings(self):
         source = Gio.SettingsSchemaSource.get_default()
