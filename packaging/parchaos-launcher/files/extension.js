@@ -722,9 +722,10 @@ const Launcher = GObject.registerClass({
             text: `Uninstall "${app.get_name()}"?`,
             x_align: Clutter.ActorAlign.CENTER,
         }));
+        const baseText = 'The app will be removed from this computer. Your own files stay where they are.';
         const body = new St.Label({
             style_class: 'parchaos-launcher-confirm-body',
-            text: 'The app will be removed from this computer. Your own files stay where they are.',
+            text: `${baseText}\n\nChecking what will be removed…`,
             x_align: Clutter.ActorAlign.CENTER,
         });
         body.clutter_text.line_wrap = true;
@@ -733,9 +734,34 @@ const Launcher = GObject.registerClass({
         const cancel = new St.Button({label: 'Cancel', style_class: 'parchaos-launcher-confirm-button', x_expand: true, can_focus: true});
         const remove = new St.Button({label: 'Uninstall', style_class: 'parchaos-launcher-confirm-button destructive', x_expand: true, can_focus: true});
         cancel.connect('clicked', () => this._closeConfirm());
+        // Uninstall stays off until the helper has worked out everything
+        // the removal takes with it, which the dialog then lists.
+        remove.reactive = false;
+        remove.opacity = 128;
         remove.connect('clicked', () => {
             this._closeConfirm();
             this._uninstall(app);
+        });
+        runAsync([this._helper, 'plan', app.get_id()]).then(({stdout}) => {
+            if (this._confirm !== shade)
+                return;
+            let result = {};
+            try {
+                result = JSON.parse(stdout);
+            } catch (e) {
+                result = {error: 'Couldn\'t check what would be removed.'};
+            }
+            const packages = result.packages ?? [];
+            if (result.error || packages.length === 0) {
+                body.text = result.error || 'Couldn\'t check what would be removed.';
+                return;
+            }
+            body.text = packages.length > 1
+                ? `${baseText}\n\nThis also removes: ${packages.join(', ')}.`
+                : baseText;
+            remove.reactive = true;
+            remove.opacity = 255;
+            this._placeConfirmBox(box);
         });
         buttons.add_child(cancel);
         buttons.add_child(remove);
@@ -743,10 +769,15 @@ const Launcher = GObject.registerClass({
         shade.add_child(box);
         this.add_child(shade);
         this._confirm = shade;
+        this._placeConfirmBox(box);
+        cancel.grab_key_focus();
+    }
+
+    _placeConfirmBox(box) {
+        const m = this._monitor;
         const [, natW] = box.get_preferred_width(-1);
         const [, natH] = box.get_preferred_height(natW);
         box.set_position(Math.round((m.width - natW) / 2), Math.round((m.height - natH) / 2));
-        cancel.grab_key_focus();
     }
 
     _closeConfirm() {

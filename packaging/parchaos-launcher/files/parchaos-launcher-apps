@@ -3,13 +3,18 @@
 #
 #   parchaos-launcher-apps removable ID...   print a JSON list of the given
 #                                            desktop IDs that can be removed
+#   parchaos-launcher-apps plan ID           print JSON {"packages": [...]}:
+#                                            everything removing it removes
 #   parchaos-launcher-apps uninstall ID      remove the app that ID belongs to
 #
 # An app is removable when it comes from Flatpak, or from an RPM package
 # that nothing else installed needs (rpm -e --test), that isn't part of
 # ParchaOS itself (parchaos-* or required by parchaos-desktop) and isn't a
-# core desktop component. RPM removal goes through pkexec (the desktop's
-# password prompt); Flatpak removal through flatpak itself.
+# core desktop component. RPM removal goes through dnf5daemon, the same
+# service the app store uses: the plan is resolved first (so the launcher
+# can show every package that goes, including no-longer-needed
+# dependencies), and running it asks for authorization through polkit.
+# Flatpak removal goes through flatpak itself.
 #
 # Original code for ParchaOS, GPL-3.0-or-later.
 
@@ -20,7 +25,9 @@ import sys
 import gi
 
 gi.require_version('GioUnix', '2.0')
-from gi.repository import GioUnix  # noqa: E402
+from gi.repository import Gio, GioUnix, GLib  # noqa: E402
+
+DNF = 'org.rpm.dnf.v0'
 
 # Packages the desktop itself is built from, even when nothing formally
 # requires them.
@@ -79,30 +86,101 @@ def removable(desktop_id):
     return run(['rpm', '-e', '--test', pkg]).returncode == 0
 
 
-def uninstall(desktop_id):
+class DnfSession:
+    """A dnf5daemon session with one package removal resolved."""
+
+    def __init__(self, package):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+        self.path, = self._call('/org/rpm/dnf/v0', 'SessionManager', 'open_session',
+                                GLib.Variant('(a{sv})', ({'load_available_repos': GLib.Variant('b', False)},)),
+                                '(o)')
+        self._call(self.path, 'rpm.Rpm', 'remove',
+                   GLib.Variant('(asa{sv})', ([package], {})), '()')
+        items, result = self._call(self.path, 'Goal', 'resolve',
+                                   GLib.Variant('(a{sv})', ({},)), '(a(sssa{sv}a{sv})u)')
+        self.packages = sorted({pkg.get('name', '') for _obj, action, _r, _a, pkg in items
+                                if action == 'Remove'} - {''})
+        self.problems = []
+        if result != 0:
+            self.problems, = self._call(self.path, 'Goal', 'get_transaction_problems_string',
+                                        None, '(as)')
+
+    def _call(self, path, iface, method, args, rtype, timeout=120000,
+              flags=Gio.DBusCallFlags.NONE):
+        return self.bus.call_sync(DNF, path, f'{DNF}.{iface}', method, args,
+                                  GLib.VariantType(rtype), flags, timeout, None).unpack()
+
+    def run(self):
+        # Interactive: polkit asks for the administrator password.
+        self._call(self.path, 'Goal', 'do_transaction', GLib.Variant('(a{sv})', ({},)), '()',
+                   timeout=60 * 60 * 1000, flags=Gio.DBusCallFlags.ALLOW_INTERACTIVE_AUTHORIZATION)
+
+    def close(self):
+        try:
+            self._call('/org/rpm/dnf/v0', 'SessionManager', 'close_session',
+                       GLib.Variant('(o)', (self.path,)), '(b)')
+        except GLib.Error:
+            pass
+
+
+def plan(desktop_id):
+    """Names of every package removing this app would remove."""
     if not removable(desktop_id):
-        print('This app is part of the system and can\'t be removed here.',
-              file=sys.stderr)
+        return None, 'This app is part of the system and can\'t be removed here.'
+    src = source_of(desktop_id)
+    if src[0] == 'flatpak':
+        return [src[1]], None
+    session = DnfSession(src[1])
+    try:
+        if session.problems:
+            return None, session.problems[0].splitlines()[0]
+        # Never let the plan reach into ParchaOS or the core desktop.
+        blocked = [p for p in session.packages
+                   if p.startswith('parchaos') or p in protected()]
+        if blocked:
+            return None, f'Removing it would also remove {", ".join(blocked)}.'
+        return session.packages, None
+    finally:
+        session.close()
+
+
+def uninstall(desktop_id):
+    packages, error = plan(desktop_id)
+    if packages is None:
+        print(error, file=sys.stderr)
         return 1
     src = source_of(desktop_id)
     if src[0] == 'flatpak':
-        argv = ['flatpak', 'uninstall', '-y', '--noninteractive', src[2], src[1]]
-    else:
-        argv = ['pkexec', '/usr/bin/dnf', 'remove', '-y', src[1]]
-    out = run(argv)
-    if out.returncode != 0:
-        msg = (out.stderr or out.stdout).strip().splitlines()
-        print(msg[-1] if msg else 'Removal failed.', file=sys.stderr)
-    return out.returncode
+        out = run(['flatpak', 'uninstall', '-y', '--noninteractive', src[2], src[1]])
+        if out.returncode != 0:
+            msg = (out.stderr or out.stdout).strip().splitlines()
+            print(msg[-1] if msg else 'Removal failed.', file=sys.stderr)
+        return out.returncode
+    session = DnfSession(src[1])
+    try:
+        if session.packages != packages:
+            print('The system changed; try again.', file=sys.stderr)
+            return 1
+        session.run()
+    except GLib.Error as e:
+        print(GLib.dbus_error_strip_remote_error(e) or 'Removal failed.', file=sys.stderr)
+        return 1
+    finally:
+        session.close()
+    return 0
 
 
 def main(argv):
     if len(argv) >= 2 and argv[1] == 'removable':
         print(json.dumps([i for i in argv[2:] if removable(i)]))
         return 0
+    if len(argv) == 3 and argv[1] == 'plan':
+        packages, error = plan(argv[2])
+        print(json.dumps({'packages': packages or [], 'error': error}))
+        return 0 if packages is not None else 1
     if len(argv) == 3 and argv[1] == 'uninstall':
         return uninstall(argv[2])
-    print('usage: parchaos-launcher-apps removable ID... | uninstall ID',
+    print('usage: parchaos-launcher-apps removable ID... | plan ID | uninstall ID',
           file=sys.stderr)
     return 2
 

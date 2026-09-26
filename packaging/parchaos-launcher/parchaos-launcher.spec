@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -24,6 +24,7 @@ Source3:        parchaos-launcher-apps
 
 BuildArch:      noarch
 
+Requires:       dnf5daemon-server
 Requires:       gnome-shell >= 48
 # Edit mode's helper (removability checks and uninstall).
 Requires:       python3-gobject
@@ -55,6 +56,11 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-8
+- Uninstall goes through dnf5daemon instead of pkexec dnf remove -y: the
+  confirmation lists every package the removal takes with it, refuses
+  plans that would touch ParchaOS or core packages, and asks for
+  authorization through polkit.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7
 - Arrow keys and Enter work inside an open folder (Enter no longer opens the hidden main grid's selection); page and scroll timers are removed when the launcher closes.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
