@@ -50,6 +50,9 @@ PROFILE_REPO_PACKAGES=(
     # session's apps and windows at login.
     parchaos-session
 
+    # Live Clock and Calendar icons (packaging/parchaos-live-icons/).
+    parchaos-live-icons
+
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # MacTahoe-gtk-theme (MIT), dark variant. Installs as

@@ -1,0 +1,11 @@
+{
+  "uuid": "parchaos-live-icons@parchaos.org",
+  "name": "ParchaOS Live Icons",
+  "description": "Live app icons: the Clock icon shows the current time and the Calendar icon shows today's date, in the dock and the launcher.",
+  "shell-version": [
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/alexgalicea/parchaos-gnome"
+}
