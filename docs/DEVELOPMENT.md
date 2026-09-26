@@ -193,6 +193,16 @@ package too, so the profile removes `openh264` with `rpm -e --nodeps`
 and then installs `noopenh264` with the Cisco repo disabled, in a single
 container call.
 
+## Public surface audit
+
+`scripts/public-surface-audit.sh` (read-only) lists the COPR projects,
+their packages and what the repo metadata actually serves, plus the
+GitHub repositories, releases and release assets of the owner accounts.
+It flags removed or third-party material (pearOS, Pafari, Finder,
+macOS-remap, TMOG, pre-rewrite global-menu and cloud builds) and
+ParchaOS-related repositories that are public by mistake. Run it before
+every release.
+
 ## License
 
 - **Code, packaging and docs** written for ParchaOS: **GPL-3.0-or-later**
