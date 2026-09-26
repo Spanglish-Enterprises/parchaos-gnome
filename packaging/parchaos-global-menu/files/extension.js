@@ -309,6 +309,9 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const icon = new St.Icon({
             gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon-symbolic.svg`),
             style_class: 'parchaos-menubar-logo-icon',
+            // Set in code: the shell theme's panel icon rules can override
+            // a CSS icon-size and blew the logo up to ~28 px.
+            icon_size: 16,
             y_align: Clutter.ActorAlign.CENTER,
         });
         logoBtn.add_child(icon);

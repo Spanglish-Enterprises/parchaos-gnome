@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -93,6 +93,10 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-5
+- Fix the new menu bar logo rendering at ~28 px on the real desktop: set
+  its size in code (icon_size) and pin width/height, since the shell
+  theme's panel icon rules overrode the CSS icon-size.
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-4
 - Menu bar logo is now a symbolic SVG drawn for 16 px (was a 570 px PNG
   scaled down): crisp edges, follows the panel text color, and vertically
