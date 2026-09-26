@@ -1,0 +1,226 @@
+diff --git a/panels/meson.build b/panels/meson.build
+index 07c7733..445c454 100644
+--- a/panels/meson.build
++++ b/panels/meson.build
+@@ -13,6 +13,7 @@ panels = [
+   'multitasking',
+   'notifications',
+   'online-accounts',
++  'parchaos',
+   'power',
+   'printers',
+   'privacy',
+diff --git a/panels/parchaos/cc-parchaos-panel.c b/panels/parchaos/cc-parchaos-panel.c
+new file mode 100644
+index 0000000..c54081b
+--- /dev/null
++++ b/panels/parchaos/cc-parchaos-panel.c
+@@ -0,0 +1,76 @@
++/* cc-parchaos-panel.c
++ *
++ * Settings sidebar entry for ParchaOS. ParchaOS keeps its own preferences
++ * (keyboard style, appearance style, ...) in a separate app, ParchaOS
++ * Settings, so this panel explains that and opens it. Keeping the patch
++ * to Settings this small is what lets it carry across GNOME releases.
++ *
++ * SPDX-License-Identifier: GPL-2.0-or-later
++ */
++
++#include <gio/gdesktopappinfo.h>
++
++#include "cc-parchaos-panel.h"
++
++#define PARCHAOS_SETTINGS_DESKTOP "org.parchaos.Settings.desktop"
++
++struct _CcParchaosPanel
++{
++  CcPanel    parent_instance;
++
++  GtkWidget *open_button;
++};
++
++G_DEFINE_TYPE (CcParchaosPanel, cc_parchaos_panel, CC_TYPE_PANEL)
++
++static void
++open_parchaos_settings (CcParchaosPanel *self)
++{
++  g_autoptr(GDesktopAppInfo) info = g_desktop_app_info_new (PARCHAOS_SETTINGS_DESKTOP);
++  g_autoptr(GAppLaunchContext) context = NULL;
++  g_autoptr(GError) error = NULL;
++
++  if (info == NULL)
++    return;
++
++  context = G_APP_LAUNCH_CONTEXT (gdk_display_get_app_launch_context (gtk_widget_get_display (GTK_WIDGET (self))));
++  if (!g_app_info_launch (G_APP_INFO (info), NULL, context, &error))
++    g_warning ("Could not open ParchaOS Settings: %s", error->message);
++}
++
++static void
++cc_parchaos_panel_class_init (CcParchaosPanelClass *klass)
++{
++}
++
++static void
++cc_parchaos_panel_init (CcParchaosPanel *self)
++{
++  g_autoptr(GDesktopAppInfo) info = g_desktop_app_info_new (PARCHAOS_SETTINGS_DESKTOP);
++  GtkWidget *toolbar_view;
++  GtkWidget *status;
++
++  adw_navigation_page_set_title (ADW_NAVIGATION_PAGE (self), "ParchaOS");
++
++  toolbar_view = adw_toolbar_view_new ();
++  adw_toolbar_view_add_top_bar (ADW_TOOLBAR_VIEW (toolbar_view), adw_header_bar_new ());
++
++  status = adw_status_page_new ();
++  adw_status_page_set_icon_name (ADW_STATUS_PAGE (status), "org.gnome.Settings-parchaos-symbolic");
++  adw_status_page_set_title (ADW_STATUS_PAGE (status), "ParchaOS");
++  adw_status_page_set_description (ADW_STATUS_PAGE (status),
++                                   info != NULL
++                                   ? "Settings made for ParchaOS, like how the Super key works, are in ParchaOS Settings."
++                                   : "ParchaOS Settings isn't installed.");
++
++  self->open_button = gtk_button_new_with_label ("Open ParchaOS Settings");
++  gtk_widget_set_halign (self->open_button, GTK_ALIGN_CENTER);
++  gtk_widget_add_css_class (self->open_button, "pill");
++  gtk_widget_add_css_class (self->open_button, "suggested-action");
++  gtk_widget_set_sensitive (self->open_button, info != NULL);
++  g_signal_connect_swapped (self->open_button, "clicked", G_CALLBACK (open_parchaos_settings), self);
++  adw_status_page_set_child (ADW_STATUS_PAGE (status), self->open_button);
++
++  adw_toolbar_view_set_content (ADW_TOOLBAR_VIEW (toolbar_view), status);
++  adw_navigation_page_set_child (ADW_NAVIGATION_PAGE (self), toolbar_view);
++}
+diff --git a/panels/parchaos/cc-parchaos-panel.h b/panels/parchaos/cc-parchaos-panel.h
+new file mode 100644
+index 0000000..e7c9e10
+--- /dev/null
++++ b/panels/parchaos/cc-parchaos-panel.h
+@@ -0,0 +1,18 @@
++/* cc-parchaos-panel.h
++ *
++ * Settings sidebar entry for ParchaOS: points to ParchaOS Settings, the
++ * app that holds preferences specific to ParchaOS.
++ *
++ * SPDX-License-Identifier: GPL-2.0-or-later
++ */
++
++#pragma once
++
++#include <shell/cc-panel.h>
++
++G_BEGIN_DECLS
++
++#define CC_TYPE_PARCHAOS_PANEL (cc_parchaos_panel_get_type())
++G_DECLARE_FINAL_TYPE (CcParchaosPanel, cc_parchaos_panel, CC, PARCHAOS_PANEL, CcPanel)
++
++G_END_DECLS
+diff --git a/panels/parchaos/gnome-parchaos-panel.desktop.in b/panels/parchaos/gnome-parchaos-panel.desktop.in
+new file mode 100644
+index 0000000..efc11a5
+--- /dev/null
++++ b/panels/parchaos/gnome-parchaos-panel.desktop.in
+@@ -0,0 +1,12 @@
++[Desktop Entry]
++Name=ParchaOS
++Comment=Settings made for ParchaOS, like how the Super key works
++Exec=gnome-control-center parchaos
++Icon=org.gnome.Settings-parchaos-symbolic
++Terminal=false
++Type=Application
++NoDisplay=true
++StartupNotify=true
++Categories=GNOME;GTK;Settings;DesktopSettings;X-GNOME-Settings-Panel;X-GNOME-SystemSettings;
++OnlyShowIn=GNOME;
++Keywords=ParchaOS;Super;Ctrl;Command;Keyboard;Style;Appearance;
+diff --git a/panels/parchaos/icons/meson.build b/panels/parchaos/icons/meson.build
+new file mode 100644
+index 0000000..c078fec
+--- /dev/null
++++ b/panels/parchaos/icons/meson.build
+@@ -0,0 +1,4 @@
++install_data(
++  'scalable/org.gnome.Settings-parchaos-symbolic.svg',
++  install_dir: join_paths(control_center_icondir, 'hicolor', 'scalable', 'apps')
++)
+diff --git a/panels/parchaos/icons/scalable/org.gnome.Settings-parchaos-symbolic.svg b/panels/parchaos/icons/scalable/org.gnome.Settings-parchaos-symbolic.svg
+new file mode 100644
+index 0000000..67cf688
+--- /dev/null
++++ b/panels/parchaos/icons/scalable/org.gnome.Settings-parchaos-symbolic.svg
+@@ -0,0 +1,8 @@
++<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
++  <!-- ParchaOS fruit for the menu bar, drawn on the 16 px grid: a round
++       body, a solid 2 px stem on whole pixels, and a bold leaf, so no
++       part renders as a faint half-pixel line at menu-bar size. -->
++  <circle fill="#bebebe" cx="8" cy="9.75" r="5.75"/>
++  <rect fill="#bebebe" x="7" y="1" width="2" height="4"/>
++  <path fill="#bebebe" d="M9 4.6C9 1.6 11.5 0 15 0.4C14.9 3.6 12.6 5.2 9 4.6Z"/>
++</svg>
+diff --git a/panels/parchaos/meson.build b/panels/parchaos/meson.build
+new file mode 100644
+index 0000000..48c71b6
+--- /dev/null
++++ b/panels/parchaos/meson.build
+@@ -0,0 +1,25 @@
++panels_list += cappletname
++desktop = 'gnome-@0@-panel.desktop'.format(cappletname)
++
++i18n.merge_file(
++  type: 'desktop',
++  input: desktop + '.in',
++  output: desktop,
++  po_dir: po_dir,
++  install: true,
++  install_dir: control_center_desktopdir
++)
++
++sources = files(
++  'cc-parchaos-panel.c',
++)
++
++panels_libs += static_library(
++  cappletname,
++  sources: sources,
++  include_directories: [ top_inc, common_inc ],
++  dependencies: common_deps,
++  c_args: cflags
++)
++
++subdir('icons')
+diff --git a/shell/cc-panel-list.c b/shell/cc-panel-list.c
+index 2b59587..b70e474 100644
+--- a/shell/cc-panel-list.c
++++ b/shell/cc-panel-list.c
+@@ -407,6 +407,10 @@ static const gchar * const panel_order[] = {
+   "privacy",
+   "system",
+   "reset-settings",
++
++  "separator",
++
++  "parchaos",
+ };
+ 
+ static guint
+diff --git a/shell/cc-panel-loader.c b/shell/cc-panel-loader.c
+index 28a1671..a2d5473 100644
+--- a/shell/cc-panel-loader.c
++++ b/shell/cc-panel-loader.c
+@@ -42,6 +42,7 @@ extern GType cc_display_panel_get_type (void);
+ extern GType cc_keyboard_panel_get_type (void);
+ extern GType cc_mouse_panel_get_type (void);
+ extern GType cc_multitasking_panel_get_type (void);
++extern GType cc_parchaos_panel_get_type (void);
+ #ifdef BUILD_NETWORK
+ extern GType cc_network_panel_get_type (void);
+ extern GType cc_wifi_panel_get_type (void);
+@@ -102,6 +103,7 @@ static CcPanelLoaderVtable default_panels[] =
+ #endif
+   PANEL_TYPE("notifications",    cc_notifications_panel_get_type,        NULL),
+   PANEL_TYPE("online-accounts",  cc_online_accounts_panel_get_type,      NULL),
++  PANEL_TYPE("parchaos",         cc_parchaos_panel_get_type,             NULL),
+   PANEL_TYPE("power",            cc_power_panel_get_type,                NULL),
+   PANEL_TYPE("printers",         cc_printers_panel_get_type,             NULL),
+   PANEL_TYPE("privacy",          cc_privacy_panel_get_type,              NULL),

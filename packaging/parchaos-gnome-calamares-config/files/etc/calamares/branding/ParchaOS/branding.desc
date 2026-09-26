@@ -212,8 +212,8 @@ slideshow:               "show.qml"
 # An image slideshow does not need to have the API defined.
 slideshowAPI: 2
 
-# log feature
+# log feature: disabled. Calamares' default uploads the install log
+# unencrypted to a public paste service (termbin.com), where anyone with
+# the link can read it (disk layout, hostname, user name, hardware).
 uploadServer :
-    type :    "fiche"
-    url :     "http://termbin.com:9999"
-    sizeLimit : -1
+    type :    "none"

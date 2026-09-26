@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -117,6 +117,10 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 /usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 23
+- Security: disable Calamares' install-log upload. The default sent the
+  log unencrypted to a public paste service (termbin.com), readable by
+  anyone with the link (disk layout, hostname, user name, hardware).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-22
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.
