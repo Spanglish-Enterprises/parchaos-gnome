@@ -424,17 +424,133 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const dialog = new ModalDialog.ModalDialog({ styleClass: 'parchaos-about-dialog' });
         const box = new St.BoxLayout({ vertical: true, style_class: 'parchaos-about-box' });
 
-        const osRelease = this._readOsRelease();
-        const [, kernel] = GLib.spawn_command_line_sync('uname -r');
-        const kernelText = kernel ? new TextDecoder().decode(kernel).trim() : 'unknown';
+        const logo = new St.Icon({
+            gicon: Gio.icon_new_for_string(`${this.path}/parchaos-menu-icon-symbolic.svg`),
+            icon_size: 88,
+            style_class: 'parchaos-about-logo',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        box.add_child(logo);
 
-        box.add_child(new St.Label({ text: osRelease.name ?? 'ParchaOS', style_class: 'parchaos-about-title' }));
-        box.add_child(new St.Label({ text: `Version: ${osRelease.version ?? 'unknown'}` }));
-        box.add_child(new St.Label({ text: `Kernel: ${kernelText}` }));
+        const osRelease = this._readOsRelease();
+        box.add_child(new St.Label({
+            text: osRelease.name ?? 'ParchaOS',
+            style_class: 'parchaos-about-title',
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
+        const gnome = this._commandOutput(['gnome-shell', '--version']).replace(/^GNOME Shell\s*/, '');
+        const version = [osRelease.version ? `Version ${osRelease.version}` : null,
+            gnome ? `GNOME ${gnome}` : null].filter(v => v).join(' · ');
+        box.add_child(new St.Label({
+            text: version || 'Version unknown',
+            style_class: 'parchaos-about-version',
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
+
+        const specs = new St.Widget({
+            style_class: 'parchaos-about-specs',
+            layout_manager: new Clutter.GridLayout({ column_spacing: 14, row_spacing: 6 }),
+        });
+        let row = 0;
+        for (const [label, value] of this._systemSpecs()) {
+            if (!value)
+                continue;
+            const l = new St.Label({ text: label, style_class: 'parchaos-about-spec-label', x_align: Clutter.ActorAlign.END });
+            const v = new St.Label({ text: value, style_class: 'parchaos-about-spec-value', x_expand: true });
+            v.clutter_text.line_wrap = true;
+            specs.layout_manager.attach(l, 0, row, 1, 1);
+            specs.layout_manager.attach(v, 1, row, 1, 1);
+            row++;
+        }
+        box.add_child(specs);
+
+        box.add_child(new St.Label({
+            text: 'ParchaOS is built on Fedora Linux and GNOME.',
+            style_class: 'parchaos-about-footer',
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
 
         dialog.contentLayout.add_child(box);
-        dialog.setButtons([{ label: 'Close', action: () => dialog.close(), default: true }]);
+        dialog.setButtons([
+            {
+                label: 'More Info…',
+                action: () => {
+                    dialog.close();
+                    try {
+                        Gio.Subprocess.new(['gnome-control-center', 'system', 'about'], Gio.SubprocessFlags.NONE);
+                    } catch (e) {
+                        logError(e, 'parchaos-global-menu: could not open Settings');
+                    }
+                },
+            },
+            { label: 'Close', action: () => dialog.close(), default: true },
+        ]);
         dialog.open();
+    }
+
+    _commandOutput(argv) {
+        try {
+            const [ok, out] = GLib.spawn_command_line_sync(argv.map(a => GLib.shell_quote(a)).join(' '));
+            return ok && out ? new TextDecoder().decode(out).trim() : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    _readFile(path) {
+        try {
+            const [ok, contents] = GLib.file_get_contents(path);
+            return ok ? new TextDecoder().decode(contents).trim() : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // [label, value] rows for the About card; empty values are skipped.
+    _systemSpecs() {
+        const vendor = this._readFile('/sys/class/dmi/id/sys_vendor');
+        const product = this._readFile('/sys/class/dmi/id/product_name');
+        const board = this._readFile('/sys/class/dmi/id/board_name');
+        const model = [vendor, product && !/to be filled|system product name/i.test(product) ? product : board]
+            .filter(v => v && !/to be filled/i.test(v)).join(' ');
+
+        const cpuinfo = this._readFile('/proc/cpuinfo');
+        const cpu = (cpuinfo.match(/^model name\s*:\s*(.+)$/m)?.[1] ?? '')
+            .replace(/\(R\)|\(TM\)/g, '').replace(/\s+/g, ' ').trim();
+
+        // Graphics: the main display controller (discrete before integrated).
+        const gpus = this._commandOutput(['lspci', '-mm']).split('\n')
+            .filter(l => /"(VGA compatible controller|3D controller|Display controller)"/.test(l))
+            .map(l => {
+                const f = [...l.matchAll(/"([^"]*)"/g)].map(m => m[1]);
+                const name = (f[2] ?? '').replace(/^.*\[(.+)\]$/, '$1');
+                const brand = /AMD|ATI/.test(f[1]) ? 'AMD' : /NVIDIA/i.test(f[1]) ? 'NVIDIA' : /Intel/i.test(f[1]) ? 'Intel' : '';
+                return `${brand} ${name}`.trim();
+            })
+            .sort((a, b) => /Graphics$/.test(a) - /Graphics$/.test(b));
+
+        const memKb = Number(this._readFile('/proc/meminfo').match(/^MemTotal:\s*(\d+)/m)?.[1] ?? 0);
+        // MemTotal excludes memory the kernel reserves; round up to the
+        // installed size (installed RAM comes in even gigabytes).
+        const memGb = memKb ? Math.ceil(memKb / 1024 / 1024 / 2) * 2 : 0;
+
+        let storage = '';
+        try {
+            const info = Gio.File.new_for_path('/').query_filesystem_info('filesystem::size,filesystem::free', null);
+            const gb = n => `${Math.round(n / 1e9)} GB`;
+            storage = `${gb(info.get_attribute_uint64('filesystem::free'))} available of ${gb(info.get_attribute_uint64('filesystem::size'))}`;
+        } catch (e) {
+            // leave empty
+        }
+
+        return [
+            ['Computer', model],
+            ['Processor', cpu],
+            ['Graphics', gpus[0] ?? ''],
+            ['Memory', memGb ? `${memGb} GB` : ''],
+            ['Storage', storage],
+            ['Kernel', this._commandOutput(['uname', '-r'])],
+        ];
     }
 
     _readOsRelease() {

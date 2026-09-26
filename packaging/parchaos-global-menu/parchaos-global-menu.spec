@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -59,6 +59,8 @@ Requires:       gnome-shell >= 45
 # needed.
 Requires:       libgweather
 Requires:       geoclue2
+# About card: graphics adapter name.
+Requires:       pciutils
 
 %description
 ParchaOS's global application menu bar for GNOME Shell: an
@@ -93,6 +95,10 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-9
+- New About ParchaOS card: large logo, name, version with the GNOME
+  release, a spec sheet (computer, processor, graphics, memory rounded to
+  the installed size, storage, kernel), and More Info… (Settings → About).
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-8
 - Menu bar follows the macOS 26-era reference values instead of the
   macOS 27 ones: 11 px item padding (22 px gaps), bold app name, a soft
