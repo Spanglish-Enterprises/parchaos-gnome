@@ -26,6 +26,25 @@ profile_customize() {
     echo "--- Branding /etc/os-release as ParchaOS ---"
     run_in_target /usr/libexec/parchaos-os-release
 
+    # The live session (livesys runs this hook at live boot only; it never
+    # reaches installed systems): put the installer first in the dock, and
+    # don't lock the screen or blank it while someone reads the installer.
+    echo "--- Live session setup (installer in the dock, no screen lock) ---"
+    mkdir -p "$ROOTFS_TARGET/var/lib/livesys"
+    cat > "$ROOTFS_TARGET/var/lib/livesys/livesys-session-extra" <<'LIVE'
+cat > /usr/share/glib-2.0/schemas/zz-parchaos-live.gschema.override << FOE
+[org.gnome.shell]
+favorite-apps=['calamares.desktop', 'org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+[org.gnome.desktop.screensaver]
+lock-enabled=false
+
+[org.gnome.desktop.session]
+idle-delay=uint32 0
+FOE
+glib-compile-schemas /usr/share/glib-2.0/schemas
+LIVE
+
     echo "--- Setting default hostname: parchaos ---"
     echo "parchaos" > "$ROOTFS_TARGET/etc/hostname"
 

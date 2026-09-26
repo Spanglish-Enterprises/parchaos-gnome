@@ -261,3 +261,34 @@ QPushButton#aboutButton { qproperty-icon: url(:/data/images/release.svg); }
 #licenseItem {  }
 #licenseItemFullText {  }
 */
+
+/* Check boxes and radio buttons: the dark QWidget background above
+   hid their indicators until checked. Give them a visible outline,
+   filled when on. */
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #8e8e93;
+    background-color: #2c2c2e;
+}
+QCheckBox::indicator {
+    border-radius: 3px;
+}
+QRadioButton::indicator {
+    border-radius: 8px;
+}
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: #c7c7cc;
+}
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    border-color: #0a84ff;
+    background-color: #0a84ff;
+}
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    border-color: #48484a;
+    background-color: #1f1f1f;
+}
+QRadioButton::indicator:checked {
+    background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+        stop:0 #ffffff, stop:0.35 #ffffff, stop:0.45 #0a84ff, stop:1 #0a84ff);
+}
