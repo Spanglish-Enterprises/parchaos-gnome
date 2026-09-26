@@ -39,7 +39,7 @@
 
 Name:           parchaos-tmog
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Launcher for TMOG (Task Manager OG), fetched from the official vendor on first run
 
 License:        NOASSERTION
@@ -76,6 +76,10 @@ chmod 0755 %{buildroot}%{_bindir}/parchaos-tmog-launch
 %{_datadir}/applications/org.parchaos.TMOG.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Verify the downloaded TMOG AppImage against a pinned SHA-256 before
+  running it, and keep launch errors in a private temporary file instead
+  of a fixed name in /tmp.
 * Tue Sep 22 2026 ParchaOS packaging - 1.0.0-1
 - Initial package under the parchaos-* name (product rebrand from
   plumOS to ParchaOS). .desktop launcher + first-run-fetch wrapper

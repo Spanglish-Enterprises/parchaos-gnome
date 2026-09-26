@@ -11,6 +11,10 @@ set -euo pipefail
 CACHE_DIR="$HOME/.local/share/parchaos-tmog"
 APPIMAGE="$CACHE_DIR/TaskManagerOG-x86_64.AppImage"
 DOWNLOAD_URL="https://tmog.org/downloads/TaskManagerOG-0.1.4-x86_64.AppImage"
+# SHA-256 of that exact release. The download only runs if it matches, so
+# a changed or tampered file on the server is never executed. Update both
+# together when moving to a new TMOG release.
+SHA256="a9873347ee2b1a4895cf2c8f39660d8cf4b86ab89b24c08d541f237e365b4346"
 
 notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send "TMOG" "$1" || echo "$1" >&2
@@ -25,6 +29,11 @@ if [ ! -x "$APPIMAGE" ]; then
         notify "Failed to download TMOG. Check your network connection and try again."
         exit 1
     fi
+    if ! echo "$SHA256  $TMP" | sha256sum --check --status; then
+        rm -f "$TMP"
+        notify "The TMOG download didn't match the expected release, so it wasn't opened. Try again later."
+        exit 1
+    fi
     chmod +x "$TMP"
     mv "$TMP" "$APPIMAGE"
 fi
@@ -32,10 +41,15 @@ fi
 # AppImages need FUSE to mount themselves; not every Fedora install has
 # libfuse2 present (Fedora 44 defaults to fuse3). Fall back to
 # extract-and-run, which needs no FUSE at all, if the direct launch fails.
-if ! "$APPIMAGE" "$@" 2>/tmp/parchaos-tmog-launch.err; then
-    if grep -qi fuse /tmp/parchaos-tmog-launch.err 2>/dev/null; then
+# Error output goes to a private temporary file (not a fixed /tmp name
+# another user could pre-create).
+ERR=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/parchaos-tmog.XXXXXX")
+trap 'rm -f "$ERR"' EXIT
+if ! "$APPIMAGE" "$@" 2>"$ERR"; then
+    if grep -qi fuse "$ERR" 2>/dev/null; then
+        rm -f "$ERR"
         exec "$APPIMAGE" --appimage-extract-and-run "$@"
     fi
-    cat /tmp/parchaos-tmog-launch.err >&2
+    cat "$ERR" >&2
     exit 1
 fi
