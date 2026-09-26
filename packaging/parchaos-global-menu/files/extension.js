@@ -273,7 +273,11 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         // setting (e.g. Just Perfection's) doesn't spread the menus out.
         let pos = 1;
         for (const button of this._menuBarButtons) {
-            const pad = button.roleId === 'logo' ? 8 : 6;
+            // Padding from the reference menu bar: the logo item is 33 px
+            // wide around a 16 px glyph, the app name ~10 px, menu items
+            // 9 px each side with no gap between them.
+            const pad = {logo: 8, app: 10}[button.roleId] ?? 9;
+            button.add_style_class_name('parchaos-menubar-button');
             button.set_style(`-natural-hpadding: ${pad}px; -minimum-hpadding: ${pad}px;`);
             Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, pos++, 'left');
         }

@@ -4,20 +4,46 @@
     icon-size: 16px;
     width: 16px;
     height: 16px;
-    padding: 0 4px;
+}
+
+/* Menu bar items: 13 px text, semibold items and a heavy app name, and a
+   faint pill-shaped highlight on hover and while a menu is open (the
+   reference uses a ~8% white pill; slightly stronger here since GNOME has
+   no plus-lighter blend). The theme's label padding rule wins over ours,
+   so spacing comes from each button's -natural-hpadding instead. */
+#panel .panel-button.parchaos-menubar-button {
+    border-radius: 999px;
+    /* The highlight is ~24 px tall in the reference, not the full bar. */
+    margin: 4px 0;
+}
+
+/* No highlight for plain keyboard focus (the theme adds one), only for
+   hover and an open menu. */
+#panel .panel-button.parchaos-menubar-button:focus {
+    box-shadow: none;
+    background-color: transparent;
+}
+
+#panel .panel-button.parchaos-menubar-button:hover {
+    box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+#panel .panel-button.parchaos-menubar-button:active,
+#panel .panel-button.parchaos-menubar-button:checked {
+    box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.16);
 }
 
 .parchaos-menubar-app-label {
-    font-weight: bold;
+    font-weight: 800;
     color: #ffffff;
-    padding: 0 4px;
     font-size: 13px;
 }
 
 .parchaos-menubar-label {
-    font-weight: normal;
+    font-weight: 600;
     color: #ffffff;
-    padding: 0 4px;
     font-size: 13px;
     transition: color 0.15s ease;
 }

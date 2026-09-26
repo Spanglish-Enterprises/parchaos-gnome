@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -93,6 +93,12 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-7
+- Menu bar measured against a reference UI kit: 9 px padding per item
+  with no extra gap, 10 px for the app name, 33 px logo item; menu items
+  semibold (600) and the app name extra-bold (800).
+- Hover/open highlight is a ~24 px tall pill (was the theme's full-height
+  inset shadow), and plain keyboard focus no longer highlights the logo.
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-6
 - Menu bar spacing matches the reference bar: buttons set their own
   horizontal padding (6 px, 8 px for the logo) instead of inheriting a
