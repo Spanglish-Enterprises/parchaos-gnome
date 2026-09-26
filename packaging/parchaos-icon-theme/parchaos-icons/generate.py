@@ -166,8 +166,91 @@ ICONS = {
     'parchaos-disks': (disks, ['gnome-disks']),
 }
 
+
+# --- Places (no tile): violet folders with a gold tab, a light glyph for
+# the folder's purpose, and the trash. ---
+
+FOLDER_DEFS = ('<defs><linearGradient id="front" x1="0" y1="0" x2="0" y2="1">'
+               '<stop offset="0" stop-color="#a98cf6"/><stop offset="1" stop-color="#7654dc"/></linearGradient>'
+               '<filter id="fsh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.2"/></filter></defs>')
+
+GLYPH = 'fill="#fff" fill-opacity="0.55"'
+FOLDER_GLYPHS = {
+    'plain': '',
+    'documents': (f'<rect x="212" y="258" width="88" height="112" rx="10" {GLYPH}/>'
+                  '<rect x="228" y="284" width="56" height="8" rx="4" fill="#7654dc"/>'
+                  '<rect x="228" y="304" width="56" height="8" rx="4" fill="#7654dc"/>'
+                  '<rect x="228" y="324" width="36" height="8" rx="4" fill="#7654dc"/>'),
+    'download': (f'<path d="M256 256 V330 M222 300 L256 334 L290 300" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>'
+                 f'<rect x="206" y="352" width="100" height="16" rx="8" {GLYPH}/>'),
+    'music': (f'<path d="M238 346 V270 L298 258 V334" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="14" stroke-linejoin="round"/>'
+              f'<circle cx="226" cy="348" r="18" {GLYPH}/><circle cx="286" cy="336" r="18" {GLYPH}/>'),
+    'images': (f'<rect x="202" y="262" width="108" height="92" rx="12" {GLYPH}/>'
+               '<path d="M212 344 L244 304 L266 328 L282 312 L302 344z" fill="#7654dc"/>'
+               '<circle cx="284" cy="286" r="10" fill="#f2b632"/>'),
+    'videos': (f'<rect x="200" y="266" width="112" height="84" rx="14" {GLYPH}/>'
+               '<path d="M246 288 L276 308 L246 328z" fill="#7654dc"/>'),
+    'desktop': (f'<rect x="200" y="262" width="112" height="72" rx="10" {GLYPH}/>'
+                f'<rect x="246" y="334" width="20" height="18" {GLYPH}/><rect x="226" y="350" width="60" height="10" rx="5" {GLYPH}/>'),
+    'home': (f'<path d="M256 254 L312 300 V360 H200 V300z" {GLYPH}/>'
+             '<rect x="240" y="320" width="32" height="40" rx="6" fill="#7654dc"/>'),
+    'templates': (f'<rect x="206" y="262" width="100" height="100" rx="12" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="12"/>'
+                  f'<path d="M206 300 H306 M246 300 V362" stroke="#fff" stroke-opacity="0.6" stroke-width="12"/>'),
+    'public': (f'<circle cx="232" cy="290" r="20" {GLYPH}/><circle cx="286" cy="290" r="20" {GLYPH}/>'
+               f'<path d="M196 356a36 32 0 0 1 72 0z" {GLYPH}/><path d="M250 356a36 32 0 0 1 72 0z" {GLYPH}/>'),
+    'remote': (f'<circle cx="256" cy="310" r="50" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="12"/>'
+               f'<path d="M206 310 H306 M256 260 C228 290 228 330 256 360 C284 330 284 290 256 260" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="10"/>'),
+}
+
+
+def folder(glyph, open_=False):
+    back = ('<path d="M76 108 h120 a20 20 0 0 1 16 8 l22 30 h204 a28 28 0 0 1 28 28 v214 H48 V136 a28 28 0 0 1 28-28z" fill="#5b3fb0"/>'
+            '<path d="M76 108 h120 a20 20 0 0 1 16 8 l22 30 H48 V136 a28 28 0 0 1 28-28z" fill="#f2b632"/>')
+    if open_:
+        front = '<path d="M60 206 H468 a20 20 0 0 1 19 26 L452 390 a28 28 0 0 1 -27 22 H87 a28 28 0 0 1 -27 -22 L25 232 a20 20 0 0 1 19 -26z" fill="url(#front)" filter="url(#fsh)"/>'
+    else:
+        front = '<rect x="40" y="176" width="432" height="244" rx="28" fill="url(#front)" filter="url(#fsh)"/>'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' + FOLDER_DEFS + back + front
+            + '<rect x="41" y="177" width="430" height="3" rx="1.5" fill="#fff" fill-opacity="0.35"/>'
+            + FOLDER_GLYPHS[glyph] + '</svg>\n')
+
+
+def trash(full):
+    papers = ('<path d="M168 132 l40 -30 l56 34 l-24 42z" fill="#fff"/>'
+              '<path d="M250 118 l58 -18 l30 50 l-50 24z" fill="#f6e4b8"/>'
+              '<path d="M312 138 l44 10 l-10 46 l-40 -6z" fill="#fff"/>') if full else ''
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>'
+            '<linearGradient id="bin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9cfdc"/><stop offset="1" stop-color="#8e97ab"/></linearGradient>'
+            '<filter id="tsh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.22"/></filter></defs>'
+            + papers +
+            '<path d="M132 176 H380 L356 430 a24 24 0 0 1 -24 22 H180 a24 24 0 0 1 -24 -22z" fill="url(#bin)" filter="url(#tsh)"/>'
+            '<rect x="112" y="150" width="288" height="44" rx="22" fill="#7a55d6"/>'
+            '<rect x="112" y="150" width="288" height="14" rx="7" fill="#fff" fill-opacity="0.3"/>'
+            '<g fill="#fff" fill-opacity="0.35"><rect x="162" y="250" width="188" height="12" rx="6"/>'
+            '<rect x="170" y="310" width="172" height="12" rx="6"/><rect x="178" y="370" width="156" height="12" rx="6"/></g>'
+            '</svg>\n')
+
+
+# name -> (svg text factory, MacTahoe places file(s) it replaces)
+PLACES = {
+    'parchaos-folder': (lambda: folder('plain'), ['folder']),
+    'parchaos-folder-open': (lambda: folder('plain', open_=True), ['folder-open']),
+    'parchaos-folder-documents': (lambda: folder('documents'), ['folder-documents']),
+    'parchaos-folder-download': (lambda: folder('download'), ['folder-download']),
+    'parchaos-folder-music': (lambda: folder('music'), ['folder-music']),
+    'parchaos-folder-images': (lambda: folder('images'), ['folder-images']),
+    'parchaos-folder-videos': (lambda: folder('videos'), ['folder-videos']),
+    'parchaos-folder-desktop': (lambda: folder('desktop'), ['user-desktop']),
+    'parchaos-folder-home': (lambda: folder('home'), ['user-home']),
+    'parchaos-folder-templates': (lambda: folder('templates'), ['folder-templates']),
+    'parchaos-folder-public': (lambda: folder('public'), ['folder-public']),
+    'parchaos-folder-remote': (lambda: folder('remote'), ['folder-html']),
+    'parchaos-trash': (lambda: trash(False), ['user-trash']),
+    'parchaos-trash-full': (lambda: trash(True), ['user-trash-full']),
+}
+
 if __name__ == '__main__':
-    for name, (gen, _targets) in ICONS.items():
+    for name, (gen, _targets) in {**ICONS, **PLACES}.items():
         with open(os.path.join(HERE, f'{name}.svg'), 'w') as f:
             f.write(gen())
-    print(f'wrote {len(ICONS)} icons')
+    print(f'wrote {len(ICONS) + len(PLACES)} icons')

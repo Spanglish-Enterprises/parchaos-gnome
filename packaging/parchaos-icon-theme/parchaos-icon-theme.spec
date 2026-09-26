@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,21 @@ Source13:        parchaos-weather.svg
 Source14:        parchaos-screenshot.svg
 Source15:        parchaos-system-monitor.svg
 Source16:        parchaos-disks.svg
+# Batch 3 (ticket #13): folders and trash (places), generated too.
+Source17:       parchaos-folder.svg
+Source18:       parchaos-folder-open.svg
+Source19:       parchaos-folder-documents.svg
+Source20:       parchaos-folder-download.svg
+Source21:       parchaos-folder-music.svg
+Source22:       parchaos-folder-images.svg
+Source23:       parchaos-folder-videos.svg
+Source24:       parchaos-folder-desktop.svg
+Source25:       parchaos-folder-home.svg
+Source26:       parchaos-folder-templates.svg
+Source27:       parchaos-folder-public.svg
+Source28:       parchaos-folder-remote.svg
+Source29:       parchaos-trash.svg
+Source30:       parchaos-trash-full.svg
 
 BuildArch:      noarch
 
@@ -94,6 +109,43 @@ for theme in MacTahoe MacTahoe-dark; do
     done
 done
 
+# Places: violet ParchaOS folders and the trash replace MacTahoe's
+# Apple-look ones. Unlike apps/, each variant has its own places/ dir.
+# The fixed-size copies (16/22/24) are overwritten with the same scalable
+# SVGs (other icons link to them), so the new art shows at every size.
+for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+    d=%{buildroot}%{_datadir}/icons/$theme/places/scalable
+    for pair in \
+                folder:%{SOURCE17} folder-open:%{SOURCE18} folder-documents:%{SOURCE19} \
+                folder-download:%{SOURCE20} folder-music:%{SOURCE21} folder-images:%{SOURCE22} \
+                folder-videos:%{SOURCE23} user-desktop:%{SOURCE24} user-home:%{SOURCE25} \
+                folder-templates:%{SOURCE26} folder-public:%{SOURCE27} folder-html:%{SOURCE28} \
+                user-trash:%{SOURCE29} user-trash-full:%{SOURCE30}; do
+        name=${pair%%%%:*}; src=${pair#*:}
+        if [ -e "$d/$name.svg" ] || [ -L "$d/$name.svg" ]; then
+            rm -f "$d/$name.svg"
+            install -m 0644 "$src" "$d/$name.svg"
+        fi
+    done
+    for size in 16 22 24; do
+        sd=%{buildroot}%{_datadir}/icons/$theme/places/$size
+        [ -d "$sd" ] || continue
+        for pair in \
+                folder:%{SOURCE17} folder-open:%{SOURCE18} folder-documents:%{SOURCE19} \
+                folder-download:%{SOURCE20} folder-music:%{SOURCE21} folder-images:%{SOURCE22} \
+                folder-videos:%{SOURCE23} user-desktop:%{SOURCE24} user-home:%{SOURCE25} \
+                folder-templates:%{SOURCE26} folder-public:%{SOURCE27} folder-html:%{SOURCE28} \
+                user-trash:%{SOURCE29} user-trash-full:%{SOURCE30}; do
+            name=${pair%%%%:*}; src=${pair#*:}
+            # Overwrite the small copy in place (other icons link to it);
+            # the SVG scales cleanly to these sizes.
+            if [ -e "$sd/$name.svg" ] && [ ! -L "$sd/$name.svg" ]; then
+                install -m 0644 "$src" "$sd/$name.svg"
+            fi
+        done
+    done
+done
+
 # Drop MacTahoe's weather-*-large/-small condition icons. GNOME Weather
 # draws these at ~200px, and most of MacTahoe's embed small raster
 # images, so they came out dotted/pixelated. Without them the lookup
@@ -115,6 +167,12 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-7
+- Original ParchaOS folders (violet with a gold tab, with glyphs for
+  Documents, Downloads, Music, Pictures, Videos, Desktop, Home, Templates,
+  Public and remote folders) and trash (empty/full), replacing MacTahoe's
+  Apple-look places icons in all three variants, including their
+  fixed-size copies (ticket #13).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-6
 - Original ParchaOS icons for Calendar, Clock, Calculator, Contacts, Mail,
   Settings, Terminal, Text Editor, Weather, Screenshot, System Monitor and
