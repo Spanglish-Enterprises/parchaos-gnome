@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -88,6 +88,10 @@ Patch1:         0002-crisp-uncropped-hover-magnification.patch
 # so it stayed put while the icons spread under the pointer. Patch2 slides
 # it along the dock with its icon (no scaling, stays at the dock edge).
 Patch2:         0003-running-indicator-follows-magnification.patch
+# When Do Not Disturb turns off, icons can be rebuilt before the badge
+# model is recreated, throwing in UnityIndicator for every icon. Patch3
+# skips the badge indicator until the model exists.
+Patch3:         0004-skip-badges-until-remote-model-exists.patch
 
 BuildArch:      noarch
 
@@ -166,6 +170,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-11
+- Fix "remoteModel is undefined" errors building dock icons right after
+  Do Not Disturb turns off (badge indicator created before its model).
 * Fri Sep 25 2026 ParchaOS packaging - 106-10
 - Running-app indicator dots now slide with their icons during hover
   magnification instead of staying at the resting position.

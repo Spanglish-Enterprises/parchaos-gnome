@@ -1,0 +1,18 @@
+diff --git a/appIconIndicators.js b/appIconIndicators.js
+index 27ba661..88786d3 100755
+--- a/appIconIndicators.js
++++ b/appIconIndicators.js
+@@ -55,8 +55,12 @@ export class AppIconIndicator {
+         else
+             ({runningIndicatorStyle} = settings);
+ 
++        // The remote model is created in a 'state-changed' handler that can
++        // run after the icons are rebuilt when Do Not Disturb turns off, so
++        // check the model itself rather than only the DND state.
++        const dockManager = Docking.DockManager.getDefault();
+         if (settings.showIconsEmblems &&
+-            !Docking.DockManager.getDefault().notificationsMonitor.dndMode) {
++            !dockManager.notificationsMonitor.dndMode && dockManager.remoteModel) {
+             const unityIndicator = new UnityIndicator(source);
+             this._indicators.push(unityIndicator);
+         }
