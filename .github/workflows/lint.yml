@@ -13,7 +13,7 @@ jobs:
     container:
       image: fedora:44
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install tools
         run: dnf -y install ShellCheck rpm-build glib2 desktop-file-utils python3 nodejs
       - name: Run checks
@@ -28,7 +28,9 @@ jobs:
     container:
       image: fedora:44
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Install tools
+        run: dnf -y install rpm-build
       - name: Compare forks with Fedora
         run: |
           status=0

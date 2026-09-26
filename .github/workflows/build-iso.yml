@@ -42,7 +42,7 @@ jobs:
       image: fedora:44
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install build dependencies
         run: |
