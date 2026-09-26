@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -71,8 +71,32 @@ Source35:       parchaos-logo-symbolic.svg
 # Original keyboard glyph; MacTahoe draws input-keyboard-symbolic as the
 # reference desktop's command-key symbol.
 Source36:       parchaos-keyboard-symbolic.svg
+# Original file-type icons (one per kind) and the script that maps
+# MacTahoe's file-type icons onto them.
+Source37:       mime-map.py
+Source40:       parchaos-mime-generic.svg
+Source41:       parchaos-mime-text.svg
+Source42:       parchaos-mime-code.svg
+Source43:       parchaos-mime-document.svg
+Source44:       parchaos-mime-spreadsheet.svg
+Source45:       parchaos-mime-presentation.svg
+Source46:       parchaos-mime-pdf.svg
+Source47:       parchaos-mime-image.svg
+Source48:       parchaos-mime-audio.svg
+Source49:       parchaos-mime-video.svg
+Source50:       parchaos-mime-archive.svg
+Source51:       parchaos-mime-package.svg
+Source52:       parchaos-mime-disk.svg
+Source53:       parchaos-mime-font.svg
+Source54:       parchaos-mime-certificate.svg
+Source55:       parchaos-mime-contact.svg
+Source56:       parchaos-mime-calendar.svg
+Source57:       parchaos-mime-mail.svg
+Source58:       parchaos-mime-web.svg
+Source59:       parchaos-mime-database.svg
 
 BuildArch:      noarch
+BuildRequires:  python3
 
 # Real bug found via a real COPR build attempt (2026-09-23): install.sh
 # calls gtk-update-icon-cache internally after installing each variant
@@ -182,6 +206,10 @@ while read -r f; do
     install -m 0644 %{SOURCE36} "$f"
 done
 
+# File-type icons: MacTahoe's page-style ones imitate the reference
+# desktop's document icons; replace each with ParchaOS's own for its kind.
+python3 %{SOURCE37} %{buildroot}%{_datadir}/icons %{_sourcedir}
+
 # Drop MacTahoe's weather-*-large/-small condition icons. GNOME Weather
 # draws these at ~200px, and most of MacTahoe's embed small raster
 # images, so they came out dotted/pixelated. Without them the lookup
@@ -203,6 +231,13 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-11
+- Original file-type icons: MacTahoe's page-style file icons (which
+  imitate the reference desktop's document icons) are replaced with
+  ParchaOS's own, one design per kind of file (text, code, documents,
+  spreadsheets, presentations, PDF, images, audio, video, archives,
+  packages, disk images, fonts, certificates, contacts, calendars, mail,
+  web, databases).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-10
 - Replace MacTahoe's command-key symbol used as the keyboard icon
   (input-keyboard-symbolic) with an original keyboard glyph.

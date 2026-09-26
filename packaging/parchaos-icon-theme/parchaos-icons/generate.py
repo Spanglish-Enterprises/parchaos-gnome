@@ -330,6 +330,70 @@ def keyboard_symbolic():
 
 
 OWN['parchaos-keyboard-symbolic'] = keyboard_symbolic
+# --- File-type (mimetype) icons: a white page with a folded corner, a
+# category-colored band and a glyph for the kind of file. 64 px canvas,
+# like the MacTahoe icons they replace (see mime-map.py for which file
+# types get which). ---
+
+MIME_KINDS = {
+    # kind: (band color, glyph drawn in a 64 px box, centered around 32,34)
+    'generic': ('#8e8e93', ''),
+    'text': ('#8e8e93', '<g fill="#8e8e93"><rect x="20" y="24" width="24" height="3" rx="1.5"/>'
+             '<rect x="20" y="30" width="24" height="3" rx="1.5"/><rect x="20" y="36" width="16" height="3" rx="1.5"/></g>'),
+    'code': ('#7654dc', '<path d="M26 26l-7 7 7 7M38 26l7 7-7 7" fill="none" stroke="#7654dc" '
+             'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'),
+    'document': ('#2f7de1', '<g fill="#2f7de1"><rect x="19" y="22" width="26" height="3" rx="1.5"/>'
+                 '<rect x="19" y="28" width="26" height="3" rx="1.5"/><rect x="19" y="34" width="26" height="3" rx="1.5"/>'
+                 '<rect x="19" y="40" width="17" height="3" rx="1.5"/></g>'),
+    'spreadsheet': ('#2ea55a', '<g fill="none" stroke="#2ea55a" stroke-width="2.5"><rect x="19" y="22" width="26" height="21" rx="2"/>'
+                    '<path d="M19 29h26M19 36h26M28 22v21M37 22v21"/></g>'),
+    'presentation': ('#ef7d1a', '<g fill="#ef7d1a"><rect x="18" y="22" width="28" height="18" rx="2.5"/>'
+                     '<rect x="30.5" y="40" width="3" height="5"/></g><rect x="22" y="26" width="12" height="3" rx="1.5" fill="#fff"/>'),
+    'pdf': ('#e0443b', '<g fill="#e0443b"><rect x="19" y="22" width="26" height="8" rx="2"/>'
+            '<rect x="19" y="33" width="26" height="3" rx="1.5"/><rect x="19" y="39" width="18" height="3" rx="1.5"/></g>'),
+    'image': ('#1ea0a8', '<rect x="18" y="22" width="28" height="22" rx="3" fill="#1ea0a8"/>'
+              '<path d="M18 40l8-9 6 6 4-4 10 10H21a3 3 0 0 1-3-3z" fill="#0f6f75"/><circle cx="38" cy="28" r="3" fill="#ffd35c"/>'),
+    'audio': ('#e2457a', '<path d="M28 42V25l14-3v16" fill="none" stroke="#e2457a" stroke-width="3" stroke-linejoin="round"/>'
+              '<circle cx="25" cy="42" r="4" fill="#e2457a"/><circle cx="39" cy="38" r="4" fill="#e2457a"/>'),
+    'video': ('#a24bd6', '<rect x="17" y="23" width="30" height="21" rx="4" fill="#a24bd6"/><path d="M29 28v11l9-5.5z" fill="#fff"/>'),
+    'archive': ('#b8862f', '<rect x="20" y="24" width="24" height="20" rx="3" fill="#d9a441"/>'
+                '<rect x="20" y="24" width="24" height="6" rx="2" fill="#b8862f"/><rect x="28" y="33" width="8" height="3" rx="1.5" fill="#7a5616"/>'),
+    'package': ('#5a4fd6', '<path d="M32 21l12 6v13l-12 6-12-6V27z" fill="#5a4fd6"/><path d="M20 27l12 6 12-6M32 33v13" '
+                'fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'),
+    'disk': ('#6c7a89', '<circle cx="32" cy="33" r="11" fill="#6c7a89"/><circle cx="32" cy="33" r="3" fill="#fff"/>'),
+    'font': ('#3a3a3c', '<path d="M22 44l8-22h4l8 22M25.5 36h13" fill="none" stroke="#3a3a3c" stroke-width="3.5" '
+             'stroke-linecap="round" stroke-linejoin="round"/>'),
+    'certificate': ('#c49a2c', '<circle cx="32" cy="30" r="8" fill="#c49a2c"/><path d="M27 36l-2 9 7-3 7 3-2-9" fill="#c49a2c"/>'
+                    '<circle cx="32" cy="30" r="3.5" fill="#fff"/>'),
+    'contact': ('#1ea0a8', '<circle cx="32" cy="28" r="6" fill="#1ea0a8"/><path d="M21 44c1-7 6-10 11-10s10 3 11 10z" fill="#1ea0a8"/>'),
+    'calendar': ('#e0443b', '<rect x="20" y="23" width="24" height="21" rx="3" fill="#fff" stroke="#8e8e93" stroke-width="1.5"/>'
+                 '<path d="M20 26a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v4H20z" fill="#e0443b"/>'),
+    'mail': ('#2f7de1', '<rect x="18" y="25" width="28" height="19" rx="3" fill="#2f7de1"/>'
+             '<path d="M19 27l13 9 13-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'),
+    'web': ('#2f7de1', '<g fill="none" stroke="#2f7de1" stroke-width="2.5"><circle cx="32" cy="33" r="11"/>'
+            '<ellipse cx="32" cy="33" rx="5" ry="11"/><path d="M21 33h22"/></g>'),
+    'database': ('#7654dc', '<g fill="#7654dc"><ellipse cx="32" cy="25" rx="11" ry="4"/><path d="M21 27v6c0 2 5 4 11 4s11-2 11-4v-6c0 2-5 4-11 4s-11-2-11-4z"/>'
+                 '<path d="M21 36v6c0 2 5 4 11 4s11-2 11-4v-6c0 2-5 4-11 4s-11-2-11-4z"/></g>'),
+}
+
+
+def mime(kind):
+    # Plain shapes only (no filters or clip paths): GTK 4 draws icons with
+    # its own SVG renderer, which flattens those into a silhouette.
+    band, glyph = MIME_KINDS[kind]
+    page = 'M14 8a4 4 0 0 1 4-4h20l12 12v40a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
+            f'<path d="{page}" transform="translate(0 1)" fill="#000" fill-opacity="0.18"/>'
+            f'<path d="{page}" fill="#fdfdfd"/>'
+            f'<path d="M14 51h36v5a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z" fill="{band}"/>'
+            '<path d="M38 4v9a3 3 0 0 0 3 3h9z" fill="#dcdce0"/>'
+            + glyph + '</svg>\n')
+
+
+for _kind in MIME_KINDS:
+    OWN[f'parchaos-mime-{_kind}'] = (lambda k: lambda: mime(k))(_kind)
+
+
 OWN['parchaos-logo'] = logo
 OWN['parchaos-logo-symbolic'] = logo_symbolic
 
