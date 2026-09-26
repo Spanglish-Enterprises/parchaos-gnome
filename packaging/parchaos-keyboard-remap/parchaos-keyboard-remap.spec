@@ -78,14 +78,18 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
-License:        MIT AND GPL-2.0-or-later
+License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later
 URL:            https://github.com/xremap/xremap
 Source0:        https://github.com/xremap/xremap/releases/download/v%{xremap_version}/xremap-linux-x86_64-gnome.zip
 Source1:        https://github.com/xremap/xremap-gnome/archive/%{gnome_ext_commit}/xremap-gnome-%{gnome_ext_shortcommit}.tar.gz
 Source2:        parchaos-keyboard-remap-files.tar.gz
+Source90:       LICENSE
+Source91:       GPL-2.0.txt
+Source92:       THIRD-PARTY-LICENSES.md
+Source93:       https://raw.githubusercontent.com/xremap/xremap/v%{xremap_version}/LICENSE#/xremap-LICENSE
 
 ExclusiveArch:  x86_64
 
@@ -120,6 +124,7 @@ mkdir xremap-bin
 (cd xremap-bin && unzip -o %{SOURCE0})
 tar xzf %{SOURCE1}
 tar xzf %{SOURCE2}
+cp -p %{SOURCE90} %{SOURCE91} %{SOURCE92} %{SOURCE93} .
 
 %build
 # Nothing to compile: xremap ships as a prebuilt binary (Source0), and
@@ -160,6 +165,10 @@ dconf update >/dev/null 2>&1 || :
 dconf update >/dev/null 2>&1 || :
 
 %files
+%license LICENSE
+%license GPL-2.0.txt
+%license THIRD-PARTY-LICENSES.md
+%license xremap-LICENSE
 %{_bindir}/xremap
 %{_bindir}/parchaos-keyboard-style
 %{_datadir}/gnome-shell/extensions/xremap@k0kubun.com/
@@ -171,6 +180,10 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 0.15.13-8
+- Ship the license text (%license) with an accurate SPDX License tag.
+  Includes xremap's MIT license and a third-party notice for xremap and
+  xremap-gnome.
 * Sat Sep 26 2026 ParchaOS packaging - 0.15.13-7
 - Rebuild with the current parchaos-keyboard-style (0.15.13-6 was built
   from a stale copy of the packaged files, so the style names super-ctrl

@@ -34,11 +34,12 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Preview, Clock, Mail)
 
-License:        NOASSERTION
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
+Source90:       LICENSE
 BuildArch:      noarch
 
 Requires(post): loupe
@@ -55,6 +56,7 @@ this spec's own banner comment for the full reasoning and what was
 deliberately left out (Amberol/Music, no native Fedora RPM).
 
 %prep
+cp -p %{SOURCE90} .
 
 %build
 
@@ -83,6 +85,7 @@ RENAMES
 chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-renames
 
 %files
+%license LICENSE
 %{_libexecdir}/parchaos-app-renames
 
 %post
@@ -107,6 +110,8 @@ update-desktop-database %{_datadir}/applications &>/dev/null || true
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
 - Rename Software to "Parcha Store" so users recognize the app store
   (translated Name[xx]= lines dropped: it's a brand name).

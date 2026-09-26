@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // ParchaOS Live Icons -- the Clock icon shows the current time and the
 // Calendar icon shows today's date, wherever the shell draws app icons
 // (dock, launcher, app switcher).

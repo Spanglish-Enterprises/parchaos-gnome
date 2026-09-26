@@ -1,12 +1,13 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-welcome
 Source1:        org.parchaos.Welcome.desktop
 Source2:        parchaos-welcome-autostart.desktop
+Source90:       LICENSE
 BuildArch:      noarch
 
 BuildRequires:  desktop-file-utils
@@ -25,6 +26,7 @@ the user turns them on), then shows where the launcher, Parcha Controls
 and the menu bar are. It doesn't run in the installer's live session.
 
 %prep
+cp -p %{SOURCE90} .
 
 %build
 
@@ -38,11 +40,14 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Welcome.
 desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %files
+%license LICENSE
 %{_bindir}/parchaos-welcome
 %{_datadir}/applications/org.parchaos.Welcome.desktop
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
 - Require parchaos-keyboard-remap 0.15.13-7 for the Super key page.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3

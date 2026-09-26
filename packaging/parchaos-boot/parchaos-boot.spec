@@ -1,10 +1,11 @@
 Name:           parchaos-boot
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Keeps new kernels in the ParchaOS boot menu
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-grub-setup
+Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       grub2-tools
@@ -23,6 +24,7 @@ update, and a small EFI stub that loads it), and the installer uses the
 same script for new installs.
 
 %prep
+cp -p %{SOURCE90} .
 
 %build
 
@@ -35,9 +37,12 @@ install -Dm0755 %{SOURCE0} %{buildroot}%{_libexecdir}/parchaos-grub-setup
 %{_libexecdir}/parchaos-grub-setup || :
 
 %files
+%license LICENSE
 %{_libexecdir}/parchaos-grub-setup
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
 - First release: move UEFI installs to Fedora's GRUB layout so kernel
   updates reach the boot menu.

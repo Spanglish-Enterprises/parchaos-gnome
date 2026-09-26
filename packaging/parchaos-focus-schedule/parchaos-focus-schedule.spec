@@ -42,12 +42,13 @@
 
 Name:           parchaos-focus-schedule
 Version:        1.1.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
-License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos
+License:        GPL-3.0-or-later
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-focus-schedule-files.tar.gz
+Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       parchaos-desktop-schemas >= 2026.09.23-33
@@ -66,6 +67,7 @@ themselves is left alone.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %install
 install -Dm0755 usr/bin/parchaos-focus-schedule %{buildroot}%{_bindir}/parchaos-focus-schedule
@@ -83,11 +85,14 @@ rm -f %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-start.timer
       %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-end.timer || :
 
 %files
+%license LICENSE
 %{_bindir}/parchaos-focus-schedule
 %{_userunitdir}/parchaos-focus-schedule.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.1.0-3
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.1.0-2
 - Require parchaos-desktop-schemas (the settings schema) instead of
   relying on the desktop meta-package.

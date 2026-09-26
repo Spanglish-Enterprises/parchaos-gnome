@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -21,6 +21,7 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-launcher-apps
+Source90:       LICENSE
 
 BuildArch:      noarch
 
@@ -41,6 +42,7 @@ in place. Replaces the overview app grid (dock Show Apps button, Super+A).
 mkdir -p src
 cd src
 cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
+cp -p %{SOURCE90} .
 
 %build
 
@@ -54,9 +56,12 @@ install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0755 src/parchaos-launcher-apps "$DEST/"
 
 %files
+%license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-12
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-11
 - Require parchaos-desktop-schemas (the settings schema) instead of
   relying on the desktop meta-package.

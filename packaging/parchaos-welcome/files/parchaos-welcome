@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ParchaOS Welcome: a short first-login assistant. It sets the few choices
 # that shape the desktop (style, light or dark, the Super key, location for
 # the weather) and shows where things are. It opens once per account (from

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # parchaos-focus-schedule: scheduled Do Not Disturb.
 #
 # Runs for the whole session (a systemd --user service). Every time the

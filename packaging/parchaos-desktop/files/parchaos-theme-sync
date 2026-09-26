@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # parchaos-theme-sync: keep the GTK, window and Shell themes in step with
 # the appearance (light or dark) and the ParchaOS style (Glass or Classic).
 #

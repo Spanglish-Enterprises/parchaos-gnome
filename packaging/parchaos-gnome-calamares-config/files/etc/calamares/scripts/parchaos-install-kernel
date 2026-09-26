@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Real bug found via a full end-to-end install+reboot test (2026-09-20,
 # see docs/phase4-findings.md): the installed system's disk never
 # contained a bootable kernel at all. Root cause: unpackfs.conf's single

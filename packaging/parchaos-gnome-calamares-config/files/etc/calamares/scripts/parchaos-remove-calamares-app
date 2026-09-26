@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Real bug found via a real install failure on actual hardware
 # (2026-09-24): an earlier attempt at this same fix put `dnf -y remove
 # calamares` inside parchaos-finalize-install, which runs very early

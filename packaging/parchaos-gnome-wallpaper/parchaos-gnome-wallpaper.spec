@@ -14,12 +14,14 @@
 
 Name:           parchaos-gnome-wallpaper
 Version:        2026.09.23
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS (GNOME) default desktop wallpaper
 
-License:        NOASSERTION
+License:        CC-BY-SA-4.0 AND CC-BY-3.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-wallpaper-files.tar.gz
+Source90:       LICENSE-ARTWORK
+Source91:       LOGO-CREDITS.md
 BuildArch:      noarch
 
 %description
@@ -29,15 +31,20 @@ generated from branding/logo/ in this repo.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} %{SOURCE91} .
 
 %install
 mkdir -p %{buildroot}
 cp -a usr %{buildroot}/
 
 %files
+%license LICENSE-ARTWORK
+%license LOGO-CREDITS.md
 %{_datadir}/backgrounds/parchaos/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-4
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-3
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.

@@ -47,7 +47,7 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -59,6 +59,8 @@ Source1:        parchaos-browser-mimeapps.list
 # Original ParchaOS artwork (CC BY-SA 4.0), same file as in
 # parchaos-icon-theme; shipped in hicolor so the icon works in any theme.
 Source2:        parcha-browser.svg
+Source90:       LICENSE
+Source91:       LICENSE-ARTWORK
 
 # Parcha Browser replaces Pafari (pearOS's WebKitGTK/Epiphany fork, whose
 # name is itself a Safari pun): obsoleting it removes it on dnf upgrade.
@@ -77,6 +79,7 @@ at the real chromium-browser binary. See this spec's own banner comment
 for the full reasoning.
 
 %prep
+cp -p %{SOURCE90} %{SOURCE91} .
 
 %build
 
@@ -117,12 +120,16 @@ if [ $1 -eq 0 ]; then
 fi
 
 %files
+%license LICENSE
+%license LICENSE-ARTWORK
 %{_datadir}/applications/es.parchaos.Browser.desktop
 %config(noreplace) %{_sysconfdir}/xdg/gnome-mimeapps.list
 %config(noreplace) %{_sysconfdir}/xdg/mimeapps.list
 %{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
 - Hide Chromium's own launcher entry (NoDisplay=true, re-applied on
   chromium updates, undone on removal): it duplicated Parcha Browser in

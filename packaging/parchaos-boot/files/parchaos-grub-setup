@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # parchaos-grub-setup: make kernel updates reach the boot menu on UEFI
 # installs.
 #

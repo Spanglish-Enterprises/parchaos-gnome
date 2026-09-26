@@ -10,13 +10,14 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
+Source90:       LICENSE
 
 BuildArch:      noarch
 
@@ -31,6 +32,7 @@ editors, note apps) come back with them.
 %prep
 mkdir -p src
 cp %{SOURCE0} %{SOURCE1} src/
+cp -p %{SOURCE90} .
 
 %build
 
@@ -40,9 +42,12 @@ install -Dm0644 src/extension.js "$DEST/extension.js"
 install -Dm0644 src/metadata.json "$DEST/metadata.json"
 
 %files
+%license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
 - Require parchaos-desktop-schemas (the settings schema) instead of
   relying on the desktop meta-package.

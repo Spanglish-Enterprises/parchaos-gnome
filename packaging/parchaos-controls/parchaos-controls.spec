@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -20,6 +20,7 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-controls-symbolic.svg
+Source90:       LICENSE
 
 BuildArch:      noarch
 
@@ -35,6 +36,7 @@ status icons (or Super+S) in place of GNOME's Quick Settings menu.
 mkdir -p src/icons
 cp %{SOURCE0} %{SOURCE1} %{SOURCE2} src/
 cp %{SOURCE3} src/icons/
+cp -p %{SOURCE90} .
 
 %build
 
@@ -46,9 +48,12 @@ install -m 0644 src/extension.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
 %files
+%license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
 - Light appearance: with the system set to light, the panel, tiles, text
   and controls are light (both styles), switching live when Dark Mode is

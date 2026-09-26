@@ -49,12 +49,13 @@
 
 Name:           parchaos-gdm-logo
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's real logo on the GDM login screen (replaces Fedora's default)
 
-License:        NOASSERTION
+License:        CC-BY-3.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gdm-logo-files.tar.gz
+Source90:       LOGO-CREDITS.md
 BuildArch:      noarch
 
 Requires:       gdm
@@ -71,12 +72,14 @@ See this spec's own banner comment for the full root-cause story.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %install
 mkdir -p %{buildroot}
 cp -a usr %{buildroot}/
 
 %files
+%license LOGO-CREDITS.md
 %{_datadir}/pixmaps/parchaos-gdm-logo.png
 %{_datadir}/glib-2.0/schemas/zz-parchaos-login-screen.gschema.override
 
@@ -87,6 +90,8 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.

@@ -34,12 +34,13 @@
 
 Name:           parchaos-cloud
 Version:        2.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's cloud drives -- rclone-backed cloud storage under ~/Cloud
 
-License:        MIT
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-cloud-files.tar.gz
+Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       rclone
@@ -57,6 +58,7 @@ repo for why and how.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %build
 # Nothing to compile: a shell script, a systemd unit template, a
@@ -76,6 +78,7 @@ gtk-update-icon-cache -q -t -f %{_datadir}/icons/hicolor &>/dev/null || :
 update-desktop-database -q %{_datadir}/applications &>/dev/null || :
 
 %files
+%license LICENSE
 %{_bindir}/parchaos-cloud
 %{_prefix}/lib/systemd/user/parchaos-cloud@.service
 %{_datadir}/applications/parchaos-cloud.desktop
@@ -83,6 +86,10 @@ update-desktop-database -q %{_datadir}/applications &>/dev/null || :
 %{_datadir}/icons/hicolor/scalable/apps/parchaos-cloud.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.0.0-4
+- Ship the license text (%license) with an accurate SPDX License tag.
+  Relicensed GPL-3.0-or-later like the rest of ParchaOS's code; an
+  original cloud glyph replaces the Material Design one.
 * Sat Sep 26 2026 ParchaOS packaging - 2.0.0-3
 - Setup always opens rclone's wizard in a terminal (the graphical option
   never showed anything). Remote names are escaped for systemd and the

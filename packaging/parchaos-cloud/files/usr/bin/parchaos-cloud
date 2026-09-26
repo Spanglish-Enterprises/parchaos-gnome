@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # parchaos-cloud — mount cloud storage remotes (Google Drive, OneDrive,
 # any of rclone's real backends) under ~/Cloud/<name>, via a systemd user
 # template unit running `rclone mount`. Original implementation; see

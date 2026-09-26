@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // ParchaOS Session Restore -- reopens the apps that were open at the end of
 // the last session and puts their windows back where they were.
 //

@@ -33,15 +33,16 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
-License:        MIT
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-menu-icon-symbolic.svg
+Source90:       LICENSE
 
 BuildArch:      noarch
 
@@ -74,6 +75,7 @@ and how.
 mkdir -p src
 cd src
 cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
+cp -p %{SOURCE90} .
 
 %build
 # Nothing to compile: plain JS/JSON/CSS, no gschema in this version (the
@@ -92,9 +94,13 @@ install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 
 %files
+%license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-16
+- Ship the license text (%license) with an accurate SPDX License tag.
+  Relicensed GPL-3.0-or-later like the rest of ParchaOS's code.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-15
 - Menus built from one data table (MENU_TABLE) by a generic loop; the
   logo menu too. Focus tracking, the app-name lookup (now via .desktop

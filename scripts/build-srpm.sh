@@ -35,6 +35,12 @@ for name in "$@"; do
     top=$(mktemp -d)
     mkdir -p "$top/SOURCES"
 
+    # Standard license texts any spec can list as a Source for %license:
+    # LICENSE (GPL-3.0), LICENSE-ARTWORK (CC BY-SA 4.0), GPL-2.0.txt and
+    # LOGO-CREDITS.md (the logo's CC BY 3.0 attribution).
+    cp LICENSE LICENSE-ARTWORK LICENSES/GPL-2.0.txt "$top/SOURCES/"
+    cp branding/logo/CREDITS.md "$top/SOURCES/LOGO-CREDITS.md"
+
     # Local sources: files next to the spec, and generated artwork.
     find "$dir" -maxdepth 1 -type f ! -name '*.spec' -exec cp {} "$top/SOURCES/" \;
     [ -d "$dir/files" ] && find "$dir/files" -type f -exec cp {} "$top/SOURCES/" \;

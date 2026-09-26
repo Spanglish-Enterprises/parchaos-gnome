@@ -9,13 +9,14 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-settings
 Source1:        org.parchaos.Settings.desktop
+Source90:       LICENSE
 
 BuildArch:      noarch
 BuildRequires:  desktop-file-utils
@@ -31,6 +32,7 @@ ParchaOS Settings holds preferences specific to ParchaOS, starting with
 how the Super key works (Super as Ctrl, or standard Super and Ctrl roles).
 
 %prep
+cp -p %{SOURCE90} .
 
 %build
 
@@ -42,10 +44,13 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Set
 desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings.desktop
 
 %files
+%license LICENSE
 %{_bindir}/parchaos-settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-11
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
 - Require parchaos-keyboard-remap 0.15.13-7 (the first build whose
   keyboard-style accepts super-ctrl and standard).

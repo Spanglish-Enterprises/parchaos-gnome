@@ -68,12 +68,13 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
-License:        NOASSERTION
+License:        GPL-3.0-or-later AND CC0-1.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-calamares-config-files.tar.gz
+Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       calamares
@@ -92,6 +93,7 @@ why.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %install
 mkdir -p %{buildroot}
@@ -109,6 +111,7 @@ chmod 0755 %{buildroot}%{_sysconfdir}/calamares/scripts/parchaos-remove-calamare
 chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 
 %files
+%license LICENSE
 %{_sysconfdir}/calamares/settings.conf
 %{_sysconfdir}/calamares/modules/
 %{_sysconfdir}/calamares/scripts/
@@ -118,6 +121,8 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 %{_datadir}/polkit-1/actions/org.parchaos.installer.policy
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-27
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-26
 - Run the installer through its own polkit action
   (org.parchaos.pkexec.installer), so the live session can allow exactly

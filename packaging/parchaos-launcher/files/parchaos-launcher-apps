@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Helper for ParchaOS Launcher's edit mode.
 #
 #   parchaos-launcher-apps removable ID...   print a JSON list of the given

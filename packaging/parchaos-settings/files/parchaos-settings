@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ParchaOS Settings: preferences specific to ParchaOS that GNOME's own
 # Settings app has no place for. Original code for ParchaOS,
 # GPL-3.0-or-later.

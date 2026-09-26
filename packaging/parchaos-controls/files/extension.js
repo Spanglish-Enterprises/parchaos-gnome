@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Parcha Controls -- ParchaOS's control center for GNOME Shell.
 //
 // A tiled panel that opens from the top bar's status icons (and Super+S),

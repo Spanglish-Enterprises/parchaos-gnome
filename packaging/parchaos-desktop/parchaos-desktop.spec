@@ -62,10 +62,10 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        37%{?dist}
+Release:        38%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
-License:        NOASSERTION
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 # Desktop-wide ParchaOS preferences (visual style), read by the
 # ParchaOS extensions and set from ParchaOS Settings.
@@ -87,6 +87,7 @@ Source6:        80-parchaos-copr.repo
 # Keeps the GTK, window and Shell themes matching light/dark and the style.
 Source7:        parchaos-theme-sync
 Source8:        parchaos-theme-sync.service
+Source90:       LICENSE
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
@@ -151,6 +152,8 @@ the packages that read it can require the version they need without
 depending on the whole desktop meta-package.
 
 %prep
+cp -p %{SOURCE90} .
+
 %build
 %install
 install -Dm0644 %{SOURCE0} %{buildroot}%{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
@@ -215,9 +218,11 @@ if [ -f "$f" ] && ! grep -q '^Hidden=true' "$f"; then
 fi
 
 %files schemas
+%license LICENSE
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 
 %files
+%license LICENSE
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-extensions-tuning
@@ -232,6 +237,8 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-38
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-37
 - Drop TMOG: no longer part of ParchaOS; Obsoletes parchaos-tmog so
   existing installs remove it.

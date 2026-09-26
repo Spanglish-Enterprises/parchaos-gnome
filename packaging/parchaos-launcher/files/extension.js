@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // ParchaOS Launcher -- a full-screen app launcher for GNOME Shell.
 //
 // Replaces the overview's app grid: whatever would open it (the dock's

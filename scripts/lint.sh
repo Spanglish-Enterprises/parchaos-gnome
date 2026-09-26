@@ -22,6 +22,13 @@ for spec in packaging/*/*.spec; do
     rpmspec -P "$spec" >/dev/null 2>&1 || { rpmspec -P "$spec" 2>&1 | tail -3; fail "$spec"; }
 done
 
+echo "== license metadata =="
+# Every package states a real SPDX license and ships its license text.
+for spec in packaging/*/*.spec; do
+    grep -qE '^License:.*NOASSERTION' "$spec" && fail "$spec: License is NOASSERTION"
+    grep -q '^%license ' "$spec" || fail "$spec: no %license file"
+done
+
 echo "== GSettings schemas =="
 while IFS= read -r schema; do
     dir=$(mktemp -d)

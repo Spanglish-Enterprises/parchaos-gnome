@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ParchaOS (GNOME) post-install finalization, run inside the target
 # chroot by Calamares' shellprocess module (shellprocess-remove-livecd.
 # conf) right before the dracut module regenerates the initramfs.

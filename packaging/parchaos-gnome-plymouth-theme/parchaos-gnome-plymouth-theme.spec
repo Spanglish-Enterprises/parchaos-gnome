@@ -36,12 +36,14 @@
 
 Name:           parchaos-gnome-plymouth-theme
 Version:        2026.09.23
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS (GNOME) Plymouth boot splash theme
 
-License:        GPL-2.0-or-later
+License:        GPL-2.0-or-later AND CC-BY-3.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-plymouth-theme-files.tar.gz
+Source90:       GPL-2.0.txt
+Source91:       LOGO-CREDITS.md
 BuildArch:      noarch
 
 Requires:       plymouth
@@ -54,15 +56,20 @@ logo as the watermark.
 
 %prep
 %setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} %{SOURCE91} .
 
 %install
 mkdir -p %{buildroot}%{_datadir}/plymouth/themes
 cp -a parcha-plymouth %{buildroot}%{_datadir}/plymouth/themes/
 
 %files
+%license GPL-2.0.txt
+%license LOGO-CREDITS.md
 %{_datadir}/plymouth/themes/parcha-plymouth/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-4
+- Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-3
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.
