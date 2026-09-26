@@ -350,9 +350,17 @@ echo "--- Assembling ISO ---"
 rm -rf "$ISO_WORKDIR"
 mkdir -p "$ISO_WORKDIR/LiveOS" "$ISO_WORKDIR/EFI/BOOT" "$ISO_WORKDIR/boot"
 
+# The base cache is bootstrapped with keepcache=True and cloned into the
+# target, so every downloaded RPM (1.3 GB) and dnf's metadata would
+# otherwise ship inside the image. The installed system fetches fresh
+# metadata on first use anyway.
+rm -rf "$ROOTFS_TARGET"/var/cache/libdnf5/* "$ROOTFS_TARGET"/var/cache/dnf/*
+
 echo "Compressing rootfs as SquashFS (this is the slow part)..."
+# The x86 BCJ filter and 1 MiB blocks compress binaries noticeably
+# better than plain xz defaults.
 mksquashfs "$ROOTFS_TARGET" "$ISO_WORKDIR/LiveOS/squashfs.img" \
-    -comp xz -e boot -noappend
+    -comp xz -Xbcj x86 -b 1M -e boot -noappend
 
 cp "$ROOTFS_TARGET/boot/vmlinuz-$KERNEL_VER" "$ISO_WORKDIR/boot/vmlinuz"
 cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.img"
@@ -635,5 +643,12 @@ else
 fi
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
+
+# Releases are published as GitHub release assets, which must be under
+# 2 GiB each.
+iso_size=$(stat -c %s "$BUILD_DIR/$ISO_NAME")
+if [ "$iso_size" -ge $((2 * 1024 * 1024 * 1024)) ]; then
+    echo "WARNING: $ISO_NAME is $((iso_size / 1048576)) MiB, over the 2 GiB GitHub release asset limit" >&2
+fi
 
 echo "=== Done: $BUILD_DIR/$ISO_NAME ==="
