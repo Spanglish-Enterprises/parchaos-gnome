@@ -173,3 +173,78 @@
   border: none;
   background-color: rgba(255, 255, 255, 0.07);
 }
+
+/* Light appearance (system appearance set to light). */
+.parchaos-controls-panel.parchaos-light {
+  background-color: rgba(246, 246, 248, 0.7);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+  color: #1d1d1f;
+}
+
+.parchaos-controls-panel.parchaos-light.parchaos-style-classic {
+  background-color: rgba(242, 242, 245, 0.94);
+}
+
+.parchaos-light .parchaos-controls-tile {
+  background-color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.parchaos-light.parchaos-style-classic .parchaos-controls-tile {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.parchaos-light .parchaos-controls-title,
+.parchaos-light .parchaos-controls-row-text:hover .parchaos-controls-title {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.parchaos-light .parchaos-controls-subtitle,
+.parchaos-light .parchaos-controls-small-label {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.parchaos-light .parchaos-controls-circle {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.parchaos-light .parchaos-controls-circle:hover {
+  background-color: rgba(0, 0, 0, 0.14);
+}
+
+.parchaos-light .parchaos-controls-circle:checked {
+  background-color: #0a84ff;
+}
+
+.parchaos-light .parchaos-controls-circle:checked:hover {
+  background-color: #2b95ff;
+}
+
+.parchaos-light .parchaos-controls-circle-icon {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.parchaos-light .parchaos-controls-circle:checked .parchaos-controls-circle-icon {
+  color: #ffffff;
+}
+
+.parchaos-light .parchaos-controls-slider-icon,
+.parchaos-light .parchaos-controls-media-button {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.parchaos-light .parchaos-controls-media-button:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.parchaos-light .parchaos-controls-media-art {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.parchaos-light .parchaos-controls-slider {
+  -barlevel-background-color: rgba(0, 0, 0, 0.1);
+  -barlevel-active-background-color: #ffffff;
+  -slider-handle-border-color: rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+}

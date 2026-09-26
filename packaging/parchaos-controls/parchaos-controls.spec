@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,10 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
+- Light appearance: with the system set to light, the panel, tiles, text
+  and controls are light (both styles), switching live when Dark Mode is
+  toggled.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-8
 - Point the extension's website link at the ParchaOS website.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7

@@ -199,6 +199,18 @@ const ControlsPanel = GObject.registerClass({
             orientation: Clutter.Orientation.VERTICAL,
         });
         applyStyleClass(this, styleSettings());
+        // Light or dark panel, following the system appearance (and the
+        // Dark Mode tile in this panel, live).
+        this._interface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+        const syncScheme = () => {
+            if (this._interface.get_string('color-scheme') === 'prefer-dark')
+                this.remove_style_class_name('parchaos-light');
+            else
+                this.add_style_class_name('parchaos-light');
+        };
+        const schemeId = this._interface.connect('changed::color-scheme', syncScheme);
+        this.connect('destroy', () => this._interface.disconnect(schemeId));
+        syncScheme();
         this._qs = qs;
         this.add_effect(new Shell.BlurEffect({
             radius: 60,
