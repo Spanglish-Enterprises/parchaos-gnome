@@ -3,10 +3,11 @@
 """make-brand.py -- generates every ParchaOS logo asset from one design.
 
 The ParchaOS mark is an original drawing (owner-approved concept "A",
-2026-09-26): a halved passion fruit seen from above -- a rind ring, a
-pith ring, the pulp, and seven seeds (one in the middle, six around it,
-each pointing outward). It has no stem, leaf or bite, so it can't be
-read as another company's fruit logo. Artwork: CC BY-SA 4.0
+revised 2026-09-26 after a WIPO image search): a halved passion fruit
+seen from above -- a rind with an open gap at the upper right, a pith
+ring, the pulp and irregular, hand-placed seeds. It has no stem, leaf or
+bite, and no radial symmetry, so it doesn't read as another company's
+fruit logo or as a ring-of-dots mark. Artwork: CC BY-SA 4.0
 (LICENSE-ARTWORK), (c) 2026 Spanglish Enterprises LLC.
 
 Run from the repository root: python3 branding/logo/make-brand.py
@@ -24,25 +25,39 @@ TILE = (30, 28, 46, 255)
 FONT = "/usr/share/fonts/adwaita-sans-fonts/AdwaitaSans-Regular.ttf"
 
 
-def seeds(cx, cy, r_ring, rx, ry):
-    """Center seed plus six radial seeds (as ellipses)."""
-    out = [(cx, cy, rx, ry, 0.0)]
-    for i in range(6):
-        a = 2 * math.pi * i / 6 - math.pi / 2
-        out.append((cx + r_ring * math.cos(a), cy + r_ring * math.sin(a), rx, ry,
-                    math.degrees(a) + 90))
-    return out
+# Seeds as (cx, cy, half-length, half-width, angle in degrees) on a
+# 64-unit canvas: hand-placed and irregular, like a real cut passion
+# fruit, so the mark has no radial symmetry (no rosette, spokes or dot
+# grid). SMALL_SEEDS is the simplified set for 16-32 px glyphs.
+SEEDS = [(24.5, 23.0, 4.1, 2.5, -35), (35.0, 20.5, 3.8, 2.4, 20), (43.0, 28.0, 4.0, 2.5, 70),
+         (29.5, 32.0, 3.6, 2.3, 110), (38.5, 36.5, 4.2, 2.6, -15), (22.0, 39.0, 3.9, 2.4, 60),
+         (31.0, 44.0, 4.0, 2.5, -60), (42.5, 43.5, 3.5, 2.2, 35)]
+SMALL_SEEDS = [(25.5, 24.5, 5.0, 3.2, -35), (38.5, 25.0, 4.8, 3.1, 35), (31.0, 34.5, 5.0, 3.2, 100),
+               (22.5, 39.5, 4.6, 3.0, 40), (40.5, 40.5, 5.0, 3.2, -20)]
+# The rind has an open gap at the upper right (degrees; 0 = right, up is
+# negative), which gives the mark its own silhouette.
+GAP = (-62, -28)
+GAP_SMALL = (-62, -24)
 
 
-def color_svg():
-    parts = [f'<circle cx="32" cy="32" r="30" fill="{PURPLE}"/>',
-             f'<circle cx="32" cy="32" r="24.5" fill="{PITH}"/>',
-             f'<circle cx="32" cy="32" r="21.5" fill="{PULP}"/>']
-    for x, y, rx, ry, rot in seeds(32, 32, 11.5, 2.5, 3.7):
-        parts.append(f'<ellipse cx="{x:.2f}" cy="{y:.2f}" rx="{rx}" ry="{ry}" '
-                     f'transform="rotate({rot:.1f} {x:.2f} {y:.2f})" fill="{SEED}"/>')
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" '
-            'viewBox="0 0 64 64">' + "".join(parts) + "</svg>\n")
+def ring_with_gap(r_out, r_in, gap, c=32):
+    """A ring (annulus) with the angular range `gap` cut out."""
+    a0, a1 = gap
+    pt = lambda r, a: (c + r * math.cos(math.radians(a)), c + r * math.sin(math.radians(a)))
+    x1, y1 = pt(r_out, a1)
+    x2, y2 = pt(r_out, a0 + 360)
+    x3, y3 = pt(r_in, a0 + 360)
+    x4, y4 = pt(r_in, a1)
+    return (f"M{x1:.2f} {y1:.2f}A{r_out} {r_out} 0 1 1 {x2:.2f} {y2:.2f}"
+            f"L{x3:.2f} {y3:.2f}A{r_in} {r_in} 0 1 0 {x4:.2f} {y4:.2f}Z")
+
+
+def seed_path(x, y, half_len, half_w, angle):
+    a = math.radians(angle)
+    ux, uy = math.cos(a), math.sin(a)
+    x1, y1, x2, y2 = x + half_len * ux, y + half_len * uy, x - half_len * ux, y - half_len * uy
+    return (f"M{x1:.2f} {y1:.2f}A{half_len:.2f} {half_w:.2f} {angle:.1f} 1 0 {x2:.2f} {y2:.2f}"
+            f"A{half_len:.2f} {half_w:.2f} {angle:.1f} 1 0 {x1:.2f} {y1:.2f}Z")
 
 
 def circle_path(cx, cy, r):
@@ -50,32 +65,29 @@ def circle_path(cx, cy, r):
             f"a{r:.3f} {r:.3f} 0 1 0 {-2 * r:.3f} 0z")
 
 
-def ellipse_path(cx, cy, a, b, angle):
-    """Ellipse with semi-axis a along `angle` (radians) and b across it."""
-    ux, uy = math.cos(angle), math.sin(angle)
-    x1, y1, x2, y2 = cx + a * ux, cy + a * uy, cx - a * ux, cy - a * uy
-    rot = math.degrees(angle)
-    return (f"M{x1:.3f} {y1:.3f}A{a:.3f} {b:.3f} {rot:.2f} 1 0 {x2:.3f} {y2:.3f}"
-            f"A{a:.3f} {b:.3f} {rot:.2f} 1 0 {x1:.3f} {y1:.3f}z")
+def color_svg():
+    parts = [f'<path fill="{PURPLE}" d="{ring_with_gap(30, 24.5, GAP)}"/>',
+             f'<circle cx="32" cy="32" r="24.5" fill="{PITH}"/>',
+             f'<circle cx="32" cy="32" r="21.5" fill="{PULP}"/>']
+    parts += [f'<path fill="{SEED}" d="{seed_path(*sd)}"/>' for sd in SEEDS]
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" '
+            'viewBox="0 0 64 64">' + "".join(parts) + "</svg>\n")
 
 
-def mono_svg(fill, size=16, symbolic=False):
-    """One-color mark as a single even-odd path: disc, a ring cut between
-    rind and pulp, and the seeds cut out. Tuned for 16 px."""
-    c = size / 2
-    s = size / 16
-    d = [circle_path(c, c, 7.5 * s),      # outer edge
-         circle_path(c, c, 6.1 * s),      # cut: inner edge of the rind
-         circle_path(c, c, 5.1 * s)]      # pulp
-    d.append(circle_path(c, c, 0.9 * s))  # center seed (hole)
-    for i in range(6):                    # six seeds pointing outward
-        a = 2 * math.pi * i / 6 - math.pi / 2
-        d.append(ellipse_path(c + 3.0 * s * math.cos(a), c + 3.0 * s * math.sin(a),
-                              1.15 * s, 0.72 * s, a))
+def mono_svg(fill, size=64, small=None, symbolic=False):
+    """One-color mark: the rind (with its gap) and the pulp with the seeds
+    cut out. Sizes of 32 px or less use the simplified seed set."""
+    if small is None:
+        small = size <= 32
+    if small:
+        rind, pulp, seeds = ring_with_gap(31, 25, GAP_SMALL), circle_path(32, 32, 20.5), SMALL_SEEDS
+    else:
+        rind, pulp, seeds = ring_with_gap(30, 25.5, GAP), circle_path(32, 32, 22), SEEDS
     cls = ' class="ParchaOS-mark"' if symbolic else ""
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
-            f'viewBox="0 0 {size} {size}"><path{cls} fill="{fill}" fill-rule="evenodd" '
-            f'd="{"".join(d)}"/></svg>\n')
+            f'viewBox="0 0 64 64"><path{cls} fill="{fill}" d="{rind}"/>'
+            f'<path{cls} fill="{fill}" fill-rule="evenodd" '
+            f'd="{pulp}{"".join(seed_path(*sd) for sd in seeds)}"/></svg>\n')
 
 
 def render(svg_text, px):
@@ -98,7 +110,7 @@ def write(path, data):
 def wordmark(height, mark_px, text_px, color, width=None):
     """Mark followed by the word ParchaOS, on a transparent canvas."""
     font = ImageFont.truetype(FONT, text_px)
-    mark = render(mono_svg(color), mark_px)
+    mark = render(mono_svg(color, small=mark_px <= 32), mark_px)
     gap = round(mark_px * 0.3)
     text_w = ImageDraw.Draw(Image.new("RGBA", (1, 1))).textlength("ParchaOS", font=font)
     w = width or round(mark_px + gap + text_w + 2)
@@ -159,7 +171,7 @@ def main():
     color = color_svg()
     white = mono_svg("#ffffff")
     black = mono_svg("#000000")
-    symbolic = mono_svg("#2e3436", symbolic=True)
+    symbolic = mono_svg("#2e3436", size=16, symbolic=True)
 
     # Vector sources.
     write("branding/logo/parchaos-mark.svg", color)
@@ -173,7 +185,7 @@ def main():
         write(p, symbolic)
     # The shell theme's Activities button (white, drawn at 48 px from 16).
     write("packaging/parchaos-gtk-theme/parchaos-activities.svg",
-          mono_svg("#fff").replace('width="16" height="16"', 'width="48" height="48"'))
+          mono_svg("#fff", size=48, small=True))
 
     # Raster brand files (names kept; the "silhouette" files are the
     # one-color mark now).
