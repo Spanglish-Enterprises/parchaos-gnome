@@ -9,6 +9,10 @@
 // they appear. Apps that restore their own documents (browsers, editors,
 // note apps) come back with them.
 //
+// Logging out closes apps one by one, so the session is also saved when
+// the log out / restart / power off dialog opens, and saving stops once
+// the user confirms (it resumes if they cancel).
+//
 // Original code for ParchaOS, GPL-3.0-or-later.
 
 import GLib from 'gi://GLib';
@@ -17,15 +21,18 @@ import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
+import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const SAVE_INTERVAL = 30;          // seconds
 const PLACE_WINDOW_S = 90;         // how long to wait for restored windows
 const STATE_DIR = GLib.build_filenamev([GLib.get_user_state_dir(), 'parchaos']);
 const STATE_FILE = GLib.build_filenamev([STATE_DIR, 'session.json']);
-// Once per login: the runtime dir is emptied at logout, while extensions
-// are disabled and re-enabled around the lock screen.
-const RESTORED_MARKER = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'parchaos-session-restored']);
+// Once per login. Extensions are disabled and re-enabled around the lock
+// screen, but this module is only evaluated once per shell process, and
+// every login starts a new shell. (A marker file in the runtime dir
+// survived logout whenever the user manager lingered.)
+let restoredThisLogin = false;
 
 function desktopSettings() {
     const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.parchaos.desktop', true);
@@ -59,9 +66,12 @@ export default class ParchaSessionExtension extends Extension {
         this._settings = desktopSettings();
         this._pending = new Map();   // appId -> [saved window, ...]
         this._handlers = [];
+        this._sources = new Set();
+        this._ending = false;
+        this._hookEndSession();
 
-        if (!GLib.file_test(RESTORED_MARKER, GLib.FileTest.EXISTS)) {
-            GLib.file_set_contents(RESTORED_MARKER, '');
+        if (!restoredThisLogin) {
+            restoredThisLogin = true;
             if (this._settings?.get_boolean('restore-session') ?? true) {
                 const saved = this._load();
                 if (saved.length > 0)
@@ -80,20 +90,56 @@ export default class ParchaSessionExtension extends Extension {
         if (this._saveId)
             GLib.source_remove(this._saveId);
         this._saveId = 0;
+        this._injections?.clear();
+        this._injections = null;
         this._stopPlacing();
+        for (const id of this._sources)
+            GLib.source_remove(id);
+        this._sources.clear();
+        if (this._startupId)
+            Main.layoutManager.disconnect(this._startupId);
+        this._startupId = 0;
         this._settings = null;
+    }
+
+    // One-shot timeout that's removed if the extension is disabled first.
+    _later(ms, callback) {
+        const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+            this._sources.delete(id);
+            callback();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._sources.add(id);
+    }
+
+    _hookEndSession() {
+        const self = this;
+        const proto = EndSessionDialog.EndSessionDialog.prototype;
+        this._injections = new InjectionManager();
+        // Save while every app is still open, then stop saving so the
+        // closing-down desktop doesn't replace it.
+        this._injections.overrideMethod(proto, 'OpenAsync', original => function (...args) {
+            self._save();
+            return original.apply(this, args);
+        });
+        this._injections.overrideMethod(proto, '_confirm', original => function (...args) {
+            self._ending = true;
+            return original.apply(this, args);
+        });
+        this._injections.overrideMethod(proto, 'cancel', original => function (...args) {
+            self._ending = false;
+            return original.apply(this, args);
+        });
     }
 
     _whenStarted(callback) {
         if (!Main.layoutManager._startingUp) {
-            GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
-                callback();
-                return GLib.SOURCE_REMOVE;
-            });
+            this._later(2000, callback);
             return;
         }
-        const id = Main.layoutManager.connect('startup-complete', () => {
-            Main.layoutManager.disconnect(id);
+        this._startupId = Main.layoutManager.connect('startup-complete', () => {
+            Main.layoutManager.disconnect(this._startupId);
+            this._startupId = 0;
             callback();
         });
     }
@@ -125,7 +171,7 @@ export default class ParchaSessionExtension extends Extension {
     }
 
     _save() {
-        if (Main.sessionMode.isLocked)
+        if (Main.sessionMode.isLocked || this._ending)
             return;
         // While logging out, apps close one by one within a few seconds;
         // don't let that emptied-out state replace the real session. An
@@ -223,10 +269,9 @@ export default class ParchaSessionExtension extends Extension {
         // Some apps resize themselves right after mapping; place again a
         // moment later.
         this._place(win, entry);
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 400, () => {
+        this._later(400, () => {
             if (win.get_display())
                 this._place(win, entry);
-            return GLib.SOURCE_REMOVE;
         });
         if (this._pending.size === 0)
             this._stopPlacing();

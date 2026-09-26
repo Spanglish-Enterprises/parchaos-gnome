@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -43,6 +43,12 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
+- Save when the log out, restart or power off dialog opens and stop
+  saving once confirmed, so the closing-down desktop can't replace the
+  session. Restore once per shell process instead of using a runtime-dir
+  marker (which survived logout when the user manager lingered). Track
+  every timer.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
 - Point the extension's website link at the ParchaOS website.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
