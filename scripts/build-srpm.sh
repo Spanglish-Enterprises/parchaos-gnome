@@ -44,7 +44,7 @@ for name in "$@"; do
     # Local sources: files next to the spec, and generated artwork.
     find "$dir" -maxdepth 1 -type f ! -name '*.spec' -exec cp {} "$top/SOURCES/" \;
     [ -d "$dir/files" ] && find "$dir/files" -type f -exec cp {} "$top/SOURCES/" \;
-    [ -d "$dir/parchaos-icons" ] && cp "$dir"/parchaos-icons/*.svg "$dir"/parchaos-icons/*.py "$top/SOURCES/" 2>/dev/null
+    [ -d "$dir/parchaos-icons" ] && cp "$dir"/parchaos-icons/*.svg "$dir"/parchaos-icons/*.py "$dir"/parchaos-icons/*.txt "$top/SOURCES/" 2>/dev/null
     # Specs with a tarball of their files/ tree among the sources (always
     # rebuilt here, never reused from an earlier build).
     tarball=$(rpmspec -P "$spec" 2>/dev/null | awk '/^Source[0-9]*:/ {print $2}' | grep -- '-files\.tar\.gz$' || true)

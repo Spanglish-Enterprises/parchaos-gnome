@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
@@ -76,6 +76,10 @@ Source36:       parchaos-keyboard-symbolic.svg
 Source37:       mime-map.py
 # ParchaOS's cloud icon, in place of MacTahoe's icloud.svg.
 Source38:       parchaos-cloud.svg
+# Removes every MacTahoe app icon ParchaOS hasn't replaced, and MacTahoe's
+# drawings of Apple hardware and file types (see the script's docstring).
+Source70:       prune-apps.py
+Source71:       allowlist.txt
 Source40:       parchaos-mime-generic.svg
 Source41:       parchaos-mime-text.svg
 Source42:       parchaos-mime-code.svg
@@ -108,6 +112,8 @@ BuildRequires:  python3
 BuildRequires:  gtk-update-icon-cache
 
 Requires:       hicolor-icon-theme
+# Apps whose MacTahoe icon was removed fall back to GNOME's icons.
+Requires:       adwaita-icon-theme
 
 %description
 ParchaOS's icon theme: original ParchaOS artwork for apps, folders and
@@ -223,6 +229,14 @@ find %{buildroot}%{_datadir}/icons/MacTahoe* \
     \( -name 'weather-*-large.svg' -o -name 'weather-*-small.svg' \) \
     \( -type f -o -type l \) -delete
 
+# Keep only ParchaOS's own app icons: everything else falls back to
+# GNOME's (Adwaita, hicolor). Fails the build if an excluded name survives.
+python3 %{SOURCE70} %{buildroot}%{_datadir}/icons %{SOURCE71}
+for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+    sed -i 's/^Inherits=.*/Inherits=Adwaita,hicolor/' %{buildroot}%{_datadir}/icons/$theme/index.theme
+done
+grep -q '^Inherits=Adwaita,hicolor' %{buildroot}%{_datadir}/icons/MacTahoe/index.theme
+
 # ParchaOS uses GNOME's Adwaita cursors; MacTahoe's copy the reference
 # desktop's cursor designs, so they aren't shipped.
 rm -rf %{buildroot}%{_datadir}/icons/MacTahoe*/cursors
@@ -239,6 +253,12 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-15
+- Keep only ParchaOS's own app icons: every other MacTahoe app icon is
+  removed (apps fall back to Adwaita/hicolor), Apple-named files get
+  neutral names, and MacTahoe's drawings of Apple hardware and file
+  types are removed. The build fails if an excluded name survives.
+  Inherits Adwaita,hicolor.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-14
 - Stop shipping MacTahoe's cursors (ParchaOS uses Adwaita's); neutral
   summary.

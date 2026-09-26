@@ -1,0 +1,26 @@
+# App icons ParchaOS keeps in the MacTahoe-based themes: the targets the
+# spec replaces with original ParchaOS artwork (aliases that link to them
+# are kept too). Every other MacTahoe app icon is removed by
+# prune-apps.py, so apps fall back to GNOME's own icons.
+file-manager
+softwarecenter
+web-browser
+safari
+calendar
+preferences-system-time
+calc
+addressbook
+internet-mail
+preferences-system
+terminal
+text-editor
+indicator-weather
+accessories-screenshot
+utilities-system-monitor
+gnome-disks
+org.gnome.Loupe
+file-roller
+hwinfo
+icloud
+start-here
+budgie-app-launcher-applet
