@@ -1,0 +1,11 @@
+[Unit]
+Description=Scheduled Do Not Disturb
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/parchaos-focus-schedule
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

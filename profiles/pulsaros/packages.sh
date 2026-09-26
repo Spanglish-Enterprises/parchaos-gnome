@@ -123,15 +123,9 @@ PROFILE_REPO_PACKAGES=(
     # script itself).
     parchaos-cloud
 
-    # Nightly Focus/Do Not Disturb schedule (packaging/parchaos-focus-schedule/)
-    # -- two systemd --user timers (22:00/08:00 by default) calling the
-    # real freedesktop.org Notifications Inhibit/UnInhibit D-Bus
-    # methods. Built and verified working against KDE Plasma originally
-    # (docs/phase0-findings.md in the KDE repo); genuinely 100%
-    # DE-agnostic (pure D-Bus spec calls via gdbus, no toolkit
-    # dependency at all) -- carried over unchanged for this GNOME
-    # profile, no porting needed. Enabled by default via its own
-    # systemd user-preset.
+    # Scheduled Do Not Disturb (packaging/parchaos-focus-schedule/): a
+    # user service that turns GNOME's Do Not Disturb on during a daily
+    # period (22:00-08:00 by default, set in ParchaOS Settings).
     parchaos-focus-schedule
 
     # Auto light/dark theme switching with real sunrise/sunset support

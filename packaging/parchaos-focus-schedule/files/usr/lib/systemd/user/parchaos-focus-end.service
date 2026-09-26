@@ -1,6 +1,0 @@
-[Unit]
-Description=End scheduled focus time (restore notification popups)
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/parchaos-focus-end

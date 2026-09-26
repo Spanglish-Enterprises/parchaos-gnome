@@ -23,5 +23,23 @@
         put their windows back where they were.
       </description>
     </key>
+    <key name="focus-schedule" type="b">
+      <default>true</default>
+      <summary>Scheduled Do Not Disturb</summary>
+      <description>
+        Turn on Do Not Disturb every day between focus-start and focus-end.
+        A Do Not Disturb the user turned on themselves is left alone.
+      </description>
+    </key>
+    <key name="focus-start" type="s">
+      <default>'22:00'</default>
+      <summary>Scheduled Do Not Disturb starts (HH:MM)</summary>
+      <description>24-hour local time. If later than focus-end, the period runs past midnight.</description>
+    </key>
+    <key name="focus-end" type="s">
+      <default>'08:00'</default>
+      <summary>Scheduled Do Not Disturb ends (HH:MM)</summary>
+      <description>24-hour local time.</description>
+    </key>
   </schema>
 </schemalist>

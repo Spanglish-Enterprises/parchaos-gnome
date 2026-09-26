@@ -1,9 +1,0 @@
-[Unit]
-Description=Morning schedule for parchaos-focus-end
-
-[Timer]
-OnCalendar=*-*-* 08:00:00
-Persistent=false
-
-[Install]
-WantedBy=timers.target

@@ -41,8 +41,8 @@
 # ==============================================================================
 
 Name:           parchaos-focus-schedule
-Version:        1.0.0
-Release:        2%{?dist}
+Version:        1.1.0
+Release:        1%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
 License:        NOASSERTION
@@ -51,43 +51,48 @@ Source0:        parchaos-focus-schedule-files.tar.gz
 BuildArch:      noarch
 
 Requires:       glib2
-%{?systemd_requires}
+Requires:       python3-gobject
 BuildRequires:  systemd-rpm-macros
 
 %description
-Two systemd --user timers (parchaos-focus-start.timer at 22:00,
-parchaos-focus-end.timer at 08:00) that turn GNOME's own Do Not
-Disturb on overnight and back off in the morning, silencing
-notification popups during those hours. A Do Not Disturb the user
-switched on themselves is left alone.
+Scheduled Do Not Disturb: a small user service turns GNOME's own Do Not
+Disturb on during a daily period (22:00 to 08:00 by default) and back
+off afterwards. It works out the right state from the clock at login,
+after sleep, at each start and end time, and whenever the schedule is
+changed in ParchaOS Settings, so a computer that was off or asleep at
+the boundary still ends up right. A Do Not Disturb the user switched on
+themselves is left alone.
 
 %prep
 %setup -q -c -n %{name}-%{version}
 
 %install
-mkdir -p %{buildroot}
-cp -a usr %{buildroot}/
-chmod 0755 %{buildroot}%{_bindir}/parchaos-focus-start
-chmod 0755 %{buildroot}%{_bindir}/parchaos-focus-end
+install -Dm0755 usr/bin/parchaos-focus-schedule %{buildroot}%{_bindir}/parchaos-focus-schedule
+install -Dm0644 usr/lib/systemd/user/parchaos-focus-schedule.service \
+    %{buildroot}%{_userunitdir}/parchaos-focus-schedule.service
+# Enabled for everyone, including existing installs (a preset only
+# applies on first install).
+mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
+ln -s ../parchaos-focus-schedule.service \
+    %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %post
-%systemd_user_post parchaos-focus-start.timer
-%systemd_user_post parchaos-focus-end.timer
-
-%preun
-%systemd_user_preun parchaos-focus-start.timer
-%systemd_user_preun parchaos-focus-end.timer
+# Releases before 1.1.0 used two timers enabled globally by preset.
+rm -f %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-start.timer \
+      %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-end.timer || :
 
 %files
-%{_bindir}/parchaos-focus-start
-%{_bindir}/parchaos-focus-end
-%{_prefix}/lib/systemd/user/parchaos-focus-start.service
-%{_prefix}/lib/systemd/user/parchaos-focus-start.timer
-%{_prefix}/lib/systemd/user/parchaos-focus-end.service
-%{_prefix}/lib/systemd/user/parchaos-focus-end.timer
-%{_prefix}/lib/systemd/user-preset/90-parchaos-focus-schedule.preset
+%{_bindir}/parchaos-focus-schedule
+%{_userunitdir}/parchaos-focus-schedule.service
+%{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.1.0-1
+- Replace the two fixed timers with a user service that works out the
+  right Do Not Disturb state from the clock at login, after sleep, at
+  each boundary and when the schedule changes; times and on/off come
+  from ParchaOS settings (org.parchaos.desktop focus-schedule, focus-
+  start, focus-end).
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
 - Real bug found on real hardware: GNOME Shell has no
   Notifications.Inhibit method, so focus-start failed every night and

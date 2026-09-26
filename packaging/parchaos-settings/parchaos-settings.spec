@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -45,6 +45,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
+- General: a Focus group to turn scheduled Do Not Disturb on or off and
+  set its start and end times.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
 - General page: "Reopen apps when logging back in" (session restore).
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
