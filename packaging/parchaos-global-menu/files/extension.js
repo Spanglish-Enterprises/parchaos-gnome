@@ -268,9 +268,15 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._createWindowMenu();
         this._createHelpMenu();
 
+        // Menu spacing like the reference bar (~2x the text height between
+        // items). Set on the buttons themselves so a panel-wide padding
+        // setting (e.g. Just Perfection's) doesn't spread the menus out.
         let pos = 1;
-        for (const button of this._menuBarButtons)
+        for (const button of this._menuBarButtons) {
+            const pad = button.roleId === 'logo' ? 8 : 6;
+            button.set_style(`-natural-hpadding: ${pad}px; -minimum-hpadding: ${pad}px;`);
             Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, pos++, 'left');
+        }
 
         this._weatherIndicator = new WeatherIndicator();
         Main.panel.addToStatusArea('parchaos-weather', this._weatherIndicator, 0, 'right');
