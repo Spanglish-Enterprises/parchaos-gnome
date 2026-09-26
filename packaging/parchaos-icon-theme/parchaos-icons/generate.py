@@ -276,6 +276,49 @@ def trash(full):
             '</svg>\n')
 
 
+# --- The ParchaOS mark: a halved passion fruit (parcha) with its stem and
+# leaf, full color and symbolic. Replaces MacTahoe's start-here logos. ---
+
+def logo():
+    import math
+    seeds = []
+    for ring, count, r in ((0, 1, 0), (1, 6, 50), (2, 12, 96)):
+        for i in range(count):
+            a = 2 * math.pi * i / count + ring * 0.26
+            x = 256 + r * math.cos(a)
+            y = 300 + r * math.sin(a)
+            seeds.append(f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="15" ry="19" fill="#fff1c4" fill-opacity="0.55"/>'
+                         f'<ellipse cx="{x:.1f}" cy="{y + 2:.1f}" rx="8" ry="11" fill="#3a1d05"/>')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">'
+            '<defs><radialGradient id="rind" cx="0.4" cy="0.35" r="0.75">'
+            '<stop offset="0" stop-color="#9b4fe0"/><stop offset="1" stop-color="#4b0f86"/></radialGradient>'
+            '<radialGradient id="pulp" cx="0.45" cy="0.4" r="0.7">'
+            '<stop offset="0" stop-color="#ffd35c"/><stop offset="1" stop-color="#ec9a1f"/></radialGradient>'
+            '<filter id="lsh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000" flood-opacity="0.22"/></filter></defs>'
+            '<g filter="url(#lsh)">'
+            '<rect x="244" y="64" width="24" height="70" rx="12" fill="#6b4a1e"/>'
+            '<path d="M266 110 C266 58 316 30 384 38 C382 96 336 122 266 110 Z" fill="#4caf50"/>'
+            '<path d="M276 104 C306 80 336 64 368 52" fill="none" stroke="#2e7d32" stroke-width="7" stroke-linecap="round"/>'
+            '<circle cx="256" cy="300" r="180" fill="url(#rind)"/>'
+            '<circle cx="256" cy="300" r="146" fill="#f7f0de"/>'
+            '<circle cx="256" cy="300" r="134" fill="url(#pulp)"/>'
+            + ''.join(seeds) +
+            '</g></svg>\n')
+
+
+def logo_symbolic():
+    # Same drawing as the menu-bar glyph (16 px grid).
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+            '<circle fill="#bebebe" cx="8" cy="9.75" r="5.75"/>'
+            '<rect fill="#bebebe" x="7" y="1" width="2" height="4"/>'
+            '<path fill="#bebebe" d="M9 4.6C9 1.6 11.5 0 15 0.4C14.9 3.6 12.6 5.2 9 4.6Z"/>'
+            '</svg>\n')
+
+
+OWN['parchaos-logo'] = logo
+OWN['parchaos-logo-symbolic'] = logo_symbolic
+
+
 # name -> (svg text factory, MacTahoe places file(s) it replaces)
 PLACES = {
     'parchaos-folder': (lambda: folder('plain'), ['folder']),

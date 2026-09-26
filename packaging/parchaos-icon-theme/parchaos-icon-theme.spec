@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ Source30:       parchaos-trash-full.svg
 Source31:       parchaos-preview.svg
 Source32:       parchaos-archive.svg
 Source33:       parchaos-firmware.svg
+# The ParchaOS mark, replacing MacTahoe's Apple-logo start-here icons.
+Source34:       parchaos-logo.svg
+Source35:       parchaos-logo-symbolic.svg
 
 BuildArch:      noarch
 
@@ -151,6 +154,26 @@ for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
     done
 done
 
+# The Apple logo: MacTahoe draws it as start-here (the distributor/menu
+# logo) and the Budgie launcher applet. Overwrite every real file (the
+# aliases link to them) with the ParchaOS mark, symbolic where the name
+# asks for it. folder-apple gets the plain ParchaOS folder.
+find %{buildroot}%{_datadir}/icons/MacTahoe* -type f \
+    \( -name 'start-here*.svg' -o -name 'budgie-app-launcher-applet*.svg' \) |
+while read -r f; do
+    case "$f" in
+        *-symbolic.svg|*/symbolic/*) install -m 0644 %{SOURCE35} "$f" ;;
+        *) install -m 0644 %{SOURCE34} "$f" ;;
+    esac
+done
+find %{buildroot}%{_datadir}/icons/MacTahoe* -type f -name 'folder-apple*.svg' |
+while read -r f; do
+    case "$f" in
+        *-symbolic.svg) install -m 0644 %{SOURCE35} "$f" ;;
+        *) install -m 0644 %{SOURCE17} "$f" ;;
+    esac
+done
+
 # Drop MacTahoe's weather-*-large/-small condition icons. GNOME Weather
 # draws these at ~200px, and most of MacTahoe's embed small raster
 # images, so they came out dotted/pixelated. Without them the lookup
@@ -172,6 +195,8 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-9
+- Replace the Apple-logo start-here, Budgie launcher and folder-apple icons with the ParchaOS mark (a halved passion fruit) and the ParchaOS folder.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-8
 - Original icons for the image viewer (Preview), Archive Manager and
   Firmware; MacTahoe's copied Apple's Preview and Archive Utility, and its
