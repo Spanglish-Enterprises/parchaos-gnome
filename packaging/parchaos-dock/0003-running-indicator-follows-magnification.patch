@@ -1,0 +1,46 @@
+diff --git a/dash.js b/dash.js
+index 4ec4054..4627273 100755
+--- a/dash.js
++++ b/dash.js
+@@ -911,9 +911,27 @@ export const DockDash = GObject.registerClass({
+                 badge.translation_x = finalTransX;
+                 badge.translation_y = finalTransY * 0.3;
+             }
++
++            // The running indicator (the default style's _dot, or the
++            // drawing area of the dots styles) is also outside targetActor.
++            // Slide it along the dock with its icon; it stays at the dock
++            // edge and at its own size, it doesn't grow or lift.
++            for (const indicator of this._runningIndicatorActors(data.icon)) {
++                indicator.remove_transition('translation-x');
++                indicator.remove_transition('translation-y');
++                if (this._isHorizontal)
++                    indicator.translation_x = finalTransX;
++                else
++                    indicator.translation_y = finalTransY;
++            }
+         });
+     }
+ 
++    _runningIndicatorActors(icon) {
++        return [icon._dot, icon._indicator?._indicators?.map(i => i._area)]
++            .flat().filter(a => a);
++    }
++
+     _stretchBackground(iconData) {
+         const bg = this._background;
+         const mapped = iconData.filter(d => d.icon.mapped);
+@@ -979,6 +997,13 @@ export const DockDash = GObject.registerClass({
+                 badge.translation_x = 0;
+                 badge.translation_y = 0;
+             }
++
++            for (const indicator of this._runningIndicatorActors(icon)) {
++                indicator.remove_transition('translation-x');
++                indicator.remove_transition('translation-y');
++                indicator.translation_x = 0;
++                indicator.translation_y = 0;
++            }
+         });
+     }
+ 

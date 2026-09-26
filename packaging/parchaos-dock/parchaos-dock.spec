@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -84,6 +84,10 @@ Patch0:         0001-fix-showappsicon-number-overlay-crash.patch
 # It also tracks magnification over the whole dash (hovering Show Apps used
 # to reset it) and stretches the dock background with the spread icons.
 Patch1:         0002-crisp-uncropped-hover-magnification.patch
+# The running-app indicator (dot) lives outside the magnified icon actor,
+# so it stayed put while the icons spread under the pointer. Patch2 slides
+# it along the dock with its icon (no scaling, stays at the dock edge).
+Patch2:         0003-running-indicator-follows-magnification.patch
 
 BuildArch:      noarch
 
@@ -162,6 +166,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-10
+- Running-app indicator dots now slide with their icons during hover
+  magnification instead of staying at the resting position.
 * Fri Sep 25 2026 ParchaOS packaging - 106-9
 - Follow-ups found on real hardware after 106-8: hovering Show Apps reset
   magnification (it sits outside the box that tracked the pointer), and
