@@ -15,7 +15,7 @@ theming (light + dark) with original ParchaOS icons, a Chromium-based
 browser, a Super-as-Ctrl keyboard remap, scheduled Do Not Disturb, auto
 light/dark, TMOG, a hosts-file ad-blocker, a live/video wallpaper,
 Desktop Icons NG, and GNOME Shell extensions from Pulsar OS's own list
-for desktop polish (traffic-light window buttons, genie minimize effect,
+for desktop polish (traffic-light window buttons, magic-lamp minimize effect,
 top-right notification banners, blur, and more). The KDE-only
 cruft this repo inherited from its original fork (`profiles/pearos/`
 and its packaging) has been fully removed.
@@ -99,7 +99,7 @@ scripts/lint.sh     The static checks CI runs on every push.
 
 ## What's actually shipped (see the phase docs for the "why" and the real bugs behind each)
 
-**Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, genie minimize
+**Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, magic-lamp minimize
 effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (global
 menu bar with the About ParchaOS card and weather), `parchaos-launcher`
 (full-screen app launcher with folders, search and uninstall),

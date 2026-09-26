@@ -26,6 +26,24 @@ profile_customize() {
     echo "--- Branding /etc/os-release as ParchaOS ---"
     run_in_target /usr/libexec/parchaos-os-release
 
+    # Distribution rules for the ISO itself:
+    # - Fedora's logos are only for official Fedora media, so a remix ships
+    #   generic-logos (same file paths, neutral artwork).
+    # - Cisco's patent license covers openh264 only when users download it
+    #   from Cisco, so the ISO carries Fedora's noopenh264 stub instead.
+    #   The fedora-cisco-openh264 repo stays enabled, so installed systems
+    #   can fetch the real library from Cisco (dnf swap noopenh264 openh264).
+    echo "--- Swapping in generic-logos and noopenh264 ---"
+    run_in_target dnf -y swap fedora-logos generic-logos
+    run_in_target dnf -y swap openh264 noopenh264
+    run_in_target rpm -q generic-logos noopenh264
+    for pkg in fedora-logos openh264; do
+        if run_in_target rpm -q "$pkg" >/dev/null 2>&1; then
+            echo "ERROR: $pkg is still in the image" >&2
+            return 1
+        fi
+    done
+
     # The live session (livesys runs this hook at live boot only; it never
     # reaches installed systems): put the installer first in the dock, and
     # don't lock the screen or blank it while someone reads the installer.

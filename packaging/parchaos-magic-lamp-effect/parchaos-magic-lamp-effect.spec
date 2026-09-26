@@ -28,8 +28,8 @@
 
 Name:           parchaos-magic-lamp-effect
 Version:        25
-Release:        2%{?dist}
-Summary:        Compiz-alike magic lamp (genie) minimize effect for GNOME Shell
+Release:        3%{?dist}
+Summary:        Compiz-style magic lamp minimize effect for GNOME Shell
 
 License:        GPL-3.0-only
 URL:            https://github.com/hermes83/compiz-alike-magic-lamp-effect
@@ -45,9 +45,8 @@ Requires:       dconf
 
 %description
 A real, independently-maintained (not Inled-original) GNOME Shell
-extension: the classic Compiz "magic lamp" genie effect for minimizing
-windows into the dock, the familiar genie-style minimize
-animation. Same real upstream Pulsar OS's own config uses. See this
+extension: the classic Compiz "magic lamp" effect, which shrinks
+minimized windows into the dock. Same real upstream Pulsar OS's own config uses. See this
 spec's own banner comment for the license diligence.
 
 %prep
@@ -69,6 +68,8 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/compiz-alike-magic-lamp-effect@hermes83.github.com/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 25-3
+- Neutral summary and description wording.
 * Fri Sep 25 2026 ParchaOS packaging - 25-2
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.

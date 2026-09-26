@@ -398,8 +398,8 @@ gnome-extensions-app
 # `chromium-freeworld` (RPM Fusion) doesn't exist for this Fedora
 # release -- this is Fedora's own plain `chromium`, which has shipped
 # with Google API keys already stripped since 2021 (no baked-in
-# Sign-in/Sync nagging). H.264 support comes from the
-# fedora-cisco-openh264 repo this profile already enables.
+# Sign-in/Sync nagging). The ISO ships noopenh264 (customize.sh); H.264
+# comes from Cisco's openh264, which users fetch from the enabled repo.
 chromium
 # Mail.app equivalent -- confirmed via real `dnf repoquery -l geary` on
 # real hardware that this ships org.gnome.Geary.desktop (renamed to

@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <img alt="Fedora 44" src="https://img.shields.io/badge/Fedora-44-51a2da?logo=fedora&logoColor=white">
-  <img alt="GNOME" src="https://img.shields.io/badge/GNOME-Wayland-4a86cf?logo=gnome&logoColor=white">
+  <img alt="Based on Fedora 44" src="https://img.shields.io/badge/based%20on-Fedora%2044-51a2da">
+  <img alt="GNOME on Wayland" src="https://img.shields.io/badge/GNOME-Wayland-4a86cf">
   <img alt="Secure Boot" src="https://img.shields.io/badge/Secure%20Boot-supported-2ea44f">
   <img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-blue">
 </p>
@@ -32,7 +32,7 @@
 
 ## Why ParchaOS
 
-- **Everything where you expect it.** A dock with a genie minimize, a global
+- **Everything where you expect it.** A dock with a magic-lamp minimize effect, a global
   menu bar, traffic-light window buttons and a full-screen app launcher,
   with no extension hunting or theme tweaking.
 - **Fedora underneath.** Current kernels, Wayland, SELinux, Flatpak and the
@@ -90,6 +90,10 @@
 **You'll need:** a 64-bit PC (UEFI or legacy BIOS), 4 GB of RAM (8 GB
 recommended), and 25 GB of disk space.
 
+**H.264 video:** like Fedora, the ISO doesn't include Cisco's OpenH264
+library. To enable it after installing, run
+`sudo dnf swap noopenh264 openh264` (downloaded straight from Cisco).
+
 > [!NOTE]
 > ParchaOS is a young project. It's tested on real hardware and in virtual
 > machines, but expect rough edges, and back up your data before you
@@ -109,6 +113,20 @@ own packages are in `packaging/` (one directory and spec per package) and
 are published to the [COPR repository](https://copr.fedorainfracloud.org/coprs/alexgalicea/parchaos-gnome/)
 that installed systems update from. For how things fit together, see
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Source code
+
+Everything needed to rebuild ParchaOS is public:
+
+- **ParchaOS's own packages:** this repository, plus the source RPMs on
+  [COPR](https://copr.fedorainfracloud.org/coprs/alexgalicea/parchaos-gnome/).
+- **Fedora packages** in the ISO: unmodified Fedora 44 builds, with
+  sources at [src.fedoraproject.org](https://src.fedoraproject.org/) and
+  as source RPMs (`dnf download --source <package>`).
+
+If you can't get the source for any package in a ParchaOS release, open
+an issue and we'll provide it, for at least three years after that
+release.
 
 ## Contributing
 
@@ -130,6 +148,14 @@ ParchaOS stands on the shoulders of:
   the Noun Project, CC BY 3.0 ([details](branding/logo/CREDITS.md)).
 
 *Parcha* is a Spanish name for passion fruit, used in Puerto Rico and Venezuela.
+
+## Trademarks
+
+ParchaOS is an independent project. It isn't affiliated with or endorsed
+by the Fedora Project, Red Hat, the GNOME Foundation, Apple, Inled
+(Pulsar OS) or pearOS. Fedora is a trademark of Red Hat, LLC; GNOME is a
+trademark of the GNOME Foundation; other names belong to their owners
+and are used only to identify those projects.
 
 ## License
 

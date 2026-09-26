@@ -1,12 +1,13 @@
 Name:           parchaos-release
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS name, logo and links in os-release
-License:        GPL-3.0-or-later
+License:        GPL-3.0-or-later AND CC-BY-3.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-os-release
 Source1:        parchaos-logo.svg
 Source2:        parchaos-logo-symbolic.svg
+Source3:        LOGO-CREDITS
 BuildArch:      noarch
 
 Requires:       fedora-release-common
@@ -18,9 +19,11 @@ hostname and support links, which GNOME's About page, the boot menu and
 other tools show. Version fields stay Fedora's, so dnf and version checks
 keep working. Fedora's release package replaces /etc/os-release on every
 update, so a trigger writes it again afterwards. Also installs the
-ParchaOS logo the os-release LOGO field names.
+ParchaOS logo the os-release LOGO field names, with its CC BY 3.0
+attribution.
 
 %prep
+cp -p %{SOURCE3} .
 
 %build
 
@@ -42,11 +45,15 @@ if [ "$1" -eq 0 ]; then
 fi
 
 %files
+%license LOGO-CREDITS
 %{_libexecdir}/parchaos-os-release
 %{_datadir}/icons/hicolor/scalable/apps/parchaos-logo.svg
 %{_datadir}/icons/hicolor/symbolic/apps/parchaos-logo-symbolic.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Ship the logo's CC BY 3.0 attribution (LOGO-CREDITS) as a license
+  file.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
 - First release: ParchaOS os-release branding kept across Fedora
   release-package updates, and the ParchaOS logo icon.
