@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,10 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Dark Mode tile writes an explicit prefer-light/prefer-dark color
+  scheme. GNOME's own toggle writes 'default' (no preference) for light,
+  which left Electron apps such as Obsidian in the wrong mode.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Verified in an isolated headless gnome-shell with the
   real extension set: opens from the top bar and Super+S, closes on Esc;

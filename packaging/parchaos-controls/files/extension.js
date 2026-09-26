@@ -197,9 +197,18 @@ const ControlsPanel = GObject.registerClass({
             lm.attach(this._focusTile(dnd), 0, 2, 2, 1);
             col = 2;
         }
+        // GNOME's own dark style toggle writes 'default' (no preference)
+        // for light, which Electron/Chromium apps treat as "keep guessing"
+        // and can stay dark or light. Write an explicit preference both
+        // ways; the toggle still mirrors the state.
         const dark = this._firstItem(qs._darkMode);
-        if (dark)
-            lm.attach(smallToggle(dark, 'Dark Mode'), col++, 2, 1, 1);
+        if (dark) {
+            lm.attach(smallToggle(dark, 'Dark Mode', () => {
+                Main.layoutManager.screenTransition.run();
+                const iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+                iface.set_string('color-scheme', dark.checked ? 'prefer-light' : 'prefer-dark');
+            }), col++, 2, 1, 1);
+        }
         const night = this._firstItem(qs._nightLight);
         if (night && col < 4)
             lm.attach(smallToggle(night, 'Night Light'), col++, 2, 1, 1);
