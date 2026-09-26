@@ -57,6 +57,10 @@ panel-indicator-padding-size=10
 animation=1
 startup-status=0
 dash-icon-size=0
+# The extension's own "support the developer" pop-up (with donation
+# buttons) would appear on every new install and every extension update.
+# Credit belongs on the project's credits page instead of in a nag.
+support-notifier-type=0
 
 # Default: top-right, sliding in from the right edge (matching the
 # reference desktop's notification behavior), with a small edge inset
