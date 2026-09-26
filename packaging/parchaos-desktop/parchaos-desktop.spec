@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -91,7 +91,7 @@ Requires:       flatpak
 Requires:       python3-gobject
 BuildRequires:  systemd-rpm-macros
 
-Requires:       parchaos-finder
+Requires:       parcher
 Requires:       parchaos-dock
 Requires:       parchaos-global-menu
 Requires:       parchaos-gtk-theme
@@ -204,6 +204,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-28
+- Require parcher (the file manager package, renamed from parchaos-
+  finder).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-27
 - Schema: add focus-schedule, focus-start and focus-end (scheduled Do
   Not Disturb).

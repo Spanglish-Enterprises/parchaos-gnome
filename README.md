@@ -130,7 +130,7 @@ independently-licensed GNOME Shell extensions for polish
 `parchaos-ui-tune`) — 12 of Pulsar OS's own real ~15-extension list in
 total.
 
-**Apps and settings**: `parchaos-finder` (Parcher, a Nautilus fork,
+**Apps and settings**: `parcher` (Parcher, a Nautilus fork,
 GPL-3.0), `parchaos-settings` (ParchaOS Settings: style, session
 restore, Focus schedule, keyboard; also reachable from a ParchaOS panel
 in GNOME Settings, `packaging/gnome-control-center/`, a patched Fedora

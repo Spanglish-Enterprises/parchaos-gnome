@@ -7,7 +7,7 @@
 
 PROFILE_REPO_PACKAGES=(
     # Parcher — ParchaOS's build of Pulsar OS's real, working
-    # fork of GNOME Files/Nautilus (packaging/parchaos-finder/). Real
+    # fork of GNOME Files/Nautilus (packaging/parcher/). Real
     # traffic-light window controls, live folder color tagging, cloud
     # drive sidebar integration. Renamed from upstream's "Files"/Pulsar
     # OS's own "Finder" branding to avoid Apple trademark exposure ahead
@@ -15,7 +15,7 @@ PROFILE_REPO_PACKAGES=(
     # Obsoletes/Conflicts/Provides stock nautilus directly (not listed in
     # packages.list's base set) -- a real drop-in replacement, same as
     # the actual Pulsar OS package itself.
-    parchaos-finder
+    parcher
 
     # Parcha Dock — ParchaOS's rebrand of Pulsar OS's real fork of the
     # well-known Dash-to-Dock GNOME Shell extension (hover
