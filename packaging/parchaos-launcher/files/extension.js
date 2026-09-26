@@ -193,6 +193,9 @@ const Launcher = GObject.registerClass({
             container: wallpaper,
             monitorIndex: monitor.index,
             vignette: false,
+            // Place it at 0,0 in our container, not at the monitor's
+            // global position (off-screen for any monitor not at 0,0).
+            controlPosition: false,
         });
         wallpaper.add_effect(new Shell.BlurEffect({
             radius: 100,

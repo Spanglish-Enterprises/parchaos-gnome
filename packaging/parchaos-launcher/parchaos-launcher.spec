@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,10 @@ install -m 0644 src/stylesheet.css "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
+- Fix a black background on multi-monitor setups: the wallpaper actor
+  was placed at the monitor's global position inside the launcher, which
+  is off-screen for any primary monitor not at 0,0.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
 - Background is the blurred wallpaper only, from the launcher's own
   background actor; open windows no longer show through.
