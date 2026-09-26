@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
@@ -117,6 +117,9 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 /usr/local/bin/parchaos-launch-calamares
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-25
+- Style installer checkboxes and radio buttons; call the launcher
+  Install ParchaOS.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-24
 - Use parchaos-boot's GRUB setup instead of a static entry pinned to the
   install kernel; set the BIOS boot flag only on the install target
