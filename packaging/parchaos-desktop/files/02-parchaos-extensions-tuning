@@ -1,0 +1,72 @@
+[org/gnome/shell/extensions/blur-my-shell/appfolder]
+brightness=0.6
+sigma=30
+
+[org/gnome/shell/extensions/blur-my-shell/applications]
+# Off: the per-window blur is rectangular and leaked outside rounded
+# window corners; windows are opaque, so nothing else used it.
+blur=false
+blur-on-overview=false
+corner-when-maximized=true
+dynamic-opacity=false
+enable-all=true
+opacity=255
+sigma=23
+# Real, documented interaction: with enable-all=true above (every app
+# blurred by default), Hanabi's own renderer window (the live-wallpaper
+# extension, packaging/parchaos-hanabi/) gets caught by that blanket
+# rule and goes semi-transparent -- Hanabi's own README says exactly
+# this and names the fix (its renderer's real app ID). The
+# ding/DING/org.gnome.Shell.Extensions.DING entries match Pulsar OS's
+# own real, working config exactly (same fetch used for the
+# button-layout/blur-my-shell defaults throughout this project) --
+# Desktop Icons NG's own desktop-grid window needs the same exception,
+# not re-derived independently here.
+blacklist=['io.github.jeffshee.HanabiRenderer', 'ding', 'DING', 'org.gnome.Shell.Extensions.DING', '*ding*', '*DING*']
+
+[org/gnome/shell/extensions/blur-my-shell/dash-to-dock]
+blur=true
+brightness=0.64
+override-background=true
+pipeline='pipeline_default_rounded'
+sigma=0
+static-blur=true
+style-dash-to-dock=2
+unblur-in-overview=true
+
+[org/gnome/shell/extensions/blur-my-shell/panel]
+blur=false
+brightness=0.6
+corner-radius=0
+force-light-text=false
+override-background=false
+pipeline='pipeline_default'
+sigma=30
+
+[org/gnome/shell/extensions/blur-my-shell/window-list]
+brightness=0.6
+sigma=30
+
+[org/gnome/shell/extensions/just-perfection]
+activities-button=false
+clock-menu-position=1
+clock-menu-position-offset=12
+panel-size=32
+panel-button-padding-size=10
+panel-indicator-padding-size=10
+animation=1
+startup-status=0
+dash-icon-size=0
+
+# Default: top-right, sliding in from the right edge (matching the
+# reference desktop's notification behavior), with a small edge inset
+# rather than flush-to-corner. anchor-vertical=0/anchor-horizontal=1
+# confirmed against the extension's own real extension.js source
+# (0=top/1=bottom/2=center for vertical, 0=left/1=right/2=center for
+# horizontal -- not guessed from the schema's bare integers alone).
+[org/gnome/shell/extensions/notification-banner-reloaded]
+anchor-vertical=0
+anchor-horizontal=1
+padding-vertical=8
+padding-horizontal=8
+animation-direction=1

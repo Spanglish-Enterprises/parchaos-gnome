@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -70,9 +70,17 @@ URL:            https://github.com/alexgalicea/parchaos-gnome
 # Desktop-wide ParchaOS preferences (visual style), read by the
 # ParchaOS extensions and set from ParchaOS Settings.
 Source0:        org.parchaos.desktop.gschema.xml
+# Theme and extension-tuning defaults. Until 2026.09.23-22 only the ISO
+# build (customize.sh) wrote these, so older installs never got changes.
+Source1:        01-parchaos-theme
+Source2:        02-parchaos-extensions-tuning
+# Flathub as a static system remote (flatpak reads remotes.d), instead of
+# a one-off `flatpak remote-add` in the ISO build.
+Source3:        flathub.flatpakrepo
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
+Requires:       flatpak
 
 Requires:       parchaos-finder
 Requires:       parchaos-dock
@@ -118,6 +126,8 @@ with packages.sh, bump Release on every change).
 %install
 install -Dm0644 %{SOURCE0} %{buildroot}%{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
+install -m0644 %{SOURCE1} %{SOURCE2} %{buildroot}%{_sysconfdir}/dconf/db/local.d/
+install -Dm0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/pulsaros/customize.sh only affects freshly built ISOs).
 # Default extensions for new user accounts. Previously written only by the
@@ -158,9 +168,14 @@ dconf update >/dev/null 2>&1 || :
 %files
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
+%{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
+%{_sysconfdir}/dconf/db/local.d/02-parchaos-extensions-tuning
+%{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-22
+- Ship the theme (01-parchaos-theme) and extension tuning (02-parchaos-extensions-tuning) dconf defaults and a static Flathub remote, previously written only by the ISO build.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-21
 - Require and enable parchaos-live-icons (live Clock and Calendar icons).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-20

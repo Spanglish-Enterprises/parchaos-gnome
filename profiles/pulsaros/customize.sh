@@ -95,161 +95,9 @@ EOF
     # was, not done in this pass.
     # The default enabled-extensions list (00-parchaos-extensions) now ships
     # in parchaos-desktop, so existing installs get changes over OTA too.
-    # Real, working tuning values -- Pulsar OS's own real defaults for
-    # these exact same extensions (same fetch as above), adapted to
-    # this profile's own dock (blur-my-shell's "dash-to-dock" module
-    # blurs behind whatever real Dash-to-Dock-derived extension is
-    # active -- parcha-dock is a real Dash-to-Dock fork with the same
-    # internal structure, confirmed this integration target is correct
-    # by extension, not re-verified pixel-for-pixel). Dropped Pulsar's
-    # kiwimenu/support-notifier-* keys -- this profile doesn't ship
-    # kiwimenu, and the notifier keys are just Just Perfection's own
-    # internal "have I shown this changelog" tracking, not a real
-    # user-facing setting.
-    cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/02-parchaos-extensions-tuning" <<EOF
-[org/gnome/shell/extensions/blur-my-shell/appfolder]
-brightness=0.6
-sigma=30
-
-[org/gnome/shell/extensions/blur-my-shell/applications]
-# Off: the per-window blur is rectangular and leaked outside rounded
-# window corners; windows are opaque, so nothing else used it.
-blur=false
-blur-on-overview=false
-corner-when-maximized=true
-dynamic-opacity=false
-enable-all=true
-opacity=255
-sigma=23
-# Real, documented interaction: with enable-all=true above (every app
-# blurred by default), Hanabi's own renderer window (the live-wallpaper
-# extension, packaging/parchaos-hanabi/) gets caught by that blanket
-# rule and goes semi-transparent -- Hanabi's own README says exactly
-# this and names the fix (its renderer's real app ID). The
-# ding/DING/org.gnome.Shell.Extensions.DING entries match Pulsar OS's
-# own real, working config exactly (same fetch used for the
-# button-layout/blur-my-shell defaults throughout this project) --
-# Desktop Icons NG's own desktop-grid window needs the same exception,
-# not re-derived independently here.
-blacklist=['io.github.jeffshee.HanabiRenderer', 'ding', 'DING', 'org.gnome.Shell.Extensions.DING', '*ding*', '*DING*']
-
-[org/gnome/shell/extensions/blur-my-shell/dash-to-dock]
-blur=true
-brightness=0.64
-override-background=true
-pipeline='pipeline_default_rounded'
-sigma=0
-static-blur=true
-style-dash-to-dock=2
-unblur-in-overview=true
-
-[org/gnome/shell/extensions/blur-my-shell/panel]
-blur=false
-brightness=0.6
-corner-radius=0
-force-light-text=false
-override-background=false
-pipeline='pipeline_default'
-sigma=30
-
-[org/gnome/shell/extensions/blur-my-shell/window-list]
-brightness=0.6
-sigma=30
-
-[org/gnome/shell/extensions/just-perfection]
-activities-button=false
-clock-menu-position=1
-clock-menu-position-offset=12
-panel-size=32
-panel-button-padding-size=10
-panel-indicator-padding-size=10
-animation=1
-startup-status=0
-dash-icon-size=0
-
-# Default: top-right, sliding in from the right edge (matching the
-# reference desktop's notification behavior), with a small edge inset
-# rather than flush-to-corner. anchor-vertical=0/anchor-horizontal=1
-# confirmed against the extension's own real extension.js source
-# (0=top/1=bottom/2=center for vertical, 0=left/1=right/2=center for
-# horizontal -- not guessed from the schema's bare integers alone).
-[org/gnome/shell/extensions/notification-banner-reloaded]
-anchor-vertical=0
-anchor-horizontal=1
-padding-vertical=8
-padding-horizontal=8
-animation-direction=1
-EOF
-    # ParchaOS's Tahoe-styled GTK/Shell theme and icon theme, both
-    # confirmed via `rpm -qlp` on their real built RPMs (not assumed):
-    # /usr/share/themes/MacTahoe-Dark and
-    # /usr/share/icons/{MacTahoe,MacTahoe-light,MacTahoe-dark} -- the
-    # "-dark" icon variant pairs with the dark GTK theme.
-    # Real gaps found 2026-09-24 (real user feedback: the terminal
-    # didn't follow the top-left traffic-light button rules),
-    # cross-checked directly against Pulsar OS's own real, working
-    # dconf defaults (Inled-Pulsar-OS/PKG's
-    # pulsaros-gnome/etc/dconf/db/local.d/00-pulsaros-theme, fetched
-    # directly, not guessed) since they've already solved this exact
-    # problem:
-    #   - button-layout was never set at all, so GNOME fell back to
-    #     Fedora's stock 'appmenu:close' -- a single close button on
-    #     the RIGHT, no traffic lights, no minimize/maximize. This is
-    #     a WM/Mutter-level setting, not something a GTK theme's CSS
-    #     can control on its own -- a theme can recolor/reshape the
-    #     buttons GNOME decides to draw, but not which ones or which
-    #     side. Matches Pulsar OS's own real value exactly.
-    #   - cursor-theme was never set, even though MacTahoe-dark
-    #     genuinely bundles a real cursors/ directory (confirmed via
-    #     `find /usr/share/icons -iname cursors` on real hardware,
-    #     not assumed) -- it was just never wired into dconf, so the
-    #     system silently fell back to the stock Adwaita cursor.
-    #   - color-scheme was never set. gtk-theme only affects legacy
-    #     GTK3 CSS theme selection; GTK4/libadwaita apps (Nautilus,
-    #     Calculator, Terminal's newer libadwaita-based preferences
-    #     dialogs, etc.) pick light/dark purely from color-scheme,
-    #     independent of gtk-theme.
-    cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/01-parchaos-theme" <<EOF
-[org/gnome/desktop/interface]
-gtk-theme='MacTahoe-Dark'
-icon-theme='MacTahoe-dark'
-cursor-theme='MacTahoe-dark'
-color-scheme='prefer-dark'
-# Real gap found via a live reference-desktop comparison 2026-09-25: the
-# top bar's clock read "Sep 25", missing the day-of-week the reference
-# always shows ("Wed Sep 16"). Fedora's own default already has
-# clock-show-date=true (confirmed live, not this profile's own
-# setting) -- clock-show-weekday is the one real GNOME key still at
-# its stock default (false).
-clock-show-weekday=true
-
-# Reference-desktop comparison, 2026-09-25: the new weather
-# indicator (parcha-global-menu) needs real location data via Geoclue
-# to work at all, matching the reference desktop's out-of-the-box
-# menu-bar weather. GNOME's own stock default for this is off (a real,
-# deliberate privacy default upstream) -- enabling it here is a
-# genuine user-facing tradeoff this profile is choosing to make for
-# the built-in weather feature, not a silent override; a user who
-# doesn't want it can turn it back off in Settings like any other
-# GNOME install.
-[org/gnome/system/location]
-enabled=true
-
-[org/gnome/desktop/wm/preferences]
-theme='MacTahoe-Dark'
-button-layout='close,minimize,maximize:'
-
-[org/gnome/shell/extensions/user-theme]
-name='MacTahoe-Dark'
-
-[org/gnome/desktop/background]
-picture-uri='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
-picture-uri-dark='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
-picture-options='zoom'
-
-[org/gnome/desktop/screensaver]
-picture-uri='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
-EOF
+    # Theme (01-parchaos-theme) and extension tuning
+    # (02-parchaos-extensions-tuning) defaults ship in parchaos-desktop
+    # too, so changes reach existing installs over OTA.
     run_in_target dconf update
 
     # ParchaOS's own Plymouth boot splash (packages.list ships
@@ -262,12 +110,8 @@ EOF
     echo "--- Setting ParchaOS's Plymouth theme as default ---"
     run_in_target plymouth-set-default-theme parcha-plymouth
 
-    # Flathub remote (system-wide), same as the KDE profile — deliberately
-    # does NOT pre-install any Flatpak app during the build to keep the
-    # build itself fast; GNOME Software (already installed, native
-    # Flatpak support) can install/update from this remote once booted.
-    echo "--- Adding the Flathub remote ---"
-    run_in_target flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    # Flathub is a static system remote shipped by parchaos-desktop
+    # (/etc/flatpak/remotes.d); no Flatpak apps are pre-installed.
 
     echo "--- Syncing Flatpak appstream metadata ---"
     run_in_target flatpak update --system --appstream || true
