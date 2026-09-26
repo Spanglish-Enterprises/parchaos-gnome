@@ -87,6 +87,23 @@
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
+/* The folder name is an entry that looks like a title until focused. */
+StEntry.parchaos-launcher-folder-title {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 4px 12px;
+  border-radius: 12px;
+  caret-color: #ffffff;
+  selection-background-color: rgba(255, 255, 255, 0.35);
+  selected-color: #ffffff;
+}
+
+StEntry.parchaos-launcher-folder-title:hover,
+StEntry.parchaos-launcher-folder-title:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
 .parchaos-launcher-folder-panel {
   padding: 24px;
   border-radius: 36px;
@@ -192,4 +209,10 @@
 
 .parchaos-style-classic .parchaos-launcher-confirm-button {
   border-radius: 8px;
+}
+
+/* Drag and drop: the app or folder an icon is held over to combine them. */
+.parchaos-launcher-drop-target {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-radius: 24px;
 }

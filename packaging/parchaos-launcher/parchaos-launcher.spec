@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -56,6 +56,11 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
+- Drag to rearrange: other icons make room, holding at a page edge turns
+  the page, holding over an app makes a folder and over a folder adds to
+  it, and dragging out of an open folder takes an app out. Folder names
+  are editable in place. The arrangement is saved.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-8
 - Uninstall goes through dnf5daemon instead of pkexec dnf remove -y: the
   confirmation lists every package the removal takes with it, refuses

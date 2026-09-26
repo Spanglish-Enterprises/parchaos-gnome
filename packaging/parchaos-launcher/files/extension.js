@@ -85,7 +85,96 @@ function loadItems() {
     const loose = apps.filter(app => !inFolder.has(app))
         .sort((a, b) => a.get_name().localeCompare(b.get_name()))
         .map(app => ({type: 'app', app}));
-    return [...loose, ...folders];
+    return applyOrder([...loose, ...folders]);
+}
+
+// --- Arrangement ---
+//
+// The order the user arranged items in is kept in org.parchaos.desktop
+// launcher-order, as app IDs and "folder:<id>". Items it doesn't list
+// (newly installed apps, new folders) follow, in the default order.
+
+function itemKey(item) {
+    return item.type === 'app' ? item.app.get_id() : `folder:${item.id}`;
+}
+
+function orderSettings() {
+    const settings = styleSettings();
+    return settings?.settings_schema.has_key('launcher-order') ? settings : null;
+}
+
+function applyOrder(items) {
+    const order = orderSettings()?.get_strv('launcher-order') ?? [];
+    if (order.length === 0)
+        return items;
+    const byKey = new Map(items.map(item => [itemKey(item), item]));
+    const placed = order.filter(key => byKey.has(key)).map(key => byKey.get(key));
+    const rest = items.filter(item => !placed.includes(item));
+    return [...placed, ...rest];
+}
+
+function saveOrder(items) {
+    orderSettings()?.set_strv('launcher-order', items.map(itemKey));
+}
+
+function folderSettings(id) {
+    return new Gio.Settings({
+        schema_id: 'org.gnome.desktop.app-folders.folder',
+        path: `/org/gnome/desktop/app-folders/folders/${id}/`,
+    });
+}
+
+// A name for a new folder from what its two apps have in common.
+const FOLDER_NAMES = [
+    ['Game', 'Games'], ['Development', 'Developer'], ['Graphics', 'Creativity'],
+    ['AudioVideo', 'Entertainment'], ['Office', 'Productivity'], ['Education', 'Education'],
+    ['Network', 'Internet'], ['Science', 'Science'], ['System', 'System'],
+    ['Settings', 'System'], ['Utility', 'Utilities'],
+];
+
+function newFolderName(apps) {
+    const shared = apps.map(app => appCategories(app.get_app_info()))
+        .reduce((a, b) => a.filter(c => b.includes(c)));
+    return FOLDER_NAMES.find(([category]) => shared.includes(category))?.[1] ?? 'Folder';
+}
+
+function createFolder(apps) {
+    const parent = new Gio.Settings({schema_id: 'org.gnome.desktop.app-folders'});
+    const id = `parchaos-${GLib.uuid_string_random().slice(0, 8)}`;
+    const settings = folderSettings(id);
+    settings.set_string('name', newFolderName(apps));
+    settings.set_boolean('translate', false);
+    settings.set_strv('apps', apps.map(app => app.get_id()));
+    parent.set_strv('folder-children', [...parent.get_strv('folder-children'), id]);
+    return id;
+}
+
+function addToFolder(id, app) {
+    const settings = folderSettings(id);
+    const appId = app.get_id();
+    settings.set_strv('excluded-apps', settings.get_strv('excluded-apps').filter(a => a !== appId));
+    if (!settings.get_strv('apps').includes(appId))
+        settings.set_strv('apps', [...settings.get_strv('apps'), appId]);
+}
+
+// Takes an app out of a folder; a folder left empty is deleted.
+function removeFromFolder(folder, app) {
+    const settings = folderSettings(folder.id);
+    const appId = app.get_id();
+    const listed = settings.get_strv('apps');
+    if (listed.includes(appId))
+        settings.set_strv('apps', listed.filter(a => a !== appId));
+    // Also a member through its categories: exclude it explicitly.
+    const categories = settings.get_strv('categories');
+    if (appCategories(app.get_app_info()).some(c => categories.includes(c)))
+        settings.set_strv('excluded-apps', [...settings.get_strv('excluded-apps'), appId]);
+    if (folder.apps.length <= 1) {
+        const parent = new Gio.Settings({schema_id: 'org.gnome.desktop.app-folders'});
+        parent.set_strv('folder-children',
+            parent.get_strv('folder-children').filter(f => f !== folder.id));
+        for (const key of settings.settings_schema.list_keys())
+            settings.reset(key);
+    }
 }
 
 // ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
@@ -291,6 +380,9 @@ const Launcher = GObject.registerClass({
         this._helper = helper;
         this._editing = false;
         this._removable = new Set();
+        this._press = null;
+        this._drag = null;
+        this.connect('captured-event', (_a, event) => this._onCapturedEvent(event));
 
         // Blur the wallpaper alone (a clone of the background group), not
         // whatever windows are open on top of it.
@@ -336,6 +428,7 @@ const Launcher = GObject.registerClass({
             if (this._scrollLockId)
                 GLib.source_remove(this._scrollLockId);
             this._dotsIdleId = this._scrollLockId = 0;
+            this._cancelDrag();
         });
         this._backdrop.add_child(new St.Widget({
             style_class: 'parchaos-launcher-backdrop',
@@ -407,6 +500,305 @@ const Launcher = GObject.registerClass({
         this.connect('scroll-event', (_a, event) => this._onScroll(event));
         // Two-finger touchpad swipes arrive as smooth scroll events.
         this.connect('key-press-event', (_a, event) => this._onKeyPress(event));
+    }
+
+    // --- Drag and drop ---
+    //
+    // Dragging a tile moves it: the others make room as it passes, and
+    // holding it at a page edge turns the page. Held over another app it
+    // makes a folder of the two; over a folder it goes in. Dragged out of
+    // an open folder, an app leaves it. Dragging starts edit mode. The
+    // arrangement is saved (see saveOrder / app-folders).
+
+    _tileFromActor(actor) {
+        for (let a = actor; a && a !== this; a = a.get_parent()) {
+            if (a instanceof AppTile)
+                return a;
+            if (a.has_style_class_name?.('parchaos-launcher-remove'))
+                return null;
+        }
+        return null;
+    }
+
+    _onCapturedEvent(event) {
+        const type = event.type();
+        if (type === Clutter.EventType.BUTTON_PRESS && event.get_button() === Clutter.BUTTON_PRIMARY) {
+            this._press = null;
+            if (this._confirm || this._entry.get_text().trim() !== '')
+                return Clutter.EVENT_PROPAGATE;
+            // (During capture the event actor is the launcher itself, so
+            // pick what's under the pointer.)
+            const [x, y] = event.get_coords();
+            const tile = this._tileFromActor(
+                global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y));
+            if (tile) {
+                this._press = {tile, x, y, inFolder: !!this._folderView};
+            }
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (type === Clutter.EventType.MOTION) {
+            const [x, y] = event.get_coords();
+            if (this._press && !this._drag &&
+                Math.hypot(x - this._press.x, y - this._press.y) > 12 * this._scale)
+                this._startDrag(this._press, x, y);
+            if (this._drag) {
+                this._updateDrag(x, y);
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (type === Clutter.EventType.BUTTON_RELEASE) {
+            this._press = null;
+            if (this._drag) {
+                const [x, y] = event.get_coords();
+                this._endDrag(x, y);
+                return Clutter.EVENT_STOP;
+            }
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    _startDrag(press, x, y) {
+        const {tile} = press;
+        tile.fake_release?.();
+        tile._clearLongPress();
+        tile._longPressed = true;   // its click, if any, isn't an open
+        if (!this._editing)
+            this._setEditing(true);
+        const [ix, iy] = tile._icon.get_transformed_position();
+        const size = this._iconSize;
+        // An app gets its own icon (a tile inside a folder goes away with
+        // the folder); a folder is drawn from its tile.
+        const clone = tile.item.type === 'app'
+            ? tile.item.app.create_icon_texture(size)
+            : new Clutter.Clone({source: tile._icon, width: size, height: size});
+        clone.set_size(size, size);
+        clone.set_pivot_point(0.5, 0.5);
+        this.add_child(clone);
+        clone.set_position(ix - this.x, iy - this.y);
+        clone.ease({scale_x: 1.1, scale_y: 1.1, duration: 120});
+        tile.opacity = 0;
+        this._drag = {
+            tile, item: tile.item, clone,
+            offX: press.x - ix, offY: press.y - iy,
+            fromFolder: press.inFolder ? this._folderView._folder : null,
+            list: this._items.filter(it => it !== tile.item),
+            insert: -1, target: null, hoverTile: null, hoverId: 0, edgeId: 0,
+        };
+        this._drag.insert = press.inFolder ? this._drag.list.length : this._items.indexOf(tile.item);
+    }
+
+    _updateDrag(x, y) {
+        const drag = this._drag;
+        drag.clone.set_position(x - drag.offX - this.x, y - drag.offY - this.y);
+
+        // Inside an open folder: leaving its panel takes the app out.
+        const view = this._folderView;
+        if (view) {
+            const [px, py] = view._panel.get_transformed_position();
+            const [pw, ph] = view._panel.get_transformed_size();
+            if (x < px || x > px + pw || y < py || y > py + ph)
+                this._closeFolder();
+            return;
+        }
+
+        this._updateEdgeFlip(x);
+        const hovered = this._tileAtIcon(x, y);
+        if (hovered)
+            this._clearGapTimer();
+        if (hovered && hovered !== drag.hoverTile) {
+            this._clearHover();
+            drag.hoverTile = hovered;
+            // A moment's pause over an app or folder means "put it in".
+            if (drag.item.type === 'app') {
+                drag.hoverId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 350, () => {
+                    drag.hoverId = 0;
+                    drag.target = hovered;
+                    hovered._holder.add_style_class_name('parchaos-launcher-drop-target');
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+            return;
+        }
+        if (hovered)
+            return;
+        this._clearHover();
+        // Make room only once the pointer rests: passing over other cells
+        // on the way to an icon mustn't push that icon away.
+        const index = this._indexAt(x, y);
+        if (index !== drag.pendingInsert) {
+            this._clearGapTimer();
+            drag.pendingInsert = index;
+            drag.gapId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 180, () => {
+                drag.gapId = 0;
+                this._moveGap(index);
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+    }
+
+    _clearGapTimer() {
+        const drag = this._drag;
+        if (drag?.gapId)
+            GLib.source_remove(drag.gapId);
+        if (drag) {
+            drag.gapId = 0;
+            drag.pendingInsert = undefined;
+        }
+    }
+
+    _clearHover() {
+        const drag = this._drag;
+        if (!drag)
+            return;
+        if (drag.hoverId)
+            GLib.source_remove(drag.hoverId);
+        drag.hoverId = 0;
+        drag.target?._holder.remove_style_class_name('parchaos-launcher-drop-target');
+        drag.target = null;
+        drag.hoverTile = null;
+    }
+
+    // Holding the dragged icon at the left or right edge turns the page.
+    _updateEdgeFlip(x) {
+        const drag = this._drag;
+        const margin = 40 * this._scale;
+        const dir = x - this.x < this._gridArea.x - margin / 2 ? -1
+            : x - this.x > this._gridArea.x + this._gridArea.width + margin / 2 ? 1 : 0;
+        if (dir === 0 || drag.edgeDir !== dir) {
+            if (drag.edgeId)
+                GLib.source_remove(drag.edgeId);
+            drag.edgeId = 0;
+            drag.edgeDir = dir;
+        }
+        if (dir !== 0 && !drag.edgeId) {
+            drag.edgeId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 600, () => {
+                const page = this._page + dir;
+                if (page >= 0 && page < this._nPages)
+                    this._setPage(page);
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
+    }
+
+    // The tile whose icon (inner part) is under the pointer, if any.
+    _tileAtIcon(x, y) {
+        const inset = this._iconSize * 0.2;
+        return this._tiles.find(t => {
+            if (t === this._drag.tile || !t.mapped)
+                return false;
+            const [ix, iy] = t._icon.get_transformed_position();
+            return x > ix + inset && x < ix + this._iconSize - inset &&
+                y > iy + inset && y < iy + this._iconSize - inset;
+        }) ?? null;
+    }
+
+    // Grid slot under the pointer on the current page.
+    _indexAt(x, y) {
+        const perPage = COLUMNS * ROWS;
+        const lx = x - this.x - this._gridArea.x;
+        const ly = y - this.y - this._gridArea.y;
+        const col = Math.max(0, Math.min(COLUMNS - 1, Math.floor(lx / this._cellW)));
+        const row = Math.max(0, Math.min(ROWS - 1, Math.floor(ly / this._cellH)));
+        const index = this._page * perPage + row * COLUMNS + col;
+        return Math.min(index, this._drag.list.length);
+    }
+
+    _slotPosition(index) {
+        const perPage = COLUMNS * ROWS;
+        const i = index % perPage;
+        return {
+            page: Math.floor(index / perPage),
+            x: this._gridArea.x + (i % COLUMNS) * this._cellW + 6 * this._scale,
+            y: Math.floor(i / COLUMNS) * this._cellH +
+                Math.round((this._cellH - this._iconSize - 34 * this._scale) / 2),
+        };
+    }
+
+    // Leave a gap at `insert`: every other tile slides to its new slot.
+    _moveGap(insert) {
+        const drag = this._drag;
+        if (insert === drag.insert)
+            return;
+        drag.insert = insert;
+        const pages = this._pages.get_children();
+        drag.list.forEach((item, j) => {
+            const tile = this._tiles.find(t => t.item === item);
+            if (!tile)
+                return;
+            const pos = this._slotPosition(j >= insert ? j + 1 : j);
+            const page = pages[pos.page];
+            if (!page)
+                return;
+            if (tile.get_parent() !== page) {
+                tile.get_parent()?.remove_child(tile);
+                page.add_child(tile);
+                tile.set_position(pos.x, pos.y);
+            } else {
+                tile.ease({x: pos.x, y: pos.y, duration: 180, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            }
+        });
+    }
+
+    _endDrag(x, y) {
+        const drag = this._drag;
+        // A drop before the pause still goes where the pointer is.
+        if (drag.gapId && drag.pendingInsert !== undefined)
+            drag.insert = drag.pendingInsert;
+        this._clearGapTimer();
+        this._drag = null;
+        if (drag.edgeId)
+            GLib.source_remove(drag.edgeId);
+        if (drag.hoverId)
+            GLib.source_remove(drag.hoverId);
+        drag.clone.destroy();
+
+        const target = drag.target?.item;
+        if (drag.fromFolder && this._folderView) {
+            // Dropped back inside the folder it came from: nothing changes.
+            drag.tile.opacity = 255;
+            return;
+        }
+        if (target && drag.item.type === 'app') {
+            if (drag.fromFolder)
+                removeFromFolder(drag.fromFolder, drag.item.app);
+            let order = drag.list;
+            if (target.type === 'folder') {
+                addToFolder(target.id, drag.item.app);
+            } else {
+                const id = createFolder([target.app, drag.item.app]);
+                order = order.map(it => it === target ? {type: 'folder', id} : it);
+            }
+            saveOrder(order);
+        } else {
+            if (drag.fromFolder)
+                removeFromFolder(drag.fromFolder, drag.item.app);
+            const order = drag.list.slice();
+            const insert = drag.insert < 0 ? order.length : Math.min(drag.insert, order.length);
+            order.splice(insert, 0, drag.fromFolder ? {type: 'app', app: drag.item.app} : drag.item);
+            saveOrder(order);
+        }
+        this._reload();
+    }
+
+    _cancelDrag() {
+        const drag = this._drag;
+        if (!drag)
+            return;
+        this._clearGapTimer();
+        this._drag = null;
+        if (drag.edgeId)
+            GLib.source_remove(drag.edgeId);
+        if (drag.hoverId)
+            GLib.source_remove(drag.hoverId);
+    }
+
+    // Rebuild from the saved arrangement, keeping the page and edit mode.
+    _reload() {
+        this._items = loadItems();
+        this._buildPages(this._items);
+        if (this._editing)
+            this._allTiles().forEach(t => t.setEditing(true, this._removable.has(t.item.app.get_id())));
     }
 
     _buildPages(items) {
@@ -871,19 +1263,41 @@ const Launcher = GObject.registerClass({
         panel.x = Math.round((m.width - panelNatW) / 2);
         panel.y = Math.round((m.height - panelNatH) / 2 - 20 * s);
 
-        const title = new St.Label({
+        // The name is editable in place: click it, type, press Enter.
+        const titleW = Math.round(420 * s);
+        const title = new St.Entry({
             text: folder.name,
             style_class: 'parchaos-launcher-folder-title',
-            width: m.width,
+            width: titleW,
+            can_focus: true,
         });
         title.clutter_text.x_align = Clutter.ActorAlign.CENTER;
+        title.x = Math.round((m.width - titleW) / 2);
         title.y = panel.y - 64 * s;
+        title.connect('button-release-event', () => Clutter.EVENT_STOP);
+        const rename = () => {
+            const name = title.get_text().trim();
+            if (name && name !== folder.name) {
+                const settings = folderSettings(folder.id);
+                settings.set_string('name', name);
+                settings.set_boolean('translate', false);
+                folder.name = name;
+                view._changed = true;
+            }
+        };
+        title.clutter_text.connect('activate', () => {
+            rename();
+            this._entry.grab_key_focus();
+        });
+        title.clutter_text.connect('key-focus-out', rename);
 
         view.add_child(title);
         view.add_child(panel);
         this.add_child(view);
         this._folderView = view;
         view._tiles = folderTiles;
+        view._panel = panel;
+        view._folder = folder;
 
         panel.set_pivot_point(0.5, 0.5);
         panel.scale_x = panel.scale_y = 0.92;
@@ -898,12 +1312,17 @@ const Launcher = GObject.registerClass({
         if (!view)
             return;
         this._folderView = null;
+        if (global.stage.key_focus && view.contains(global.stage.key_focus))
+            this._entry.grab_key_focus();
         view.ease({
             opacity: 0,
             duration: ANIM_TIME,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onStopped: () => view.destroy(),
         });
+        // A renamed folder shows its new name on the grid.
+        if (view._changed && !this._drag)
+            this._reload();
         for (const actor of [this._clip, this._dots, this._entry])
             actor.ease({opacity: 255, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
     }

@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -204,6 +204,8 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-30
+- Schema: add launcher-order (the launcher's arrangement).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-29
 - Check the ParchaOS repository for updates every 6 hours like Fedora's
   updates (it used dnf's 48-hour default), so new releases show up in

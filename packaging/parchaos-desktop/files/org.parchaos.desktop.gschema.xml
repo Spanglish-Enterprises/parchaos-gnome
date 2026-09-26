@@ -41,5 +41,14 @@
       <summary>Scheduled Do Not Disturb ends (HH:MM)</summary>
       <description>24-hour local time.</description>
     </key>
+    <key name="launcher-order" type="as">
+      <default>[]</default>
+      <summary>Launcher arrangement</summary>
+      <description>
+        The order of the launcher's apps and folders as the user arranged
+        them: desktop IDs and "folder:ID". Items not listed follow in the
+        default order.
+      </description>
+    </key>
   </schema>
 </schemalist>
