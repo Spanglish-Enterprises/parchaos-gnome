@@ -1,0 +1,111 @@
+#!/usr/bin/python3
+# Helper for ParchaOS Launcher's edit mode.
+#
+#   parchaos-launcher-apps removable ID...   print a JSON list of the given
+#                                            desktop IDs that can be removed
+#   parchaos-launcher-apps uninstall ID      remove the app that ID belongs to
+#
+# An app is removable when it comes from Flatpak, or from an RPM package
+# that nothing else installed needs (rpm -e --test), that isn't part of
+# ParchaOS itself (parchaos-* or required by parchaos-desktop) and isn't a
+# core desktop component. RPM removal goes through pkexec (the desktop's
+# password prompt); Flatpak removal through flatpak itself.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import json
+import subprocess
+import sys
+
+import gi
+
+gi.require_version('GioUnix', '2.0')
+from gi.repository import GioUnix  # noqa: E402
+
+# Packages the desktop itself is built from, even when nothing formally
+# requires them.
+CORE = {
+    'gnome-shell', 'gnome-session', 'gnome-control-center', 'gnome-software',
+    'nautilus', 'gnome-terminal', 'gnome-console', 'ptyxis', 'gdm', 'mutter',
+    'gnome-settings-daemon', 'gnome-initial-setup', 'yelp', 'dnf', 'dnf5',
+    'gnome-extensions-app', 'gnome-disk-utility', 'gnome-system-monitor',
+}
+
+
+def run(argv):
+    return subprocess.run(argv, capture_output=True, text=True)
+
+
+def source_of(desktop_id):
+    """('flatpak', app_id, scope) or ('rpm', package) or None."""
+    try:
+        info = GioUnix.DesktopAppInfo.new(desktop_id)
+    except TypeError:
+        info = None
+    if info is None:
+        return None
+    path = info.get_filename() or ''
+    if '/flatpak/exports/share/applications/' in path:
+        scope = '--user' if '/.local/share/flatpak/' in path else '--system'
+        return ('flatpak', desktop_id.removesuffix('.desktop'), scope)
+    out = run(['rpm', '-qf', '--qf', '%{NAME}\n', path])
+    if out.returncode != 0:
+        return None
+    return ('rpm', out.stdout.strip().splitlines()[0])
+
+
+_protected = None
+
+
+def protected():
+    global _protected
+    if _protected is None:
+        out = run(['rpm', '-q', '--requires', 'parchaos-desktop'])
+        names = {line.split()[0] for line in out.stdout.splitlines() if line.strip()}
+        _protected = CORE | names
+    return _protected
+
+
+def removable(desktop_id):
+    src = source_of(desktop_id)
+    if src is None:
+        return False
+    if src[0] == 'flatpak':
+        return True
+    pkg = src[1]
+    if pkg.startswith('parchaos') or pkg in protected():
+        return False
+    # Refuse anything another installed package depends on.
+    return run(['rpm', '-e', '--test', pkg]).returncode == 0
+
+
+def uninstall(desktop_id):
+    if not removable(desktop_id):
+        print('This app is part of the system and can\'t be removed here.',
+              file=sys.stderr)
+        return 1
+    src = source_of(desktop_id)
+    if src[0] == 'flatpak':
+        argv = ['flatpak', 'uninstall', '-y', '--noninteractive', src[2], src[1]]
+    else:
+        argv = ['pkexec', '/usr/bin/dnf', 'remove', '-y', src[1]]
+    out = run(argv)
+    if out.returncode != 0:
+        msg = (out.stderr or out.stdout).strip().splitlines()
+        print(msg[-1] if msg else 'Removal failed.', file=sys.stderr)
+    return out.returncode
+
+
+def main(argv):
+    if len(argv) >= 2 and argv[1] == 'removable':
+        print(json.dumps([i for i in argv[2:] if removable(i)]))
+        return 0
+    if len(argv) == 3 and argv[1] == 'uninstall':
+        return uninstall(argv[2])
+    print('usage: parchaos-launcher-apps removable ID... | uninstall ID',
+          file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

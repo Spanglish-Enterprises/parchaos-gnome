@@ -94,3 +94,76 @@
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
 }
+
+/* Edit mode */
+.parchaos-launcher-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  background-color: rgba(60, 60, 64, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.parchaos-launcher-remove StIcon {
+  icon-size: 12px;
+}
+
+.parchaos-launcher-remove:hover {
+  background-color: rgba(90, 90, 96, 0.95);
+}
+
+.parchaos-launcher-confirm-shade {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.parchaos-launcher-confirm {
+  width: 300px;
+  padding: 20px;
+  spacing: 10px;
+  border-radius: 24px;
+  background-color: rgba(40, 40, 44, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.parchaos-launcher-confirm-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+}
+
+.parchaos-launcher-confirm-body {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+}
+
+.parchaos-launcher-confirm-buttons {
+  spacing: 10px;
+  padding-top: 6px;
+}
+
+.parchaos-launcher-confirm-button {
+  padding: 8px 0;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.parchaos-launcher-confirm-button:hover,
+.parchaos-launcher-confirm-button:focus {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.parchaos-launcher-confirm-button.destructive {
+  background-color: #e5484d;
+}
+
+.parchaos-launcher-confirm-button.destructive:hover,
+.parchaos-launcher-confirm-button.destructive:focus {
+  background-color: #f05a5f;
+}

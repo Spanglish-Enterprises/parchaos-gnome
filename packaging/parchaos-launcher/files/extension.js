@@ -88,8 +88,32 @@ function loadItems() {
     return [...loose, ...folders];
 }
 
+const LONG_PRESS_MS = 550;
+
+// Runs argv, resolving to {ok, stdout, stderr}.
+function runAsync(argv) {
+    return new Promise(resolve => {
+        let proc;
+        try {
+            proc = Gio.Subprocess.new(argv,
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+        } catch (e) {
+            resolve({ok: false, stdout: '', stderr: e.message});
+            return;
+        }
+        proc.communicate_utf8_async(null, null, (p, res) => {
+            try {
+                const [, stdout, stderr] = p.communicate_utf8_finish(res);
+                resolve({ok: p.get_successful(), stdout: stdout ?? '', stderr: stderr ?? ''});
+            } catch (e) {
+                resolve({ok: false, stdout: '', stderr: e.message});
+            }
+        });
+    });
+}
+
 const AppTile = GObject.registerClass({
-    Signals: {'activate': {}},
+    Signals: {'activate': {}, 'long-press': {}, 'remove': {}},
 }, class AppTile extends St.Button {
     _init(item, iconSize, width) {
         super._init({
@@ -127,9 +151,14 @@ const AppTile = GObject.registerClass({
                 icon.add_child(mini);
             });
         }
-        icon.x_align = Clutter.ActorAlign.CENTER;
+        // The icon sits in a holder so edit mode can put a remove badge on
+        // its corner.
+        this._iconSize = iconSize;
+        this._holder = new St.Widget({width: iconSize, height: iconSize});
+        this._holder.x_align = Clutter.ActorAlign.CENTER;
+        this._holder.add_child(icon);
         this._icon = icon;
-        box.add_child(icon);
+        box.add_child(this._holder);
 
         this._label = new St.Label({
             text: item.type === 'app' ? item.app.get_name() : item.name,
@@ -146,14 +175,90 @@ const AppTile = GObject.registerClass({
                 duration: 80,
             });
         });
-        this.connect('clicked', () => this.emit('activate'));
+        // Long press (or right-click) enters edit mode; the click that
+        // ends a long press doesn't also open the app.
+        this.connect('button-press-event', (_a, event) => {
+            const button = event.get_button();
+            if (button === Clutter.BUTTON_SECONDARY) {
+                this.emit('long-press');
+                return Clutter.EVENT_STOP;
+            }
+            if (button === Clutter.BUTTON_PRIMARY) {
+                this._longPressed = false;
+                this._clearLongPress();
+                this._longPressId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, LONG_PRESS_MS, () => {
+                    this._longPressId = 0;
+                    this._longPressed = true;
+                    this.emit('long-press');
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+        this.connect('button-release-event', () => {
+            this._clearLongPress();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        this.connect('leave-event', () => {
+            this._clearLongPress();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        this.connect('destroy', () => this._clearLongPress());
+        this.connect('clicked', () => {
+            if (this._longPressed) {
+                this._longPressed = false;
+                return;
+            }
+            this.emit('activate');
+        });
+    }
+
+    _clearLongPress() {
+        if (this._longPressId) {
+            GLib.source_remove(this._longPressId);
+            this._longPressId = 0;
+        }
+    }
+
+    // Edit mode: the icon breathes gently (a slow scale pulse, offset per
+    // tile so they don't move in lockstep) and removable apps get a badge.
+    setEditing(editing, removable = false) {
+        this._icon.remove_transition('scale-x');
+        this._icon.remove_transition('scale-y');
+        this._icon.scale_x = this._icon.scale_y = 1;
+        if (editing) {
+            const delay = Math.floor(Math.random() * 700);
+            this._icon.ease({
+                scale_x: 0.94,
+                scale_y: 0.94,
+                duration: 900,
+                delay,
+                mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
+                repeatCount: -1,
+                autoReverse: true,
+            });
+        }
+        const wantBadge = editing && removable;
+        if (wantBadge && !this._badge) {
+            this._badge = new St.Button({
+                style_class: 'parchaos-launcher-remove',
+                child: new St.Icon({icon_name: 'window-close-symbolic'}),
+                can_focus: true,
+            });
+            this._badge.set_position(-6, -6);
+            this._badge.connect('clicked', () => this.emit('remove'));
+            this._holder.add_child(this._badge);
+        } else if (!wantBadge && this._badge) {
+            this._badge.destroy();
+            this._badge = null;
+        }
     }
 });
 
 const Launcher = GObject.registerClass({
     Signals: {'closed': {}},
 }, class Launcher extends St.Widget {
-    _init() {
+    _init(helper) {
         const monitor = Main.layoutManager.primaryMonitor;
         super._init({
             style_class: 'parchaos-launcher',
@@ -168,6 +273,9 @@ const Launcher = GObject.registerClass({
         this._page = 0;
         this._scrollAccum = 0;
         this._folderView = null;
+        this._helper = helper;
+        this._editing = false;
+        this._removable = new Set();
 
         // Blur the wallpaper alone (a clone of the background group), not
         // whatever windows are open on top of it.
@@ -266,7 +374,11 @@ const Launcher = GObject.registerClass({
         this._buildPages(this._items);
 
         this.connect('button-release-event', (_a, event) => {
-            if (event.get_button() === Clutter.BUTTON_PRIMARY)
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                return Clutter.EVENT_STOP;
+            if (this._editing)
+                this._setEditing(false);
+            else
                 this.close();
             return Clutter.EVENT_STOP;
         });
@@ -293,7 +405,7 @@ const Launcher = GObject.registerClass({
                 tile.x = this._gridArea.x + (i % COLUMNS) * this._cellW + 6 * this._scale;
                 tile.y = Math.floor(i / COLUMNS) * this._cellH +
                     Math.round((this._cellH - this._iconSize - 34 * this._scale) / 2);
-                tile.connect('activate', () => this._activateItem(item, tile));
+                this._wireTile(tile, item);
                 page.add_child(tile);
                 this._tiles.push(tile);
             });
@@ -408,8 +520,12 @@ const Launcher = GObject.registerClass({
     _onKeyPress(event) {
         const sym = event.get_key_symbol();
         if (sym === Clutter.KEY_Escape) {
-            if (this._folderView)
+            if (this._confirm)
+                this._closeConfirm();
+            else if (this._folderView)
                 this._closeFolder();
+            else if (this._editing)
+                this._setEditing(false);
             else if (this._entry.get_text() !== '')
                 this._entry.set_text('');
             else
@@ -470,11 +586,135 @@ const Launcher = GObject.registerClass({
             this._activateItem(first.item, first);
     }
 
+    _wireTile(tile, item) {
+        tile.connect('activate', () => this._activateItem(item, tile));
+        if (item.type !== 'app')
+            return;
+        tile.connect('long-press', () => this._setEditing(true));
+        tile.connect('remove', () => this._confirmRemove(item.app));
+        if (this._editing)
+            tile.setEditing(true, this._removable.has(item.app.get_id()));
+    }
+
+    _allTiles() {
+        const tiles = [...this._tiles];
+        this._folderView?._tiles?.forEach(t => tiles.push(t));
+        return tiles.filter(t => t.item.type === 'app' && !t.is_finalized?.());
+    }
+
+    // Edit mode: icons pulse, removable apps show a badge. Which apps are
+    // removable is asked of the helper once per edit session.
+    _setEditing(editing) {
+        if (editing === this._editing)
+            return;
+        this._editing = editing;
+        const tiles = this._allTiles();
+        tiles.forEach(t => t.setEditing(editing, this._removable.has(t.item.app.get_id())));
+        if (!editing || !this._helper)
+            return;
+        const ids = new Set();
+        for (const it of this._items) {
+            if (it.type === 'app')
+                ids.add(it.app.get_id());
+            else
+                it.apps.forEach(a => ids.add(a.get_id()));
+        }
+        runAsync([this._helper, 'removable', ...ids]).then(({ok, stdout}) => {
+            if (!ok || !this._editing)
+                return;
+            try {
+                this._removable = new Set(JSON.parse(stdout));
+            } catch (e) {
+                return;
+            }
+            this._allTiles().forEach(t =>
+                t.setEditing(true, this._removable.has(t.item.app.get_id())));
+        });
+    }
+
+    _confirmRemove(app) {
+        this._closeConfirm();
+        const m = this._monitor;
+        const shade = new St.Widget({
+            style_class: 'parchaos-launcher-confirm-shade',
+            reactive: true,
+            width: m.width,
+            height: m.height,
+        });
+        shade.connect('button-release-event', () => {
+            this._closeConfirm();
+            return Clutter.EVENT_STOP;
+        });
+        const box = new St.BoxLayout({
+            style_class: 'parchaos-launcher-confirm',
+            orientation: Clutter.Orientation.VERTICAL,
+            reactive: true,
+        });
+        box.connect('button-release-event', () => Clutter.EVENT_STOP);
+        const icon = app.create_icon_texture(64);
+        icon.x_align = Clutter.ActorAlign.CENTER;
+        box.add_child(icon);
+        box.add_child(new St.Label({
+            style_class: 'parchaos-launcher-confirm-title',
+            text: `Uninstall "${app.get_name()}"?`,
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
+        const body = new St.Label({
+            style_class: 'parchaos-launcher-confirm-body',
+            text: 'The app will be removed from this computer. Your own files stay where they are.',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        body.clutter_text.line_wrap = true;
+        box.add_child(body);
+        const buttons = new St.BoxLayout({style_class: 'parchaos-launcher-confirm-buttons', x_expand: true});
+        const cancel = new St.Button({label: 'Cancel', style_class: 'parchaos-launcher-confirm-button', x_expand: true, can_focus: true});
+        const remove = new St.Button({label: 'Uninstall', style_class: 'parchaos-launcher-confirm-button destructive', x_expand: true, can_focus: true});
+        cancel.connect('clicked', () => this._closeConfirm());
+        remove.connect('clicked', () => {
+            this._closeConfirm();
+            this._uninstall(app);
+        });
+        buttons.add_child(cancel);
+        buttons.add_child(remove);
+        box.add_child(buttons);
+        shade.add_child(box);
+        this.add_child(shade);
+        this._confirm = shade;
+        const [, natW] = box.get_preferred_width(-1);
+        const [, natH] = box.get_preferred_height(natW);
+        box.set_position(Math.round((m.width - natW) / 2), Math.round((m.height - natH) / 2));
+        cancel.grab_key_focus();
+    }
+
+    _closeConfirm() {
+        this._confirm?.destroy();
+        this._confirm = null;
+    }
+
+    // The password prompt for system packages is a shell dialog that would
+    // sit under the launcher, so close first and report by notification.
+    _uninstall(app) {
+        const name = app.get_name();
+        const id = app.get_id();
+        const helper = this._helper;
+        this.close();
+        runAsync([helper, 'uninstall', id]).then(({ok, stderr}) => {
+            if (ok) {
+                Main.notify(`${name} was uninstalled`, '');
+            } else {
+                const reason = stderr.trim().split('\n').pop() || 'The removal was cancelled or failed.';
+                Main.notify(`Couldn't uninstall ${name}`, reason);
+            }
+        });
+    }
+
     _activateItem(item, tile) {
         if (item.type === 'folder') {
             this._openFolder(item, tile);
             return;
         }
+        if (this._editing)
+            return;
         item.app.activate();
         this.close();
     }
@@ -502,13 +742,15 @@ const Launcher = GObject.registerClass({
         const visibleRows = Math.min(rows, maxRows);
 
         const grid = new St.Widget({width: cols * cellW, height: rows * cellH});
+        const folderTiles = [];
         folder.apps.forEach((app, i) => {
             const item = {type: 'app', app};
             const tile = new AppTile(item, this._iconSize, cellW - 12 * s);
             tile.x = (i % cols) * cellW + 6 * s;
             tile.y = Math.floor(i / cols) * cellH +
                 Math.round((cellH - this._iconSize - 34 * s) / 2);
-            tile.connect('activate', () => this._activateItem(item, tile));
+            this._wireTile(tile, item);
+            folderTiles.push(tile);
             grid.add_child(tile);
         });
 
@@ -547,6 +789,7 @@ const Launcher = GObject.registerClass({
         view.add_child(panel);
         this.add_child(view);
         this._folderView = view;
+        view._tiles = folderTiles;
 
         panel.set_pivot_point(0.5, 0.5);
         panel.scale_x = panel.scale_y = 0.92;
@@ -688,7 +931,7 @@ export default class ParchaOSLauncherExtension extends Extension {
         if (this._launcher) {
             this._launcher.close();
         } else {
-            const launcher = new Launcher();
+            const launcher = new Launcher(`${this.path}/parchaos-launcher-apps`);
             launcher.connect('closed', () => {
                 if (this._launcher === launcher)
                     this._launcher = null;
