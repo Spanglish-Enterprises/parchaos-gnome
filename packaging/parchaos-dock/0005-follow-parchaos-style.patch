@@ -1,0 +1,61 @@
+diff --git a/_stylesheet.scss b/_stylesheet.scss
+index 4c7ba85..15ebe4a 100755
+--- a/_stylesheet.scss
++++ b/_stylesheet.scss
+@@ -577,3 +577,13 @@ $dock_style_modes: null, shrink, extended, extended-shrink;
+     }
+ }
+ 
++
++/* ParchaOS styles. Glass keeps the translucent, blurred dock; Classic is
++   a frostier, more solid bar with tighter corners and a thin light edge.
++   !important because Blur my Shell forces the dock background
++   transparent (.transparent-dash) when it blurs the dock. */
++#dashtodockContainer.parchaos-style-classic #dash .dash-background {
++    background-color: rgba(40, 40, 44, 0.8) !important;
++    border: 1px solid rgba(255, 255, 255, 0.10);
++    border-radius: 16px;
++}
+diff --git a/docking.js b/docking.js
+index 3b91d09..efbc47b 100755
+--- a/docking.js
++++ b/docking.js
+@@ -409,6 +409,17 @@ const DockedDash = GObject.registerClass({
+         }
+ 
+         this._themeManager = new Theming.ThemeManager(this);
++
++        // ParchaOS visual style (org.parchaos.desktop, from parchaos-desktop):
++        // a parchaos-style-glass / parchaos-style-classic class on the
++        // container, kept in sync with the setting.
++        const styleSchema = Gio.SettingsSchemaSource.get_default()
++            ?.lookup('org.parchaos.desktop', true);
++        this._parchaosStyle = styleSchema
++            ? new Gio.Settings({settings_schema: styleSchema}) : null;
++        this._parchaosStyleId = this._parchaosStyle?.connect('changed::style',
++            () => this._applyParchaosStyle()) ?? 0;
++        this._applyParchaosStyle(false);
+         this._signalsHandler.add(this._themeManager, 'updated',
+             () => this.dash.resetAppIcons());
+ 
+@@ -525,7 +536,20 @@ const DockedDash = GObject.registerClass({
+         this._updateAutoHideBarriers();
+     }
+ 
++    _applyParchaosStyle(refresh = true) {
++        const style = this._parchaosStyle?.get_string('style') ?? 'glass';
++        for (const s of ['glass', 'classic'])
++            this.remove_style_class_name(`parchaos-style-${s}`);
++        this.add_style_class_name(`parchaos-style-${style}`);
++        // The theme manager copies border styles from the theme node.
++        if (refresh)
++            this._themeManager.updateCustomTheme();
++    }
++
+     _onDestroy() {
++        if (this._parchaosStyleId)
++            this._parchaosStyle.disconnect(this._parchaosStyleId);
++        this._parchaosStyle = null;
+         // The dash, intellihide and themeManager have global signals as well internally
+         this.dash.destroy();
+         this._intellihide.destroy();

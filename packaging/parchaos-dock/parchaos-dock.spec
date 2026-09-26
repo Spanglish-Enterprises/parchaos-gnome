@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -92,6 +92,9 @@ Patch2:         0003-running-indicator-follows-magnification.patch
 # model is recreated, throwing in UnityIndicator for every icon. Patch3
 # skips the badge indicator until the model exists.
 Patch3:         0004-skip-badges-until-remote-model-exists.patch
+# Follow the ParchaOS style setting (glass or classic) from
+# org.parchaos.desktop, like the launcher, Controls and menu bar.
+Patch4:         0005-follow-parchaos-style.patch
 
 BuildArch:      noarch
 
@@ -170,6 +173,8 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 106-13
+- Follow the ParchaOS style setting: Classic is a frostier, more solid bar with a thin light edge.
 * Sat Sep 26 2026 ParchaOS packaging - 106-12
 - Point the extension's website link at the ParchaOS website.
 * Fri Sep 25 2026 ParchaOS packaging - 106-11
