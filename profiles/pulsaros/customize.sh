@@ -136,7 +136,9 @@ brightness=0.6
 sigma=30
 
 [org/gnome/shell/extensions/blur-my-shell/applications]
-blur=true
+# Off: the per-window blur is rectangular and leaked outside rounded
+# window corners; windows are opaque, so nothing else used it.
+blur=false
 blur-on-overview=false
 corner-when-maximized=true
 dynamic-opacity=false

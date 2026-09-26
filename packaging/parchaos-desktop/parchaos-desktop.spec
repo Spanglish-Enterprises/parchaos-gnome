@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -116,6 +116,14 @@ cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop <<'DCONF'
 # a desktop OS should always offer it.
 [org/gnome/shell]
 always-show-log-out=true
+
+# blur-my-shell's application blur draws a rectangular blurred copy of
+# the wallpaper behind each window, with one fixed corner radius. Window
+# radii differ per toolkit (libadwaita, GTK3, Chromium), so the blurred
+# square showed outside the rounded top corners. Windows are fully
+# opaque here (opacity=255), so the blur was only ever visible there.
+[org/gnome/shell/extensions/blur-my-shell/applications]
+blur=false
 DCONF
 
 %post
@@ -128,6 +136,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-14
+- Turn off blur-my-shell application blur: its rectangular blur showed
+  behind the rounded top corners of windows (worst in Chromium).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-13
 - Drop pafari: Parcha Browser replaces it (and Obsoletes it).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12
