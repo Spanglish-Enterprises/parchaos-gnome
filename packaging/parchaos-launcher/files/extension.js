@@ -326,9 +326,16 @@ const Launcher = GObject.registerClass({
             mode: Shell.BlurMode.ACTOR,
         }));
         this._backdrop.add_child(wallpaper);
+        this._dotsIdleId = 0;
+        this._scrollLockId = 0;
         this.connect('destroy', () => {
             this._bgManager?.destroy();
             this._bgManager = null;
+            if (this._dotsIdleId)
+                GLib.source_remove(this._dotsIdleId);
+            if (this._scrollLockId)
+                GLib.source_remove(this._scrollLockId);
+            this._dotsIdleId = this._scrollLockId = 0;
         });
         this._backdrop.add_child(new St.Widget({
             style_class: 'parchaos-launcher-backdrop',
@@ -496,9 +503,10 @@ const Launcher = GObject.registerClass({
                 dot.remove_style_pseudo_class('checked');
         });
         // Center the dots under the grid (their width is known once styled).
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-            if (!this._dots)
-                return GLib.SOURCE_REMOVE;
+        if (this._dotsIdleId)
+            return;
+        this._dotsIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._dotsIdleId = 0;
             const [, natW] = this._dots.get_preferred_width(-1);
             this._dots.x = Math.round((this._monitor.width - natW) / 2);
             this._dots.y = this._gridArea.y + this._gridArea.height + 12 * this._scale;
@@ -518,7 +526,8 @@ const Launcher = GObject.registerClass({
                 this._scrollAccum = 0;
                 // Ignore the tail of the same fling.
                 this._scrollLock = true;
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, PAGE_TIME + 80, () => {
+                this._scrollLockId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PAGE_TIME + 80, () => {
+                    this._scrollLockId = 0;
                     this._scrollLock = false;
                     this._scrollAccum = 0;
                     return GLib.SOURCE_REMOVE;
@@ -547,8 +556,14 @@ const Launcher = GObject.registerClass({
                 this.close();
             return Clutter.EVENT_STOP;
         }
-        if (this._folderView)
+        const arrows = [Clutter.KEY_Left, Clutter.KEY_Right, Clutter.KEY_Up, Clutter.KEY_Down];
+        if (this._folderView) {
+            if (arrows.includes(sym)) {
+                this._moveFolderSelection(sym);
+                return Clutter.EVENT_STOP;
+            }
             return Clutter.EVENT_PROPAGATE;
+        }
         if (sym === Clutter.KEY_Page_Down) {
             this._setPage(this._page + 1);
             return Clutter.EVENT_STOP;
@@ -557,7 +572,7 @@ const Launcher = GObject.registerClass({
             this._setPage(this._page - 1);
             return Clutter.EVENT_STOP;
         }
-        if ([Clutter.KEY_Left, Clutter.KEY_Right, Clutter.KEY_Up, Clutter.KEY_Down].includes(sym)) {
+        if (arrows.includes(sym)) {
             this._moveSelection(sym);
             return Clutter.EVENT_STOP;
         }
@@ -590,7 +605,40 @@ const Launcher = GObject.registerClass({
             this._select(0);
     }
 
+    // Arrow keys inside an open folder move a selection of its own.
+    _moveFolderSelection(sym) {
+        const view = this._folderView;
+        const tiles = view._tiles;
+        const n = tiles.length;
+        if (n === 0)
+            return;
+        let i = view._selected ?? -1;
+        if (i < 0) {
+            i = 0;
+        } else if (sym === Clutter.KEY_Right) {
+            i = Math.min(n - 1, i + 1);
+        } else if (sym === Clutter.KEY_Left) {
+            i = Math.max(0, i - 1);
+        } else if (sym === Clutter.KEY_Down) {
+            i = i + COLUMNS < n ? i + COLUMNS : i;
+        } else if (sym === Clutter.KEY_Up) {
+            i = i - COLUMNS >= 0 ? i - COLUMNS : i;
+        }
+        tiles[view._selected]?.remove_style_pseudo_class('selected');
+        view._selected = i;
+        tiles[i].add_style_pseudo_class('selected');
+    }
+
     _activateFirst() {
+        // With a folder open, Enter opens the folder's selected app, never
+        // the (hidden) main grid's.
+        const view = this._folderView;
+        if (view) {
+            const tile = view._tiles[view._selected];
+            if (tile)
+                this._activateItem(tile.item, tile);
+            return;
+        }
         const selected = this._tiles[this._selected];
         if (selected) {
             this._activateItem(selected.item, selected);

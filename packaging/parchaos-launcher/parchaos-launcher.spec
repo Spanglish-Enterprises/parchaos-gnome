@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -55,6 +55,8 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7
+- Arrow keys and Enter work inside an open folder (Enter no longer opens the hidden main grid's selection); page and scroll timers are removed when the launcher closes.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Point the extension's website link at the ParchaOS website.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
