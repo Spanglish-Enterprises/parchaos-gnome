@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -74,6 +74,14 @@ URL:            https://github.com/Inled-Pulsar-OS/dash-to-dock
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/archive/%{commit}/parchaos-dock-%{shortcommit}.tar.gz
 Patch0:         0001-fix-showappsicon-number-overlay-crash.patch
+# Hover magnification scaled a texture rendered at the resting size (48px
+# stretched to ~68px, visibly pixelated) and the magnified icon's top was
+# sliced off: since GNOME 46 St.BoxLayout is an St.Viewport whose
+# clip-to-view clips painting to the dock's box, independent of the
+# clip_to_allocation=false this fork already sets everywhere. Patch1 renders
+# dock icons at the magnified size, turns off clip-to-view on the dash
+# boxes, and leaves magnification headroom in the slide container's clip.
+Patch1:         0002-crisp-uncropped-hover-magnification.patch
 
 BuildArch:      noarch
 
@@ -152,6 +160,13 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-8
+- Fix pixelated and top-clipped icons during hover magnification (user
+  report with a photo). Root causes: the icon texture was rendered at the
+  resting size and scaled up, and St.Viewport's clip-to-view (GNOME 46+)
+  clipped painting to the dock's box. Verified in an isolated headless
+  gnome-shell: A/B screenshots of the same hovered icon show the rounded
+  top restored and visibly sharper edges.
 * Fri Sep 25 2026 ParchaOS packaging - 106-7
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.

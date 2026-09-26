@@ -1,0 +1,125 @@
+diff --git a/appIcons.js b/appIcons.js
+index ef90fe7..62c3194 100755
+--- a/appIcons.js
++++ b/appIcons.js
+@@ -41,6 +41,27 @@ import {Extension} from './dependencies/shell/extensions/extension.js';
+ // the shell domain with the default _() and N_()
+ const {gettext: __, ngettext} = Extension;
+ 
++/**
++ * Hover magnification scales the icon actor up to the magnification factor.
++ * Scaling a texture rendered at the resting size makes it visibly pixelated,
++ * so render the texture at the magnified size and fit it back into the
++ * resting size: crisp at rest (downscaled) and at full magnification.
++ *
++ * @param {St.Icon} icon the icon actor created for the dock
++ * @param {number} size the resting icon size in logical pixels
++ * @returns {St.Icon} the same icon
++ */
++export function renderForMagnification(icon, size) {
++    const settings = Docking.DockManager.settings;
++    const factor = settings.dockMagnification
++        ? Math.max(1, settings.magnificationSizeFactor || 1) : 1;
++    if (factor > 1 && icon instanceof St.Icon && size > 0) {
++        icon.icon_size = Math.ceil(size * factor);
++        icon.set_size(size, size);
++    }
++    return icon;
++}
++
+ const DBusMenu = await DBusMenuUtils.haveDBusMenu();
+ 
+ const tracker = Shell.WindowTracker.get_default();
+@@ -118,6 +139,10 @@ export const DockAbstractAppIcon = GObject.registerClass({
+             0, GLib.MAXUINT32, 0),
+     },
+ }, class DockAbstractAppIcon extends Dash.DashIcon {
++    _createIcon(iconSize) {
++        return renderForMagnification(super._createIcon(iconSize), iconSize);
++    }
++
+     // settings are required inside.
+     _init(app, monitorIndex, iconAnimator) {
+         super._init(app);
+@@ -138,6 +163,12 @@ export const DockAbstractAppIcon = GObject.registerClass({
+         this._indicator = new AppIconIndicators.AppIconIndicator(this);
+         this._urgentWindows = new Set();
+ 
++        const rerenderIcon = () => this.icon?._createIconTexture?.(this.icon.iconSize);
++        this._signalsHandler.add(Docking.DockManager.settings,
++            'changed::dock-magnification', rerenderIcon);
++        this._signalsHandler.add(Docking.DockManager.settings,
++            'changed::magnification-size-factor', rerenderIcon);
++
+         // Monitor windows-changes instead of app state.
+         // Keep using the same Id and function callback (that is extended)
+         if (this._stateChangedId > 0) {
+@@ -1890,7 +1921,7 @@ export const DockShowAppsIcon = GObject.registerClass({
+     }
+ 
+     _createIcon(size) {
+-        this._iconActor = super._createIcon(size);
++        this._iconActor = renderForMagnification(super._createIcon(size), size);
+         this._iconActor.fallbackIconName = this._iconActor.iconName;
+         this._iconActor.fallbackGicon = this._iconActor.gicon;
+         this._iconActor.iconName = `view-app-grid-${Main.sessionMode.currentMode}-symbolic`;
+diff --git a/dash.js b/dash.js
+index 8d85215..0989994 100755
+--- a/dash.js
++++ b/dash.js
+@@ -333,6 +333,15 @@ export const DockDash = GObject.registerClass({
+         });
+         this._box._delegate = this;
+         this._boxContainer.add_child(this._box);
++
++        // Since GNOME 46 St.BoxLayout is an St.Viewport, which clips its
++        // children while painting (clip-to-view) regardless of
++        // clip_to_allocation -- that's what sliced the top off magnified
++        // icons. Magnification needs to paint outside the dock's box.
++        for (const box of [this._dashContainer, this._boxContainer, this._box]) {
++            if ('clip_to_view' in box)
++                box.clip_to_view = false;
++        }
+         Utils.addActor(this._scrollView, this._boxContainer);
+         this._dashContainer.add_child(this._scrollView);
+ 
+diff --git a/docking.js b/docking.js
+index 2605bdf..a1304bb 100755
+--- a/docking.js
++++ b/docking.js
+@@ -164,8 +164,33 @@ const DashSlideContainer = GObject.registerClass({
+ 
+         this.child.allocate(childBox);
+ 
+-        this.child.set_clip(-childBox.x1, -childBox.y1,
+-            -childBox.x1 + availWidth, -childBox.y1 + availHeight);
++        // Magnified icons grow and lift past the dock's own box towards the
++        // screen interior; leave that much room in the clip on that side so
++        // they aren't sliced off. The screen-edge side keeps its clip for the
++        // slide in/out animation.
++        let headroom = 0;
++        if (DockManager.settings.dockMagnification) {
++            const factor = Math.max(1, DockManager.settings.magnificationSizeFactor || 1);
++            const iconSize = DockManager.settings.dashMaxIconSize || 48;
++            headroom = Math.ceil(iconSize * (factor - 1) * 1.5);
++        }
++        // set_clip(x, y, width, height); width/height as upstream computes them
++        let [clipX, clipY] = [-childBox.x1, -childBox.y1];
++        let [clipW, clipH] = [-childBox.x1 + availWidth, -childBox.y1 + availHeight];
++        if (this.side === St.Side.BOTTOM) {
++            clipY -= headroom;
++            clipH += headroom;
++        } else if (this.side === St.Side.TOP) {
++            clipH += headroom;
++        } else if (this.side === St.Side.LEFT) {
++            clipW += headroom;
++        } else if (this.side === St.Side.RIGHT) {
++            clipX -= headroom;
++            clipW += headroom;
++        }
++        this.child.set_clip(clipX, clipY, clipW, clipH);
++        if ('clip_to_view' in this.child)
++            this.child.clip_to_view = false;
+     }
+ 
+     /**
