@@ -57,6 +57,8 @@ PROFILE_REPO_PACKAGES=(
     parchaos-release
     # First-login assistant (packaging/parchaos-welcome/).
     parchaos-welcome
+    # Keeps new kernels in the boot menu (packaging/parchaos-boot/).
+    parchaos-boot
 
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice

@@ -38,7 +38,7 @@ REPO_ROOT="$(dirname -- "$SCRIPT_DIR")"
 # future omitted --profile would just silently break instead of failing
 # loudly). No default now — --profile is required, see the check below.
 PROFILE=""
-BRANCH="42"          # a Fedora release number ("42", "41", ...) or "rawhide"
+BRANCH=""            # a Fedora release number ("44", ...) or "rawhide"; default from profile.conf
 LOCAL=0               # install profile RPMs from build/local-rpms/ instead of COPR
 CLEAN_BASE=0          # wipe and rebuild the dnf --installroot base cache
 CLEAN_TARGET=0        # wipe and re-clone the working rootfs from the base cache
@@ -130,6 +130,32 @@ source "$PROFILE_DIR/repo.sh"
 # shellcheck source=/dev/null
 source "$PROFILE_DIR/customize.sh"
 
+# The live ISO's boot menu (UEFI and BIOS): the normal quiet boot with the
+# splash, a basic-graphics fallback for GPUs the kernel can't drive yet,
+# and a troubleshooting entry with kernel messages on the serial console
+# (what automated VM tests read).
+live_menu_entries() {
+    local base="root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image"
+    cat <<MENU
+menuentry "Start $PROFILE_DISPLAY_NAME" {
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz $base rhgb quiet
+    initrd (\$root)/boot/initramfs.img
+}
+menuentry "Start $PROFILE_DISPLAY_NAME in basic graphics mode" {
+    linux (\$root)/boot/vmlinuz $base nomodeset quiet
+    initrd (\$root)/boot/initramfs.img
+}
+menuentry "Troubleshooting: start with kernel messages" {
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz $base console=tty0 console=ttyS0,115200n8
+    initrd (\$root)/boot/initramfs.img
+}
+MENU
+}
+
+# The Fedora release: --branch, else the profile's own, else 44.
+BRANCH="${BRANCH:-${PROFILE_FEDORA_RELEASE:-44}}"
 : "${PROFILE_DISPLAY_NAME:?profile.conf must set PROFILE_DISPLAY_NAME}"
 : "${PROFILE_SLUG:?profile.conf must set PROFILE_SLUG}"
 : "${PROFILE_ISO_LABEL:?profile.conf must set PROFILE_ISO_LABEL}"
@@ -355,9 +381,16 @@ cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.
 # to; real hardware with Secure Boot on needs the shim chain).
 HAVE_UEFI=0
 SECUREBOOT_DIR="$PROFILE_DIR/ploader/secureboot"
-if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+# Fedora's signed shim (shim-x64) and CD-boot GRUB come from the target
+# itself, so UEFI boot (including Secure Boot) doesn't depend on a
+# profile shipping its own copies under ploader/ (ticket #55).
+# (Fedora 44 installs them under /usr/lib/efi/<package>/<version>/; older
+# releases put them straight on /boot/efi.)
+ROOTFS_EFI_DIR="$(dirname "$(find "$ROOTFS_TARGET/usr/lib/efi/shim" -name shimx64.efi 2>/dev/null | sort -V | tail -1)")"
+[ -f "$ROOTFS_EFI_DIR/shimx64.efi" ] || ROOTFS_EFI_DIR="$ROOTFS_TARGET/boot/efi/EFI/fedora"
+if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx64.efi" ]; then
     HAVE_UEFI=1
-    echo "Building UEFI boot image (Ploader)..."
+    echo "Building UEFI boot image..."
     mkdir -p "$ISO_WORKDIR/EFI/BOOT"
     EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
     # VERIFIED ROOT CAUSE (2026-09-21, see docs/phase4-findings.md "UEFI
@@ -399,7 +432,8 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     MOK_KEY="${PLOADER_MOK_KEY:-$REAL_HOME/pearos-mok/pearos-mok.key}"
     MOK_CERT="${PLOADER_MOK_CERT:-$REAL_HOME/pearos-mok/pearos-mok.crt}"
     SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
-    if command -v sbsign >/dev/null 2>&1 && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
+    if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] && command -v sbsign >/dev/null 2>&1 \
+       && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
         echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
         SIGNED_PLOADER="$BUILD_DIR/ploader_x64_signed.efi"
         sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
@@ -426,11 +460,14 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi" ]; then
         UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi"
     fi
-    if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
-       && [ -n "$UEFI_GRUB_EFI" ]; then
+    SHIM_EFI="$SECUREBOOT_DIR/shimx64.efi"
+    [ -f "$SHIM_EFI" ] || SHIM_EFI="$ROOTFS_EFI_DIR/shimx64.efi"
+    MM_EFI="$SECUREBOOT_DIR/mmx64.efi"
+    [ -f "$MM_EFI" ] || MM_EFI="$ROOTFS_EFI_DIR/mmx64.efi"
+    if [ -f "$SHIM_EFI" ] && [ -f "$MM_EFI" ] && [ -n "$UEFI_GRUB_EFI" ]; then
         echo "Chaining shim -> Fedora's real grub2-efi-x64-cdboot (gcdx64.efi) for UEFI kernel boot."
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
+        mcopy -i "$EFIBOOT_IMG" "$SHIM_EFI" ::/EFI/BOOT/BOOTX64.EFI
+        mcopy -i "$EFIBOOT_IMG" "$MM_EFI" ::/EFI/BOOT/mmx64.efi
         mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" ::/EFI/BOOT/grubx64.efi
         # gcdx64.efi's own prefix/config search targets the OUTER ISO9660
         # filesystem it was booted from (i.e. (cd0) as GRUB itself sees it),
@@ -454,18 +491,19 @@ search --file --set=root /boot/vmlinuz
 
 set default=0
 set timeout=5
-menuentry "$PROFILE_DISPLAY_NAME" {
-    set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image console=tty0 console=ttyS0,115200n8
-    initrd (\$root)/boot/initramfs.img
-}
+$(live_menu_entries)
 EOF
         if [ -f "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ]; then
             cp "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" "$ISO_WORKDIR/EFI/BOOT/fonts/unicode.pf2"
         fi
     else
-        echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
-        mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+        if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+            echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
+            mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+        else
+            echo "ERROR: no signed shim, MokManager or grub2-efi-x64-cdboot in the target; can't build UEFI boot." >&2
+            exit 1
+        fi
     fi
 else
     echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
@@ -542,11 +580,7 @@ search --file --set=root /boot/vmlinuz
 
 set default=0
 set timeout=5
-menuentry "$PROFILE_DISPLAY_NAME" {
-    set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image vga=791 console=tty0 console=ttyS0,115200n8
-    initrd (\$root)/boot/initramfs.img
-}
+$(live_menu_entries)
 EOF
 
 echo "Running grub2-mkrescue..."

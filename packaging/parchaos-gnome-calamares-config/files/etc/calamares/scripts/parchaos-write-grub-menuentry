@@ -29,33 +29,10 @@
 # menuentry needs no dynamic BLS discovery at all, so whatever GRUB's
 # own blscfg/btrfs-subvolume resolution gap actually is becomes
 # irrelevant.
+# Replaced 2026-09-26 (ticket #54): the static custom.cfg entry was
+# pinned to the install-time kernel, and GRUB's full config sat on the
+# EFI partition where kernel updates never regenerate it. parchaos-boot's
+# parchaos-grub-setup (installed in the target) now writes the real
+# config to /boot/grub2/grub.cfg and a small EFI stub that loads it.
 set -e
-
-BLS_ENTRY="$(ls /boot/loader/entries/*.conf 2>/dev/null | head -1)"
-if [ -z "$BLS_ENTRY" ]; then
-    echo "parchaos-write-grub-menuentry: no BLS entry found under /boot/loader/entries" >&2
-    exit 1
-fi
-
-TITLE="$(awk -F'title ' '/^title /{print $2}' "$BLS_ENTRY")"
-LINUX_PATH="$(awk -F'linux ' '/^linux /{print $2}' "$BLS_ENTRY")"
-INITRD_PATH="$(awk -F'initrd ' '/^initrd /{print $2}' "$BLS_ENTRY")"
-OPTIONS="$(awk -F'options ' '/^options /{print $2}' "$BLS_ENTRY")"
-
-if [ -z "$LINUX_PATH" ] || [ -z "$INITRD_PATH" ]; then
-    echo "parchaos-write-grub-menuentry: could not parse linux/initrd from $BLS_ENTRY" >&2
-    exit 1
-fi
-
-ROOT_UUID="$(findmnt -no UUID /)"
-
-mkdir -p /boot/efi/EFI/fedora
-cat > /boot/efi/EFI/fedora/custom.cfg <<EOF
-insmod part_gpt
-insmod btrfs
-menuentry '${TITLE:-ParchaOS}' {
-    search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
-    linux ${LINUX_PATH} ${OPTIONS}
-    initrd ${INITRD_PATH}
-}
-EOF
+exec /usr/libexec/parchaos-grub-setup

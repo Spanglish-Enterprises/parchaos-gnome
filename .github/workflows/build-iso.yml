@@ -47,7 +47,7 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf -y install dnf-plugins-core rsync squashfs-tools xorriso \
-              grub2-tools grub2-pc-modules dosfstools mtools systemd-container git
+              grub2-tools grub2-pc-modules grub2-efi-x64-modules dosfstools mtools systemd-container git
 
       - name: Build ISO
         run: |
@@ -55,6 +55,17 @@ jobs:
             --profile "${{ github.event.inputs.profile || 'pulsaros' }}" \
             --branch "${{ github.event.inputs.branch || '44' }}" \
             --clean-target
+
+      - name: Check the UEFI boot image uses the signed shim
+        run: |
+          iso=$(ls build/*.iso | head -1)
+          xorriso -osirrox on -indev "$iso" -extract /EFI/efiboot.img /tmp/efiboot.img
+          mcopy -i /tmp/efiboot.img ::/EFI/BOOT/BOOTX64.EFI /tmp/BOOTX64.EFI
+          mcopy -i /tmp/efiboot.img ::/EFI/BOOT/grubx64.efi /tmp/grubx64.efi
+          # Fedora's shim is signed by Microsoft's UEFI CA; GRUB by Fedora.
+          grep -aq "Microsoft Corporation UEFI CA" /tmp/BOOTX64.EFI
+          grep -aq "Fedora" /tmp/grubx64.efi
+          echo "UEFI boot image: signed shim -> Fedora GRUB"
 
       - name: Upload ISO + checksum
         uses: actions/upload-artifact@v4
