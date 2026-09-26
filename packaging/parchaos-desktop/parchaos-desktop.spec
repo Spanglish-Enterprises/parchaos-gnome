@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -83,7 +83,6 @@ Requires:       parchaos-cloud
 Requires:       parchaos-focus-schedule
 Requires:       parchaos-yin-yang
 Requires:       parchaos-tmog
-Requires:       pafari
 Requires:       parchaos-browser
 Requires:       parchaos-app-renames
 Requires:       parchaos-notification-position
@@ -129,6 +128,8 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-13
+- Drop pafari: Parcha Browser replaces it (and Obsoletes it).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12
 - Ship a dconf default so existing installs get it over OTA:
   always-show-log-out=true (GNOME hides Log Out on single-user machines;

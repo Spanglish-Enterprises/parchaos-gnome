@@ -1,0 +1,10 @@
+# Parcha Browser is ParchaOS's web browser. /etc/xdg wins over the
+# stale /usr/share defaults (gnome-session's list names Epiphany,
+# shared-mime-info's names Firefox -- neither is installed).
+[Default Applications]
+text/html=es.parchaos.Browser.desktop
+application/xhtml+xml=es.parchaos.Browser.desktop
+x-scheme-handler/http=es.parchaos.Browser.desktop
+x-scheme-handler/https=es.parchaos.Browser.desktop
+x-scheme-handler/about=es.parchaos.Browser.desktop
+x-scheme-handler/unknown=es.parchaos.Browser.desktop

@@ -47,14 +47,22 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
-License:        NOASSERTION
+License:        GPL-3.0-or-later AND CC-BY-SA-4.0
 URL:            https://github.com/alexgalicea/parchaos-gnome
 BuildArch:      noarch
 
 Source0:        es.parchaos.Browser.desktop
+Source1:        parchaos-browser-mimeapps.list
+# Original ParchaOS artwork (CC BY-SA 4.0), same file as in
+# parchaos-icon-theme; shipped in hicolor so the icon works in any theme.
+Source2:        parcha-browser.svg
+
+# Parcha Browser replaces Pafari (pearOS's WebKitGTK/Epiphany fork, whose
+# name is itself a Safari pun): obsoleting it removes it on dnf upgrade.
+Obsoletes:      pafari < 1:26.8-7
 
 Requires:       chromium
 Requires:       desktop-file-utils
@@ -62,8 +70,8 @@ Requires:       desktop-file-utils
 %description
 A thin ParchaOS-branded launcher for Fedora's own real `chromium` package
 -- gives ParchaOS a genuine Chromium/Blink-engine browser option
-alongside pafari (this profile's WebKitGTK-based one), for real-world
-Google services like Gmail that are tuned for Chrome/Blink. Not a
+for real-world Google services like Gmail that are tuned for
+Chrome/Blink. It is ParchaOS's default web browser (replacing Pafari). Not a
 from-scratch Chromium rebuild; just a rebranded desktop entry pointing
 at the real chromium-browser binary. See this spec's own banner comment
 for the full reasoning.
@@ -75,11 +83,26 @@ for the full reasoning.
 %install
 mkdir -p %{buildroot}%{_datadir}/applications
 install -m 0644 %{SOURCE0} %{buildroot}%{_datadir}/applications/es.parchaos.Browser.desktop
+# Default browser: GNOME reads gnome-mimeapps.list, then mimeapps.list,
+# from /etc/xdg before the /usr/share copies that name uninstalled apps.
+install -Dm 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/xdg/gnome-mimeapps.list
+install -Dm 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/xdg/mimeapps.list
+install -Dm 0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %files
 %{_datadir}/applications/es.parchaos.Browser.desktop
+%config(noreplace) %{_sysconfdir}/xdg/gnome-mimeapps.list
+%config(noreplace) %{_sysconfdir}/xdg/mimeapps.list
+%{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
+- Replace Pafari: Obsoletes pafari so dnf upgrade removes it.
+- Make Parcha Browser the default for web links via /etc/xdg defaults;
+  the /usr/share defaults named Epiphany and Firefox, neither installed.
+- Own icon name (es.parchaos.Browser, original artwork in hicolor)
+  instead of the theme's "safari" icon.
+- License set: GPL-3.0-or-later (packaging) AND CC-BY-SA-4.0 (icon).
 * Thu Sep 24 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Real user request: a Chromium-based browser for full
   Gmail/Google-service compatibility, distinct from pafari's WebKitGTK

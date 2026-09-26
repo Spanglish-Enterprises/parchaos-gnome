@@ -37,7 +37,7 @@ job is now just to orient you to them, not to duplicate their detail:
   (`gnome-software`, a real hosts-file ad-blocker, a real Wayland-native
   live wallpaper) and closing the last extension gap (Desktop Icons
   NG). Also documents a real five-bug dependency chain found in the
-  existing `pafari` package while adding `gnome-software` — worth
+  since-removed `pafari` package while adding `gnome-software` — worth
   reading before touching RPM `Epoch`/`Provides`/`Obsoletes` on any
   package in this repo.
 
@@ -118,9 +118,10 @@ independently-licensed GNOME Shell extensions for polish
 total.
 
 **Apps**: `parchaos-finder` (real Nautilus fork, GPL-3.0, genuinely
-clear to redistribute), `pafari` (WebKitGTK/Epiphany fork), `parchaos-browser`
-(thin Chromium rebrand for full Google-service compatibility),
-`parchaos-app-renames` (Loupe → Preview, Clocks → Clock, Geary → Mail),
+clear to redistribute), `parchaos-browser` ("Parcha Browser": thin Chromium
+rebrand and the default web browser; it replaced and Obsoletes `pafari`, the
+old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Preview,
+Clocks → Clock, Geary → Mail, Software → Parcha Store),
 `parchaos-tmog`, `parchaos-cloud` (rclone wrapper — **deprioritized**,
 see phase2/phase3 docs; already shipped before this project's own
 licensing-audit habit started, same missing-LICENSE gap as the rest of
@@ -165,6 +166,20 @@ Sayri, `pulsaros-timemachine`, `pulsaros-welcome`, `pulsaros-cloud`,
 Island-style notification UI, an app store, a driver manager. See
 `docs/gnome-phase2-findings.md` and `docs/gnome-phase3-findings.md` for
 the full audit and the drafted (unsent) outreach email.
+
+## License
+
+- **Code, packaging and docs** written for ParchaOS: **GPL-3.0-or-later**
+  (`LICENSE`). Chosen to match the GPL code this project forks and ships
+  (Nautilus/Parcher, Dash-to-Dock/Parcha Dock, several GNOME Shell
+  extensions), so everything combines cleanly.
+- **Original ParchaOS artwork** (e.g. the app icons in
+  `packaging/parchaos-icon-theme/parchaos-icons/`): **CC BY-SA 4.0**
+  (`LICENSE-ARTWORK`).
+- **Third-party components keep their own licenses**, declared in each
+  package's spec `License:` field -- e.g. the passion-fruit logo is CC BY 3.0
+  with attribution in `branding/logo/CREDITS.md`, MacTahoe themes are GPL-3.0,
+  xremap is MIT.
 
 ## Naming policy (trademark caution)
 

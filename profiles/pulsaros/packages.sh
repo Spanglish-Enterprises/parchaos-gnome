@@ -138,23 +138,10 @@ PROFILE_REPO_PACKAGES=(
     # changelog.
     parchaos-tmog
 
-    # Pafari (packaging/pafari/) -- pearOS/Pulsar OS's real fork of
-    # GNOME Web (Epiphany), GPL-3.0-or-later. This profile ships no
-    # other web browser at all (confirmed via packages.list), so this
-    # fills a real gap, matching the KDE (pearos) variant's own use of
-    # it as the default browser (profiles/pearos/packages.sh). Genuine
-    # GTK4/libadwaita/WebKitGTK app -- if anything, a more natural fit
-    # for this GNOME profile than it was for KDE. The KDE variant
-    # never set an explicit XDG MIME default for it either (just
-    # installs it and pins it to the panel), so this follows the same
-    # minimal-touch precedent rather than adding new default-browser
-    # plumbing this project hasn't established yet.
-    pafari
-
-    # Parcha Browser (packaging/parchaos-browser/) -- a thin ParchaOS
-    # rebrand of Fedora's own real `chromium` package, for real-world
-    # Google services (Gmail chief among them) that are tuned for
-    # Chrome/Blink and can behave worse on pafari's WebKitGTK engine.
+    # Parcha Browser (packaging/parchaos-browser/) -- ParchaOS's web
+    # browser and the default for web links: a thin rebrand of Fedora's
+    # own real `chromium` package. It replaced Pafari (pearOS's Epiphany
+    # fork) and Obsoletes it, so existing installs drop Pafari on update.
     # Requires: chromium pulls the actual browser engine in from
     # packages.list's base set.
     parchaos-browser
