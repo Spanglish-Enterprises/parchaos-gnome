@@ -62,12 +62,14 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
 URL:            https://github.com/alexgalicea/parchaos-gnome
 BuildArch:      noarch
+Requires(post): dconf
+Requires(postun): dconf
 
 Requires:       parchaos-finder
 Requires:       parchaos-dock
@@ -107,11 +109,30 @@ with packages.sh, bump Release on every change).
 %prep
 %build
 %install
-mkdir -p %{buildroot}
+mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
+# Desktop defaults that must also reach existing installs over OTA
+# (profiles/pulsaros/customize.sh only affects freshly built ISOs).
+cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop <<'DCONF'
+# GNOME hides "Log Out" from the system menu on single-user machines;
+# a desktop OS should always offer it.
+[org/gnome/shell]
+always-show-log-out=true
+DCONF
+
+%post
+dconf update >/dev/null 2>&1 || :
+
+%postun
+dconf update >/dev/null 2>&1 || :
 
 %files
+%{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12
+- Ship a dconf default so existing installs get it over OTA:
+  always-show-log-out=true (GNOME hides Log Out on single-user machines;
+  found when the user couldn't find a way to log out).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-11
 - Require parchaos-keyboard-remap, the new name of parchaos-macos-remap.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-10
