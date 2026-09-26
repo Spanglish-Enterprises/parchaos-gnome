@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -234,6 +234,10 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-13
+- File-type icons: programs no longer get the spreadsheet icon,
+  Makefiles the disk icon, or Word templates the code icon (tighter
+  matching, with a self-test).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-12
 - Replace MacTahoe's icloud.svg with ParchaOS's cloud icon.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-11

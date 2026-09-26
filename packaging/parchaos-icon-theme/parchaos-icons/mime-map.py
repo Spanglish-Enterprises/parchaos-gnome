@@ -18,19 +18,22 @@ import sys
 # First match wins. Matched against the icon name without ".svg".
 RULES = [
     ('pdf', r'pdf|postscript|dvi|x-xps|oxps'),
-    ('spreadsheet', r'spreadsheet|excel|table|csv|gdsheet|numbers|oasis-spreadsheet|x-gnumeric|ms-works'),
+    # Word-processor formats first: their names contain "xml" and
+    # "template", which would otherwise read as code or plain text.
+    ('document', r'wordprocessingml|msword|opendocument\.text|oasis-text|x-abiword'),
+    ('spreadsheet', r'spreadsheet|excel|(^|[-.])table($|[-.])|csv|gdsheet|numbers|oasis-spreadsheet|x-gnumeric|ms-works'),
     ('presentation', r'presentation|powerpoint|slide|gdslides|keynote|x-kpresenter'),
     ('database', r'database|access|sqlite|sql|oasis-database|dbf|kexi'),
     ('font', r'font|ttf|otf|woff|x-pcf|bdf'),
     ('certificate', r'certificate|pgp|pkcs|x509|pem|keystore|x-java-keystore|signature|gpg|ssh-key'),
     ('contact', r'vcard|contact|addressbook|users|x-ldif'),
-    ('calendar', r'calendar|x-vcalendar|ics'),
+    ('calendar', r'calendar|x-vcalendar|ics$'),
     ('mail', r'mbox|message|rfc822|x-mail|msoutlook|x-mimearchive|eml'),
-    ('disk', r'iso|disk|x-ms-wim|x-cd-image|raw-disk|virtualbox|vmdk|vhd|vdi|ovf|ova|qcow|dmg|x-apple-diskimage|efi|hdd'),
+    ('disk', r'iso|disk|x-ms-wim|x-cd-image|raw-disk|virtualbox|vmdk|vhd|vdi|ovf|ova|qcow|dmg|x-apple-diskimage|vnd\.efi|hdd'),
     ('package', r'appimage|flatpak|x-rpm|x-deb|debian|package|apk|android|x-msi|portable-executable|'
                 r'x-executable|x-sharedlib|software|system-component|extension|addon|x-ms-dos|x-shellscript-exec|'
                 r'x-desktop|snap|x-content-software|x-bat|msdownload|ms-shortcut|firmware|x-object|macbinary|x-plasma|partial-download'),
-    ('archive', r'zip|tar|rar|7z|gzip|bzip|xz|lzma|lz|zstd|compress|archive|cab|x-cpio|x-ar|jar|x-ace|x-arj|'
+    ('archive', r'zip|tar|rar|7z|gzip|bzip|xz|lzma|lz|zstd|compress|archive|cab|x-cpio|x-arc?($|[-.])|jar|x-ace|x-arj|'
                 r'x-lha|x-stuffit|squashfs|torrent'),
     ('audio', r'(^|-)audio|clementine|ogg|playlist|podcast|x-mpegurl|x-scpls|mp3|flac|midi|x-wav|opus'),
     ('video', r'(^|-)video|x-matroska|mp4|webm|x-flv|x-ms-wmv|quicktime|vnd.rn-realmedia'),
@@ -41,7 +44,7 @@ RULES = [
              r'x-go|x-rust|typescript|coffeescript|x-lua|x-makefile|x-cmake|x-patch|x-diff|xml|yaml|toml|'
              r'css|x-sass|x-scss|x-less|x-csharp|x-kotlin|x-swift|x-haskell|x-erlang|x-elixir|x-scala|'
              r'x-tex|x-lisp|x-scheme|x-ocaml|x-fortran|x-pascal|x-vala|x-meson|x-gettext|x-qml|'
-             r'x-matlab|mathematica|x-r|x-sql|x-authors|x-install|x-readme|x-copying|x-changelog|x-credits|'
+             r'x-matlab|mathematica|x-r($|[-.])|x-sql|x-authors|x-install|x-readme|x-copying|x-changelog|x-credits|'
              r'x-log|x-ini|x-dockerfile|x-nix|x-typst|x-markdown|x-rst|asciidoc|ipynb|x-ipynb'),
     ('document', r'document|chm|msword|word|rtf|oasis-text|oasis-master|opendocument|gddoc|epub|x-abiword|'
                  r'wordperfect|x-kword|pages|x-fictionbook|x-mobipocket|djvu|note|onenote|rnote|gdnote|'
@@ -69,7 +72,41 @@ def targets(icons_dir):
                 yield path, f[:-4]
 
 
+# Names that have gone wrong before, and what they must map to.
+EXPECTED = {
+    'application-x-executable': 'package',
+    'application-x-ms-dos-executable': 'package',
+    'application-vnd.microsoft.portable-executable': 'package',
+    'text-x-makefile': 'code',
+    'application-vnd.openxmlformats-officedocument.wordprocessingml.template': 'document',
+    'application-vnd.openxmlformats-officedocument.wordprocessingml.document': 'document',
+    'application-vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'spreadsheet',
+    'application-vnd.openxmlformats-officedocument.presentationml.presentation': 'presentation',
+    'application-x-remote-connection': 'generic',
+    'application-x-root': 'generic',
+    'application-vnd.efi.iso': 'disk',
+    'text-x-r': 'code',
+    'text-calendar': 'calendar',
+    'application-x-arduino': 'generic',
+    'application-x-arc': 'archive',
+    'text-x-python': 'code',
+    'image-png': 'image',
+    'application-pdf': 'pdf',
+    'application-zip': 'archive',
+    'text-plain': 'text',
+}
+
+
+def self_test():
+    bad = {name: (kind_of(name), want) for name, want in EXPECTED.items() if kind_of(name) != want}
+    for name, (got, want) in bad.items():
+        print(f'{name}: {got}, expected {want}')
+    return 1 if bad else 0
+
+
 def main(argv):
+    if argv[1:2] == ['--self-test']:
+        return self_test()
     if argv[1:2] == ['--dry-run']:
         for _path, name in targets(argv[2]):
             print(f'{name} -> {kind_of(name)}')

@@ -49,6 +49,9 @@ for path in sys.argv[1:]:
 sys.exit(bad)
 PY
 
+echo "== file-type icon mapping =="
+python3 -B packaging/parchaos-icon-theme/parchaos-icons/mime-map.py --self-test || fail mime-map
+
 echo "== GNOME Shell extension JavaScript syntax =="
 while IFS= read -r js; do
     node --check "$js" 2>&1 | head -5 | grep . && fail "$js"
