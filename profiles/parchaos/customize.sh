@@ -41,10 +41,11 @@ profile_customize() {
     # then install the stub with the Cisco repo off. On installed systems
     # (repo enabled) the first dnf upgrade brings the real library back,
     # downloaded from Cisco.
-    if run_in_target rpm -q openh264 >/dev/null 2>&1; then
-        run_in_target rpm -e --nodeps openh264
-    fi
-    run_in_target dnf -y --disablerepo=fedora-cisco-openh264 install noopenh264
+    # One nspawn call, so the removal can't be skipped by a failed guard.
+    run_in_target /bin/bash -c '
+        set -e
+        if rpm -q openh264 >/dev/null; then rpm -e --nodeps openh264; fi
+        dnf -y --disablerepo=fedora-cisco-openh264 install noopenh264'
     run_in_target rpm -q generic-logos noopenh264
     for pkg in fedora-logos openh264; do
         if run_in_target rpm -q "$pkg" >/dev/null 2>&1; then
