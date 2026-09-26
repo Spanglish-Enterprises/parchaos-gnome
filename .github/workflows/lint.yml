@@ -50,25 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install tools
-        run: dnf -y install rpm-build
-      - name: Compare forks with Fedora
-        run: |
-          status=0
-          for pkg in gnome-control-center; do
-            ours=$(rpmspec -q --srpm --qf '%{version}' packaging/$pkg/$pkg.spec 2>/dev/null)
-            fedora=$(dnf -q repoquery --latest-limit 1 --qf '%{version}' "$pkg" | tail -1)
-            echo "$pkg: ParchaOS $ours, Fedora $fedora"
-            if [ "$(printf '%s\n%s\n' "$ours" "$fedora" | sort -V | tail -1)" != "$ours" ]; then
-              echo "::error::$pkg: Fedora has $fedora, the ParchaOS fork is $ours. Rebase the fork."
-              status=1
-            fi
-          done
-          # Parcher is based on an older Nautilus on purpose until its
-          # rebase (docs/parcher-rebase-plan.md): warn, don't fail.
-          base=$(rpmspec -q --srpm --qf '%{version}' packaging/parcher/parcher.spec 2>/dev/null)
-          fedora=$(dnf -q repoquery --latest-limit 1 --qf '%{version}' nautilus | tail -1)
-          echo "parcher: Nautilus $base base, Fedora nautilus $fedora"
-          if [ "$(printf '%s\n%s\n' "$base" "$fedora" | sort -V | tail -1)" != "$base" ]; then
-            echo "::warning::Parcher is based on Nautilus $base; Fedora has $fedora. See docs/parcher-rebase-plan.md."
-          fi
-          exit $status
+        run: dnf -y install rpm-build python3-rpm
+      - name: Compare forks with Fedora (version and release)
+        run: scripts/check-forks.py
