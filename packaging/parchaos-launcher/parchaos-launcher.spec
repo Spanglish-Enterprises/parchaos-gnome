@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -61,6 +61,12 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-14
+- Dragging the only app of a folder back onto that folder no longer
+  deletes the folder; a folder emptied by a drag leaves the saved order.
+- Uninstall removes nothing unless the removal still matches the list
+  the user confirmed; Flatpak removal can ask for the administrator
+  password through polkit.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-13
 - Rebuild: install the license file from the build directory (the
   previous build failed to find it).

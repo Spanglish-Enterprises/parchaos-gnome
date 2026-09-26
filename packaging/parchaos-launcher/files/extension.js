@@ -159,6 +159,7 @@ function addToFolder(id, app) {
 }
 
 // Takes an app out of a folder; a folder left empty is deleted.
+// Returns true when the folder was deleted.
 function removeFromFolder(folder, app) {
     const settings = folderSettings(folder.id);
     const appId = app.get_id();
@@ -175,7 +176,9 @@ function removeFromFolder(folder, app) {
             parent.get_strv('folder-children').filter(f => f !== folder.id));
         for (const key of settings.settings_schema.list_keys())
             settings.reset(key);
+        return true;
     }
+    return false;
 }
 
 // ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
@@ -758,14 +761,30 @@ const Launcher = GObject.registerClass({
         drag.clone.destroy();
 
         const target = drag.target?.item;
-        if (drag.fromFolder && this._folderView) {
-            // Dropped back inside the folder it came from: nothing changes.
-            drag.tile.opacity = 255;
+        const onOwnFolder = drag.fromFolder && target?.type === 'folder' &&
+            target.id === drag.fromFolder.id;
+        if (drag.fromFolder && (this._folderView || onOwnFolder)) {
+            // Dropped back inside or onto the folder it came from: nothing changes.
+            if (this._folderView)
+                drag.tile.opacity = 255;
+            else
+                this._reload();
             return;
         }
+        // Taking the last app out deletes its folder; drop it from the order
+        // too, and shift a later insert position up by one.
+        const takeOut = () => {
+            if (!drag.fromFolder || !removeFromFolder(drag.fromFolder, drag.item.app))
+                return;
+            const at = drag.list.findIndex(it => it.type === 'folder' && it.id === drag.fromFolder.id);
+            if (at < 0)
+                return;
+            drag.list = drag.list.filter((_, i) => i !== at);
+            if (drag.insert > at)
+                drag.insert--;
+        };
         if (target && drag.item.type === 'app') {
-            if (drag.fromFolder)
-                removeFromFolder(drag.fromFolder, drag.item.app);
+            takeOut();
             let order = drag.list;
             if (target.type === 'folder') {
                 addToFolder(target.id, drag.item.app);
@@ -775,8 +794,7 @@ const Launcher = GObject.registerClass({
             }
             saveOrder(order);
         } else {
-            if (drag.fromFolder)
-                removeFromFolder(drag.fromFolder, drag.item.app);
+            takeOut();
             const order = drag.list.slice();
             const insert = drag.insert < 0 ? order.length : Math.min(drag.insert, order.length);
             order.splice(insert, 0, drag.fromFolder ? {type: 'app', app: drag.item.app} : drag.item);
@@ -1134,9 +1152,11 @@ const Launcher = GObject.registerClass({
         // the removal takes with it, which the dialog then lists.
         remove.reactive = false;
         remove.opacity = 128;
+        let confirmed = null;
         remove.connect('clicked', () => {
             this._closeConfirm();
-            this._uninstall(app);
+            if (confirmed)
+                this._uninstall(app, confirmed);
         });
         runAsync([this._helper, 'plan', app.get_id()]).then(({stdout}) => {
             if (this._destroyed || this._confirm !== shade)
@@ -1155,6 +1175,7 @@ const Launcher = GObject.registerClass({
             body.text = packages.length > 1
                 ? `${baseText}\n\nThis also removes: ${packages.join(', ')}.`
                 : baseText;
+            confirmed = packages;
             remove.reactive = true;
             remove.opacity = 255;
             this._placeConfirmBox(box);
@@ -1183,12 +1204,14 @@ const Launcher = GObject.registerClass({
 
     // The password prompt for system packages is a shell dialog that would
     // sit under the launcher, so close first and report by notification.
-    _uninstall(app) {
+    // The helper removes nothing unless the plan still matches the list
+    // the user confirmed.
+    _uninstall(app, packages) {
         const name = app.get_name();
         const id = app.get_id();
         const helper = this._helper;
         this.close();
-        runAsync([helper, 'uninstall', id]).then(({ok, stderr}) => {
+        runAsync([helper, 'uninstall', id, ...packages]).then(({ok, stderr}) => {
             if (ok) {
                 Main.notify(`${name} was uninstalled`, '');
             } else {
