@@ -58,7 +58,7 @@ Name:           parchaos-yin-yang
 # versioning inconsistency, not a typo on this end), confirmed by
 # checking pyproject.toml's content at the v4.0.1 ref directly.
 Version:        4.0.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Automatic light/dark theme switching with real sunrise/sunset support
 
 License:        MIT
@@ -85,8 +85,8 @@ Source1:        parchaos-yin-yang-files.tar.gz
 # they surface, not assumed impossible.
 Patch0:         0001-relax-fedora-package-version-pins.patch
 Patch1:         0002-fix-broken-relative-resource-paths.patch
-# Real gap found via real desktop usage 2026-09-25 (user: "use the
-# desktop to find bugs" -- launching yin_yang directly showed "Plugin
+# Real gap found via real desktop usage 2026-09-25 (testing on the
+# real desktop -- launching yin_yang directly showed "Plugin
 # Colors has no support for your desktop environment yet!" and the
 # same for "Icons"). Checked the real upstream source before assuming
 # anything was broken on our end: Colors is genuinely KDE-only by
@@ -195,6 +195,9 @@ install -m 0644 usr/share/parchaos-yin-yang/resources/yin_yang.timer \
 %{_datadir}/parchaos-yin-yang/resources/yin_yang.timer
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 4.0.1-4
+- Reworded comments and changelog to describe user-reported issues
+  instead of quoting them.
 * Fri Sep 25 2026 ParchaOS packaging - 4.0.1-3
 - Real bug found via live testing on real hardware: toggling did nothing
   on GNOME because every plugin defaulted to disabled, the GTK/Icons

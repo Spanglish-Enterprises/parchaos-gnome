@@ -287,7 +287,7 @@ touchegg
 google-noto-sans-fonts
 google-noto-emoji-fonts
 # Real bug found via a real installed system on actual hardware
-# (2026-09-24): user reported "strange letter spacing" in the Terminal
+# (2026-09-24): user reported odd letter spacing in the Terminal
 # app. Root-caused live on a fresh install: `gsettings get
 # org.gnome.desktop.interface font-name` returns "Adwaita Sans 11" and
 # the terminal/monospace default is "Adwaita Mono" (both GNOME's own
@@ -392,7 +392,7 @@ usb_modeswitch
 # position, autohide, magnification, etc.) were completely
 # unreachable from the desktop. `gnome-extensions prefs <uuid>` from a
 # terminal always worked, which is how this got missed until a real
-# user asked "where are the dock's options."
+# user asked where the dock's options were.
 gnome-extensions-app
 # Chromium/Blink engine for parchaos-browser (packages.sh). Confirmed
 # via real `dnf list --available` on real hardware 2026-09-24:

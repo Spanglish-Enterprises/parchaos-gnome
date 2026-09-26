@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
 
 License:        MIT
@@ -139,8 +139,8 @@ fi
 mkdir -p %{buildroot}%{_datadir}/themes
 ./install.sh -c dark -d %{buildroot}%{_datadir}/themes --silent-mode
 
-# Real gap found 2026-09-24 (real user feedback: "we don't seem to have
-# a light mode and we should provide both"): install.sh's own
+# Real gap found 2026-09-24 (real user feedback: no light mode; both
+# should ship): install.sh's own
 # COMMAND_COLOR_VARIANTS (libs/lib-core.sh) is
 # ('light' 'dark') -- light was always a real, fully-supported
 # upstream variant (a genuine gtk-Light.scss compile path, not a
@@ -159,8 +159,8 @@ mkdir -p %{buildroot}%{_datadir}/themes
 ./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
 
 # Real bug found via log-based live testing 2026-09-25 (real user
-# report: "the window button traffic lights are only showing the icons
-# and not the color circles like a Mac"). Root cause, confirmed against
+# report: the window buttons showed only their icons, without the
+# colored circles). Root cause, confirmed against
 # upstream's own README ("Fix for libadwaita (not perfect)") and
 # libs/lib-install.sh's config_gtk4(): libadwaita apps (most of modern
 # GNOME, including Settings/Files) ignore the system theme directory
@@ -220,6 +220,9 @@ ln -sf gtk-Dark.css "$GTK4_SKEL/gtk-dark.css"
 %{_sysconfdir}/skel/.local/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12
+- Reworded comments and changelog to describe user-reported issues
+  instead of quoting them.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-11
 - Release 10's COPR build failed with "Installed (but unpackaged)
   file(s)": install.sh -l's main() also installs the plain per-user

@@ -108,7 +108,7 @@ Every *fresh* install since that meta-package was added has been
 silently deregistering `parchaos-desktop` itself at the very last step
 of install, without any error (the removal script's `|| true` on the
 `dnf remove` swallows it). Caught live on the real machine (user
-reported "I still see the install system app" from an install that
+reported the installer app still showing, from an install that
 predated even the original fix's ISO — while fixing that live, the same
 `dnf remove calamares --noautoremove` reproduced the newer regression
 on the spot, pulling `parchaos-desktop` into the same transaction).
@@ -149,7 +149,7 @@ live:
   likely cause of Nautilus's own repeated ABRT crashes in the same
   journal window. Fixed: added `glibc-langpack-en`.
 - **System-wide font rendering was subtly wrong** — real user-caught
-  feedback ("the letter spacing in the terminal is strange"). Both
+  feedback (odd letter spacing in the terminal). Both
   "Adwaita Sans" (this profile's configured UI font) and "Adwaita Mono"
   (monospace default) were configured but never actually installed —
   `fc-match` fell back to Cantarell for UI text and, worse, the
@@ -346,9 +346,8 @@ tonight's other fixes.
 
 ## Two more real bugs found live, 2026-09-24: the dock and keyboard remap
 
-Prompted by real user feedback ("the theming is still lacking... the
-dock should have options and should be on by default like a Mac
-would"). Checked the real machine directly rather than guessing at a
+Prompted by real user feedback (theming still lacking; the dock should
+have options and be on by default). Checked the real machine directly rather than guessing at a
 theming/CSS explanation, and found two unrelated, genuine bugs — not a
 theming issue at all:
 
@@ -413,9 +412,9 @@ below.
 
 ## Traffic lights, light mode, and app rebrands, 2026-09-24
 
-Prompted by real user feedback ("the terminal is not following our
-rules of traffic lights", "we don't seem to have a light mode",
-"what other apps can we do similar" [to the browser rebrand]).
+Prompted by real user feedback (the terminal didn't follow the
+traffic-light button rules, there was no light mode, and a request for
+more app rebrands like the browser's).
 
 - **Traffic lights**: `button-layout` was never set at all
   (`org/gnome/desktop/wm/preferences`), so GNOME fell back to Fedora's
@@ -537,7 +536,7 @@ logout/reboot verification from earlier tonight.
 
 ## GDM login logo still showed Fedora, 2026-09-24
 
-Real user feedback: "the login logo is still fedora". Root cause,
+Real user feedback: the login screen still showed the Fedora logo. Root cause,
 confirmed on real hardware: the `gdm` package itself ships
 `/usr/share/glib-2.0/schemas/org.gnome.login-screen.gschema.override`
 setting `logo='/usr/share/pixmaps/fedora-gdm-logo.png'` as a
@@ -671,8 +670,8 @@ Fedora's full comps.xml bundle. Added `Requires: localsearch` to
 (launched nautilus directly, confirmed no crash, no new coredump).
 
 **The GDM login-screen logo was huge.** Real user report, and a very
-specific, useful one: "It should be the text logo with the icon like
-it's currently in the lock screen... that's the perfect size."
+specific, useful one: use the text logo with the icon, at the size the
+lock screen already shows it.
 Release 1 of `parchaos-gdm-logo` had shipped the raw 572x572 square
 app icon completely unscaled into GDM's login-screen logo slot.
 Checked Fedora's own real, working `fedora-gdm-logo.png` (extracted
@@ -684,7 +683,7 @@ match (the same real icon asset plus "ParchaOS" in Nunito Sans,
 checked before shipping. `parchaos-gdm-logo` Release 2.
 
 **Hanabi (live wallpaper) auto-launched and failed at every login.**
-Real user report: "not a good user experience." `journalctl` showed
+Real user report: a poor experience at login. `journalctl` showed
 the renderer launching automatically the moment the extension was
 enabled, regardless of `change-wallpaper` (confirmed `false` by
 default) or `video-path` (confirmed empty by default), immediately
@@ -701,7 +700,7 @@ value) in addition to the ISO-config fix.
 
 ## Update 2026-09-25: a real "use the desktop to find bugs" pass
 
-Real user instruction: "you can use the desktop to find bugs." Logged
+Real user instruction: use the desktop directly to find bugs. Logged
 into the real machine directly (unlocked the screen and, later, logged
 back in after an explicitly user-approved test logout, both via
 `ydotool` synthetic keyboard input over SSH -- the only way to drive a
@@ -968,8 +967,8 @@ introduced.
 
 ## Update 2026-09-25: a real reference-desktop comparison, two more real bugs, and a real self-inflicted packaging incident
 
-Real user request: a real reference-desktop screenshot, asking "how
-can we make it work like the real macOS." Took a fresh screenshot of
+Real user request: a real reference-desktop screenshot, asking how to
+make the desktop work like the reference. Took a fresh screenshot of
 the live desktop and compared side by side rather than guessing from
 memory.
 
@@ -1066,8 +1065,8 @@ hardware) rather than a quick extension fix, also not started.
 
 ## Update 2026-09-25: Chromium's rounded window corners leak background, confirmed real upstream limitation
 
-Real user report with a live screenshot: "if you look closely at the
-curved corners there's a remaining background." Confirmed visually --
+Real user report with a live screenshot: background showing through at
+the rounded window corners. Confirmed visually --
 zoomed into `parchaos-browser`'s (Chromium) top-left and top-right
 window corners and found a real, consistent, blocky artifact: a sliver
 of the window's own rectangular background color visible just outside
@@ -1115,8 +1114,8 @@ wrong one. A real patch was written and shipped on that assumption
 constants and `g_*_get_symbolic_icon()` calls to their non-symbolic
 equivalents, added a `nautilus_trash_monitor_get_icon()` sibling
 function, rebound user bookmarks to a non-symbolic icon property).
-When the user pushed back ("If you compare to macos screenshot the
-sidebar is monochrome I believe") and the actual reference image was
+When the user pushed back (the reference screenshot's sidebar looked
+monochrome) and the actual reference image was
 re-cropped and re-examined directly, every single sidebar icon in it
 -- Applications, Desktop, Documents, Downloads, iCloud Drive, Dropbox,
 the home folder, Macintosh HD, AirDrop, Network, Trash -- is
@@ -1238,9 +1237,9 @@ top bar, leftmost among the status icons.
 UI to match the reference desktop's visual language -- gradient condition backgrounds,
 hourly strip, 10-day forecast, data tiles), consistent with this
 project's established pattern of patching/reskinning real upstream
-apps rather than building from scratch. Flagged: "macOS 27 Golden
-Gate" (the fictional future version in the user's reference
-screenshot) has no real Weather-app screenshot to clone precisely, so
+apps rather than building from scratch. Flagged: the OS version in the
+user's reference screenshot is current, and there was no Weather-app
+screenshot of it on hand to clone precisely, so
 this would target current/recent reference Weather design language
 unless a real reference image is provided.
 

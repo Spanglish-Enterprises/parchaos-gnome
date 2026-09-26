@@ -1,6 +1,6 @@
 # ==============================================================================
 # ParchaOS's GDM login-screen logo -- real user feedback (2026-09-24):
-# "the login logo is still fedora".
+# the login screen still showed the Fedora logo.
 #
 # Real root cause, confirmed on real hardware (not guessed): GDM's own
 # `gdm` RPM ships /usr/share/glib-2.0/schemas/org.gnome.login-screen.gschema.override
@@ -25,9 +25,9 @@
 # behavior when `glib-compile-schemas` processes a directory, not
 # guessed.
 #
-# Real bug found live on real hardware 2026-09-25 (user report: "the
-# login screen... the logo is huge!! It should be the text logo with
-# the icon"): Release 1 shipped the raw 572x572 square icon
+# Real bug found live on real hardware 2026-09-25 (user report: the
+# login-screen logo was far too big and should be the text logo with
+# the icon): Release 1 shipped the raw 572x572 square icon
 # (branding/logo/parcha-logo-white.png) completely unscaled into this
 # slot. Checked Fedora's own real, working fedora-gdm-logo.png
 # (extracted directly from the real fedora-logos RPM, not guessed) --
@@ -49,7 +49,7 @@
 
 Name:           parchaos-gdm-logo
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's real logo on the GDM login screen (replaces Fedora's default)
 
 License:        NOASSERTION
@@ -87,6 +87,9 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
+- Reworded comments and changelog to describe user-reported issues
+  instead of quoting them.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
 - Real bug found live: the 572x572 square icon rendered huge in GDM's
   login-screen logo slot. Replaced with a proper compact wordmark

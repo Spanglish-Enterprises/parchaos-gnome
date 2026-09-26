@@ -187,7 +187,7 @@ PROFILE_REPO_PACKAGES=(
 
     # ParchaOS's real logo on the GDM login screen, replacing Fedora's
     # default (packaging/parchaos-gdm-logo/) -- real user feedback
-    # ("the login logo is still fedora").
+    # (the login screen still showed the Fedora logo).
     parchaos-gdm-logo
 
     # Hosts-file ad-blocker (packaging/parchaos-hblock/) -- one of the

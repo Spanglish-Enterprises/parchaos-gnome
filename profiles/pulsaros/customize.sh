@@ -72,8 +72,8 @@ EOF
     # assumed) -- GNOME Shell itself only reads the Shell theme's own
     # gnome-shell/ subdirectory through this extension; GTK apps read
     # gtk-theme directly and don't need it.
-    # Real gap found 2026-09-24 (real user feedback: "keep checking our
-    # theming"): cross-checked this profile's extension list against
+    # Real gap found 2026-09-24 (real user feedback: keep auditing the
+    # theming): cross-checked this profile's extension list against
     # Pulsar OS's own real dconf defaults (Inled-Pulsar-OS/PKG's
     # pulsaros-gnome/etc/dconf/db/local.d/00-pulsaros-theme, fetched
     # directly) -- they ship ~15 extensions for their full desktop
@@ -92,9 +92,8 @@ EOF
     cat > "$ROOTFS_TARGET/etc/dconf/db/local.d/00-parchaos-extensions" <<EOF
 [org/gnome/shell]
 enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
-# Real bug found live on real hardware 2026-09-25 (user report: "the
-# hanabi extension is auto popping up at login, not a good user
-# experience"): hanabi-extension@jeffshee.github.io launches its
+# Real bug found live on real hardware 2026-09-25 (user report: the
+# hanabi extension popped up automatically at login): hanabi-extension@jeffshee.github.io launches its
 # renderer at enable-time regardless of the change-wallpaper toggle
 # (confirmed false by default) or video-path (empty by default) --
 # with nothing configured, it repeatedly fails at login with
@@ -207,8 +206,8 @@ EOF
     # /usr/share/themes/MacTahoe-Dark and
     # /usr/share/icons/{MacTahoe,MacTahoe-light,MacTahoe-dark} -- the
     # "-dark" icon variant pairs with the dark GTK theme.
-    # Real gaps found 2026-09-24 (real user feedback: "the terminal is
-    # not following our rules of traffic lights on the left top"),
+    # Real gaps found 2026-09-24 (real user feedback: the terminal
+    # didn't follow the top-left traffic-light button rules),
     # cross-checked directly against Pulsar OS's own real, working
     # dconf defaults (Inled-Pulsar-OS/PKG's
     # pulsaros-gnome/etc/dconf/db/local.d/00-pulsaros-theme, fetched

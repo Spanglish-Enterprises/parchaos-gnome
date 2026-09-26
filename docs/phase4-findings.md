@@ -135,7 +135,7 @@ own file was checked and found equally generic (`partition.conf`,
 duplicate content that would only drift from the packaged default over
 time.
 
-## AMD/Intel compatibility (user request: "we also need to make sure its amd compatible")
+## AMD/Intel compatibility (user request: make sure it works on AMD too)
 
 Checked what was already covered transitively vs. genuinely missing,
 by reading the real installed package list in a built rootfs

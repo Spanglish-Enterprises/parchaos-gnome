@@ -140,7 +140,7 @@ now met for this profile too.
 
 ## The logo-centering bug (real user feedback, fixed at the source)
 
-Real feedback ("the logo seems a bit weird and off center") traced to
+Real feedback (the logo looked slightly off-center) traced to
 asymmetric canvas padding in the source PNGs
 (`branding/logo/parcha-logo-*.png`, `parcha-silhouette-*.png`): 170px left
 margin vs. 62px right margin, found via `PIL.Image.getbbox()`. Fixed by

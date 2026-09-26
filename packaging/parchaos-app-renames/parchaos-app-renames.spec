@@ -34,7 +34,7 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Preview, Clock, Mail)
 
 License:        NOASSERTION
@@ -79,6 +79,9 @@ sed -i '0,/^\[Desktop Action/{s/^Name=.*/Name=Mail/;s/^GenericName=.*/GenericNam
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
+- Reworded comments and changelog to describe user-reported issues
+  instead of quoting them.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.
@@ -89,8 +92,8 @@ update-desktop-database %{_datadir}/applications &>/dev/null || true
   Restricted each sed to the range before the first [Desktop Action
   line. See the updated %post comment for the full explanation.
 * Thu Sep 24 2026 ParchaOS packaging - 1.0.0-1
-- Initial package. Real user request ("what other apps can we do
-  similar with" re: the browser rebrand) plus a real theming audit
+- Initial package. Real user request (more app rebrands like the
+  browser's) plus a real theming audit
   finding: the icon theme already covers these apps for free, only
   the display name needed fixing. See banner comment for full
   reasoning, including why Amberol was left out.

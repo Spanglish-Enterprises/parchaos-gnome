@@ -49,8 +49,8 @@
 # as log noise. Fixed by guarding both call sites with a
 # typeof-is-function check before calling.
 # Patch0 also fixes a second real bug found via log-based live testing
-# 2026-09-25 (real user report: "the notification badge on the dock
-# stays put and doesn't move with the icon while hovering"). Root
+# 2026-09-25 (real user report: the dock's notification badge stayed
+# put instead of moving with the icon on hover). Root
 # cause, confirmed against GNOME Shell's own real appDisplay.js: the
 # Hot-Key number-overlay badge (_numberOverlayBin) is added as a
 # sibling of the icon inside _iconContainer, not a descendant of the
@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -152,6 +152,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-7
+- Reworded comments and changelog to describe user-reported issues
+  instead of quoting them.
 * Fri Sep 25 2026 ParchaOS packaging - 106-6
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.
