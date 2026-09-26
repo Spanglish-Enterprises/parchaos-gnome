@@ -28,11 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install GNOME Shell
-        run: dnf -y install gnome-shell mesa-dri-drivers dbus-daemon glib2 python3 gnome-weather
+        run: dnf -y install gnome-shell mesa-dri-drivers dbus-daemon glib2 python3 python3-dbusmock gnome-weather
       - name: Start a system D-Bus (GNOME Shell needs one)
         run: |
           mkdir -p /run/dbus
           dbus-daemon --system --fork
+          # Stand-in logind, as GNOME Shell's own CI does.
+          python3 -m dbusmock --system --template logind &
+          sleep 2
       - name: Run the smoke test
         run: scripts/smoke-test.sh
 
