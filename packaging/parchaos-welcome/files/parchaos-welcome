@@ -160,8 +160,9 @@ class Window(Adw.ApplicationWindow):
             row = Adw.SwitchRow(
                 title='Location Services',
                 subtitle='Lets the menu bar show the weather where you are, and apps '
-                         'like Maps and Weather find you. Your location is looked up '
-                         'with Wi-Fi networks nearby.')
+                         'like Maps and Weather find you. To find your approximate '
+                         'location, the identifiers of nearby Wi-Fi networks are sent '
+                         'to BeaconDB, and your IP address may be used.')
             location.bind('enabled', row, 'active', Gio.SettingsBindFlags.DEFAULT)
             group = Adw.PreferencesGroup()
             group.add(row)
@@ -185,9 +186,15 @@ class Window(Adw.ApplicationWindow):
             tour.add(row)
         pages.append(page('starred-symbolic', 'Where Things Are', None, tour))
 
+        legal = Adw.PreferencesGroup()
+        legal_row = Adw.ActionRow(title='Legal and Privacy', activatable=True,
+                                  subtitle='Licenses, credits, and which services ParchaOS connects to.')
+        legal_row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+        legal_row.connect('activated', lambda _row: open_legal())
+        legal.add(legal_row)
         pages.append(page('emblem-ok-symbolic', 'You\'re All Set',
                           'Enjoy ParchaOS. Found a bug or have an idea? Help → Report a '
-                          'Bug or Feature Request in the menu bar.'))
+                          'Bug or Feature Request in the menu bar.', legal))
         return pages
 
     def _go(self, step):
@@ -203,6 +210,16 @@ class Window(Adw.ApplicationWindow):
         last = position >= self.carousel.get_n_pages() - 1
         self.back.set_visible(position > 0)
         self.next.set_label('Get Started' if last else 'Continue')
+
+
+LEGAL_FILE = '/usr/share/doc/parchaos/LEGAL.md'
+
+
+def open_legal():
+    try:
+        Gio.AppInfo.launch_default_for_uri(Gio.File.new_for_path(LEGAL_FILE).get_uri(), None)
+    except GLib.Error:
+        pass
 
 
 class App(Adw.Application):

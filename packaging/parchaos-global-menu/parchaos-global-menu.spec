@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -99,6 +99,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-18
+- About card: Legal and Privacy button. Weather: clicking shows Open
+  Weather and the MET Norway data credit.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-17
 - Rebuild: install the license file from the build directory (the
   previous build failed to find it).

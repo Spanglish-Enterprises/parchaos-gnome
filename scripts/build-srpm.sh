@@ -40,6 +40,8 @@ for name in "$@"; do
     # LOGO-CREDITS.md (the logo's CC BY 3.0 attribution).
     cp LICENSE LICENSE-ARTWORK LICENSES/GPL-2.0.txt "$top/SOURCES/"
     cp branding/logo/CREDITS.md "$top/SOURCES/LOGO-CREDITS.md"
+    # The legal and privacy notice installed by parchaos-release.
+    cp docs/LEGAL.md "$top/SOURCES/"
 
     # Local sources: files next to the spec, and generated artwork.
     find "$dir" -maxdepth 1 -type f ! -name '*.spec' -exec cp {} "$top/SOURCES/" \;

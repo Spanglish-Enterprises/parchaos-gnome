@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -46,6 +46,10 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
+- Legal and Privacy row on the last page; the location switch says that
+  nearby Wi-Fi identifiers go to BeaconDB and the IP address may be
+  used.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4

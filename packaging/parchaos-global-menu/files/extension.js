@@ -182,7 +182,7 @@ const WeatherIndicator = GObject.registerClass({
     GTypeName: 'ParchaOSWeatherIndicator',
 }, class WeatherIndicator extends PanelMenu.Button {
     _init() {
-        super._init(0.0, 'Weather', true);
+        super._init(0.0, 'Weather', false);
 
         const box = new St.BoxLayout({
             style_class: 'parchaos-weather-box',
@@ -211,10 +211,15 @@ const WeatherIndicator = GObject.registerClass({
         this._cancellable = new Gio.Cancellable();
         this._updateTimerId = 0;
 
-        this.connect('button-press-event', () => {
-            this._openWeatherApp();
-            return Clutter.EVENT_STOP;
-        });
+        // Clicking shows where the forecast comes from (MET Norway's data
+        // is CC BY 4.0 and needs attribution) and opens the Weather app.
+        const openItem = new PopupMenu.PopupMenuItem('Open Weather');
+        openItem.connect('activate', () => this._openWeatherApp());
+        this.menu.addMenuItem(openItem);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        const creditItem = new PopupMenu.PopupMenuItem('Weather data: MET Norway', { reactive: false });
+        creditItem.add_style_class_name('parchaos-weather-credit');
+        this.menu.addMenuItem(creditItem);
         this.connect('destroy', () => this._onDestroy());
 
         this._startGeolocation();
@@ -652,6 +657,18 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                         Gio.Subprocess.new(['gnome-control-center', 'system', 'about'], Gio.SubprocessFlags.NONE);
                     } catch (e) {
                         logError(e, 'parchaos-global-menu: could not open Settings');
+                    }
+                },
+            },
+            {
+                label: 'Legal and Privacy',
+                action: () => {
+                    dialog.close();
+                    try {
+                        Gio.AppInfo.launch_default_for_uri(
+                            Gio.File.new_for_path('/usr/share/doc/parchaos/LEGAL.md').get_uri(), null);
+                    } catch (e) {
+                        logError(e, 'parchaos-global-menu: could not open the legal notice');
                     }
                 },
             },
