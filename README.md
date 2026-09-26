@@ -3,7 +3,7 @@
 **Status as of 2026-09-26**: a real disk install, reboot, and login has
 happened on the actual physical machine this variant ships to (MSI B650
 GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
-ships 30 custom packages plus the full Fedora base — dock, global menu
+ships 31 custom packages plus the full Fedora base — dock, global menu
 bar, a full-screen app launcher, Parcha Controls (control center),
 Parcher (the Nautilus-based file manager), ParchaOS Settings (plus a
 panel in GNOME Settings), session restore, live Clock and Calendar
@@ -93,7 +93,7 @@ engine/            Reusable Fedora ISO build engine (dracut, GRUB,
                     repo's own history.
 profiles/pulsaros/  This variant's only profile. packages.list (stock
                     Fedora packages), packages.sh (this project's own
-                    30 custom packages, PROFILE_REPO_PACKAGES),
+                    31 custom packages, PROFILE_REPO_PACKAGES),
                     customize.sh (branding + dconf defaults),
                     repo.sh, profile.conf.
 packaging/          One directory per custom package, each with a
@@ -153,7 +153,9 @@ kernel-install-on-target, EFI System Partition population, a Calamares
 app-removal cascade-removal regression caught and fixed twice).
 
 **System**: `parchaos-release` keeps the ParchaOS name, logo and links
-in `/etc/os-release` across Fedora updates.
+in `/etc/os-release` across Fedora updates. `parchaos-welcome` is the
+first-login assistant (style, light/dark, Super key, location consent,
+a short tour).
 
 **OTA mechanism**: `parchaos-desktop`, a meta-package whose `Requires:`
 list names every package above (it also ships the desktop-wide dconf
