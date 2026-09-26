@@ -193,6 +193,23 @@ package too, so the profile removes `openh264` with `rpm -e --nodeps`
 and then installs `noopenh264` with the Cisco repo disabled, in a single
 container call.
 
+## Release source code (GPL)
+
+Every release publishes the complete corresponding source of its ISO as
+GitHub release assets (owner decision, 2026-09-26). On the build host,
+after the ISO build:
+
+    scripts/collect-sources.py build/rootfs-parchaos-44 build/sources --prefix <iso-name>
+
+It reads each installed package's source RPM from the rootfs, downloads
+Fedora's from Koji (which keeps every build) and ParchaOS's from the
+matching COPR build, and writes `<iso-name>-sources-NN.tar` archives
+(under 2 GiB each) plus `<iso-name>-sources.sha256`. Upload those with
+the ISO. `docs/SOURCES.md` (installed as /usr/share/doc/parchaos/SOURCES.md)
+and `docs/release-notes-template.md` carry the written offer; source
+requests come in through the parchaos.org/support form ("Question",
+titled "Source code request").
+
 ## Public surface audit
 
 `scripts/public-surface-audit.sh` (read-only) lists the COPR projects,

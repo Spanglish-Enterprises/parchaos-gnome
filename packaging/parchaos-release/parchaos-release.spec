@@ -1,6 +1,6 @@
 Name:           parchaos-release
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS name, logo and links in os-release
 License:        GPL-3.0-or-later AND CC-BY-3.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -11,6 +11,8 @@ Source3:        LOGO-CREDITS
 # docs/LEGAL.md: licenses, credits, network connections, export notice.
 Source4:        LEGAL.md
 Source5:        LICENSE
+# docs/SOURCES.md: where the source is, and the written offer.
+Source6:        SOURCES.md
 BuildArch:      noarch
 
 Requires:       fedora-release-common
@@ -32,6 +34,7 @@ cp -p %{SOURCE3} %{SOURCE5} .
 
 %install
 install -Dm0644 %{SOURCE4} %{buildroot}%{_datadir}/doc/parchaos/LEGAL.md
+install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/doc/parchaos/SOURCES.md
 install -Dm0755 %{SOURCE0} %{buildroot}%{_libexecdir}/parchaos-os-release
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/parchaos-logo.svg
 install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/parchaos-logo-symbolic.svg
@@ -53,11 +56,15 @@ fi
 %license LICENSE
 %dir %{_datadir}/doc/parchaos
 %{_datadir}/doc/parchaos/LEGAL.md
+%{_datadir}/doc/parchaos/SOURCES.md
 %{_libexecdir}/parchaos-os-release
 %{_datadir}/icons/hicolor/scalable/apps/parchaos-logo.svg
 %{_datadir}/icons/hicolor/symbolic/apps/parchaos-logo-symbolic.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
+- Install /usr/share/doc/parchaos/SOURCES.md: where the source is, and
+  the written offer.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
 - Install the ParchaOS legal and privacy notice
   (/usr/share/doc/parchaos/LEGAL.md) and the GPL license text.

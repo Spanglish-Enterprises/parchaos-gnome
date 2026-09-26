@@ -118,15 +118,19 @@ that installed systems update from. For how things fit together, see
 
 Everything needed to rebuild ParchaOS is public:
 
-- **ParchaOS's own packages:** this repository, plus the source RPMs on
+- **Each release** has the source RPM of every package in its ISO as
+  release assets, next to the ISO.
+- **ParchaOS's own packages** are in this repository, and their source
+  RPMs are also on
   [COPR](https://copr.fedorainfracloud.org/coprs/alexgalicea/parchaos-gnome/).
-- **Fedora packages** in the ISO: unmodified Fedora 44 builds, with
-  sources at [src.fedoraproject.org](https://src.fedoraproject.org/) and
-  as source RPMs (`dnf download --source <package>`).
+- **Fedora packages** are unmodified Fedora builds, with sources at
+  [src.fedoraproject.org](https://src.fedoraproject.org/).
 
-If you can't get the source for any package in a ParchaOS release, open
-an issue and we'll provide it, for at least three years after that
-release.
+For at least three years after each release, Spanglish Enterprises LLC
+will provide the complete corresponding source on request, at no more
+than the cost of distribution: use the
+[support form](https://parchaos.org/support), choose **Question** and
+title it "Source code request". See [docs/SOURCES.md](docs/SOURCES.md).
 
 ## Contributing
 

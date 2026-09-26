@@ -20,9 +20,8 @@ installing.
   license text is in `/usr/share/licenses/<package>/`, and
   `rpm -q --qf '%{LICENSE}\n' <package>` shows its license.
 
-The complete corresponding source code for ParchaOS is available; see
-"Source code" in the project README
-(https://github.com/Spanglish-Enterprises/parchaos-gnome).
+The complete corresponding source code for ParchaOS, and the written
+offer for it, are described in `/usr/share/doc/parchaos/SOURCES.md`.
 
 ## Trademarks and affiliation
 
