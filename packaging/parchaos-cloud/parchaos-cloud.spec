@@ -34,7 +34,7 @@
 
 Name:           parchaos-cloud
 Version:        2.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's cloud drives -- rclone-backed cloud storage under ~/Cloud
 
 License:        MIT
@@ -83,6 +83,10 @@ update-desktop-database -q %{_datadir}/applications &>/dev/null || :
 %{_datadir}/icons/hicolor/scalable/apps/parchaos-cloud.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.0.0-3
+- Setup always opens rclone's wizard in a terminal (the graphical option
+  never showed anything). Remote names are escaped for systemd and the
+  mount unit runs no shell.
 * Sat Sep 26 2026 ParchaOS packaging - 2.0.0-2
 - Full-color app icon (the ParchaOS tile with a cloud and sync arrows);
   the launcher and dock showed the plain symbolic outline before.

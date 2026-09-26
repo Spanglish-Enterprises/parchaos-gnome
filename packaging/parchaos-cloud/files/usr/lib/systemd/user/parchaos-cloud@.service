@@ -1,11 +1,13 @@
 [Unit]
-Description=ParchaOS cloud drive %i (rclone mount)
+Description=ParchaOS cloud drive %I (rclone mount)
 After=network-online.target
 
 [Service]
-ExecStartPre=/usr/bin/env bash -c 'mkdir -p "%h/Cloud/%i"'
-ExecStart=/usr/bin/rclone mount %i: "%h/Cloud/%i" --vfs-cache-mode writes --dir-cache-time 24h --poll-interval 30s
-ExecStopPost=/usr/bin/fusermount3 -uz "%h/Cloud/%i"
+# %I is the remote name (unescaped from the instance name). No shell, so
+# a name can't be read as commands.
+ExecStartPre=/usr/bin/mkdir -p "%h/Cloud/%I"
+ExecStart=/usr/bin/rclone mount "%I:" "%h/Cloud/%I" --vfs-cache-mode writes --dir-cache-time 24h --poll-interval 30s
+ExecStopPost=/usr/bin/fusermount3 -uz "%h/Cloud/%I"
 Restart=on-failure
 RestartSec=3
 

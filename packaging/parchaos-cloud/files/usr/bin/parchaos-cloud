@@ -22,6 +22,13 @@ usage: parchaos-cloud <command> [name]
 EOF
 }
 
+# The systemd unit for a remote. Remote names can contain characters
+# systemd treats specially (spaces, slashes, dashes...), so escape them;
+# the unit reads the original name back with %I.
+unit_for() {
+    systemd-escape --template="${UNIT_PREFIX}@.service" "$1"
+}
+
 is_mounted() {
     local name="$1"
     mountpoint -q "${CLOUD_DIR}/${name}" 2>/dev/null
@@ -47,18 +54,18 @@ cmd_list() {
 cmd_mount() {
     local name="$1"
     mkdir -p "${CLOUD_DIR}/${name}"
-    systemctl --user enable --now "${UNIT_PREFIX}@${name}.service"
+    systemctl --user enable --now "$(unit_for "$name")"
     sleep 1
     if is_mounted "$name"; then
         echo "Mounted ${name} at ${CLOUD_DIR}/${name}"
     else
-        echo "Not mounted yet; check 'journalctl --user -u ${UNIT_PREFIX}@${name}'."
+        echo "Not mounted yet; check 'journalctl --user -u $(unit_for "$name")'."
     fi
 }
 
 cmd_unmount() {
     local name="$1"
-    systemctl --user disable --now "${UNIT_PREFIX}@${name}.service" 2>/dev/null || true
+    systemctl --user disable --now "$(unit_for "$name")" 2>/dev/null || true
     echo "Unmounted ${name}."
 }
 
@@ -77,7 +84,7 @@ cmd_add() {
 cmd_reconnect() {
     local name="$1"
     rclone config reconnect "${name}:"
-    systemctl --user restart "${UNIT_PREFIX}@${name}.service" 2>/dev/null || true
+    systemctl --user restart "$(unit_for "$name")" 2>/dev/null || true
     echo "Reconnected ${name}."
 }
 
@@ -89,24 +96,11 @@ cmd_open() {
     exec gio open "${CLOUD_DIR}/${name}"
 }
 
+# Setup runs rclone's own wizard in a terminal. (An earlier "graphical
+# setup" choice ran `rclone config` with no terminal at all, so it never
+# showed anything.)
 cmd_choose() {
-    if command -v zenity >/dev/null 2>&1; then
-        local choice
-        choice=$(zenity --list --title="Add Cloud Account" \
-            --text="How would you like to set up your cloud account?" \
-            --column="Option" "Graphical setup (rclone web UI)" "Terminal setup" \
-            2>/dev/null || true)
-        case "$choice" in
-            "Graphical setup"*)
-                exec rclone config --auto-confirm 2>/dev/null || exec gnome-terminal -- bash -lc 'parchaos-cloud add'
-                ;;
-            *)
-                exec gnome-terminal -- bash -lc 'parchaos-cloud add'
-                ;;
-        esac
-    else
-        exec gnome-terminal -- bash -lc 'parchaos-cloud add'
-    fi
+    exec gnome-terminal -- bash -lc 'parchaos-cloud add'
 }
 
 main() {
