@@ -1,40 +1,26 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS keyboard layout for xremap: Super is the shortcut key.
+#
+# Physical Super and Ctrl trade places, so Super+C copies and Ctrl stays
+# free for the terminal. The rules below then adjust a few apps so
+# familiar Super shortcuts keep doing the expected thing. Rules are
+# checked top to bottom; `application` limits a rule to (or away from)
+# the focused app's ID.
+
 keypress_delay_ms: 10
 
-# `modmap` section: key-to-key remapping (no combinations).
 modmap:
-  - name: Make Super act as Ctrl
+  - name: parchaos-super-is-shortcut-key
     remap:
-      LeftCtrl: LeftMeta
       LeftMeta: LeftCtrl
-      RightCtrl: RightMeta
+      LeftCtrl: LeftMeta
       RightMeta: RightCtrl
+      RightCtrl: RightMeta
 
-# `keymap` section: remapping a sequence of key combinations to another.
 keymap:
-  - name: Make Super-Left/Right work as Home/End (with Shift for selection)
-    remap:
-      Ctrl-Left: Home
-      Ctrl-Right: End
-      Shift-Ctrl-Left: Shift-Home
-      Shift-Ctrl-Right: Shift-End
-  - name: Delete word
-    remap:
-      Alt-Backspace: Ctrl-Backspace
-  - name: Delete complete line
-    application:
-      not: org.gnome.Terminal
-    remap:
-      Ctrl-K: Ctrl-D
-  - name: Parcher (Files) shortcuts
-    application:
-      only: org.gnome.Nautilus
-    remap:
-      Ctrl-Up: Alt-Up          # Go Up
-      Ctrl-Down: Enter         # Go Down (Alt-Down doesn't open files)
-      Ctrl-Backspace: Delete   # Move to Trash
-      Shift-Ctrl-Dot: Ctrl-H   # Show/Hide Hidden Files
-      Shift-Ctrl-G: Ctrl-L     # Enter Location
-  - name: Terminal copy/paste and window management
+  # The terminal keeps Ctrl for itself; its menu actions answer to
+  # Shift+Super instead (set in 02-parchaos-keyboard-remap).
+  - name: parchaos-terminal-actions
     application:
       only: org.gnome.Terminal
     remap:
@@ -45,3 +31,31 @@ keymap:
       Ctrl-W: Shift-Super-W
       Ctrl-Q: Shift-Super-Q
       Ctrl-F: Shift-Super-F
+
+  # File manager: parent folder, open, trash, hidden files, path bar.
+  - name: parchaos-file-manager
+    application:
+      only: org.gnome.Nautilus
+    remap:
+      Ctrl-Up: Alt-Up
+      Ctrl-Down: Enter
+      Ctrl-Backspace: Delete
+      Shift-Ctrl-Dot: Ctrl-H
+      Shift-Ctrl-G: Ctrl-L
+
+  # Text editing everywhere: Super+Arrow jumps to the line's start or end
+  # (Shift extends the selection), Alt+Backspace erases a word.
+  - name: parchaos-line-ends
+    remap:
+      Ctrl-Left: Home
+      Ctrl-Right: End
+      Shift-Ctrl-Left: Shift-Home
+      Shift-Ctrl-Right: Shift-End
+  - name: parchaos-erase-word
+    remap:
+      Alt-Backspace: Ctrl-Backspace
+  - name: parchaos-erase-to-line-end
+    application:
+      not: org.gnome.Terminal
+    remap:
+      Ctrl-K: Ctrl-D

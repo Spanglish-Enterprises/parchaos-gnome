@@ -1,34 +1,38 @@
-# Keybinding defaults to pair with xremap's Super<->Ctrl swap
-# (config.yml). Ported from Pulsar OS's gnome-macos-remap-wayland
-# install.sh gsettings calls into this project's existing system-wide
-# dconf db mechanism (see profiles/parchaos/customize.sh) rather than
-# running gsettings at first-login -- declarative, applies to every
-# user, and survives a real disk install the same way the theme
-# defaults do.
-[org/gnome/desktop/input-sources]
-xkb-options=@as []
+# SPDX-License-Identifier: GPL-3.0-or-later
+# GNOME keyboard defaults for ParchaOS's Super-as-shortcut-key layout
+# (see /etc/xremap/config.yml). Applied system-wide through the dconf
+# database, so every user starts with them; parchaos-keyboard-style
+# writes GNOME's stock bindings over them for users who pick the
+# standard layout.
 
+# Super isn't a separate overview key: the swapped layout uses it for
+# shortcuts, and no XKB option does the swap instead of xremap.
 [org/gnome/mutter]
 overlay-key=''
 
+[org/gnome/desktop/input-sources]
+xkb-options=@as []
+
+# Window switching and workspaces.
 [org/gnome/desktop/wm/keybindings]
-minimize=@as []
-show-desktop=['<Control>d']
 switch-applications=['<Control>Tab']
 switch-applications-backward=['<Shift><Control>Tab']
 switch-group=['<Control>grave']
 switch-group-backward=['<Shift><Control>grave']
 switch-to-workspace-left=['<Super>Left']
 switch-to-workspace-right=['<Super>Right']
+show-desktop=['<Control>d']
+minimize=@as []
 
 [org/gnome/mutter/keybindings]
 toggle-tiled-left=@as []
 toggle-tiled-right=@as []
 
+# Launcher and screenshots.
 [org/gnome/shell/keybindings]
-toggle-message-tray=@as []
-toggle-overview=['LaunchA']
 toggle-application-view=['<Primary>space', 'LaunchB']
+toggle-overview=['LaunchA']
+toggle-message-tray=@as []
 screenshot=['<Shift><Control>3']
 show-screenshot-ui=['<Shift><Control>4']
 screenshot-window=['<Shift><Control>5']
@@ -36,6 +40,7 @@ screenshot-window=['<Shift><Control>5']
 [org/gnome/settings-daemon/plugins/media-keys]
 screensaver=@as []
 
+# Terminal actions on Shift+Super (the terminal keeps Ctrl).
 [org/gnome/terminal/legacy/keybindings]
 copy='<Shift><Super>c'
 paste='<Shift><Super>v'

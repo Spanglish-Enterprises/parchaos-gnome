@@ -1,17 +1,18 @@
 # ==============================================================================
-# ParchaOS's keyboard remap -- swaps Super<->Ctrl and layers on a real
-# set of Super-key conventions (Super-Left/Right as Home/End,
-# Super-C/V/T/N/W/Q/F in the terminal, Parcher/Nautilus's Super-based file
-# shortcuts, etc.), via xremap (github.com/xremap/xremap, MIT), a
-# userspace evdev key remapper. Real upstream software, not
-# hand-rolled: this is a Fedora repackaging of Pulsar OS's own
-# gnome-macos-remap-wayland (Inled-Pulsar-OS/gnome-macos-remap-wayland,
-# itself a fork of petrstepanov/gnome-macos-remap-wayland) -- same
-# "repackage already-proven software" approach already used for this
-# project's theme/dock/global-menu packages.
+# ParchaOS's keyboard remap -- swaps Super<->Ctrl and adds a few
+# Super-key conventions (Super-Left/Right as Home/End, Super-C/V/T/N/W/Q/F
+# in the terminal, file-manager shortcuts), via xremap
+# (github.com/xremap/xremap, MIT), a userspace evdev key remapper.
 #
-# What changed from the upstream install.sh, and why:
-#   - The upstream project is designed to be `git clone`d and run as an
+# ParchaOS's own configuration: /etc/xremap/config.yml and the dconf
+# keybinding defaults (02-parchaos-keyboard-remap) were written for
+# ParchaOS from a plain list of the shortcuts it wants (2026-09-26). The
+# approach -- xremap with a system-wide user unit -- follows the idea of
+# gnome-macos-remap-wayland, but no configuration or script from that
+# project is used (its repositories carry no license).
+#
+# How this differs from a clone-and-run install script, and why:
+#   - A clone-and-run installer is designed to be `git clone`d and run as an
 #     interactive install.sh (downloads xremap's latest release at
 #     install time, edits the CURRENT user's own systemd --user units
 #     and gsettings via `sudo`/`$USER`). None of that is appropriate
@@ -26,14 +27,14 @@
 #       * The systemd --user unit is enabled via a real
 #         /usr/lib/systemd/user-preset/*.preset drop-in (system-wide
 #         "enable this for every user" mechanism) instead of the
-#         upstream script's `systemctl --user enable` against
+#         installer's `systemctl --user enable` against
 #         whichever single user happened to run install.sh -- this is
-#         the actual real bug the upstream approach would have hit:
+#         the real bug that approach would hit:
 #         hardcoding to "liveuser" would silently do nothing for the
 #         real username Calamares creates during a disk install.
 #       * uinput access uses only the udev `TAG+="uaccess"` mechanism
 #         (systemd-logind's dynamic per-session device ACL) instead of
-#         the upstream script's static `gpasswd -a $USER input` --
+#         an installer's static `gpasswd -a $USER input` --
 #         same reasoning as above (no fixed username to add), and
 #         uaccess is the modern, correct mechanism on any
 #         systemd-logind system (Fedora always has been one).
@@ -44,12 +45,8 @@
 #         existing mechanism, see profiles/parchaos/customize.sh)
 #         instead of one-shot `gsettings set` calls -- declarative,
 #         applies to every user, survives a real disk install.
-#   - config.yml trimmed to the apps this profile actually ships
-#     (org.gnome.Nautilus/Parcher, org.gnome.Terminal -- confirmed via
-#     packaging/parchaos-finder's spec and profiles/parchaos/
-#     packages.list, not assumed): dropped the upstream config's
-#     GNOME Console/Ptyxis/Eclipse sections, which this profile
-#     doesn't ship and which would just be dead config otherwise.
+#   - config.yml only covers the apps ParchaOS ships with app-specific
+#     rules (org.gnome.Nautilus for Parcher, org.gnome.Terminal).
 #
 # Depends on xremap's own real, separate GNOME Shell extension
 # (xremap/xremap-gnome, GPLv2+, uuid xremap@k0kubun.com) -- xremap's
@@ -78,7 +75,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later
@@ -112,11 +109,9 @@ Super-key conventions (Super-Left/Right as Home/End,
 Super-C/V/T/N/W/Q/F in the terminal, Parcher's Super-based file shortcuts,
 app switching on Super-Tab) system-wide, via xremap -- a real, actively
 maintained userspace evdev key remapper -- and its companion GNOME
-Shell extension. Ported from Pulsar OS's own gnome-macos-remap-wayland,
-adapted from an interactive per-user install script into a real,
-declarative RPM (systemd user-preset, udev uaccess, dconf db) that
-works correctly regardless of what username Calamares creates during
-a real disk install.
+Shell extension. Packaged declaratively (systemd user-preset, udev
+uaccess, dconf defaults), so it works for whatever user account the
+installer creates.
 
 %prep
 %setup -q -c -T -n %{name}-%{version}
@@ -180,6 +175,10 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 0.15.13-9
+- ParchaOS's own remap configuration and keybinding defaults, written
+  from a plain list of the wanted shortcuts; the key mappings are
+  unchanged.
 * Sat Sep 26 2026 ParchaOS packaging - 0.15.13-8
 - Ship the license text (%license) with an accurate SPDX License tag.
   Includes xremap's MIT license and a third-party notice for xremap and
