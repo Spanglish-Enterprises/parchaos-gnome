@@ -47,7 +47,7 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -96,6 +96,9 @@ install -Dm 0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/
 %{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
+- Icon v2: fruit-globe on a white tile with a soft violet rind, matching
+  the MacTahoe palette (same artwork as parchaos-icon-theme).
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-2
 - Replace Pafari: Obsoletes pafari so dnf upgrade removes it.
 - Make Parcha Browser the default for web links via /etc/xdg defaults;

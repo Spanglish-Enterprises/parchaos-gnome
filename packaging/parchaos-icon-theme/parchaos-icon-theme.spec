@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -81,6 +81,11 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-4
+- Icon v2: redraw Parcher, Parcha Store and Parcha Browser in the
+  MacTahoe palette (folder blues, white tiles, soft violet) so they sit
+  naturally in the dock; the v1 gold/magenta palette clashed. Parcher is
+  now a white folder on a blue tile (chosen from two drafts).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-3
 - Replace MacTahoe's reproductions of Apple's Finder, App Store and
   Safari icons with original ParchaOS artwork for Parcher, Parcha Store,
