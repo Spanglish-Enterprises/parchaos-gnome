@@ -1,0 +1,11 @@
+[Unit]
+Description=Keep the GTK and Shell themes in step with light/dark and the ParchaOS style
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/libexec/parchaos-theme-sync
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

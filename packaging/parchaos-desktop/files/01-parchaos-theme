@@ -11,15 +11,8 @@ color-scheme='prefer-dark'
 # its stock default (false).
 clock-show-weekday=true
 
-# Reference-desktop comparison, 2026-09-25: the new weather
-# indicator (parcha-global-menu) needs real location data via Geoclue
-# to work at all, matching the reference desktop's out-of-the-box
-# menu-bar weather. GNOME's own stock default for this is off (a real,
-# deliberate privacy default upstream) -- enabling it here is a
-# genuine user-facing tradeoff this profile is choosing to make for
-# the built-in weather feature, not a silent override; a user who
-# doesn't want it can turn it back off in Settings like any other
-# GNOME install.
+# Location: the menu-bar weather needs it, but it's off (GNOME's own
+# privacy default) until the user agrees.
 # Location stays off until the user turns it on (ParchaOS Welcome asks
 # at first login; also in Settings > Privacy).
 [org/gnome/system/location]

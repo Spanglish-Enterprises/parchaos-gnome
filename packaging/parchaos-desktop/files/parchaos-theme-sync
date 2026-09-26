@@ -1,0 +1,78 @@
+#!/usr/bin/python3
+# parchaos-theme-sync: keep the GTK, window and Shell themes in step with
+# the appearance (light or dark) and the ParchaOS style (Glass or Classic).
+#
+# Light/dark is GNOME's color-scheme; libadwaita apps follow it on their
+# own, but GTK 3 apps and the Shell theme use a named theme. This service
+# picks MacTahoe-Light or MacTahoe-Dark, with the -solid variant for the
+# Classic style, whenever either setting changes (Parcha Controls, ParchaOS
+# Welcome, ParchaOS Settings or GNOME Settings). Themes that aren't
+# MacTahoe are the user's own choice and are left alone.
+#
+#   parchaos-theme-sync            run as a user service
+#   parchaos-theme-sync --once     apply once and exit
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+import sys
+
+import gi
+
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib  # noqa: E402
+
+THEMES_DIR = '/usr/share/themes'
+TARGETS = [
+    ('org.gnome.desktop.interface', 'gtk-theme'),
+    ('org.gnome.desktop.wm.preferences', 'theme'),
+    ('org.gnome.shell.extensions.user-theme', 'name'),
+]
+
+
+def settings(schema_id):
+    source = Gio.SettingsSchemaSource.get_default()
+    found = source.lookup(schema_id, True) if source else None
+    return Gio.Settings(settings_schema=found) if found else None
+
+
+def wanted_theme(dark, classic):
+    return f'MacTahoe-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
+
+
+class ThemeSync:
+    def __init__(self):
+        self.interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
+        self.desktop = settings('org.parchaos.desktop')
+        self.targets = [(s, key) for s, key in ((settings(i), k) for i, k in TARGETS) if s]
+
+    def watch(self):
+        self.interface.connect('changed::color-scheme', lambda *_: self.apply())
+        if self.desktop is not None:
+            self.desktop.connect('changed::style', lambda *_: self.apply())
+
+    def apply(self):
+        dark = self.interface.get_string('color-scheme') == 'prefer-dark'
+        classic = self.desktop is not None and self.desktop.get_string('style') == 'classic'
+        theme = wanted_theme(dark, classic)
+        if not os.path.isdir(os.path.join(THEMES_DIR, theme)):
+            return
+        for target, key in self.targets:
+            current = target.get_string(key)
+            if current.startswith('MacTahoe') and current != theme:
+                target.set_string(key, theme)
+        Gio.Settings.sync()
+
+
+def main(argv):
+    sync = ThemeSync()
+    sync.apply()
+    if '--once' in argv:
+        return 0
+    sync.watch()
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/alexgalicea/parchaos-gnome
@@ -41,6 +41,9 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- The style and light/dark choices leave theme switching to parchaos-
+  theme-sync.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
 - First release: style, light or dark, the Super key, location (off
   unless turned on) and a short tour; opens once per account at first

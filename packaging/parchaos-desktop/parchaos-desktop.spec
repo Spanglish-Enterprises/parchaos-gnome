@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -84,6 +84,9 @@ Source5:        parchaos-extensions-migrate.service
 # Repository priority so ParchaOS's patched Fedora packages aren't replaced
 # by newer Fedora builds.
 Source6:        80-parchaos-copr.repo
+# Keeps the GTK, window and Shell themes matching light/dark and the style.
+Source7:        parchaos-theme-sync
+Source8:        parchaos-theme-sync.service
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
@@ -141,10 +144,14 @@ install -m0644 %{SOURCE1} %{SOURCE2} %{buildroot}%{_sysconfdir}/dconf/db/local.d
 install -Dm0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-extensions-migrate
 install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/dnf5/repos.override.d/80-parchaos-copr.repo
+install -Dm0755 %{SOURCE7} %{buildroot}%{_libexecdir}/parchaos-theme-sync
+install -Dm0644 %{SOURCE8} %{buildroot}%{_userunitdir}/parchaos-theme-sync.service
 install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
 mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
 ln -s ../parchaos-extensions-migrate.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
+ln -s ../parchaos-theme-sync.service \
+    %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/pulsaros/customize.sh only affects freshly built ISOs).
 # Default extensions for new user accounts. Previously written only by the
@@ -200,11 +207,19 @@ fi
 %{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 %{_libexecdir}/parchaos-extensions-migrate
 %{_datadir}/dnf5/repos.override.d/80-parchaos-copr.repo
+%{_libexecdir}/parchaos-theme-sync
+%{_userunitdir}/parchaos-theme-sync.service
+%{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
 %{_userunitdir}/parchaos-extensions-migrate.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-32
+- Add parchaos-theme-sync, a user service that switches the GTK, window
+  and Shell themes between MacTahoe Light and Dark (solid for Classic)
+  whenever light/dark or the style changes. Fix a stale comment about
+  location.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-31
 - Require parchaos-welcome (first-login assistant). Location services
   default to off; the welcome asks.

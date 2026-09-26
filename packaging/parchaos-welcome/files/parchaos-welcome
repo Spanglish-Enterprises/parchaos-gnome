@@ -39,27 +39,12 @@ def live_session():
         return False
 
 
-def themed_variant(name, style):
-    """MacTahoe theme for a style (Classic uses the solid variants)."""
-    if not name.startswith('MacTahoe'):
-        return name
-    base = name.removesuffix('-solid')
-    return f'{base}-solid' if style == 'classic' else base
-
-
 def apply_style(style):
+    # parchaos-theme-sync (parchaos-desktop) switches the GTK and Shell
+    # themes to match.
     desktop = schema('org.parchaos.desktop')
     if desktop is not None:
         desktop.set_string('style', style)
-    for schema_id, key in (('org.gnome.desktop.interface', 'gtk-theme'),
-                           ('org.gnome.shell.extensions.user-theme', 'name')):
-        settings = schema(schema_id)
-        if settings is None:
-            continue
-        current = settings.get_string(key)
-        wanted = themed_variant(current, style)
-        if wanted != current and os.path.isdir(f'/usr/share/themes/{wanted}'):
-            settings.set_string(key, wanted)
 
 
 def keyboard_style():

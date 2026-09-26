@@ -3,7 +3,6 @@
 # Settings app has no place for. Original code for ParchaOS,
 # GPL-3.0-or-later.
 
-import os
 import subprocess
 import sys
 
@@ -15,30 +14,6 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
 
 APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
-
-
-def themed_variant(name, style):
-    """MacTahoe theme name for a style: Classic uses the solid (unblurred)
-    variant. Other themes are the user's choice and stay as they are."""
-    if not name.startswith('MacTahoe'):
-        return name
-    base = name.removesuffix('-solid')
-    return f'{base}-solid' if style == 'classic' else base
-
-
-def apply_theme_variants(style):
-    """Point the GTK and Shell themes at the variant matching the style."""
-    source = Gio.SettingsSchemaSource.get_default()
-    targets = [('org.gnome.desktop.interface', 'gtk-theme'),
-               ('org.gnome.shell.extensions.user-theme', 'name')]
-    for schema_id, key in targets:
-        if source.lookup(schema_id, True) is None:
-            continue
-        settings = Gio.Settings(schema_id=schema_id)
-        current = settings.get_string(key)
-        wanted = themed_variant(current, style)
-        if wanted != current and os.path.isdir(f'/usr/share/themes/{wanted}'):
-            settings.set_string(key, wanted)
 
 
 def keyboard_style():
@@ -223,8 +198,9 @@ class Window(Adw.ApplicationWindow):
 
     def _on_style_toggled(self, button, value):
         if button.get_active() and self._desktop.get_string('style') != value:
+            # parchaos-theme-sync (parchaos-desktop) switches the GTK and
+            # Shell themes to match.
             self._desktop.set_string('style', value)
-            apply_theme_variants(value)
 
     def _on_super_toggled(self, row, _pspec):
         style = 'super-ctrl' if row.get_active() else 'standard'
