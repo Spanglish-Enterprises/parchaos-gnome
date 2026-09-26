@@ -35,10 +35,16 @@ profile_customize() {
     #   can fetch the real library from Cisco (dnf swap noopenh264 openh264).
     echo "--- Swapping in generic-logos and noopenh264 ---"
     run_in_target dnf -y swap fedora-logos generic-logos
-    # Cisco's openh264 Obsoletes noopenh264, so the swap only sticks with
-    # that repo disabled. On installed systems (repo enabled) the first
-    # dnf upgrade brings the real library back, downloaded from Cisco.
-    run_in_target dnf -y --disablerepo=fedora-cisco-openh264 swap openh264 noopenh264
+    # Cisco's openh264 Obsoletes noopenh264, and dnf honors that even for
+    # the installed copy, so `dnf swap` just reinstalls openh264. Remove it
+    # at the rpm level (noopenh264 provides the same library right after),
+    # then install the stub with the Cisco repo off. On installed systems
+    # (repo enabled) the first dnf upgrade brings the real library back,
+    # downloaded from Cisco.
+    if run_in_target rpm -q openh264 >/dev/null 2>&1; then
+        run_in_target rpm -e --nodeps openh264
+    fi
+    run_in_target dnf -y --disablerepo=fedora-cisco-openh264 install noopenh264
     run_in_target rpm -q generic-logos noopenh264
     for pkg in fedora-logos openh264; do
         if run_in_target rpm -q "$pkg" >/dev/null 2>&1; then
