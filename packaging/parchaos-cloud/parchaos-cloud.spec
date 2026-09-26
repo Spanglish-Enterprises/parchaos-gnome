@@ -38,7 +38,7 @@ Release:        3%{?dist}
 Summary:        ParchaOS's cloud drives -- rclone-backed cloud storage under ~/Cloud
 
 License:        MIT
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-cloud-files.tar.gz
 BuildArch:      noarch
 

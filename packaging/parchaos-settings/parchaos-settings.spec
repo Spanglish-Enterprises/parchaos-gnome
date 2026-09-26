@@ -13,7 +13,7 @@ Release:        10%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-settings
 Source1:        org.parchaos.Settings.desktop
 

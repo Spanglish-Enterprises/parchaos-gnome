@@ -11,7 +11,7 @@ Release:        2%{?dist}
 Summary:        Live Clock and Calendar app icons for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 

@@ -72,7 +72,7 @@ Release:        26%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-calamares-config-files.tar.gz
 BuildArch:      noarch
 

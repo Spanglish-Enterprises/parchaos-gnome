@@ -51,7 +51,7 @@ Release:        5%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 BuildArch:      noarch
 
 Source0:        es.parchaos.Browser.desktop

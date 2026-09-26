@@ -40,7 +40,7 @@ Release:        3%{?dist}
 Summary:        ParchaOS (GNOME) Plymouth boot splash theme
 
 License:        GPL-2.0-or-later
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-plymouth-theme-files.tar.gz
 BuildArch:      noarch
 

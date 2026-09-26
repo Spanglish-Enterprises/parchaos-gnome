@@ -38,7 +38,7 @@ Release:        5%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Preview, Clock, Mail)
 
 License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 BuildArch:      noarch
 
 Requires(post): loupe

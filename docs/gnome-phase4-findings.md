@@ -48,7 +48,7 @@ button (#28).
 - `sed -i` on `/etc/os-release` replaces Fedora's symlink with a file
   that `rpm -V` flags and the next update reverts.
 
-## Security audit (`docs/security-audit-2026-09.md`)
+## Security audit (2026-09)
 
 Two medium findings fixed (installer log upload, website support form).
 Open: #22, the keyboard remap gives every user raw keyboard access

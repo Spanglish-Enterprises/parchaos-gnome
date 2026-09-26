@@ -37,7 +37,7 @@ Release:        14%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css

@@ -66,7 +66,7 @@ Release:        36%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 # Desktop-wide ParchaOS preferences (visual style), read by the
 # ParchaOS extensions and set from ParchaOS Settings.
 Source0:        org.parchaos.desktop.gschema.xml

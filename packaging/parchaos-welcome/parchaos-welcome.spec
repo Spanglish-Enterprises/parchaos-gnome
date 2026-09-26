@@ -3,7 +3,7 @@ Version:        1.0.0
 Release:        4%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-welcome
 Source1:        org.parchaos.Welcome.desktop
 Source2:        parchaos-welcome-autostart.desktop

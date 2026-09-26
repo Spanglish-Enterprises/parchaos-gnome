@@ -53,7 +53,7 @@ Release:        3%{?dist}
 Summary:        ParchaOS's real logo on the GDM login screen (replaces Fedora's default)
 
 License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gdm-logo-files.tar.gz
 BuildArch:      noarch
 

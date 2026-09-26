@@ -49,7 +49,7 @@ job is now just to orient you to them, not to duplicate their detail:
 
 ## What this repo is
 
-This is a **GNOME-based** sibling of [`alexgalicea/parchaos`](https://github.com/alexgalicea/parchaos)
+This is a **GNOME-based** sibling of `parchaos` (KDE, private)
 (the original, working, KDE Plasma–based ParchaOS — a Fedora port of
 [pearOS](https://github.com/pearOS-archlinux), a macOS-styled Linux distro).
 
@@ -103,8 +103,7 @@ packaging/          One directory per custom package, each with a
                     explaining what it is, why it exists, and the
                     real bugs found building/shipping it — read the
                     spec before assuming what a package does.
-docs/               gnome-phase{0,1,2,3,4}-findings.md — see above;
-                    security-audit-2026-09.md.
+docs/               gnome-phase{0,1,2,3,4}-findings.md — see above.
 scripts/lint.sh     The static checks CI runs on every push.
                     pearos-ui-reference/ — historical KDE-era design
                     reference, not this repo's own history.

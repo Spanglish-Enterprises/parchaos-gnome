@@ -3,7 +3,7 @@ Version:        1.0.0
 Release:        1%{?dist}
 Summary:        ParchaOS name, logo and links in os-release
 License:        GPL-3.0-or-later
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-os-release
 Source1:        parchaos-logo.svg
 Source2:        parchaos-logo-symbolic.svg

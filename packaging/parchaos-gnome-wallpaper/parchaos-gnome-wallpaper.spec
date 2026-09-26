@@ -18,7 +18,7 @@ Release:        3%{?dist}
 Summary:        ParchaOS (GNOME) default desktop wallpaper
 
 License:        NOASSERTION
-URL:            https://github.com/alexgalicea/parchaos-gnome
+URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-wallpaper-files.tar.gz
 BuildArch:      noarch
 
