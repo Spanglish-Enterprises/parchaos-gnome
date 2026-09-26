@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        25%{?dist}
+Release:        26%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -181,6 +181,16 @@ dconf update >/dev/null 2>&1 || :
 %postun
 dconf update >/dev/null 2>&1 || :
 
+# touchegg (installed by older ISOs) autostarts a client that retries
+# its disabled daemon every 5 seconds all session; GNOME on Wayland
+# has its own touchpad gestures. Hide the autostart entry, again after
+# every touchegg update.
+%triggerin -- touchegg
+f=/etc/xdg/autostart/touchegg.desktop
+if [ -f "$f" ] && ! grep -q '^Hidden=true' "$f"; then
+    echo 'Hidden=true' >> "$f"
+fi
+
 %files
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
@@ -194,6 +204,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-26
+- Hide touchegg's autostart entry (installed by older ISOs; its client
+  retried a disabled daemon every 5 seconds).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-25
 - Require parchaos-release (os-release branding that survives Fedora updates).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-24

@@ -278,10 +278,9 @@ gnome-contacts
 # directly.
 gnome-shell-extension-gsconnect
 
-# Multi-finger trackpad gestures — same real Fedora package the KDE
-# profile uses (touchegg, DE-agnostic system-level daemon); config
-# still needs porting/verifying for GNOME's own gesture conventions.
-touchegg
+# (touchegg dropped 2026-09-26: GNOME on Wayland has its own touchpad
+# gestures, and with the daemon disabled its autostart client retried
+# the connection every 5 seconds all session long.)
 
 # --- Fonts / basics needed for the branding layer to render correctly ---
 google-noto-sans-fonts
