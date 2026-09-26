@@ -31,6 +31,7 @@ import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
 
 const DEFAULT_APP_NAME = 'Parcher';
+const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
 
 // A small set of window identities that represent desktop-shell helper
 // surfaces (icon grids, overlays) rather than real user applications --
@@ -220,9 +221,13 @@ const WeatherIndicator = GObject.registerClass({
 // ---------------------------------------------------------------------
 // A simple confirm/cancel modal for power actions.
 // ---------------------------------------------------------------------
+// ModalDialog is a GObject class: subclasses must be registered, or
+// constructing one throws "Tried to construct an object without a GType"
+// (which silently broke Log Out/Restart/Shut Down).
+const ConfirmDialog = GObject.registerClass(
 class ConfirmDialog extends ModalDialog.ModalDialog {
-    constructor(message, onConfirm) {
-        super({ styleClass: 'parchaos-confirm-dialog' });
+    _init(message, onConfirm) {
+        super._init({ styleClass: 'parchaos-confirm-dialog' });
 
         const label = new St.Label({
             text: message,
@@ -246,7 +251,7 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
             },
         ]);
     }
-}
+});
 
 export default class ParchaOSGlobalMenuExtension extends Extension {
     enable() {
@@ -356,6 +361,47 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         new ConfirmDialog(message, onConfirm).open();
     }
 
+    // "About <App>": GTK/libadwaita apps export an "about" action on the
+    // session bus (org.gtk.Actions on the app's object path) -- activate
+    // that to show the app's own About window. Apps without one (Chromium,
+    // Electron, X11 apps) get a simple dialog built from their .desktop info.
+    _showAppAbout() {
+        const window = this._activeAppWindow;
+        const app = window
+            ? Shell.WindowTracker.get_default().get_window_app(window)
+            : Shell.AppSystem.get_default().lookup_app(DEFAULT_APP_ID);
+        const busName = window?.get_gtk_unique_bus_name?.();
+        const appPath = window?.get_gtk_application_object_path?.();
+        if (!busName || !appPath) {
+            this._showGenericAppAbout(app);
+            return;
+        }
+        Gio.DBus.session.call(busName, appPath, 'org.gtk.Actions', 'Activate',
+            new GLib.Variant('(sava{sv})', ['about', [], {}]),
+            null, Gio.DBusCallFlags.NONE, -1, null, (conn, res) => {
+                try {
+                    conn.call_finish(res);
+                } catch (e) {
+                    this._showGenericAppAbout(app);
+                }
+            });
+    }
+
+    _showGenericAppAbout(app) {
+        if (!app)
+            return;
+        const dialog = new ModalDialog.ModalDialog({ styleClass: 'parchaos-about-dialog' });
+        const box = new St.BoxLayout({ vertical: true, x_align: Clutter.ActorAlign.CENTER });
+        box.add_child(app.create_icon_texture(96));
+        box.add_child(new St.Label({ text: app.get_name(), style: 'font-weight: bold; font-size: 1.3em; text-align: center;' }));
+        const description = app.get_description();
+        if (description)
+            box.add_child(new St.Label({ text: description, style: 'text-align: center;' }));
+        dialog.contentLayout.add_child(box);
+        dialog.setButtons([{ label: 'OK', action: () => dialog.close(), key: Clutter.KEY_Escape, default: true }]);
+        dialog.open();
+    }
+
     _showAboutDialog() {
         const dialog = new ModalDialog.ModalDialog({ styleClass: 'parchaos-about-dialog' });
         const box = new St.BoxLayout({ vertical: true, style_class: 'parchaos-about-box' });
@@ -403,6 +449,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         appBtn.roleId = 'app';
 
         this._aboutAppItem = new PopupMenu.PopupMenuItem(`About ${DEFAULT_APP_NAME}`);
+        this._aboutAppItem.connect('activate', () => this._showAppAbout());
         appBtn.menu.addMenuItem(this._aboutAppItem);
 
         this._hideAppItem = new PopupMenu.PopupMenuItem(`Hide ${DEFAULT_APP_NAME}`);

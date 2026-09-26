@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -93,6 +93,16 @@ install -m 0644 src/parchaos-menu-icon.png "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-3
+- Fix Log Out/Restart/Shut Down doing nothing: ConfirmDialog subclassed
+  ModalDialog without GObject.registerClass, so constructing it threw
+  "Tried to construct an object without a GType" (found in the journal
+  after a real failed log-out).
+- Wire up "About <App>", which had no handler at all: activates the app's
+  own "about" action over org.gtk.Actions, falling back to a simple
+  dialog from the app's .desktop info. Both verified in an isolated
+  headless gnome-shell (confirm dialog renders; Calculator's own About
+  window opens from the menu).
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-2
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.
