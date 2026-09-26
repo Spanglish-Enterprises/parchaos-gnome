@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -68,6 +68,9 @@ Source33:       parchaos-firmware.svg
 # The ParchaOS mark, replacing MacTahoe's Apple-logo start-here icons.
 Source34:       parchaos-logo.svg
 Source35:       parchaos-logo-symbolic.svg
+# Original keyboard glyph; MacTahoe draws input-keyboard-symbolic as the
+# reference desktop's command-key symbol.
+Source36:       parchaos-keyboard-symbolic.svg
 
 BuildArch:      noarch
 
@@ -174,6 +177,11 @@ while read -r f; do
     esac
 done
 
+find %{buildroot}%{_datadir}/icons/MacTahoe* -type f -name 'input-keyboard-symbolic.svg' |
+while read -r f; do
+    install -m 0644 %{SOURCE36} "$f"
+done
+
 # Drop MacTahoe's weather-*-large/-small condition icons. GNOME Weather
 # draws these at ~200px, and most of MacTahoe's embed small raster
 # images, so they came out dotted/pixelated. Without them the lookup
@@ -195,6 +203,9 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-10
+- Replace MacTahoe's command-key symbol used as the keyboard icon
+  (input-keyboard-symbolic) with an original keyboard glyph.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-9
 - Replace the Apple-logo start-here, Budgie launcher and folder-apple icons with the ParchaOS mark (a halved passion fruit) and the ParchaOS folder.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-8

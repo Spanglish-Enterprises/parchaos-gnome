@@ -315,6 +315,21 @@ def logo_symbolic():
             '</svg>\n')
 
 
+def keyboard_symbolic():
+    # A plain keyboard: outline, two rows of keys and a space bar.
+    keys = ''.join(f'<rect x="{x}" y="{y}" width="1.6" height="1.6" rx="0.3"/>'
+                   for y in (5.2, 7.6) for x in (3, 5.2, 7.4, 9.6, 11.8))
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+            '<g fill="#2e3436">'
+            '<path d="M2.5 3h11A1.5 1.5 0 0 1 15 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5v-7'
+            'A1.5 1.5 0 0 1 2.5 3zm0 1a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-7'
+            'a.5.5 0 0 0-.5-.5z"/>'
+            + keys +
+            '<rect x="5.2" y="10" width="5.6" height="1.4" rx="0.3"/>'
+            '</g></svg>\n')
+
+
+OWN['parchaos-keyboard-symbolic'] = keyboard_symbolic
 OWN['parchaos-logo'] = logo
 OWN['parchaos-logo-symbolic'] = logo_symbolic
 
