@@ -25,24 +25,36 @@
 # than a hardcoded device name, since the real disk name varies by
 # hardware (sda, vda, nvme0n1, ...).
 
-set -e
+set -eu
 
-for d in /dev/sd? /dev/vd? /dev/nvme?n?; do
-    [ -b "$d" ] || continue
-    if [[ "$d" == *nvme* ]]; then
-        p1="${d}p1"
-    else
-        p1="${d}1"
-    fi
-    [ -b "$p1" ] || continue
+# Only the disk ParchaOS is being installed to (ticket #69: this used to
+# flag partition 1 of every disk that looked similar, including other
+# disks in the machine). The target root comes from Calamares (${ROOT});
+# fall back to its calamares-root mount.
+root="${1:-}"
+if [ -z "$root" ] || ! mountpoint -q "$root"; then
+    root=$(findmnt -rno TARGET | grep -m1 '^/tmp/calamares-root' || true)
+fi
+[ -n "$root" ] || { echo "parchaos-fix-biosboot-flag: target root not found; skipping"; exit 0; }
+source=$(findmnt -no SOURCE "$root" | sed 's/\[.*\]$//')
+disk=/dev/$(lsblk -no PKNAME "$source" | head -1)
+[ -b "$disk" ] || { echo "parchaos-fix-biosboot-flag: no disk for $source; skipping"; exit 0; }
 
-    size=$(blockdev --getsize64 "$p1" 2>/dev/null || echo 0)
-    # 1MiB = 1048576 bytes; a little slack for alignment rounding.
-    if [ "$size" -ge 900000 ] && [ "$size" -le 1200000 ]; then
-        fstype=$(blkid -o value -s TYPE "$p1" 2>/dev/null || true)
-        if [ -z "$fstype" ]; then
-            echo "parchaos-fix-biosboot-flag: setting bios_grub on $d partition 1"
-            parted -s "$d" set 1 bios_grub on
-        fi
+# Only GPT disks have a BIOS boot partition.
+[ "$(blkid -o value -s PTTYPE "$disk" 2>/dev/null || true)" = gpt ] || exit 0
+
+case "$disk" in
+    *nvme*|*mmcblk*|*loop*) p1="${disk}p1" ;;
+    *) p1="${disk}1" ;;
+esac
+[ -b "$p1" ] || exit 0
+
+size=$(blockdev --getsize64 "$p1" 2>/dev/null || echo 0)
+# 1MiB = 1048576 bytes; a little slack for alignment rounding.
+if [ "$size" -ge 900000 ] && [ "$size" -le 1200000 ]; then
+    fstype=$(blkid -o value -s TYPE "$p1" 2>/dev/null || true)
+    if [ -z "$fstype" ]; then
+        echo "parchaos-fix-biosboot-flag: setting bios_grub on $disk partition 1"
+        parted -s "$disk" set 1 bios_grub on || echo "parchaos-fix-biosboot-flag: parted failed; continuing"
     fi
-done
+fi
