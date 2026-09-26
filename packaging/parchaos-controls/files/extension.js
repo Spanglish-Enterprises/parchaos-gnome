@@ -180,6 +180,16 @@ function sliderTile(title, iconName) {
     return {tile: t, slider, icon};
 }
 
+// MprisSource has no destroy(): each instance keeps its D-Bus proxy and
+// name-owner subscription for good. Keep a single one for the whole shell
+// process (this module is only evaluated once, so it survives the
+// disable/enable cycle around the lock screen) instead of one per open.
+let _mediaSource = null;
+function mediaSource() {
+    _mediaSource ??= new Mpris.MprisSource();
+    return _mediaSource;
+}
+
 const ControlsPanel = GObject.registerClass({
     Signals: {'request-close': {}},
 }, class ControlsPanel extends St.BoxLayout {
@@ -483,8 +493,14 @@ const ControlsPanel = GObject.registerClass({
         box.add_child(controls);
         t.add_child(box);
 
-        const source = new Mpris.MprisSource();
+        const source = mediaSource();
         let player = null;
+        // Replacing a St.Bin's child only unparents the old one; destroy it
+        // so icons with destroy handlers aren't left to the GC sweep.
+        const setArt = actor => {
+            art.child?.destroy();
+            art.child = actor;
+        };
         const sync = () => {
             const players = source.players;
             const newPlayer = players.find(p => p.status === 'Playing') ?? players[0] ?? null;
@@ -496,7 +512,7 @@ const ControlsPanel = GObject.registerClass({
             if (!player) {
                 title.text = 'Not Playing';
                 artist.text = '';
-                art.child = new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: 24});
+                setArt(new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: 24}));
                 controls.opacity = 90;
                 controls.reactive = false;
                 return;
@@ -507,10 +523,10 @@ const ControlsPanel = GObject.registerClass({
             artist.text = (player.trackArtists ?? []).join(', ');
             const url = player.trackCoverUrl;
             if (url) {
-                art.child = new St.Icon({gicon: new Gio.FileIcon({file: Gio.File.new_for_uri(url)}), icon_size: 44});
+                setArt(new St.Icon({gicon: new Gio.FileIcon({file: Gio.File.new_for_uri(url)}), icon_size: 44}));
             } else {
                 const appIcon = player.app?.create_icon_texture(44);
-                art.child = appIcon ?? new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: 24});
+                setArt(appIcon ?? new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: 24}));
             }
             play.child.icon_name = player.status === 'Playing'
                 ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
@@ -530,13 +546,15 @@ const ControlsPanel = GObject.registerClass({
             return Clutter.EVENT_STOP;
         });
         // MprisSource finds players asynchronously; sync once it has.
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-            if (t.get_stage())
-                sync();
+        let syncId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+            syncId = 0;
+            sync();
             return GLib.SOURCE_REMOVE;
         });
         sync();
         t.connect('destroy', () => {
+            if (syncId)
+                GLib.source_remove(syncId);
             player?.disconnectObject(t);
             source.disconnectObject(t);
         });

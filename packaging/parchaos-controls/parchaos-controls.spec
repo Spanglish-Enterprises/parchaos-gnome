@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,10 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7
+- Use one media-player watcher for the whole session instead of one per
+  panel open (it has no destroy method, so each one leaked).
+- Destroy replaced now-playing artwork and the delayed sync on close.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Follow the ParchaOS style setting (glass or classic).
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
