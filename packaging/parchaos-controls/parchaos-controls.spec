@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,11 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
+- Add a "Super as Ctrl" tile: switches the current user between the
+  Super-as-Ctrl keyboard style and standard key roles (runs
+  parchaos-keyboard-style from parchaos-keyboard-remap). Small tiles now
+  wrap four per row.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-3
 - Show toggles that other extensions add to Quick Settings (e.g.
   GSConnect's Mobile Devices) as tiles; their name opens that

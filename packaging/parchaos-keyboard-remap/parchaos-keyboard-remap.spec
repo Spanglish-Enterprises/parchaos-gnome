@@ -78,7 +78,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later
@@ -141,6 +141,9 @@ install -Dm0644 usr/lib/systemd/user-preset/90-parchaos-keyboard-remap.preset %{
 install -Dm0644 usr/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules %{buildroot}%{_prefix}/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules
 install -Dm0644 usr/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf %{buildroot}%{_prefix}/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf
 install -Dm0644 etc/dconf/db/local.d/02-parchaos-keyboard-remap %{buildroot}%{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
+# Per-user choice between Super-as-Ctrl (default) and standard key roles;
+# used by Parcha Controls' "Super as Ctrl" tile.
+install -Dm0755 usr/bin/parchaos-keyboard-style %{buildroot}%{_bindir}/parchaos-keyboard-style
 
 %post
 udevadm control --reload-rules >/dev/null 2>&1 || :
@@ -158,6 +161,7 @@ dconf update >/dev/null 2>&1 || :
 
 %files
 %{_bindir}/xremap
+%{_bindir}/parchaos-keyboard-style
 %{_datadir}/gnome-shell/extensions/xremap@k0kubun.com/
 %{_sysconfdir}/xremap/config.yml
 %{_prefix}/lib/systemd/user/parchaos-keyboard-remap.service
@@ -167,6 +171,11 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - %{xremap_version}-5
+- Add parchaos-keyboard-style: each user can switch between Super as Ctrl
+  (the remap plus ParchaOS shortcuts, default) and standard key roles
+  (remap masked for that user, GNOME's stock shortcuts restored), applied
+  immediately.
 * Fri Sep 25 2026 ParchaOS packaging - 0.15.13-4
 - Describe the remapped key as Super (the key it actually is on PC
   keyboards) in the summary, description, service description and config

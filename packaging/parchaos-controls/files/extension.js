@@ -138,6 +138,55 @@ function smallToggle(source, label, onActivate) {
     return t;
 }
 
+const KEYBOARD_STYLE = 'parchaos-keyboard-style';
+
+// "Super as Ctrl": on = the Super key works like Cmd (keyboard remap on,
+// ParchaOS shortcuts); off = standard Super and Ctrl roles. Switching runs
+// parchaos-keyboard-style, which applies immediately.
+function keyboardStyleTile() {
+    const t = tile(1, 1, 'parchaos-controls-small');
+    const box = new St.BoxLayout({
+        orientation: Clutter.Orientation.VERTICAL,
+        x_align: Clutter.ActorAlign.CENTER,
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    const circle = circleFor('input-keyboard-symbolic', 36, () => {
+        const next = circle.has_style_pseudo_class('checked') ? 'windows' : 'mac';
+        setChecked(next === 'mac');
+        runStyle([next]).catch(e => logError(e, 'parchaos-controls: keyboard style'));
+    });
+    circle.x_align = Clutter.ActorAlign.CENTER;
+    const setChecked = on => {
+        if (on)
+            circle.add_style_pseudo_class('checked');
+        else
+            circle.remove_style_pseudo_class('checked');
+    };
+    const runStyle = async args => {
+        const proc = Gio.Subprocess.new([KEYBOARD_STYLE, ...args],
+            Gio.SubprocessFlags.STDOUT_PIPE);
+        const [out] = await new Promise((resolve, reject) =>
+            proc.communicate_utf8_async(null, null, (p, res) => {
+                try {
+                    resolve(p.communicate_utf8_finish(res).slice(1));
+                } catch (e) {
+                    reject(e);
+                }
+            }));
+        return (out ?? '').trim();
+    };
+    runStyle(['status'])
+        .then(style => setChecked(style !== 'windows'))
+        .catch(e => logError(e, 'parchaos-controls: keyboard style'));
+    box.add_child(circle);
+    const l = new St.Label({style_class: 'parchaos-controls-small-label', text: 'Super as Ctrl'});
+    l.clutter_text.ellipsize = 3;
+    l.x_align = Clutter.ActorAlign.CENTER;
+    box.add_child(l);
+    t.add_child(box);
+    return t;
+}
+
 // A plain action button in a small tile (not bound to a toggle).
 function smallAction(iconName, label, onActivate) {
     return smallToggle(iconName, label, onActivate);
@@ -230,33 +279,36 @@ const ControlsPanel = GObject.registerClass({
                 row++;
         });
 
-        // Bottom row: power mode (when the machine has profiles), then
-        // screenshot, settings and lock.
-        col = 0;
+        // Small tiles, four per row: power mode (when the machine has
+        // profiles), the Super-as-Ctrl keyboard style, then screenshot,
+        // settings and lock.
+        const small = [];
         const power = this._firstItem(qs._powerProfiles);
-        if (power?.visible)
-            lm.attach(smallToggle(power, 'Power Mode', () => {
+        if (power?.visible) {
+            small.push(smallToggle(power, 'Power Mode', () => {
                 this.emit('request-close');
                 openSettings('power');
-            }), col++, row, 1, 1);
-        lm.attach(smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
+            }));
+        }
+        if (GLib.find_program_in_path(KEYBOARD_STYLE))
+            small.push(keyboardStyleTile());
+        small.push(smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
                 Main.screenshotUI.open().catch(logError);
                 return GLib.SOURCE_REMOVE;
             });
-        }), col++, row, 1, 1);
-        lm.attach(smallAction('emblem-system-symbolic', 'Settings', () => {
+        }));
+        small.push(smallAction('emblem-system-symbolic', 'Settings', () => {
             this.emit('request-close');
             openSettings();
-        }), col++, row, 1, 1);
-        if (col < 4) {
-            lm.attach(smallAction('system-lock-screen-symbolic', 'Lock', () => {
-                this.emit('request-close');
-                Main.screenShield?.lock(true);
-            }), col++, row, 1, 1);
-        }
+        }));
+        small.push(smallAction('system-lock-screen-symbolic', 'Lock', () => {
+            this.emit('request-close');
+            Main.screenShield?.lock(true);
+        }));
+        small.forEach((t, i) => lm.attach(t, i % 4, row + Math.floor(i / 4), 1, 1));
     }
 
     // Quick Settings keeps no list of extension-added items; they're the

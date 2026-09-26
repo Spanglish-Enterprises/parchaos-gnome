@@ -1,0 +1,101 @@
+#!/bin/bash
+# parchaos-keyboard-style: choose how the Super key behaves for the
+# current user.
+#
+#   mac      Super works like Cmd: xremap swaps Super and Ctrl, and the
+#            ParchaOS keybinding defaults (02-parchaos-keyboard-remap)
+#            apply. This is the default.
+#   windows  Super keeps its usual role (overview, Super+Tab, ...) and
+#            Ctrl stays Ctrl: xremap is off and GNOME's stock shortcuts
+#            are written into the user's own settings, over the ParchaOS
+#            defaults.
+#   status   print the current style.
+#
+# Takes effect immediately, no log out needed.
+
+set -u
+
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/parchaos"
+STATE_FILE="$STATE_DIR/keyboard-style"
+SERVICE=parchaos-keyboard-remap.service
+TERMINAL=org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/
+
+# Every key the ParchaOS defaults change, as "schema key".
+KEYS=(
+    "org.gnome.desktop.input-sources xkb-options"
+    "org.gnome.mutter overlay-key"
+    "org.gnome.desktop.wm.keybindings minimize"
+    "org.gnome.desktop.wm.keybindings show-desktop"
+    "org.gnome.desktop.wm.keybindings switch-applications"
+    "org.gnome.desktop.wm.keybindings switch-applications-backward"
+    "org.gnome.desktop.wm.keybindings switch-group"
+    "org.gnome.desktop.wm.keybindings switch-group-backward"
+    "org.gnome.desktop.wm.keybindings switch-to-workspace-left"
+    "org.gnome.desktop.wm.keybindings switch-to-workspace-right"
+    "org.gnome.mutter.keybindings toggle-tiled-left"
+    "org.gnome.mutter.keybindings toggle-tiled-right"
+    "org.gnome.shell.keybindings toggle-message-tray"
+    "org.gnome.shell.keybindings toggle-overview"
+    "org.gnome.shell.keybindings toggle-application-view"
+    "org.gnome.shell.keybindings screenshot"
+    "org.gnome.shell.keybindings show-screenshot-ui"
+    "org.gnome.shell.keybindings screenshot-window"
+    "org.gnome.settings-daemon.plugins.media-keys screensaver"
+    "$TERMINAL copy"
+    "$TERMINAL paste"
+    "$TERMINAL new-tab"
+    "$TERMINAL new-window"
+    "$TERMINAL close-tab"
+    "$TERMINAL close-window"
+    "$TERMINAL find"
+)
+
+schema_exists() {
+    gsettings list-keys "$1" >/dev/null 2>&1
+}
+
+current() {
+    if [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = windows ]; then
+        echo windows
+    else
+        echo mac
+    fi
+}
+
+set_windows() {
+    # The unit is enabled system-wide, so a per-user disable wouldn't stick
+    # across logins; masking does.
+    systemctl --user stop "$SERVICE" >/dev/null 2>&1
+    systemctl --user mask "$SERVICE" >/dev/null 2>&1
+    for entry in "${KEYS[@]}"; do
+        read -r schema key <<<"$entry"
+        schema_exists "$schema" || continue
+        # GNOME's own default, read with no dconf databases in the way.
+        stock=$(DCONF_PROFILE=/dev/null gsettings get "$schema" "$key") || continue
+        gsettings set "$schema" "$key" "$stock"
+    done
+    mkdir -p "$STATE_DIR"
+    echo windows >"$STATE_FILE"
+}
+
+set_mac() {
+    for entry in "${KEYS[@]}"; do
+        read -r schema key <<<"$entry"
+        schema_exists "$schema" || continue
+        gsettings reset "$schema" "$key"
+    done
+    systemctl --user unmask "$SERVICE" >/dev/null 2>&1
+    systemctl --user start "$SERVICE" >/dev/null 2>&1
+    mkdir -p "$STATE_DIR"
+    echo mac >"$STATE_FILE"
+}
+
+case "${1:-status}" in
+    mac) set_mac ;;
+    windows) set_windows ;;
+    status) current ;;
+    *)
+        echo "usage: parchaos-keyboard-style [mac|windows|status]" >&2
+        exit 2
+        ;;
+esac
