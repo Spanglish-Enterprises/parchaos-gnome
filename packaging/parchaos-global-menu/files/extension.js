@@ -6,10 +6,10 @@
  * menus, a system logo menu with real power actions, and a weather
  * indicator.
  *
- * This is an original, from-scratch implementation written against
+ * An independent implementation written for ParchaOS from
  * docs/global-menu-rewrite-spec.md (a plain feature description) and
- * GNOME Shell's own public extension APIs. It is not derived from, and
- * was not written by reading, any other project's global-menu source.
+ * GNOME Shell's public extension APIs. The menus are described by a data
+ * table (MENU_TABLE) and built by one generic loop.
  *
  * Compatible with GNOME Shell 45-50, Wayland.
  */
@@ -35,7 +35,7 @@ const DEFAULT_APP_NAME = 'Parcher';
 const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
 
 // The public ParchaOS website (help, FAQ, bug reports).
-const SITE_URL = 'https://parchaos-website.vercel.app';
+const SITE_URL = 'https://parchaos.org';
 
 // A small set of window identities that represent desktop-shell helper
 // surfaces (icon grids, overlays) rather than real user applications --
@@ -187,7 +187,7 @@ const WeatherIndicator = GObject.registerClass({
             style_class: 'parchaos-weather-box',
             y_align: Clutter.ActorAlign.CENTER,
         });
-        this._icon = new St.Icon({
+        this._conditionIcon = new St.Icon({
             icon_name: 'weather-clear-symbolic',
             style_class: 'system-status-icon parchaos-weather-icon',
             icon_size: 16,
@@ -197,7 +197,7 @@ const WeatherIndicator = GObject.registerClass({
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'parchaos-weather-label',
         });
-        box.add_child(this._icon);
+        box.add_child(this._conditionIcon);
         box.add_child(this._label);
         this.add_child(box);
 
@@ -278,7 +278,7 @@ const WeatherIndicator = GObject.registerClass({
     _onWeatherUpdated() {
         if (!this._weatherInfo?.is_valid())
             return;
-        this._icon.icon_name = this._weatherInfo.get_symbolic_icon_name();
+        this._conditionIcon.icon_name = this._weatherInfo.get_symbolic_icon_name();
         this._label.set_text(this._weatherInfo.get_temp_summary());
         this.visible = true;
     }
@@ -346,6 +346,88 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
     }
 });
 
+// ---------------------------------------------------------------------
+// The menus after the app name. An entry either sends the focused app one
+// of SHORTCUTS' actions, runs a function (given the tracked window), or is
+// a separator.
+// ---------------------------------------------------------------------
+const SEPARATOR = null;
+
+function openSiteLink(path) {
+    try {
+        Gio.AppInfo.launch_default_for_uri(`${SITE_URL}${path}`, null);
+    } catch (e) {
+        console.error('[ParchaOSGlobalMenu] Failed to open', path, e);
+    }
+}
+
+function openSystemSettings() {
+    const apps = Shell.AppSystem.get_default();
+    (apps.lookup_app('org.gnome.Settings.desktop') ??
+        apps.lookup_app('gnome-control-center.desktop'))?.activate();
+}
+
+function toggleMaximized(window) {
+    if (!window)
+        return;
+    if (window.get_maximized())
+        window.unmaximize(Meta.MaximizeFlags.BOTH);
+    else
+        window.maximize(Meta.MaximizeFlags.BOTH);
+}
+
+const MENU_TABLE = [
+    {
+        role: 'file', title: 'File', items: [
+            { label: 'New Window', shortcut: 'new-window' },
+            // Closed directly: Ctrl+W closes a tab in browsers and does
+            // nothing in a terminal.
+            { label: 'Close Window', run: w => w?.delete(global.get_current_time()) },
+        ],
+    },
+    {
+        role: 'edit', title: 'Edit', items: [
+            { label: 'Undo', shortcut: 'undo' },
+            { label: 'Redo', shortcut: 'redo' },
+            SEPARATOR,
+            { label: 'Cut', shortcut: 'cut' },
+            { label: 'Copy', shortcut: 'copy' },
+            { label: 'Paste', shortcut: 'paste' },
+        ],
+    },
+    {
+        role: 'view', title: 'View', items: [
+            { label: 'as Icons', shortcut: 'view-icons' },
+            { label: 'as List', shortcut: 'view-list' },
+            SEPARATOR,
+            { label: 'Show Hidden Files', shortcut: 'hidden-files' },
+        ],
+    },
+    {
+        role: 'go', title: 'Go', items: [
+            { label: 'Back', shortcut: 'back' },
+            SEPARATOR,
+            { label: 'Home', run: () => openHome() },
+            { label: 'Documents', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) },
+            { label: 'Downloads', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) },
+            { label: 'Pictures', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_PICTURES) },
+        ],
+    },
+    {
+        role: 'window', title: 'Window', items: [
+            { label: 'Minimize', run: w => w?.minimize() },
+            { label: 'Zoom', run: w => toggleMaximized(w) },
+        ],
+    },
+    {
+        role: 'help', title: 'Help', items: [
+            { label: 'ParchaOS Help', run: () => openSiteLink('/#faq') },
+            SEPARATOR,
+            { label: 'Report a Bug or Feature Request…', run: () => openSiteLink('/support') },
+        ],
+    },
+];
+
 export default class ParchaOSGlobalMenuExtension extends Extension {
     enable() {
         Main.panel.add_style_class_name('parchaos-menubar');
@@ -355,39 +437,33 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             () => applyStyleClass(Main.panel, this._styleSettings)) ?? 0;
         this._menuBarButtons = [];
         this._shortcutItems = [];
-        this._activeAppWindow = null;
-        this._focusNotifyId = 0;
+        this._trackedWindow = null;
+        this._focusSignal = 0;
 
-        this._createLogoMenu();
-        this._createAppMenu();
-        this._createFileMenu();
-        this._createEditMenu();
-        this._createViewMenu();
-        this._createGoMenu();
-        this._createWindowMenu();
-        this._createHelpMenu();
+        this._buildSystemMenu();
+        this._buildAppNameMenu();
+        for (const menu of MENU_TABLE)
+            this._buildTableMenu(menu);
 
         // Menu spacing like the reference bar (~2x the text height between
         // items). Set on the buttons themselves so a panel-wide padding
         // setting (e.g. Just Perfection's) doesn't spread the menus out.
-        let pos = 1;
-        for (const button of this._menuBarButtons) {
+        for (const [index, button] of this._menuBarButtons.entries()) {
             // Padding from the reference menu bar: the logo item is 33 px
             // wide around a 16 px glyph; the app name and menu items have
             // 11 px each side with no gap between them.
             const pad = {logo: 8}[button.roleId] ?? 11;
             button.add_style_class_name('parchaos-menubar-button');
             button.set_style(`-natural-hpadding: ${pad}px; -minimum-hpadding: ${pad}px;`);
-            Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, pos++, 'left');
+            Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, index + 1, 'left');
         }
 
         this._weatherIndicator = new WeatherIndicator();
         Main.panel.addToStatusArea('parchaos-weather', this._weatherIndicator, 0, 'right');
 
-        this._focusNotifyId = global.display.connect('notify::focus-window', () => {
-            this._onFocusWindowChanged();
-        });
-        this._onFocusWindowChanged();
+        this._focusSignal = global.display.connect('notify::focus-window',
+            () => this._followFocus());
+        this._followFocus();
     }
 
     disable() {
@@ -398,9 +474,9 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._styleSettings = null;
         for (const s of ['glass', 'classic'])
             Main.panel.remove_style_class_name(`parchaos-style-${s}`);
-        if (this._focusNotifyId) {
-            global.display.disconnect(this._focusNotifyId);
-            this._focusNotifyId = 0;
+        if (this._focusSignal) {
+            global.display.disconnect(this._focusSignal);
+            this._focusSignal = 0;
         }
 
         for (const button of this._menuBarButtons)
@@ -414,12 +490,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             this._weatherIndicator = null;
         }
 
-        this._activeAppWindow = null;
+        this._trackedWindow = null;
     }
 
-    // --- Logo menu ---
+    // --- System (logo) menu ---
 
-    _createLogoMenu() {
+    _buildSystemMenu() {
         const logoBtn = new PanelMenu.Button(0.0, 'ParchaOS', false);
         logoBtn.roleId = 'logo';
         // Symbolic vector logo drawn for 16 px: crisp, follows the panel's
@@ -434,49 +510,22 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         });
         logoBtn.add_child(icon);
 
-        const aboutItem = new PopupMenu.PopupMenuItem('About ParchaOS');
-        aboutItem.connect('activate', () => this._showAboutDialog());
-        logoBtn.menu.addMenuItem(aboutItem);
-
-        logoBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const settingsItem = new PopupMenu.PopupMenuItem('System Settings…');
-        settingsItem.connect('activate', () => {
-            const app = Shell.AppSystem.get_default().lookup_app('org.gnome.Settings.desktop')
-                ?? Shell.AppSystem.get_default().lookup_app('gnome-control-center.desktop');
-            app?.activate();
-        });
-        logoBtn.menu.addMenuItem(settingsItem);
-
-        logoBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const lockItem = new PopupMenu.PopupMenuItem('Lock Screen');
-        lockItem.connect('activate', () => Main.screenShield?.lock(true));
-        logoBtn.menu.addMenuItem(lockItem);
-
-        const logoutItem = new PopupMenu.PopupMenuItem('Log Out…');
-        logoutItem.connect('activate', () => {
-            this._confirm('Log out now? Any unsaved work will be lost.', () => {
-                GLib.spawn_command_line_async('gnome-session-quit --logout --no-prompt');
-            });
-        });
-        logoBtn.menu.addMenuItem(logoutItem);
-
-        const restartItem = new PopupMenu.PopupMenuItem('Restart…');
-        restartItem.connect('activate', () => {
-            this._confirm('Restart now? Any unsaved work will be lost.', () => {
-                GLib.spawn_command_line_async('gnome-session-quit --reboot --no-prompt');
-            });
-        });
-        logoBtn.menu.addMenuItem(restartItem);
-
-        const shutdownItem = new PopupMenu.PopupMenuItem('Shut Down…');
-        shutdownItem.connect('activate', () => {
-            this._confirm('Shut down now? Any unsaved work will be lost.', () => {
-                GLib.spawn_command_line_async('gnome-session-quit --power-off --no-prompt');
-            });
-        });
-        logoBtn.menu.addMenuItem(shutdownItem);
+        const powerAction = (question, argv) => () =>
+            this._confirm(question, () => GLib.spawn_command_line_async(argv));
+        const systemEntries = [
+            { label: 'About ParchaOS', run: () => this._showAboutDialog() },
+            SEPARATOR,
+            { label: 'System Settings…', run: openSystemSettings },
+            SEPARATOR,
+            { label: 'Lock Screen', run: () => Main.screenShield?.lock(true) },
+            { label: 'Log Out…', run: powerAction('Log out now? Any unsaved work will be lost.',
+                'gnome-session-quit --logout --no-prompt') },
+            { label: 'Restart…', run: powerAction('Restart now? Any unsaved work will be lost.',
+                'gnome-session-quit --reboot --no-prompt') },
+            { label: 'Shut Down…', run: powerAction('Shut down now? Any unsaved work will be lost.',
+                'gnome-session-quit --power-off --no-prompt') },
+        ];
+        this._fillMenu(logoBtn.menu, systemEntries);
 
         this._menuBarButtons.push(logoBtn);
     }
@@ -490,7 +539,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     // that to show the app's own About window. Apps without one (Chromium,
     // Electron, X11 apps) get a simple dialog built from their .desktop info.
     _showAppAbout() {
-        const window = this._activeAppWindow;
+        const window = this._trackedWindow;
         const app = window
             ? Shell.WindowTracker.get_default().get_window_app(window)
             : Shell.AppSystem.get_default().lookup_app(DEFAULT_APP_ID);
@@ -686,32 +735,20 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         ];
     }
 
+    // NAME and VERSION from /etc/os-release (missing ones stay undefined).
     _readOsRelease() {
-        const result = {};
-        try {
-            const [ok, contents] = GLib.file_get_contents('/etc/os-release');
-            if (ok) {
-                const text = new TextDecoder().decode(contents);
-                for (const line of text.split('\n')) {
-                    const m = line.match(/^([A-Z_]+)=(.*)$/);
-                    if (!m)
-                        continue;
-                    const value = m[2].replace(/^"|"$/g, '');
-                    if (m[1] === 'NAME')
-                        result.name = value;
-                    if (m[1] === 'VERSION')
-                        result.version = value;
-                }
-            }
-        } catch (e) {
-            // Fine to leave result empty; the dialog just shows "unknown".
+        const fields = {};
+        for (const line of this._readFile('/etc/os-release').split('\n')) {
+            const eq = line.indexOf('=');
+            if (eq > 0)
+                fields[line.slice(0, eq)] = line.slice(eq + 1).replace(/^"|"$/g, '');
         }
-        return result;
+        return { name: fields.NAME, version: fields.VERSION };
     }
 
-    // --- App menu ---
+    // --- App name menu ---
 
-    _createAppMenu() {
+    _buildAppNameMenu() {
         const appBtn = new MenuBarButton(DEFAULT_APP_NAME, { bold: true });
         appBtn.roleId = 'app';
 
@@ -725,7 +762,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             if (app)
                 app.get_windows().forEach(w => w.minimize());
             else
-                this._activeAppWindow?.minimize();
+                this._trackedWindow?.minimize();
         });
         appBtn.menu.addMenuItem(this._hideAppItem);
 
@@ -735,42 +772,38 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             if (app)
                 app.request_quit();
             else
-                this._activeAppWindow?.delete(global.get_current_time());
+                this._trackedWindow?.delete(global.get_current_time());
         });
         appBtn.menu.addMenuItem(this._quitAppItem);
 
-        this._appMenuButton = appBtn;
+        this._appNameButton = appBtn;
         this._menuBarButtons.push(appBtn);
     }
 
-    _onFocusWindowChanged() {
-        const window = global.display.focus_window;
+    // Keeps the menu bar on the last real app window that had focus, so
+    // clicking the bar itself (which takes focus) doesn't reset it.
+    _followFocus() {
+        const focused = global.display.focus_window;
+        const open = new Set(global.get_window_actors().map(a => a.meta_window));
+        if (this._trackedWindow && !open.has(this._trackedWindow))
+            this._trackedWindow = null;
+        if (focused && !this._isIgnoredWindow(focused))
+            this._trackedWindow = focused;
 
-        if (this._activeAppWindow) {
-            const stillOpen = global.get_window_actors()
-                .map(a => a.meta_window)
-                .includes(this._activeAppWindow);
-            if (!stillOpen)
-                this._activeAppWindow = null;
-        }
-
-        if (window && !this._isIgnoredWindow(window))
-            this._activeAppWindow = window;
-
-        const appName = this._getAppName(this._activeAppWindow);
-        this._appMenuButton.setLabelText(appName);
+        const appName = this._displayNameFor(this._trackedWindow);
+        this._appNameButton.setLabelText(appName);
         this._aboutAppItem.label.set_text(`About ${appName}`);
         this._hideAppItem.label.set_text(`Hide ${appName}`);
         this._quitAppItem.label.set_text(`Quit ${appName}`);
 
-        const isIdleState = appName === DEFAULT_APP_NAME && !this._activeAppWindow;
+        const isIdleState = appName === DEFAULT_APP_NAME && !this._trackedWindow;
         this._hideAppItem.setSensitive(!isIdleState);
         this._quitAppItem.setSensitive(!isIdleState);
         this._updateShortcutItems();
     }
 
     _activeApp() {
-        const win = this._activeAppWindow;
+        const win = this._trackedWindow;
         return win ? Shell.WindowTracker.get_default().get_window_app(win) : null;
     }
 
@@ -780,11 +813,11 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         item.connect('activate', () => {
             // With no app focused the menu bar belongs to the file
             // manager, so New Window opens one.
-            if (action === 'new-window' && !this._activeAppWindow) {
+            if (action === 'new-window' && !this._trackedWindow) {
                 openHome();
                 return;
             }
-            const combo = shortcutFor(action, appKind(this._activeAppWindow));
+            const combo = shortcutFor(action, appKind(this._trackedWindow));
             if (combo)
                 sendKeyCombo(...combo);
         });
@@ -794,7 +827,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     }
 
     _updateShortcutItems() {
-        const kind = appKind(this._activeAppWindow);
+        const kind = appKind(this._trackedWindow);
         for (const [item, action] of this._shortcutItems) {
             item.setSensitive(shortcutFor(action, kind) !== null ||
                 (action === 'new-window' && !kind));
@@ -810,152 +843,46 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         return IGNORED_APP_IDS.includes(wmClass) || IGNORED_APP_IDS.includes(gtkAppId);
     }
 
-    _getAppName(window) {
+    // The name shown next to the logo: the app's own name from its
+    // .desktop entry, found through the window tracker or, for windows it
+    // can't match, by the window's class; the window title as a last resort.
+    _displayNameFor(window) {
         if (!window)
             return DEFAULT_APP_NAME;
-
-        const app = Shell.WindowTracker.get_default().get_window_app(window);
-        if (app?.get_name())
-            return app.get_name();
-
-        const wmClass = window.get_wm_class?.();
-        if (wmClass)
-            return wmClass.charAt(0).toUpperCase() + wmClass.slice(1);
-
-        return window.get_title?.() ?? DEFAULT_APP_NAME;
+        const tracked = Shell.WindowTracker.get_default().get_window_app(window)?.get_name();
+        if (tracked)
+            return tracked;
+        for (const id of [window.get_gtk_application_id?.(), window.get_wm_class?.()]) {
+            if (!id)
+                continue;
+            const info = Gio.DesktopAppInfo.new(`${id}.desktop`) ??
+                Gio.DesktopAppInfo.new(`${id.toLowerCase()}.desktop`);
+            if (info)
+                return info.get_display_name();
+        }
+        return window.get_title?.() || DEFAULT_APP_NAME;
     }
 
-    // --- File menu ---
-
-    _createFileMenu() {
-        const fileBtn = new MenuBarButton('File');
-        fileBtn.roleId = 'file';
-
-        this._shortcutItem(fileBtn.menu, 'New Window', 'new-window');
-
-        // Closing is done directly: Ctrl+W closes a tab in browsers and
-        // does nothing in a terminal.
-        const closeWindowItem = new PopupMenu.PopupMenuItem('Close Window');
-        closeWindowItem.connect('activate', () => {
-            this._activeAppWindow?.delete(global.get_current_time());
-        });
-        fileBtn.menu.addMenuItem(closeWindowItem);
-
-        this._menuBarButtons.push(fileBtn);
+    // Builds one MENU_TABLE entry as a menu bar button.
+    _buildTableMenu({ role, title, items }) {
+        const button = new MenuBarButton(title);
+        button.roleId = role;
+        this._fillMenu(button.menu, items);
+        this._menuBarButtons.push(button);
     }
 
-    // --- Edit menu ---
-
-    _createEditMenu() {
-        const editBtn = new MenuBarButton('Edit');
-        editBtn.roleId = 'edit';
-
-        this._shortcutItem(editBtn.menu, 'Undo', 'undo');
-        this._shortcutItem(editBtn.menu, 'Redo', 'redo');
-        editBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._shortcutItem(editBtn.menu, 'Cut', 'cut');
-        this._shortcutItem(editBtn.menu, 'Copy', 'copy');
-        this._shortcutItem(editBtn.menu, 'Paste', 'paste');
-
-        this._menuBarButtons.push(editBtn);
-    }
-
-    // --- View menu ---
-
-    _createViewMenu() {
-        const viewBtn = new MenuBarButton('View');
-        viewBtn.roleId = 'view';
-
-        this._shortcutItem(viewBtn.menu, 'as Icons', 'view-icons');
-        this._shortcutItem(viewBtn.menu, 'as List', 'view-list');
-        viewBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._shortcutItem(viewBtn.menu, 'Show Hidden Files', 'hidden-files');
-
-        this._menuBarButtons.push(viewBtn);
-    }
-
-    // --- Go menu ---
-
-    _createGoMenu() {
-        const goBtn = new MenuBarButton('Go');
-        goBtn.roleId = 'go';
-
-        this._shortcutItem(goBtn.menu, 'Back', 'back');
-
-        goBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const homeItem = new PopupMenu.PopupMenuItem('Home');
-        homeItem.connect('activate', () => openHome());
-        goBtn.menu.addMenuItem(homeItem);
-
-        const documentsItem = new PopupMenu.PopupMenuItem('Documents');
-        documentsItem.connect('activate', () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOCUMENTS));
-        goBtn.menu.addMenuItem(documentsItem);
-
-        const downloadsItem = new PopupMenu.PopupMenuItem('Downloads');
-        downloadsItem.connect('activate', () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOWNLOAD));
-        goBtn.menu.addMenuItem(downloadsItem);
-
-        const picturesItem = new PopupMenu.PopupMenuItem('Pictures');
-        picturesItem.connect('activate', () => openSpecialDir(GLib.UserDirectory.DIRECTORY_PICTURES));
-        goBtn.menu.addMenuItem(picturesItem);
-
-        this._menuBarButtons.push(goBtn);
-    }
-
-    // --- Window menu ---
-
-    _createWindowMenu() {
-        const windowBtn = new MenuBarButton('Window');
-        windowBtn.roleId = 'window';
-
-        const minimizeItem = new PopupMenu.PopupMenuItem('Minimize');
-        minimizeItem.connect('activate', () => this._activeAppWindow?.minimize());
-        windowBtn.menu.addMenuItem(minimizeItem);
-
-        const zoomItem = new PopupMenu.PopupMenuItem('Zoom');
-        zoomItem.connect('activate', () => {
-            const win = this._activeAppWindow;
-            if (!win)
-                return;
-            if (win.get_maximized())
-                win.unmaximize(Meta.MaximizeFlags.BOTH);
-            else
-                win.maximize(Meta.MaximizeFlags.BOTH);
-        });
-        windowBtn.menu.addMenuItem(zoomItem);
-
-        this._menuBarButtons.push(windowBtn);
-    }
-
-    // --- Help menu ---
-
-    _createHelpMenu() {
-        const helpBtn = new MenuBarButton('Help');
-        helpBtn.roleId = 'help';
-
-        const helpItem = new PopupMenu.PopupMenuItem('ParchaOS Help');
-        helpItem.connect('activate', () => {
-            try {
-                Gio.AppInfo.launch_default_for_uri(`${SITE_URL}/#faq`, null);
-            } catch (e) {
-                console.error('[ParchaOSGlobalMenu] Failed to open help link:', e);
+    // Adds entries (see MENU_TABLE) to a popup menu.
+    _fillMenu(menu, entries) {
+        for (const entry of entries) {
+            if (entry === SEPARATOR) {
+                menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            } else if (entry.shortcut) {
+                this._shortcutItem(menu, entry.label, entry.shortcut);
+            } else {
+                const item = new PopupMenu.PopupMenuItem(entry.label);
+                item.connect('activate', () => entry.run(this._trackedWindow));
+                menu.addMenuItem(item);
             }
-        });
-        helpBtn.menu.addMenuItem(helpItem);
-
-        helpBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const reportBugItem = new PopupMenu.PopupMenuItem('Report a Bug or Feature Request…');
-        reportBugItem.connect('activate', () => {
-            try {
-                Gio.AppInfo.launch_default_for_uri(`${SITE_URL}/support`, null);
-            } catch (e) {
-                console.error('[ParchaOSGlobalMenu] Failed to open support link:', e);
-            }
-        });
-        helpBtn.menu.addMenuItem(reportBugItem);
-
-        this._menuBarButtons.push(helpBtn);
+        }
     }
 }

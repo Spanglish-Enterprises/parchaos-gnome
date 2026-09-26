@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,12 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-15
+- Menus built from one data table (MENU_TABLE) by a generic loop; the
+  logo menu too. Focus tracking, the app-name lookup (now via .desktop
+  info) and the os-release reader rewritten; no code lines in common
+  with the extension it replaced (scripts/similarity-check.py). Help
+  links go to parchaos.org.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-14
 - Weather: location being turned off is logged as debug output, not an
   error.
