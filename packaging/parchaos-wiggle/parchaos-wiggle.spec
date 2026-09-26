@@ -25,12 +25,10 @@
 
 Name:           parchaos-wiggle
 Version:        5
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Cursor-magnification-on-shake GNOME Shell extension ("shake to locate cursor")
 
-# Wiggle itself is GPL-2.0-only; the two cursor images (Source1/2) are
-# vinceliuice's MacTahoe cursors, GPL-3.0 (Source3), shipped as data.
-License:        GPL-2.0-only AND GPL-3.0-or-later
+License:        GPL-2.0-only
 URL:            https://github.com/mechtifs/wiggle
 %global commit  db1bec361d292ae0c465eca25db4854e422ad5e4
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
@@ -46,13 +44,9 @@ Patch0:         0001-fix-stuck-magnified-cursor-on-gnome-50.patch
 # Shaking drew Wiggle's own generic arrow, so the cursor visibly changed
 # style while enlarged (user report). Patch1 picks icons/cursor-<cursor
 # theme>.svg when present (checked on every shake, so it follows the
-# light/dark switch); Source1/2 are MacTahoe's own dark/light arrows from
-# the same upstream as parchaos-icon-theme's cursors (cursors/src/svg*/
-# default.svg at the same pinned commit).
+# light/dark switch). ParchaOS uses the Adwaita cursors, whose arrow
+# matches Wiggle's generic one, so no themed arrow ships.
 Patch1:         0002-match-enlarged-cursor-to-cursor-theme.patch
-Source1:        cursor-MacTahoe-dark.svg
-Source2:        cursor-MacTahoe.svg
-Source3:        LICENSE-MacTahoe-cursors
 
 BuildArch:      noarch
 BuildRequires:  glib2
@@ -80,17 +74,17 @@ mkdir -p "$DEST/schemas" "$DEST/icons"
 install -m 0644 extension.js prefs.js effect.js cursor.js history.js const.js metadata.json "$DEST/"
 install -m 0644 schemas/*.gschema.xml "$DEST/schemas/"
 install -m 0644 icons/cursor.svg "$DEST/icons/"
-install -m 0644 %{SOURCE1} %{SOURCE2} "$DEST/icons/"
-install -Dm 0644 %{SOURCE3} %{buildroot}%{_licensedir}/%{name}/LICENSE-MacTahoe-cursors
 glib-compile-schemas "$DEST/schemas"
 
 %files
 %license LICENSE.txt
-%{_licensedir}/%{name}/LICENSE-MacTahoe-cursors
 %doc README.md
 %{_datadir}/gnome-shell/extensions/wiggle@mechtifs/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 5-5
+- Drop the MacTahoe cursor images; the default Adwaita cursors match
+  Wiggle's own enlarged arrow.
 * Fri Sep 25 2026 ParchaOS packaging - 5-4
 - Shaking the cursor no longer swaps it for a different-looking arrow:
   the enlarged cursor uses MacTahoe's own dark/light arrow matching the

@@ -1,7 +1,7 @@
 [org/gnome/desktop/interface]
 gtk-theme='MacTahoe-Dark'
 icon-theme='MacTahoe-dark'
-cursor-theme='MacTahoe-dark'
+cursor-theme='Adwaita'
 color-scheme='prefer-dark'
 # Real gap found via a live reference-desktop comparison 2026-09-25: the
 # top bar's clock read "Sep 25", missing the day-of-week the reference

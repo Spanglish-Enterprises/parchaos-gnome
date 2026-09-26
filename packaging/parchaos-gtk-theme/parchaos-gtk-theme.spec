@@ -33,8 +33,8 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        13%{?dist}
-Summary:        ParchaOS's Tahoe-styled GTK3/GTK4 theme
+Release:        14%{?dist}
+Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT
 URL:            https://github.com/vinceliuice/MacTahoe-gtk-theme
@@ -88,8 +88,8 @@ BuildRequires:  sudo
 Requires:       gtk-murrine-engine
 
 %description
-ParchaOS's real Tahoe-styled GTK3/GTK4 theme (dock, traffic-light
-window controls, translucent panels), built from vinceliuice's real
+ParchaOS's GTK3/GTK4 and GNOME Shell theme (translucent panels,
+colored window controls), built from vinceliuice's real
 upstream MacTahoe-gtk-theme (MIT) using its own install.sh — the same
 underlying theme Pulsar OS ships (Inled's own fork adds only
 non-essential accent-color polish this package doesn't yet replicate).
@@ -231,6 +231,8 @@ done
 %{_sysconfdir}/skel/.local/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-14
+- Neutral summary and description.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-13
 - Replace the Apple-logo activities button in every shell theme variant with the ParchaOS mark.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-12

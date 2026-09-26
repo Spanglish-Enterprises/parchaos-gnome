@@ -18,8 +18,8 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        13%{?dist}
-Summary:        ParchaOS's Tahoe-styled icon theme
+Release:        14%{?dist}
+Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/vinceliuice/MacTahoe-icon-theme
@@ -110,8 +110,9 @@ BuildRequires:  gtk-update-icon-cache
 Requires:       hicolor-icon-theme
 
 %description
-ParchaOS's real Tahoe-styled icon theme, built from vinceliuice's real
-upstream MacTahoe-icon-theme using its own install.sh. Default
+ParchaOS's icon theme: original ParchaOS artwork for apps, folders and
+file types, on a base built from vinceliuice's MacTahoe-icon-theme
+using its own install.sh. Default
 (neutral) color variant.
 
 %prep
@@ -222,6 +223,10 @@ find %{buildroot}%{_datadir}/icons/MacTahoe* \
     \( -name 'weather-*-large.svg' -o -name 'weather-*-small.svg' \) \
     \( -type f -o -type l \) -delete
 
+# ParchaOS uses GNOME's Adwaita cursors; MacTahoe's copy the reference
+# desktop's cursor designs, so they aren't shipped.
+rm -rf %{buildroot}%{_datadir}/icons/MacTahoe*/cursors
+
 # install.sh built icon-theme.cache before the edits above; rebuild it so
 # it matches what we actually ship.
 for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
@@ -234,6 +239,9 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-14
+- Stop shipping MacTahoe's cursors (ParchaOS uses Adwaita's); neutral
+  summary.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-13
 - File-type icons: programs no longer get the spreadsheet icon,
   Makefiles the disk icon, or Word templates the code icon (tighter

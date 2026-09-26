@@ -13,8 +13,8 @@ index 4cb3509..83a9926 100644
 +
 +    // With no custom path, draw the enlarged cursor from an image that
 +    // matches the active cursor theme, so shaking doesn't swap the arrow
-+    // for a different-looking one. MacTahoe cursors ship as
-+    // icons/cursor-<theme>.svg; other themes use the generic arrow.
++    // for a different-looking one. A theme with its own arrow ships as
++    // icons/cursor-<theme>.svg; others (Adwaita) use the generic arrow.
 +    _syncIcon() {
 +        const dir = GLib.path_get_dirname(import.meta.url.slice(7));
 +        let path = this._userPath;
