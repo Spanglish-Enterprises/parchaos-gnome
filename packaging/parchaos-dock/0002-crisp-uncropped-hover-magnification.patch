@@ -64,10 +64,25 @@ index ef90fe7..62c3194 100755
          this._iconActor.fallbackGicon = this._iconActor.gicon;
          this._iconActor.iconName = `view-app-grid-${Main.sessionMode.currentMode}-symbolic`;
 diff --git a/dash.js b/dash.js
-index 8d85215..0989994 100755
+index 8d85215..4ec4054 100755
 --- a/dash.js
 +++ b/dash.js
-@@ -333,6 +333,15 @@ export const DockDash = GObject.registerClass({
+@@ -312,14 +312,6 @@ export const DockDash = GObject.registerClass({
+         });
+         this._boxContainer.add_style_class_name(Theming.PositionStyleClass[this._position]);
+ 
+-        this._boxContainer.connect('motion-event', (_actor, event) => {
+-            this._onDockMotionEvent(event);
+-            return Clutter.EVENT_PROPAGATE;
+-        });
+-        this._boxContainer.connect('leave-event', () => {
+-            this._resetMagnification();
+-            return Clutter.EVENT_PROPAGATE;
+-        });
+ 
+         const rtl = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL;
+         this._box = new St.BoxLayout({
+@@ -333,9 +325,35 @@ export const DockDash = GObject.registerClass({
          });
          this._box._delegate = this;
          this._boxContainer.add_child(this._box);
@@ -83,11 +98,89 @@ index 8d85215..0989994 100755
          Utils.addActor(this._scrollView, this._boxContainer);
          this._dashContainer.add_child(this._scrollView);
  
++        // Track magnification over the whole dash, not just the app-icon box:
++        // the Show Apps icon lives outside _boxContainer, so hovering it used
++        // to count as leaving the dock and reset magnification.
++        this._dashContainer.reactive = true;
++        this._dashContainer.connect('motion-event', (_actor, event) => {
++            this._onDockMotionEvent(event);
++            return Clutter.EVENT_PROPAGATE;
++        });
++        this._dashContainer.connect('leave-event', (_actor, event) => {
++            // Crossing between the dash's own children isn't leaving it
++            const related = event.get_related?.();
++            if (related && this._dashContainer.contains(related))
++                return Clutter.EVENT_PROPAGATE;
++            this._resetMagnification();
++            return Clutter.EVENT_PROPAGATE;
++        });
++
+         this._showAppsIcon = new AppIcons.DockShowAppsIcon(this._position);
+         this._showAppsIcon.show(false);
+         this._showAppsIcon.icon.setIconSize(this.iconSize);
+@@ -835,6 +853,10 @@ export const DockDash = GObject.registerClass({
+             }
+         }
+ 
++        // Grow the dock background with the magnified icons (like the
++        // reference dock) instead of letting the outermost icons spill past it
++        this._stretchBackground(iconData);
++
+         // Apply scales and translations directly to the visual icon actor
+         iconData.forEach(data => {
+             const targetActor = data.icon.icon?._iconBin ?? data.icon.icon ?? data.icon._previewBin ?? data.icon;
+@@ -892,7 +914,46 @@ export const DockDash = GObject.registerClass({
+         });
+     }
+ 
++    _stretchBackground(iconData) {
++        const bg = this._background;
++        const mapped = iconData.filter(d => d.icon.mapped);
++        if (!bg || mapped.length === 0)
++            return;
++        const size = this.iconSize || 48;
++        const first = mapped[0];
++        const last = mapped[mapped.length - 1];
++        // How far the first/last icon now reach past their resting edges
++        const before = Math.max(0, (first.scale - 1) * size / 2 - first.spreadOffset);
++        const after = Math.max(0, (last.scale - 1) * size / 2 + last.spreadOffset);
++        const [bgWidth, bgHeight] = bg.get_size();
++        const length = this._isHorizontal ? bgWidth : bgHeight;
++        if (length <= 0)
++            return;
++        const stretch = (length + before + after) / length;
++        bg.remove_transition('scale-x');
++        bg.remove_transition('scale-y');
++        bg.set_pivot_point(0, 0);
++        if (this._isHorizontal) {
++            bg.scale_x = stretch;
++            bg.translation_x = -before;
++        } else {
++            bg.scale_y = stretch;
++            bg.translation_y = -before;
++        }
++    }
++
++    _resetBackgroundStretch() {
++        const bg = this._background;
++        if (!bg)
++            return;
++        bg.scale_x = 1.0;
++        bg.scale_y = 1.0;
++        bg.translation_x = 0;
++        bg.translation_y = 0;
++    }
++
+     _resetMagnification() {
++        this._resetBackgroundStretch();
+         const appIcons = this.getAppIcons();
+         appIcons.forEach(icon => {
+             const targetActor = icon.icon?._iconBin ?? icon.icon ?? icon._previewBin ?? icon;
 diff --git a/docking.js b/docking.js
-index 2605bdf..a1304bb 100755
+index 2605bdf..3b91d09 100755
 --- a/docking.js
 +++ b/docking.js
-@@ -164,8 +164,33 @@ const DashSlideContainer = GObject.registerClass({
+@@ -164,8 +164,44 @@ const DashSlideContainer = GObject.registerClass({
  
          this.child.allocate(childBox);
  
@@ -97,11 +190,15 @@ index 2605bdf..a1304bb 100755
 +        // screen interior; leave that much room in the clip on that side so
 +        // they aren't sliced off. The screen-edge side keeps its clip for the
 +        // slide in/out animation.
++        // Magnification also spreads icons (and stretches the dock
++        // background) along the dock's length, so allow some room there too.
 +        let headroom = 0;
++        let alongside = 0;
 +        if (DockManager.settings.dockMagnification) {
 +            const factor = Math.max(1, DockManager.settings.magnificationSizeFactor || 1);
 +            const iconSize = DockManager.settings.dashMaxIconSize || 48;
 +            headroom = Math.ceil(iconSize * (factor - 1) * 1.5);
++            alongside = Math.ceil(iconSize * (factor - 1) * 3);
 +        }
 +        // set_clip(x, y, width, height); width/height as upstream computes them
 +        let [clipX, clipY] = [-childBox.x1, -childBox.y1];
@@ -116,6 +213,13 @@ index 2605bdf..a1304bb 100755
 +        } else if (this.side === St.Side.RIGHT) {
 +            clipX -= headroom;
 +            clipW += headroom;
++        }
++        if (this.side === St.Side.BOTTOM || this.side === St.Side.TOP) {
++            clipX -= alongside;
++            clipW += 2 * alongside;
++        } else {
++            clipY -= alongside;
++            clipH += 2 * alongside;
 +        }
 +        this.child.set_clip(clipX, clipY, clipW, clipH);
 +        if ('clip_to_view' in this.child)

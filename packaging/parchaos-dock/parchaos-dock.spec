@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -81,6 +81,8 @@ Patch0:         0001-fix-showappsicon-number-overlay-crash.patch
 # clip_to_allocation=false this fork already sets everywhere. Patch1 renders
 # dock icons at the magnified size, turns off clip-to-view on the dash
 # boxes, and leaves magnification headroom in the slide container's clip.
+# It also tracks magnification over the whole dash (hovering Show Apps used
+# to reset it) and stretches the dock background with the spread icons.
 Patch1:         0002-crisp-uncropped-hover-magnification.patch
 
 BuildArch:      noarch
@@ -160,6 +162,14 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 106-9
+- Follow-ups found on real hardware after 106-8: hovering Show Apps reset
+  magnification (it sits outside the box that tracked the pointer), and
+  the spread icons spilled past the dock background. Track motion over
+  the whole dash (ignoring crossings between its own children), stretch
+  the background with the outermost icons, and give the slide
+  container's clip room along the dock's length. Verified with five
+  hover states in the isolated headless gnome-shell.
 * Fri Sep 25 2026 ParchaOS packaging - 106-8
 - Fix pixelated and top-clipped icons during hover magnification (user
   report with a photo). Root causes: the icon texture was rendered at the
