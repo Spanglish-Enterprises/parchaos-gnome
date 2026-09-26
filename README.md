@@ -177,7 +177,8 @@ Cmd-as-Ctrl) or say "the reference desktop". Renamed so far:
 Still needing ParchaOS names before they're ported: Spotlight, Time
 Machine, the "Apple Tahoe" SDDM theme.
 
-Deliberately kept: upstream project names and URLs (e.g. `MacTahoe`,
+Deliberately kept: upstream project names and URLs (e.g. `MacTahoe` --
+confirmed by the project owner 2026-09-25 to stay as-is, credited, not renamed;
 `gnome-macos-remap-wayland`, Pulsar OS's own "Finder"), because renaming
 them would misstate where the code came from; old names that
 `Obsoletes:`/changelogs need; and direct quotes. This is risk reduction,
