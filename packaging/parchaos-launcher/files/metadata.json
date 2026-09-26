@@ -1,0 +1,11 @@
+{
+  "uuid": "parchaos-launcher@parchaos.org",
+  "name": "ParchaOS Launcher",
+  "description": "A full-screen app launcher: blurred desktop, search, a paged grid of apps with page dots, and folders that open in place. Replaces the overview app grid.",
+  "shell-version": [
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/alexgalicea/parchaos-gnome"
+}

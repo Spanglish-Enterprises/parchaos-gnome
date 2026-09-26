@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -93,6 +93,7 @@ Requires:       parchaos-gdm-logo
 Requires:       parchaos-hblock
 Requires:       parchaos-hanabi
 Requires:       parchaos-desktop-icons
+Requires:       parchaos-launcher
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -136,6 +137,8 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-15
+- Require parchaos-launcher, the new full-screen app launcher.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-14
 - Turn off blur-my-shell application blur: its rectangular blur showed
   behind the rounded top corners of windows (worst in Chromium).

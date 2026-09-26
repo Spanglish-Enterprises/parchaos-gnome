@@ -32,6 +32,11 @@ PROFILE_REPO_PACKAGES=(
     # banner comment. Enabled by default via customize.sh.
     parchaos-global-menu
 
+    # ParchaOS Launcher -- full-screen app launcher replacing the
+    # overview app grid (packaging/parchaos-launcher/). Enabled by
+    # default via customize.sh.
+    parchaos-launcher
+
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # MacTahoe-gtk-theme (MIT), dark variant. Installs as
