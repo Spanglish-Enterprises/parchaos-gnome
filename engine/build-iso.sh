@@ -38,7 +38,7 @@ REPO_ROOT="$(dirname -- "$SCRIPT_DIR")"
 # future omitted --profile would just silently break instead of failing
 # loudly). No default now — --profile is required, see the check below.
 PROFILE=""
-BRANCH="42"          # a Fedora release number ("42", "41", ...) or "rawhide"
+BRANCH=""            # a Fedora release number ("44", ...) or "rawhide"; default from profile.conf
 LOCAL=0               # install profile RPMs from build/local-rpms/ instead of COPR
 CLEAN_BASE=0          # wipe and rebuild the dnf --installroot base cache
 CLEAN_TARGET=0        # wipe and re-clone the working rootfs from the base cache
@@ -130,6 +130,32 @@ source "$PROFILE_DIR/repo.sh"
 # shellcheck source=/dev/null
 source "$PROFILE_DIR/customize.sh"
 
+# The live ISO's boot menu (UEFI and BIOS): the normal quiet boot with the
+# splash, a basic-graphics fallback for GPUs the kernel can't drive yet,
+# and a troubleshooting entry with kernel messages on the serial console
+# (what automated VM tests read).
+live_menu_entries() {
+    local base="root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image"
+    cat <<MENU
+menuentry "Start $PROFILE_DISPLAY_NAME" {
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz $base rhgb quiet
+    initrd (\$root)/boot/initramfs.img
+}
+menuentry "Start $PROFILE_DISPLAY_NAME in basic graphics mode" {
+    linux (\$root)/boot/vmlinuz $base nomodeset quiet
+    initrd (\$root)/boot/initramfs.img
+}
+menuentry "Troubleshooting: start with kernel messages" {
+    set gfxpayload=keep
+    linux (\$root)/boot/vmlinuz $base console=tty0 console=ttyS0,115200n8
+    initrd (\$root)/boot/initramfs.img
+}
+MENU
+}
+
+# The Fedora release: --branch, else the profile's own, else 44.
+BRANCH="${BRANCH:-${PROFILE_FEDORA_RELEASE:-44}}"
 : "${PROFILE_DISPLAY_NAME:?profile.conf must set PROFILE_DISPLAY_NAME}"
 : "${PROFILE_SLUG:?profile.conf must set PROFILE_SLUG}"
 : "${PROFILE_ISO_LABEL:?profile.conf must set PROFILE_ISO_LABEL}"
@@ -454,11 +480,7 @@ search --file --set=root /boot/vmlinuz
 
 set default=0
 set timeout=5
-menuentry "$PROFILE_DISPLAY_NAME" {
-    set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image console=tty0 console=ttyS0,115200n8
-    initrd (\$root)/boot/initramfs.img
-}
+$(live_menu_entries)
 EOF
         if [ -f "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" ]; then
             cp "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" "$ISO_WORKDIR/EFI/BOOT/fonts/unicode.pf2"
@@ -542,11 +564,7 @@ search --file --set=root /boot/vmlinuz
 
 set default=0
 set timeout=5
-menuentry "$PROFILE_DISPLAY_NAME" {
-    set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz root=live:CDLABEL=$PROFILE_ISO_LABEL rd.live.image vga=791 console=tty0 console=ttyS0,115200n8
-    initrd (\$root)/boot/initramfs.img
-}
+$(live_menu_entries)
 EOF
 
 echo "Running grub2-mkrescue..."
