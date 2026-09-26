@@ -101,7 +101,7 @@ recommended), and 25 GB of disk space.
 The ISO is built from this repository on a Fedora 44 machine:
 
 ```sh
-sudo ./engine/build-iso.sh --profile pulsaros --clean-base --clean-target
+sudo ./engine/build-iso.sh --profile parchaos --clean-base --clean-target
 ```
 
 The build takes about 35 minutes and writes the ISO to `build/`. ParchaOS's

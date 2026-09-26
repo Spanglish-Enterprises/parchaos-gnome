@@ -26,7 +26,7 @@
 # most themed Fedora remixes/spins use rather than reinventing a
 # throbber animation from scratch.
 #
-# Not yet wired into profiles/pulsaros/customize.sh's Calamares
+# Not yet wired into profiles/parchaos/customize.sh's Calamares
 # post-install finalization script (parchaos-finalize-install already
 # has a guarded `if [ -d .../parcha-plymouth ]` check pointing at this
 # exact theme name, added in anticipation of this package) -- wiring

@@ -5,7 +5,7 @@ is in the top-level [README](../README.md).
 
 **Status as of 2026-09-26**: a real disk install, reboot, and login has
 happened on the actual physical machine this variant ships to (MSI B650
-GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
+GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/parchaos/`) now
 ships 31 custom packages plus the full Fedora base — dock, global menu
 bar, a full-screen app launcher, Parcha Controls (control center),
 Parcher (the Nautilus-based file manager), ParchaOS Settings (plus a
@@ -79,7 +79,7 @@ engine/            Reusable Fedora ISO build engine (dracut, GRUB,
                     xorriso/El Torito, Secure Boot shim signing) —
                     desktop-environment-agnostic, shared with the KDE
                     repo's own history.
-profiles/pulsaros/  This variant's only profile. packages.list (stock
+profiles/parchaos/  This variant's only profile. packages.list (stock
                     Fedora packages), packages.sh (this project's own
                     31 custom packages, PROFILE_REPO_PACKAGES),
                     customize.sh (branding + dconf defaults),

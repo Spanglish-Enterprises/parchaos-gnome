@@ -6,7 +6,7 @@
 # touches packages already installed; it never installs something new
 # just because it now exists in an enabled repo. This project's own ISO
 # build (engine/build-iso.sh Phase 5) installs every
-# profiles/pulsaros/packages.sh entry as an individually, directly
+# profiles/parchaos/packages.sh entry as an individually, directly
 # requested package -- there was no single thing tying them together
 # that a later `dnf update` could expand.
 #
@@ -25,7 +25,7 @@
 # update" behavior, no manual `dnf install <new-package-name>` needed
 # going forward.
 #
-# MAINTENANCE: whenever profiles/pulsaros/packages.sh gains or loses an
+# MAINTENANCE: whenever profiles/parchaos/packages.sh gains or loses an
 # entry, update the Requires: list below to match and bump Release. The
 # two lists are NOT auto-generated from each other (deliberately kept
 # simple rather than adding build-pipeline machinery for this) -- it's
@@ -129,7 +129,7 @@ Requires:       parchaos-desktop-schemas = %{version}-%{release}
 %description
 A real, no-content meta-package: installing it (or updating it) simply
 pulls in every package this ParchaOS GNOME profile ships, via a plain
-Requires: list kept in sync with profiles/pulsaros/packages.sh. Exists
+Requires: list kept in sync with profiles/parchaos/packages.sh. Exists
 so a plain `sudo dnf update` becomes a genuine "OTA" mechanism for this
 project's own packages going forward -- without this, `dnf update`
 never installs a package that's new since the user's own install, only
@@ -166,7 +166,7 @@ ln -s ../parchaos-extensions-migrate.service \
 ln -s ../parchaos-theme-sync.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
 # Desktop defaults that must also reach existing installs over OTA
-# (profiles/pulsaros/customize.sh only affects freshly built ISOs).
+# (profiles/parchaos/customize.sh only affects freshly built ISOs).
 # Default extensions for new user accounts. Previously written only by the
 # ISO build (customize.sh), so older installs kept an outdated list. Plain
 # (non-%%config) file so RPM replaces the old unowned copy on upgrade.
@@ -338,5 +338,5 @@ fi
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-1
 - Initial package, in direct response to real user feedback that
   `dnf update` alone doesn't pick up newly-added ParchaOS packages.
-  Requires: list matches profiles/pulsaros/packages.sh's
+  Requires: list matches profiles/parchaos/packages.sh's
   PROFILE_REPO_PACKAGES as of this date (14 packages).

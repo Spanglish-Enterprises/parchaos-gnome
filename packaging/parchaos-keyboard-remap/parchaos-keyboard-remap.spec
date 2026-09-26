@@ -41,12 +41,12 @@
 #         disabled so it doesn't fight Super-combinations, GNOME
 #         Terminal's Super-C/V/T/N/W/Q/F bindings, etc.) are
 #         shipped as a system-wide dconf db drop-in (this project's
-#         existing mechanism, see profiles/pulsaros/customize.sh)
+#         existing mechanism, see profiles/parchaos/customize.sh)
 #         instead of one-shot `gsettings set` calls -- declarative,
 #         applies to every user, survives a real disk install.
 #   - config.yml trimmed to the apps this profile actually ships
 #     (org.gnome.Nautilus/Parcher, org.gnome.Terminal -- confirmed via
-#     packaging/parchaos-finder's spec and profiles/pulsaros/
+#     packaging/parchaos-finder's spec and profiles/parchaos/
 #     packages.list, not assumed): dropped the upstream config's
 #     GNOME Console/Ptyxis/Eclipse sections, which this profile
 #     doesn't ship and which would just be dead config otherwise.

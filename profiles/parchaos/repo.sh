@@ -1,5 +1,5 @@
 # ==============================================================================
-# pulsaros profile — repository setup (sourced by engine/build-iso.sh)
+# parchaos profile — repository setup (sourced by engine/build-iso.sh)
 # ==============================================================================
 # Defines profile_setup_repo() / profile_teardown_repo(). Skipped entirely
 # by --skip-branding (used for the unbranded-baseline checkpoint).

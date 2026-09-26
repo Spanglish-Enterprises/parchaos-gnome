@@ -1,5 +1,5 @@
 # ==============================================================================
-# pulsaros profile — base package list (Phase 2 of engine/build-iso.sh)
+# parchaos profile — base package list (Phase 2 of engine/build-iso.sh)
 # One package per line, '#' comments ignored. This is what goes into the
 # dnf --installroot base-cache bootstrap: a plain Fedora GNOME system,
 # with no Pulsar OS / ParchaOS branding/apps yet (those come from

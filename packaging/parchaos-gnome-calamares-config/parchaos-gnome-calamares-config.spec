@@ -190,7 +190,7 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
   explains the setlocale warnings seen on every login all night, and
   is the likely cause of Nautilus's own repeated ABRT crashes seen in
   the same journal window. Fixed by adding glibc-langpack-en to
-  profiles/pulsaros/packages.list. (3) A MediaTek MT7922 WiFi/
+  profiles/parchaos/packages.list. (3) A MediaTek MT7922 WiFi/
   Bluetooth combo card's Bluetooth firmware was missing entirely
   (dmesg flooded with firmware load failures every ~0.5s, forever) --
   confirmed via `rpm -qf` on a real Fedora 44 system that this

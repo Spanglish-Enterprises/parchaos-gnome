@@ -1,5 +1,5 @@
 # ==============================================================================
-# pulsaros profile — branding/session customization (sourced by
+# parchaos profile — branding/session customization (sourced by
 # engine/build-iso.sh)
 # ==============================================================================
 # Defines profile_customize(), called by the engine in Phase 5.5, after

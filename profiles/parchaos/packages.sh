@@ -1,5 +1,5 @@
 # ==============================================================================
-# pulsaros profile — package groupings (sourced by engine/build-iso.sh)
+# parchaos profile — package groupings (sourced by engine/build-iso.sh)
 # ==============================================================================
 # Installed in Phase 5, against the repo set up by profile_setup_repo()
 # in repo.sh (this profile's own COPR + RPM Fusion).

@@ -24,14 +24,14 @@ on:
       # for any manual run that forgot to set it. Required now, matching
       # engine/build-iso.sh's own --profile no-longer-has-a-default fix.
       profile:
-        description: "Profile to build (profiles/pulsaros)"
+        description: "Profile to build (profiles/parchaos)"
         required: true
       branch:
         description: "Fedora release (a number, or 'rawhide')"
         default: "44"
         required: false
   schedule:
-    # Scheduled runs get no inputs, so they build the GNOME (pulsaros)
+    # Scheduled runs get no inputs, so they build the GNOME (parchaos)
     # profile, which is the product this repository ships.
     - cron: "0 6 * * 0"   # weekly, Sundays 06:00 UTC
 
@@ -52,7 +52,7 @@ jobs:
       - name: Build ISO
         run: |
           ./engine/build-iso.sh \
-            --profile "${{ github.event.inputs.profile || 'pulsaros' }}" \
+            --profile "${{ github.event.inputs.profile || 'parchaos' }}" \
             --branch "${{ github.event.inputs.branch || '44' }}" \
             --clean-target
 

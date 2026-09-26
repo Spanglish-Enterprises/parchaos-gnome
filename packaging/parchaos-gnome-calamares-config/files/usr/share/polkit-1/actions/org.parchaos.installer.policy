@@ -3,7 +3,7 @@
  "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!-- The installer's own action, so the live session can allow exactly this
-     one program (see the live rule in profiles/pulsaros/customize.sh), the
+     one program (see the live rule in profiles/parchaos/customize.sh), the
      way Fedora's live media allow org.fedoraproject.pkexec.liveinst.
      Everywhere else it needs an administrator password. -->
 <policyconfig>
