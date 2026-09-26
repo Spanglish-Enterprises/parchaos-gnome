@@ -143,8 +143,7 @@ Please report security problems privately (see [SECURITY.md](SECURITY.md)).
 ParchaOS stands on the shoulders of:
 
 - **[Fedora](https://fedoraproject.org)** and **[GNOME](https://www.gnome.org)**, the foundation.
-- **[Pulsar OS "Bitten Fruit"](https://bittenfruit.inled.es/)** by Inled
-  and **[pearOS](https://github.com/pearOS-archlinux)**, whose desktops inspired this one.
+- **Inled**, whose dock and file manager Parcha Dock and Parcher are based on.
 - **[MacTahoe](https://github.com/vinceliuice/MacTahoe-gtk-theme)** themes by
   vinceliuice, **Dash to Dock**, **xremap**, and the GNOME Shell extension
   authors credited in each package.
