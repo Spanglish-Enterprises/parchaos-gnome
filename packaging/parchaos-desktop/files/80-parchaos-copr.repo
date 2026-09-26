@@ -1,0 +1,7 @@
+# Prefer the ParchaOS repository over Fedora's for packages both provide.
+# ParchaOS ships a few Fedora packages with patches (gnome-control-center
+# with the ParchaOS Settings panel); without this, any newer Fedora build
+# of them would silently replace the ParchaOS one. dnf's default priority
+# is 99; lower wins. Only packages with the same name are affected.
+[copr:copr.fedorainfracloud.org:alexgalicea:parchaos-gnome]
+priority=90

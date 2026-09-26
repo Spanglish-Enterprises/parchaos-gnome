@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -81,6 +81,9 @@ Source3:        flathub.flatpakrepo
 # enabled-extensions list (which otherwise hides new defaults forever).
 Source4:        parchaos-extensions-migrate
 Source5:        parchaos-extensions-migrate.service
+# Repository priority so ParchaOS's patched Fedora packages aren't replaced
+# by newer Fedora builds.
+Source6:        80-parchaos-copr.repo
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
@@ -135,6 +138,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 install -m0644 %{SOURCE1} %{SOURCE2} %{buildroot}%{_sysconfdir}/dconf/db/local.d/
 install -Dm0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-extensions-migrate
+install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/dnf5/repos.override.d/80-parchaos-copr.repo
 install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
 mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
 ln -s ../parchaos-extensions-migrate.service \
@@ -183,11 +187,14 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-extensions-tuning
 %{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
 %{_libexecdir}/parchaos-extensions-migrate
+%{_datadir}/dnf5/repos.override.d/80-parchaos-copr.repo
 %{_userunitdir}/parchaos-extensions-migrate.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-24
+- Prefer the ParchaOS repository over Fedora's for same-name packages (dnf priority 90), so the patched GNOME Settings isn't replaced by newer Fedora builds.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-23
 - Turn on newly added ParchaOS extensions for users with their own extension list (parchaos-extensions-migrate user service, once per extension).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-22
