@@ -1,0 +1,11 @@
+{
+  "uuid": "parchaos-session@parchaos.org",
+  "name": "ParchaOS Session Restore",
+  "description": "Reopens the apps you had open when you log back in, and puts their windows back where they were.",
+  "shell-version": [
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/alexgalicea/parchaos-gnome"
+}

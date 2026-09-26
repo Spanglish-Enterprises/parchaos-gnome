@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -45,6 +45,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
+- General page: "Reopen apps when logging back in" (session restore).
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
 - Appearance page: choose the Glass or Classic style.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-1

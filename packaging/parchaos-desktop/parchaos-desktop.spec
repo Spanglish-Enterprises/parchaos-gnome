@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        19%{?dist}
+Release:        20%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -99,6 +99,7 @@ Requires:       parchaos-desktop-icons
 Requires:       parchaos-launcher
 Requires:       parchaos-controls
 Requires:       parchaos-settings
+Requires:       parchaos-session
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -127,7 +128,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -159,6 +160,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-20
+- Schema: add restore-session (default on).
+- Require and enable parchaos-session (session restore).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-19
 - Add the org.parchaos.desktop schema with the "style" key (glass or
   classic) that ParchaOS's extensions follow.

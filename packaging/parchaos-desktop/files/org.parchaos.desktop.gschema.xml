@@ -15,5 +15,13 @@
         "classic": calmer frosted surfaces, more opaque, with tighter corners.
       </description>
     </key>
+    <key name="restore-session" type="b">
+      <default>true</default>
+      <summary>Reopen apps when logging back in</summary>
+      <description>
+        Reopen the apps that were open at the end of the last session and
+        put their windows back where they were.
+      </description>
+    </key>
   </schema>
 </schemalist>

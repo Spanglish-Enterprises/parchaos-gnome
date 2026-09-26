@@ -46,6 +46,10 @@ PROFILE_REPO_PACKAGES=(
     # (packaging/parchaos-settings/), e.g. Super as Ctrl.
     parchaos-settings
 
+    # Session restore (packaging/parchaos-session/): reopens last
+    # session's apps and windows at login.
+    parchaos-session
+
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # MacTahoe-gtk-theme (MIT), dark variant. Installs as

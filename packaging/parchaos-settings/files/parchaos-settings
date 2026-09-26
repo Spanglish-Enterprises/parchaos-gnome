@@ -31,6 +31,7 @@ class Window(Adw.PreferencesWindow):
         self.set_default_size(620, 480)
         self.set_search_enabled(False)
 
+        self.add(self._general_page())
         self.add(self._appearance_page())
 
         page = Adw.PreferencesPage(title='Keyboard',
@@ -54,6 +55,29 @@ class Window(Adw.PreferencesWindow):
         self._super_row.connect('notify::active', self._on_super_toggled)
         group.add(self._super_row)
         self.add(page)
+
+    def _desktop_settings(self):
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup('org.parchaos.desktop', True) if source else None
+        return Gio.Settings(settings_schema=schema) if schema else None
+
+    def _general_page(self):
+        page = Adw.PreferencesPage(title='General',
+                                   icon_name='preferences-system-symbolic')
+        group = Adw.PreferencesGroup(title='Sessions')
+        page.add(group)
+        row = Adw.SwitchRow(
+            title='Reopen apps when logging back in',
+            subtitle='Apps you had open come back where they were, and apps '
+                     'that remember their documents reopen them too.')
+        settings = self._desktop_settings()
+        if settings is None:
+            row.set_sensitive(False)
+        else:
+            settings.bind('restore-session', row, 'active', Gio.SettingsBindFlags.DEFAULT)
+            self._general_settings = settings
+        group.add(row)
+        return page
 
     def _appearance_page(self):
         page = Adw.PreferencesPage(title='Appearance',
