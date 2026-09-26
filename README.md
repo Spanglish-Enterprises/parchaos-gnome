@@ -1,16 +1,19 @@
 # ParchaOS (GNOME variant) — pearOS/Pulsar OS on Fedora
 
-**Status as of 2026-09-25**: a real disk install, reboot, and login has
+**Status as of 2026-09-26**: a real disk install, reboot, and login has
 happened on the actual physical machine this variant ships to (MSI B650
 GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
-ships 25 real custom packages plus the full Fedora base — dock, global
-menu, Finder (Nautilus fork), GTK/icon/Plymouth/wallpaper theming
-(light + dark), a Chromium-based browser alongside the WebKitGTK one,
-a Super-as-Ctrl keyboard remap, cloud drives, focus schedule, auto light/dark,
-TMOG, a hosts-file ad-blocker, a real live/video wallpaper, Desktop
-Icons NG, and 12 of Pulsar OS's own real GNOME Shell extensions for
-desktop polish (traffic-light window buttons, genie minimize
-effect, top-right notification banners, blur, and more). The KDE-only
+ships 30 custom packages plus the full Fedora base — dock, global menu
+bar, a full-screen app launcher, Parcha Controls (control center),
+Parcher (the Nautilus-based file manager), ParchaOS Settings (plus a
+panel in GNOME Settings), session restore, live Clock and Calendar
+icons, two visual styles (Glass and Classic), GTK/icon/Plymouth/wallpaper
+theming (light + dark) with original ParchaOS icons, a Chromium-based
+browser, a Super-as-Ctrl keyboard remap, scheduled Do Not Disturb, auto
+light/dark, TMOG, a hosts-file ad-blocker, a live/video wallpaper,
+Desktop Icons NG, and GNOME Shell extensions from Pulsar OS's own list
+for desktop polish (traffic-light window buttons, genie minimize effect,
+top-right notification banners, blur, and more). The KDE-only
 cruft this repo inherited from its original fork (`profiles/pearos/`
 and its packaging) has been fully removed.
 
@@ -32,6 +35,9 @@ job is now just to orient you to them, not to duplicate their detail:
   outreach email to Inled covering everything blocked is drafted but
   **not yet sent** — that's the single highest-leverage next step if
   you're picking this up fresh.
+- `docs/gnome-phase4-findings.md` — the ParchaOS-original desktop pieces
+  (launcher, Parcha Controls, settings, session restore, live icons,
+  styles, original icons) and the September 2026 audits.
 - `docs/gnome-phase3-findings.md` — scoping and shipping the three
   "bigger feature" gaps that don't depend on Inled's answer
   (`gnome-software`, a real hosts-file ad-blocker, a real Wayland-native
@@ -67,7 +73,7 @@ which repo a task belongs in, ask.
 **A real, important caveat on Pulsar OS's own licensing** (see
 `docs/gnome-phase2-findings.md` for the full audit): their own
 project's license claims don't hold up against the real repos in most
-places. Their fork of Nautilus (used as this project's own Finder) has
+places. Their fork of Nautilus (the base of this project's Parcher) has
 a real, confirmed license. Almost everything else original to Inled —
 Sayri, Time Machine, Welcome, Cloud, the keyboard remapper, the
 Plymouth/Calamares/sound themes, Spotlight, Circle-to-Search, Control
@@ -87,7 +93,7 @@ engine/            Reusable Fedora ISO build engine (dracut, GRUB,
                     repo's own history.
 profiles/pulsaros/  This variant's only profile. packages.list (stock
                     Fedora packages), packages.sh (this project's own
-                    25 custom packages, PROFILE_REPO_PACKAGES),
+                    30 custom packages, PROFILE_REPO_PACKAGES),
                     customize.sh (branding + dconf defaults),
                     repo.sh, profile.conf.
 packaging/          One directory per custom package, each with a
@@ -97,7 +103,9 @@ packaging/          One directory per custom package, each with a
                     explaining what it is, why it exists, and the
                     real bugs found building/shipping it — read the
                     spec before assuming what a package does.
-docs/               gnome-phase{0,1,2,3}-findings.md — see above.
+docs/               gnome-phase{0,1,2,3,4}-findings.md — see above;
+                    security-audit-2026-09.md.
+scripts/lint.sh     The static checks CI runs on every push.
                     pearos-ui-reference/ — historical KDE-era design
                     reference, not this repo's own history.
 ```
@@ -105,11 +113,16 @@ docs/               gnome-phase{0,1,2,3}-findings.md — see above.
 ## What's actually shipped (see the phase docs for the "why" and the real bugs behind each)
 
 **Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, genie minimize
-effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (real
-global menu bar), `parchaos-gtk-theme`/`parchaos-icon-theme`
-(MacTahoe, both light and dark), `parchaos-gnome-wallpaper`,
-`parchaos-gnome-plymouth-theme` (currently a safe no-op guard, see
-"Still deferred" below), `parchaos-gdm-logo`, `parchaos-desktop-icons`
+effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (global
+menu bar with the About ParchaOS card and weather), `parchaos-launcher`
+(full-screen app launcher with folders, search and uninstall),
+`parchaos-controls` (Parcha Controls, the control center),
+`parchaos-session` (reopens the last session's apps and windows),
+`parchaos-live-icons` (live Clock and Calendar icons),
+`parchaos-gtk-theme`/`parchaos-icon-theme` (MacTahoe, light and dark,
+with original ParchaOS icons replacing the Apple-look ones),
+`parchaos-gnome-wallpaper`, `parchaos-gnome-plymouth-theme`
+(parcha-plymouth boot splash), `parchaos-gdm-logo`, `parchaos-desktop-icons`
 (DING), `parchaos-hanabi` (real video wallpaper), plus 8 more
 independently-licensed GNOME Shell extensions for polish
 (`blur-my-shell`, Just Perfection, No Overview, AppIndicator,
@@ -117,8 +130,11 @@ independently-licensed GNOME Shell extensions for polish
 `parchaos-ui-tune`) — 12 of Pulsar OS's own real ~15-extension list in
 total.
 
-**Apps**: `parchaos-finder` (real Nautilus fork, GPL-3.0, genuinely
-clear to redistribute), `parchaos-browser` ("Parcha Browser": thin Chromium
+**Apps and settings**: `parchaos-finder` (Parcher, a Nautilus fork,
+GPL-3.0), `parchaos-settings` (ParchaOS Settings: style, session
+restore, Focus schedule, keyboard; also reachable from a ParchaOS panel
+in GNOME Settings, `packaging/gnome-control-center/`, a patched Fedora
+build the ParchaOS repository is preferred for), `parchaos-browser` ("Parcha Browser": thin Chromium
 rebrand and the default web browser; it replaced and Obsoletes `pafari`, the
 old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Preview,
 Clocks → Clock, Geary → Mail, Software → Parcha Store),
@@ -136,8 +152,13 @@ took (see phase0/phase1 docs for the full saga: BIOS boot partitions,
 kernel-install-on-target, EFI System Partition population, a Calamares
 app-removal cascade-removal regression caught and fixed twice).
 
-**OTA mechanism**: `parchaos-desktop`, a no-content meta-package whose
-`Requires:` list names every package above — installing/updating it is
+**System**: `parchaos-release` keeps the ParchaOS name, logo and links
+in `/etc/os-release` across Fedora updates.
+
+**OTA mechanism**: `parchaos-desktop`, a meta-package whose `Requires:`
+list names every package above (it also ships the desktop-wide dconf
+defaults, the `org.parchaos.desktop` settings schema, the Flathub
+remote and the per-user extension migration) — installing/updating it is
 what makes a plain `sudo dnf update` on an already-installed system
 pick up packages added to this profile after the user's own install,
 not just upgrade ones already present. **Must be kept in sync by hand**
@@ -151,10 +172,8 @@ project's own real hardware more than once; see phase1/phase3 docs.
 - Deeper Calamares installer skinning to match the desktop's look (real QML/UI work,
   not started — could be done as this project's own original work,
   doesn't need Pulsar's blocked `calamares-themes`).
-- A real Plymouth boot-splash theme (`parcha-plymouth` doesn't exist
-  yet; the theme-switch step is a safe no-op in the meantime).
-- A "Liquid Glass" blur/glass GNOME Shell extension equivalent (real
-  source already identified: `ryohsuke1231/liquid-glass`, not started).
+- Deeper glass effects (refraction, highlights) beyond the blur the
+  Glass style uses today (a candidate source: `ryohsuke1231/liquid-glass`).
 - `parchaos-cloud`'s replacement (see above).
 
 ## Blocked on Inled (one email would unblock all of it)
@@ -194,8 +213,7 @@ Renamed so far:
 Software -> "Parcha Store" ("App Store" is itself a trademark). Approved names for
 upcoming features: Parcha Time (backups), Parcha Controls (control center),
 ParchaOS Recovery.
-Still needing ParchaOS names before they're ported: Spotlight and the
-"Apple Tahoe" SDDM theme.
+Still needing a ParchaOS name before it's built: system-wide search.
 
 Deliberately kept: upstream project names and URLs (e.g. `MacTahoe` --
 confirmed by the project owner 2026-09-25 to stay as-is, credited, not renamed;

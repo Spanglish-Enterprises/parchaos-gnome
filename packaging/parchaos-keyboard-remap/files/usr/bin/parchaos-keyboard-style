@@ -2,14 +2,17 @@
 # parchaos-keyboard-style: choose how the Super key behaves for the
 # current user.
 #
-#   mac      Super works like Cmd: xremap swaps Super and Ctrl, and the
-#            ParchaOS keybinding defaults (02-parchaos-keyboard-remap)
-#            apply. This is the default.
-#   windows  Super keeps its usual role (overview, Super+Tab, ...) and
-#            Ctrl stays Ctrl: xremap is off and GNOME's stock shortcuts
-#            are written into the user's own settings, over the ParchaOS
-#            defaults.
-#   status   print the current style.
+#   super-ctrl  Super is used for app shortcuts (Super+C, Super+V, ...):
+#               xremap swaps Super and Ctrl, and the ParchaOS keybinding
+#               defaults (02-parchaos-keyboard-remap) apply. The default.
+#   standard    Super keeps its usual role (overview, Super+Tab, ...) and
+#               Ctrl stays Ctrl: xremap is off and GNOME's stock shortcuts
+#               are written into the user's own settings, over the
+#               ParchaOS defaults.
+#   status      print the current style.
+#
+# The old names "mac" and "windows" are still accepted, and a state file
+# written with them is read (and rewritten) as the new names.
 #
 # Takes effect immediately, no log out needed.
 
@@ -55,14 +58,13 @@ schema_exists() {
 }
 
 current() {
-    if [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = windows ]; then
-        echo windows
-    else
-        echo mac
-    fi
+    case "$(cat "$STATE_FILE" 2>/dev/null)" in
+        standard|windows) echo standard ;;
+        *) echo super-ctrl ;;
+    esac
 }
 
-set_windows() {
+set_standard() {
     # The unit is enabled system-wide, so a per-user disable wouldn't stick
     # across logins; masking does.
     systemctl --user stop "$SERVICE" >/dev/null 2>&1
@@ -75,10 +77,10 @@ set_windows() {
         gsettings set "$schema" "$key" "$stock"
     done
     mkdir -p "$STATE_DIR"
-    echo windows >"$STATE_FILE"
+    echo standard >"$STATE_FILE"
 }
 
-set_mac() {
+set_super_ctrl() {
     for entry in "${KEYS[@]}"; do
         read -r schema key <<<"$entry"
         schema_exists "$schema" || continue
@@ -87,15 +89,15 @@ set_mac() {
     systemctl --user unmask "$SERVICE" >/dev/null 2>&1
     systemctl --user start "$SERVICE" >/dev/null 2>&1
     mkdir -p "$STATE_DIR"
-    echo mac >"$STATE_FILE"
+    echo super-ctrl >"$STATE_FILE"
 }
 
 case "${1:-status}" in
-    mac) set_mac ;;
-    windows) set_windows ;;
+    super-ctrl|mac) set_super_ctrl ;;
+    standard|windows) set_standard ;;
     status) current ;;
     *)
-        echo "usage: parchaos-keyboard-style [mac|windows|status]" >&2
+        echo "usage: parchaos-keyboard-style [super-ctrl|standard|status]" >&2
         exit 2
         ;;
 esac

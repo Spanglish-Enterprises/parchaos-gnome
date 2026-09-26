@@ -20,7 +20,7 @@ def keyboard_style():
     try:
         out = subprocess.run([KEYBOARD_STYLE, 'status'], capture_output=True,
                              text=True, timeout=10)
-        return out.stdout.strip() or 'mac'
+        return out.stdout.strip() or 'super-ctrl'
     except (OSError, subprocess.TimeoutExpired):
         return None
 
@@ -51,7 +51,7 @@ class Window(Adw.PreferencesWindow):
             self._super_row.set_sensitive(False)
             self._super_row.set_subtitle('Keyboard remapping is not installed.')
         else:
-            self._super_row.set_active(style != 'windows')
+            self._super_row.set_active(style not in ('standard', 'windows'))
         self._super_row.connect('notify::active', self._on_super_toggled)
         group.add(self._super_row)
         self.add(page)
@@ -185,7 +185,7 @@ class Window(Adw.PreferencesWindow):
             self._desktop.set_string('style', value)
 
     def _on_super_toggled(self, row, _pspec):
-        style = 'mac' if row.get_active() else 'windows'
+        style = 'super-ctrl' if row.get_active() else 'standard'
         row.set_sensitive(False)
 
         def done(proc, res):

@@ -272,7 +272,7 @@ gnome-weather
 gnome-calendar
 gnome-contacts
 
-# AirDrop/Handoff equivalent — GSConnect, a real GNOME Shell extension
+# Phone and nearby-device sharing — GSConnect, a real GNOME Shell extension
 # (confirmed listed in Pulsar OS's own bundled-extensions table,
 # andyholmes/gnome-shell-extension-gsconnect upstream). Fedora ships it
 # directly.

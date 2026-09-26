@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -23,7 +23,7 @@ BuildRequires:  desktop-file-utils
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
-Requires:       parchaos-keyboard-remap >= 0.15.13-5
+Requires:       parchaos-keyboard-remap >= 0.15.13-6
 
 %description
 ParchaOS Settings holds preferences specific to ParchaOS, starting with
@@ -45,6 +45,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
+- Use the new keyboard style names (super-ctrl, standard); requires
+  parchaos-keyboard-remap 0.15.13-6.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
 - General: a Focus group to turn scheduled Do Not Disturb on or off and
   set its start and end times.
