@@ -48,23 +48,11 @@ job is now just to orient you to them, not to duplicate their detail:
 
 ## What this repo is
 
-This is a **GNOME-based** sibling of `parchaos` (KDE, private)
-(the original, working, KDE Plasma–based ParchaOS — a Fedora port of
-[pearOS](https://github.com/pearOS-archlinux), a macOS-styled Linux distro).
-
-**Why a second repo instead of continuing the KDE one**: pearOS's own
-desktop look is itself downstream of a much larger, more mature, more
-complete project called **Pulsar OS "Bitten Fruit"**
-(https://bittenfruit.inled.es/, source at
-[`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG),
-GNOME-based). Pulsar OS already has working, polished,
-actively-maintained implementations of nearly everything on this
-project's roadmap. All of it is GNOME Shell-extension-based, so **none
-of it runs under KDE Plasma** — hence a separate repo rather than
-trying to bolt GNOME Shell extensions onto the existing KDE build.
-
-The KDE variant is kept as a separate, working project; this repo
-doesn't replace it.
+ParchaOS is a GNOME desktop built on Fedora Linux. This repository holds
+the ISO build engine, the one build profile, and every package ParchaOS
+adds on top of Fedora. Where a package is based on someone else's code,
+its spec says so and credits the upstream project (see also
+`docs/LEGAL.md`).
 
 **Licensing of upstream components**: only package code with a real
 LICENSE file behind it. Several Pulsar OS components have none (see
