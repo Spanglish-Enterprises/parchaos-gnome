@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-14
+- Weather: location being turned off is logged as debug output, not an
+  error.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-13
 - About card no longer blocks the desktop (GNOME version from the shell itself, graphics looked up in the background); shows the full-color ParchaOS mark. Weather cancels its location lookup and disconnects on disable. Replace deprecated vertical: true.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-12

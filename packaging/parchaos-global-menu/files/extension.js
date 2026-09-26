@@ -241,8 +241,10 @@ const WeatherIndicator = GObject.registerClass({
         try {
             this._geoclueSimple = Geoclue.Simple.new_finish(result);
         } catch (e) {
+            // Location turned off (or not allowed) is a normal choice: the
+            // weather just stays hidden.
             if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                console.error('[ParchaOSGlobalMenu] Geoclue unavailable for weather:', e);
+                console.debug(`[ParchaOSGlobalMenu] No location for weather: ${e.message}`);
             return;
         }
         this._locationId = this._geoclueSimple.connect('notify::location',

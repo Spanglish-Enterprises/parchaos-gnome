@@ -19,6 +19,19 @@ jobs:
       - name: Run checks
         run: scripts/lint.sh
 
+  # Starts a headless GNOME Shell with the ParchaOS extensions straight
+  # from the repository and drives them (scripts/smoke-test.sh).
+  smoke:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install GNOME Shell
+        run: dnf -y install gnome-shell mesa-dri-drivers dbus-daemon glib2 python3 gnome-weather
+      - name: Run the smoke test
+        run: scripts/smoke-test.sh
+
   # ParchaOS ships patched builds of some Fedora packages. The ParchaOS
   # repository has higher dnf priority, so a newer Fedora build does NOT
   # replace them: users would silently miss Fedora's fixes until the fork

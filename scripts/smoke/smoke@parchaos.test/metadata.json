@@ -1,0 +1,6 @@
+{
+  "uuid": "smoke@parchaos.test",
+  "name": "ParchaOS smoke test",
+  "description": "Drives the ParchaOS extensions in a headless shell (scripts/smoke-test.sh).",
+  "shell-version": ["48", "49", "50"]
+}
