@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -93,6 +93,11 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 2.1.0-8
+- Menu bar follows the macOS 26-era reference values instead of the
+  macOS 27 ones: 11 px item padding (22 px gaps), bold app name, a soft
+  text glow and a light darkening that fades down from the top edge, for
+  legibility over bright wallpapers.
 * Fri Sep 25 2026 ParchaOS packaging - 2.1.0-7
 - Menu bar measured against a reference UI kit: 9 px padding per item
   with no extra gap, 10 px for the app name, 33 px logo item; menu items

@@ -6,7 +6,16 @@
     height: 16px;
 }
 
-/* Menu bar items: 13 px text, semibold items and a heavy app name, and a
+/* The bar itself: a light darkening that fades down from the top edge so
+   the white text stays readable over bright wallpapers. Only while this
+   extension runs (class added to #panel on enable). */
+#panel.parchaos-menubar {
+    background-gradient-direction: vertical;
+    background-gradient-start: rgba(0, 0, 0, 0.16);
+    background-gradient-end: rgba(0, 0, 0, 0.0);
+}
+
+/* Menu bar items: 13 px text, semibold items and a bold app name, and a
    faint pill-shaped highlight on hover and while a menu is open (the
    reference uses a ~8% white pill; slightly stronger here since GNOME has
    no plus-lighter blend). The theme's label padding rule wins over ours,
@@ -36,13 +45,15 @@
 }
 
 .parchaos-menubar-app-label {
-    font-weight: 800;
+    font-weight: bold;
+    text-shadow: 0 1px 6px rgba(204, 204, 204, 0.6);
     color: #ffffff;
     font-size: 13px;
 }
 
 .parchaos-menubar-label {
     font-weight: 600;
+    text-shadow: 0 1px 6px rgba(204, 204, 204, 0.6);
     color: #ffffff;
     font-size: 13px;
     transition: color 0.15s ease;

@@ -255,6 +255,7 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
 
 export default class ParchaOSGlobalMenuExtension extends Extension {
     enable() {
+        Main.panel.add_style_class_name('parchaos-menubar');
         this._menuBarButtons = [];
         this._activeAppWindow = null;
         this._focusNotifyId = 0;
@@ -274,9 +275,9 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         let pos = 1;
         for (const button of this._menuBarButtons) {
             // Padding from the reference menu bar: the logo item is 33 px
-            // wide around a 16 px glyph, the app name ~10 px, menu items
-            // 9 px each side with no gap between them.
-            const pad = {logo: 8, app: 10}[button.roleId] ?? 9;
+            // wide around a 16 px glyph; the app name and menu items have
+            // 11 px each side with no gap between them.
+            const pad = {logo: 8}[button.roleId] ?? 11;
             button.add_style_class_name('parchaos-menubar-button');
             button.set_style(`-natural-hpadding: ${pad}px; -minimum-hpadding: ${pad}px;`);
             Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, pos++, 'left');
@@ -292,6 +293,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     }
 
     disable() {
+        Main.panel.remove_style_class_name('parchaos-menubar');
         if (this._focusNotifyId) {
             global.display.disconnect(this._focusNotifyId);
             this._focusNotifyId = 0;
