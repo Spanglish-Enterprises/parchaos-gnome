@@ -381,9 +381,16 @@ cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.
 # to; real hardware with Secure Boot on needs the shim chain).
 HAVE_UEFI=0
 SECUREBOOT_DIR="$PROFILE_DIR/ploader/secureboot"
-if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+# Fedora's signed shim (shim-x64) and CD-boot GRUB come from the target
+# itself, so UEFI boot (including Secure Boot) doesn't depend on a
+# profile shipping its own copies under ploader/ (ticket #55).
+# (Fedora 44 installs them under /usr/lib/efi/<package>/<version>/; older
+# releases put them straight on /boot/efi.)
+ROOTFS_EFI_DIR="$(dirname "$(find "$ROOTFS_TARGET/usr/lib/efi/shim" -name shimx64.efi 2>/dev/null | sort -V | tail -1)")"
+[ -f "$ROOTFS_EFI_DIR/shimx64.efi" ] || ROOTFS_EFI_DIR="$ROOTFS_TARGET/boot/efi/EFI/fedora"
+if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx64.efi" ]; then
     HAVE_UEFI=1
-    echo "Building UEFI boot image (Ploader)..."
+    echo "Building UEFI boot image..."
     mkdir -p "$ISO_WORKDIR/EFI/BOOT"
     EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
     # VERIFIED ROOT CAUSE (2026-09-21, see docs/phase4-findings.md "UEFI
@@ -425,7 +432,8 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     MOK_KEY="${PLOADER_MOK_KEY:-$REAL_HOME/pearos-mok/pearos-mok.key}"
     MOK_CERT="${PLOADER_MOK_CERT:-$REAL_HOME/pearos-mok/pearos-mok.crt}"
     SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
-    if command -v sbsign >/dev/null 2>&1 && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
+    if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] && command -v sbsign >/dev/null 2>&1 \
+       && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
         echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
         SIGNED_PLOADER="$BUILD_DIR/ploader_x64_signed.efi"
         sbsign --key "$MOK_KEY" --cert "$MOK_CERT" --output "$SIGNED_PLOADER" \
@@ -452,11 +460,14 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
     if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi" ]; then
         UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi"
     fi
-    if [ -f "$SECUREBOOT_DIR/shimx64.efi" ] && [ -f "$SECUREBOOT_DIR/mmx64.efi" ] \
-       && [ -n "$UEFI_GRUB_EFI" ]; then
+    SHIM_EFI="$SECUREBOOT_DIR/shimx64.efi"
+    [ -f "$SHIM_EFI" ] || SHIM_EFI="$ROOTFS_EFI_DIR/shimx64.efi"
+    MM_EFI="$SECUREBOOT_DIR/mmx64.efi"
+    [ -f "$MM_EFI" ] || MM_EFI="$ROOTFS_EFI_DIR/mmx64.efi"
+    if [ -f "$SHIM_EFI" ] && [ -f "$MM_EFI" ] && [ -n "$UEFI_GRUB_EFI" ]; then
         echo "Chaining shim -> Fedora's real grub2-efi-x64-cdboot (gcdx64.efi) for UEFI kernel boot."
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/shimx64.efi" ::/EFI/BOOT/BOOTX64.EFI
-        mcopy -i "$EFIBOOT_IMG" "$SECUREBOOT_DIR/mmx64.efi" ::/EFI/BOOT/mmx64.efi
+        mcopy -i "$EFIBOOT_IMG" "$SHIM_EFI" ::/EFI/BOOT/BOOTX64.EFI
+        mcopy -i "$EFIBOOT_IMG" "$MM_EFI" ::/EFI/BOOT/mmx64.efi
         mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" ::/EFI/BOOT/grubx64.efi
         # gcdx64.efi's own prefix/config search targets the OUTER ISO9660
         # filesystem it was booted from (i.e. (cd0) as GRUB itself sees it),
@@ -486,8 +497,13 @@ EOF
             cp "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" "$ISO_WORKDIR/EFI/BOOT/fonts/unicode.pf2"
         fi
     else
-        echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
-        mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+        if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+            echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
+            mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
+        else
+            echo "ERROR: no signed shim, MokManager or grub2-efi-x64-cdboot in the target; can't build UEFI boot." >&2
+            exit 1
+        fi
     fi
 else
     echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
