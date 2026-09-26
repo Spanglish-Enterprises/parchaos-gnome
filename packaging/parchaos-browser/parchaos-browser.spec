@@ -47,7 +47,7 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -89,6 +89,33 @@ install -Dm 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/xdg/gnome-mimeapps.list
 install -Dm 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/xdg/mimeapps.list
 install -Dm 0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
+# Parcha Browser *is* Chromium, so Chromium's own launcher entry is a
+# duplicate in the app grid and launcher. Hide it (NoDisplay=true in its
+# main section only) at install and again whenever chromium is updated,
+# since an update replaces its .desktop file. Links and "Open With" keep
+# going to es.parchaos.Browser.desktop through the mimeapps defaults.
+%post
+f=%{_datadir}/applications/chromium-browser.desktop
+if [ -f "$f" ] && ! sed -n '0,/^\[Desktop Action/p' "$f" | grep -q '^NoDisplay=true'; then
+    sed -i '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' "$f"
+fi
+update-desktop-database %{_datadir}/applications &>/dev/null || :
+
+%triggerin -- chromium
+f=%{_datadir}/applications/chromium-browser.desktop
+if [ -f "$f" ] && ! sed -n '0,/^\[Desktop Action/p' "$f" | grep -q '^NoDisplay=true'; then
+    sed -i '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' "$f"
+fi
+update-desktop-database %{_datadir}/applications &>/dev/null || :
+
+%postun
+# Removing Parcha Browser: show Chromium's own entry again.
+if [ $1 -eq 0 ]; then
+    f=%{_datadir}/applications/chromium-browser.desktop
+    [ -f "$f" ] && sed -i '0,/^\[Desktop Action/{/^NoDisplay=true$/d}' "$f"
+    update-desktop-database %{_datadir}/applications &>/dev/null || :
+fi
+
 %files
 %{_datadir}/applications/es.parchaos.Browser.desktop
 %config(noreplace) %{_sysconfdir}/xdg/gnome-mimeapps.list
@@ -96,6 +123,10 @@ install -Dm 0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/
 %{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5
+- Hide Chromium's own launcher entry (NoDisplay=true, re-applied on
+  chromium updates, undone on removal): it duplicated Parcha Browser in
+  the launcher and app grid.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-4
 - Launch with CHROME_DESKTOP=es.parchaos.Browser.desktop so Chromium
   uses es.parchaos.Browser as its Wayland app ID; the dock and app
