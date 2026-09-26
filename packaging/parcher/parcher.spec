@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -73,7 +73,10 @@ Obsoletes:      parchaos-finder < 48.7-12
 Provides:       nautilus = %{version}-%{release}
 Provides:       libnautilus-extension = %{version}-%{release}
 Conflicts:      nautilus
-Obsoletes:      nautilus < %{version}-%{release}
+# Any Fedora nautilus up to the next GNOME major: while Parcher is
+# installed, a newer Fedora nautilus can't be installed alongside it or
+# pulled in to replace it. Bump with each rebase (docs/parcher-rebase-plan.md).
+Obsoletes:      nautilus < 51
 
 BuildRequires:  gcc
 BuildRequires:  meson
@@ -245,6 +248,9 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 %{_datadir}/nautilus/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 48.7-13
+- Obsolete any Fedora nautilus before 51, so a newer Fedora nautilus
+  can't replace Parcher before its rebase.
 * Sat Sep 26 2026 ParchaOS packaging - 48.7-12
 - Renamed from parchaos-finder to parcher under the naming policy
   (Provides and Obsoletes parchaos-finder, so existing installs switch
