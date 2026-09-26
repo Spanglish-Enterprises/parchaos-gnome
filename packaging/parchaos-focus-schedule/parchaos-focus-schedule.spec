@@ -42,7 +42,7 @@
 
 Name:           parchaos-focus-schedule
 Version:        1.1.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
 License:        NOASSERTION
@@ -50,6 +50,7 @@ URL:            https://github.com/alexgalicea/parchaos
 Source0:        parchaos-focus-schedule-files.tar.gz
 BuildArch:      noarch
 
+Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       glib2
 Requires:       python3-gobject
 BuildRequires:  systemd-rpm-macros
@@ -87,6 +88,9 @@ rm -f %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-start.timer
 %{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.1.0-2
+- Require parchaos-desktop-schemas (the settings schema) instead of
+  relying on the desktop meta-package.
 * Sat Sep 26 2026 ParchaOS packaging - 1.1.0-1
 - Replace the two fixed timers with a user service that works out the
   right Do Not Disturb state from the clock at login, after sleep, at

@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -24,6 +24,7 @@ Source3:        parchaos-launcher-apps
 
 BuildArch:      noarch
 
+Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       dnf5daemon-server
 Requires:       gnome-shell >= 48
 # Edit mode's helper (removability checks and uninstall).
@@ -56,6 +57,9 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-11
+- Require parchaos-desktop-schemas (the settings schema) instead of
+  relying on the desktop meta-package.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
 - Closing the launcher while edit mode or the uninstall check is still
   loading no longer touches the closed launcher.

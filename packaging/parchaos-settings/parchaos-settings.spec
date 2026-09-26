@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -20,6 +20,7 @@ Source1:        org.parchaos.Settings.desktop
 BuildArch:      noarch
 BuildRequires:  desktop-file-utils
 
+Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
@@ -45,6 +46,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
+- Require parchaos-desktop-schemas (the settings schema) instead of
+  relying on the desktop meta-package.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-8
 - The style switch leaves theme switching to parchaos-theme-sync.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7

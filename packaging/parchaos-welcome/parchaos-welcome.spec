@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/alexgalicea/parchaos-gnome
@@ -10,6 +10,7 @@ Source2:        parchaos-welcome-autostart.desktop
 BuildArch:      noarch
 
 BuildRequires:  desktop-file-utils
+Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
@@ -41,6 +42,9 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
+- Require parchaos-desktop-schemas (the settings schema) instead of
+  relying on the desktop meta-package.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
 - The style and light/dark choices leave theme switching to parchaos-
   theme-sync.

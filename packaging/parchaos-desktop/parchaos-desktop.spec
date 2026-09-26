@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        32%{?dist}
+Release:        33%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -123,6 +123,7 @@ Requires:       parchaos-session
 Requires:       parchaos-live-icons
 Requires:       parchaos-release
 Requires:       parchaos-welcome
+Requires:       parchaos-desktop-schemas = %{version}-%{release}
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -134,6 +135,17 @@ never installs a package that's new since the user's own install, only
 upgrades ones already present. See this spec's own banner comment for
 the full reasoning and the maintenance rule (keep Requires: in sync
 with packages.sh, bump Release on every change).
+
+%package schemas
+Summary:        ParchaOS desktop settings schema (org.parchaos.desktop)
+Requires(post): glib2
+Requires(postun): glib2
+
+%description schemas
+The org.parchaos.desktop GSettings schema: the visual style, session
+restore, the Focus schedule and the launcher arrangement. Split out so
+the packages that read it can require the version they need without
+depending on the whole desktop meta-package.
 
 %prep
 %build
@@ -199,8 +211,10 @@ if [ -f "$f" ] && ! grep -q '^Hidden=true' "$f"; then
     echo 'Hidden=true' >> "$f"
 fi
 
-%files
+%files schemas
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
+
+%files
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-extensions-tuning
@@ -215,6 +229,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-33
+- Move the org.parchaos.desktop schema into a parchaos-desktop-schemas
+  subpackage that other packages can require.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-32
 - Add parchaos-theme-sync, a user service that switches the GTK, window
   and Shell themes between MacTahoe Light and Dark (solid for Classic)

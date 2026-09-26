@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -21,7 +21,7 @@ Source1:        metadata.json
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
-Requires:       parchaos-desktop >= 2026.09.23-20
+Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 
 %description
 Reopens the apps you had open when you log back in and puts their windows
@@ -43,6 +43,9 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
+- Require parchaos-desktop-schemas (the settings schema) instead of
+  relying on the desktop meta-package.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
 - Save when the log out, restart or power off dialog opens and stop
   saving once confirmed, so the closing-down desktop can't replace the
