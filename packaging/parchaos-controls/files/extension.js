@@ -221,6 +221,15 @@ const ControlsPanel = GObject.registerClass({
         if (sound)
             lm.attach(sound, 0, row++, 4, 1);
 
+        // Toggles other extensions add to Quick Settings (e.g. GSConnect's
+        // Mobile Devices), two per row.
+        const external = this._externalItems();
+        external.forEach((item, i) => {
+            lm.attach(this._externalTile(item), (i % 2) * 2, row, 2, 1);
+            if (i % 2 === 1 || i === external.length - 1)
+                row++;
+        });
+
         // Bottom row: power mode (when the machine has profiles), then
         // screenshot, settings and lock.
         col = 0;
@@ -248,6 +257,79 @@ const ControlsPanel = GObject.registerClass({
                 Main.screenShield?.lock(true);
             }), col++, row, 1, 1);
         }
+    }
+
+    // Quick Settings keeps no list of extension-added items; they're the
+    // grid's toggles that don't belong to one of its own indicators.
+    _externalItems() {
+        const qs = this._qs;
+        const grid = qs.menu?._grid;
+        if (!grid)
+            return [];
+        const known = new Set();
+        for (const [key, value] of Object.entries(qs)) {
+            if (key.startsWith('_') && Array.isArray(value?.quickSettingsItems))
+                value.quickSettingsItems.forEach(item => known.add(item));
+        }
+        return grid.get_children().filter(c =>
+            !known.has(c) && c.visible && typeof c.checked === 'boolean' && 'title' in c);
+    }
+
+    // The extension that added a Quick Settings item, so its name can open
+    // that extension's settings.
+    _ownerOf(item) {
+        // GJS names an extension's GObject classes after its UUID, e.g.
+        // Gjs_gsconnect_andyholmes_github_io_extension_ServiceToggle.
+        const typeName = item.constructor?.$gtype?.name ?? '';
+        for (const ext of Main.extensionManager._extensions?.values() ?? []) {
+            if (typeName.startsWith(`Gjs_${ext.uuid.replace(/[@.]/g, '_')}_`))
+                return ext.uuid;
+        }
+        // Extensions that set their own GTypeName usually prefix it with
+        // their name (GSConnectServiceIndicator for gsconnect@...).
+        const lower = typeName.toLowerCase();
+        for (const ext of Main.extensionManager._extensions?.values() ?? []) {
+            const name = ext.uuid.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (name.length >= 4 && lower.startsWith(name))
+                return ext.uuid;
+        }
+        for (const ext of Main.extensionManager._extensions?.values() ?? []) {
+            const obj = ext.stateObj;
+            if (!obj)
+                continue;
+            for (const value of Object.values(obj)) {
+                if (value?.quickSettingsItems?.includes?.(item))
+                    return ext.uuid;
+            }
+        }
+        return null;
+    }
+
+    _externalTile(item) {
+        const t = tile(2, 1, 'parchaos-controls-focus');
+        const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        row.add_child(circleFor(item, 32));
+        const {box, t: title, s} = labels();
+        const sync = () => {
+            title.text = item.title ?? '';
+            s.text = item.subtitle || (item.checked ? 'On' : 'Off');
+        };
+        item.connectObject('notify::title', sync, 'notify::subtitle', sync,
+            'notify::checked', sync, row);
+        sync();
+        const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
+        text.connect('clicked', () => {
+            const uuid = this._ownerOf(item);
+            if (uuid) {
+                this.emit('request-close');
+                Main.extensionManager.openExtensionPrefs(uuid, '', {});
+            } else {
+                clickToggle(item);
+            }
+        });
+        row.add_child(text);
+        t.add_child(row);
+        return t;
     }
 
     _firstItem(indicator) {
