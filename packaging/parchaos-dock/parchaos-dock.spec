@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -107,8 +107,8 @@ Requires:       gnome-shell >= 45
 Requires:       dconf
 
 %description
-Parcha Dock is ParchaOS's build of a real fork of the
-well-known Dash-to-Dock GNOME Shell extension: hover magnification,
+Parcha Dock is ParchaOS's build of Pulsar Dock (Inled Pulsar OS), a fork
+of the Dash to Dock GNOME Shell extension by Michele Gaio and contributors: hover magnification,
 launch bounce animations, a downloads-folder stack, and live
 minimized-window previews. Enabled by default as ParchaOS's dock.
 
@@ -121,9 +121,18 @@ minimized-window previews. Enabled by default as ParchaOS's dock.
 sed -i \
     -e 's/pulsar-dock@inled\.es/parcha-dock@parchaos.org/g' \
     -e 's/"name": "Pulsar Dock"/"name": "Parcha Dock"/' \
-    -e 's/original-author": "Inled-Pulsar-OS"/original-author": "ParchaOS"/' \
-    -e 's#"url": "https://github.com/Inled-Pulsar-OS/dash-to-dock"#"url": "https://parchaos-website.vercel.app"#' \
+    -e 's#"url": "https://github.com/Inled-Pulsar-OS/dash-to-dock"#"url": "https://parchaos.org"#' \
     metadata.json Makefile
+# Keep the upstream authors credited (GPL-2.0 fork of a fork), and describe
+# the dock without naming another desktop.
+sed -i \
+    -e 's/"original-author": "Inled-Pulsar-OS"/"original-author": "Michele Gaio (Dash to Dock) and Inled Pulsar OS (Pulsar Dock)"/' \
+    -e 's/"description": "[^"]*"/"description": "Parcha Dock for ParchaOS: hover magnification, launch bounce animations, a downloads folder stack and live minimized window previews. Based on Pulsar Dock by Inled Pulsar OS, a fork of Dash to Dock by Michele Gaio and contributors."/' \
+    metadata.json
+grep -q '"name": "Parcha Dock"' metadata.json
+grep -q 'Michele Gaio (Dash to Dock)' metadata.json
+grep -q '"url": "https://parchaos.org"' metadata.json
+! grep -qi 'macos' metadata.json
 
 %build
 make _build
@@ -173,6 +182,10 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 106-14
+- Credit Dash to Dock (Michele Gaio) and Pulsar Dock (Inled) in
+  metadata.json instead of replacing the author; neutral description;
+  website parchaos.org. The build fails if the edits stop applying.
 * Sat Sep 26 2026 ParchaOS packaging - 106-13
 - Follow the ParchaOS style setting: Classic is a frostier, more solid bar with a thin light edge.
 * Sat Sep 26 2026 ParchaOS packaging - 106-12

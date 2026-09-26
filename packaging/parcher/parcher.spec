@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -214,6 +214,26 @@ sed -i 's/^Name=Files$/Name=Parcher/' data/org.gnome.Nautilus.desktop.in.in
 sed -i 's/"Finder"/"Parcher"/' src/nautilus-window.c
 sed -i 's/_About Finder/_About Parcher/; s/>Finder</>Parcher</' src/resources/ui/nautilus-window.ui
 
+# About dialog: send users to ParchaOS for help and bug reports instead
+# of the upstream fork's site, and describe where Parcher comes from.
+# The upstream developer credits and both copyright lines stay; a
+# ParchaOS line is added.
+sed -i \
+    -e 's#_("File manager for Pulsar OS, a derivative work based on GNOME Files (Nautilus).")#_("The ParchaOS file manager, based on the Pulsar OS file manager by Inled, a derivative of GNOME Files (Nautilus).")#' \
+    -e 's#"https://github.com/Inled-Pulsar-OS/finder/issues"#"https://github.com/Spanglish-Enterprises/parchaos-gnome/issues"#' \
+    -e 's#"https://github.com/Inled-Pulsar-OS/finder"#"https://parchaos.org"#' \
+    -e 's#set_support_url (ADW_ABOUT_DIALOG (dialog), "https://os.inled.es")#set_support_url (ADW_ABOUT_DIALOG (dialog), "https://parchaos.org/support")#' \
+    -e 's#"© 2026 Inled / Pulsar OS Contributors\\n© 1999-2026 The Nautilus Authors"#"© 2026 Spanglish Enterprises LLC (ParchaOS changes)\\n© 2026 Inled / Pulsar OS Contributors\\n© 1999-2026 The Nautilus Authors"#' \
+    -e 's#"JaimeGH (Inled)",#"ParchaOS contributors",\n        "JaimeGH (Inled)",#' \
+    src/nautilus-window.c
+grep -q 'The ParchaOS file manager' src/nautilus-window.c
+grep -q '"https://parchaos.org/support"' src/nautilus-window.c
+grep -q 'Spanglish-Enterprises/parchaos-gnome/issues' src/nautilus-window.c
+grep -q 'Spanglish Enterprises LLC (ParchaOS changes)' src/nautilus-window.c
+grep -q '"ParchaOS contributors",' src/nautilus-window.c
+grep -q '© 1999-2026 The Nautilus Authors' src/nautilus-window.c
+! grep -q 'Inled-Pulsar-OS/finder\|os\.inled\.es")' src/nautilus-window.c
+
 # The sidebar's cloud section header named Apple's cloud service. Use a
 # neutral title (naming policy). Labels for a folder or mount the user
 # connected from that service keep the service's own name, like any other
@@ -256,6 +276,10 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 %{_datadir}/nautilus/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 48.7-15
+- About dialog: website, issue and support links go to ParchaOS;
+  ParchaOS copyright and contributors added while keeping the Inled and
+  Nautilus credits. The build fails if the edits stop applying.
 * Sat Sep 26 2026 ParchaOS packaging - 48.7-14
 - Build from the GNOME Nautilus 48.7 release plus Pulsar OS Finder's
   changes as one patch per feature (color tags, sidebar sections,
