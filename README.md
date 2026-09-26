@@ -91,8 +91,8 @@
 recommended), and 25 GB of disk space.
 
 **H.264 video:** like Fedora, the ISO doesn't include Cisco's OpenH264
-library. To enable it after installing, run
-`sudo dnf swap noopenh264 openh264` (downloaded straight from Cisco).
+library. It arrives with your first system update (`sudo dnf upgrade` or
+Parcha Store), downloaded straight from Cisco.
 
 > [!NOTE]
 > ParchaOS is a young project. It's tested on real hardware and in virtual

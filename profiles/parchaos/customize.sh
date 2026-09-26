@@ -35,7 +35,10 @@ profile_customize() {
     #   can fetch the real library from Cisco (dnf swap noopenh264 openh264).
     echo "--- Swapping in generic-logos and noopenh264 ---"
     run_in_target dnf -y swap fedora-logos generic-logos
-    run_in_target dnf -y swap openh264 noopenh264
+    # Cisco's openh264 Obsoletes noopenh264, so the swap only sticks with
+    # that repo disabled. On installed systems (repo enabled) the first
+    # dnf upgrade brings the real library back, downloaded from Cisco.
+    run_in_target dnf -y --disablerepo=fedora-cisco-openh264 swap openh264 noopenh264
     run_in_target rpm -q generic-logos noopenh264
     for pkg in fedora-logos openh264; do
         if run_in_target rpm -q "$pkg" >/dev/null 2>&1; then
