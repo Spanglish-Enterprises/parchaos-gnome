@@ -34,7 +34,7 @@
 
 Name:           parchaos-cloud
 Version:        2.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS's cloud drives -- rclone-backed cloud storage under ~/Cloud
 
 License:        MIT
@@ -60,7 +60,7 @@ repo for why and how.
 
 %build
 # Nothing to compile: a shell script, a systemd unit template, a
-# .desktop file, and one icon.
+# .desktop file, and two icons.
 
 %install
 mkdir -p %{buildroot}
@@ -80,8 +80,12 @@ update-desktop-database -q %{_datadir}/applications &>/dev/null || :
 %{_prefix}/lib/systemd/user/parchaos-cloud@.service
 %{_datadir}/applications/parchaos-cloud.desktop
 %{_datadir}/icons/hicolor/symbolic/apps/parchaos-cloud-symbolic.svg
+%{_datadir}/icons/hicolor/scalable/apps/parchaos-cloud.svg
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.0.0-2
+- Full-color app icon (the ParchaOS tile with a cloud and sync arrows);
+  the launcher and dock showed the plain symbolic outline before.
 * Fri Sep 25 2026 ParchaOS packaging - 2.0.0-1
 - Rewritten from scratch as an original implementation, replacing the
   previous near-verbatim copy of Inled's pulsar-cloud script. See this

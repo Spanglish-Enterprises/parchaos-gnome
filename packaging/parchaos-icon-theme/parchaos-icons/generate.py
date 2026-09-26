@@ -150,6 +150,42 @@ def disks():
     return tile('#6d7a92', '#3a4458', body)
 
 
+def preview():
+    card = lambda x, y, rot: (f'<g transform="rotate({rot} {x + 100} {y + 80})">'
+                              f'<rect x="{x}" y="{y}" width="200" height="160" rx="18" fill="#fff"/>'
+                              f'<rect x="{x + 14}" y="{y + 14}" width="172" height="118" rx="10" fill="#dff3f1"/>'
+                              f'<path d="M{x + 14} {y + 132} L{x + 74} {y + 64} L{x + 112} {y + 106} L{x + 138} {y + 80} L{x + 186} {y + 132}z" fill="#7654dc"/>'
+                              f'<circle cx="{x + 150}" cy="{y + 44}" r="14" fill="#f2b632"/></g>')
+    return tile('#4cc6b8', '#1f8a8f', card(118, 150, -10) + card(176, 196, 8))
+
+
+def archive():
+    body = ('<rect x="120" y="150" width="272" height="236" rx="28" fill="#fff"/>'
+            '<rect x="120" y="150" width="272" height="64" rx="28" fill="#efeafc"/>'
+            '<rect x="120" y="188" width="272" height="26" fill="#efeafc"/>'
+            '<g fill="#f2b632">' + ''.join(f'<rect x="{242 if i % 2 else 256}" y="{224 + i * 18}" width="14" height="12" rx="3"/>' for i in range(8)) + '</g>'
+            '<rect x="236" y="366" width="40" height="30" rx="8" fill="#f2b632"/>')
+    return tile('#9d82f0', '#5b3fb0', body)
+
+
+def firmware():
+    pins = ''.join(f'<rect x="{176 + i * 42}" y="110" width="16" height="44" rx="6" fill="#f2b632"/>'
+                   f'<rect x="{176 + i * 42}" y="358" width="16" height="44" rx="6" fill="#f2b632"/>'
+                   f'<rect x="110" y="{176 + i * 42}" width="44" height="16" rx="6" fill="#f2b632"/>'
+                   f'<rect x="358" y="{176 + i * 42}" width="44" height="16" rx="6" fill="#f2b632"/>' for i in range(4))
+    body = (pins + '<rect x="146" y="146" width="220" height="220" rx="34" fill="#f2b632"/>'
+            '<rect x="186" y="186" width="140" height="140" rx="20" fill="#3a4458"/>'
+            '<circle cx="222" cy="222" r="12" fill="#f2b632"/>')
+    return tile('#6d7a92', '#3a4458', body)
+
+
+def cloud():
+    body = ('<path d="M150 356h212a66 66 0 0 0 0-132 94 94 0 0 0-180 30 51 51 0 0 0-32 102z" fill="#fff"/>'
+            '<path d="M232 296 V252 M214 270 L232 252 L250 270" fill="none" stroke="#7654dc" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>'
+            '<path d="M288 262 V306 M270 288 L288 306 L306 288" fill="none" stroke="#7654dc" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>')
+    return tile('#7cc4ff', '#3b82e0', body)
+
+
 # name -> (generator, MacTahoe file(s) it replaces)
 ICONS = {
     'parchaos-calendar': (calendar, ['calendar']),
@@ -164,6 +200,15 @@ ICONS = {
     'parchaos-screenshot': (screenshot, ['accessories-screenshot']),
     'parchaos-system-monitor': (system_monitor, ['utilities-system-monitor']),
     'parchaos-disks': (disks, ['gnome-disks']),
+    'parchaos-preview': (preview, ['org.gnome.Loupe']),
+    'parchaos-archive': (archive, ['file-roller']),
+    'parchaos-firmware': (firmware, ['hwinfo']),
+}
+
+# Icons for ParchaOS's own apps, shipped by those apps (hicolor), not
+# replacing anything in MacTahoe.
+OWN = {
+    'parchaos-cloud': cloud,
 }
 
 
@@ -253,4 +298,7 @@ if __name__ == '__main__':
     for name, (gen, _targets) in {**ICONS, **PLACES}.items():
         with open(os.path.join(HERE, f'{name}.svg'), 'w') as f:
             f.write(gen())
-    print(f'wrote {len(ICONS) + len(PLACES)} icons')
+    for name, gen in OWN.items():
+        with open(os.path.join(HERE, f'{name}.svg'), 'w') as f:
+            f.write(gen())
+    print(f'wrote {len(ICONS) + len(PLACES) + len(OWN)} icons')

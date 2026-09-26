@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -61,6 +61,10 @@ Source27:       parchaos-folder-public.svg
 Source28:       parchaos-folder-remote.svg
 Source29:       parchaos-trash.svg
 Source30:       parchaos-trash-full.svg
+# Batch 4 (ticket #13).
+Source31:       parchaos-preview.svg
+Source32:       parchaos-archive.svg
+Source33:       parchaos-firmware.svg
 
 BuildArch:      noarch
 
@@ -100,7 +104,8 @@ for theme in MacTahoe MacTahoe-dark; do
                 calendar:%{SOURCE5} preferences-system-time:%{SOURCE6} calc:%{SOURCE7} \
                 addressbook:%{SOURCE8} internet-mail:%{SOURCE9} preferences-system:%{SOURCE10} \
                 terminal:%{SOURCE11} text-editor:%{SOURCE12} indicator-weather:%{SOURCE13} \
-                accessories-screenshot:%{SOURCE14} utilities-system-monitor:%{SOURCE15} gnome-disks:%{SOURCE16}; do
+                accessories-screenshot:%{SOURCE14} utilities-system-monitor:%{SOURCE15} gnome-disks:%{SOURCE16} \
+                org.gnome.Loupe:%{SOURCE31} file-roller:%{SOURCE32} hwinfo:%{SOURCE33}; do
         name=${pair%%%%:*}; src=${pair#*:}
         if [ -e "$d/$name.svg" ] || [ -L "$d/$name.svg" ]; then
             rm -f "$d/$name.svg"
@@ -167,6 +172,10 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-8
+- Original icons for the image viewer (Preview), Archive Manager and
+  Firmware; MacTahoe's copied Apple's Preview and Archive Utility, and its
+  Firmware icon carried a chip maker's logo (ticket #13).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-7
 - Original ParchaOS folders (violet with a gold tab, with glyphs for
   Documents, Downloads, Music, Pictures, Videos, Desktop, Home, Templates,
