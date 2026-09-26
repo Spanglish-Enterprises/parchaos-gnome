@@ -82,9 +82,9 @@ PROFILE_REPO_PACKAGES=(
     parchaos-gnome-wallpaper
 
     # ParchaOS's keyboard remap (packaging/parchaos-keyboard-remap/, formerly
-    # parchaos-macos-remap) -- swaps Cmd<->Ctrl and layers on Cmd-key conventions
-    # (Cmd-Left/Right as Home/End, Cmd-C/V/T/N/W/Q/F in the terminal,
-    # Parcher's Cmd-based file shortcuts, Cmd-Tab app switching) via
+    # parchaos-macos-remap) -- swaps Super<->Ctrl and layers on Super-key conventions
+    # (Super-Left/Right as Home/End, Super-C/V/T/N/W/Q/F in the terminal,
+    # Parcher's Super-based file shortcuts, Super-Tab app switching) via
     # xremap + its companion GNOME Shell extension, repackaged from
     # Pulsar OS's gnome-macos-remap-wayland as a real declarative RPM
     # (systemd user-preset, udev uaccess, dconf db) instead of an

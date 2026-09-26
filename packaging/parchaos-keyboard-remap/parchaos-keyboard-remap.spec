@@ -1,7 +1,7 @@
 # ==============================================================================
-# ParchaOS's keyboard remap -- swaps Cmd<->Ctrl and layers on a real
-# set of Cmd-key conventions (Cmd-Left/Right as Home/End,
-# Cmd-C/V/T/N/W/Q/F in the terminal, Parcher/Nautilus's Cmd-based file
+# ParchaOS's keyboard remap -- swaps Super<->Ctrl and layers on a real
+# set of Super-key conventions (Super-Left/Right as Home/End,
+# Super-C/V/T/N/W/Q/F in the terminal, Parcher/Nautilus's Super-based file
 # shortcuts, etc.), via xremap (github.com/xremap/xremap, MIT), a
 # userspace evdev key remapper. Real upstream software, not
 # hand-rolled: this is a Fedora repackaging of Pulsar OS's own
@@ -37,9 +37,9 @@
 #         same reasoning as above (no fixed username to add), and
 #         uaccess is the modern, correct mechanism on any
 #         systemd-logind system (Fedora always has been one).
-#       * gsettings tweaks (Cmd+Tab app switching, overlay-key
-#         disabled so it doesn't fight Cmd-combinations, GNOME
-#         Terminal's Cmd-C/V/T/N/W/Q/F bindings, etc.) are
+#       * gsettings tweaks (Super+Tab app switching, overlay-key
+#         disabled so it doesn't fight Super-combinations, GNOME
+#         Terminal's Super-C/V/T/N/W/Q/F bindings, etc.) are
 #         shipped as a system-wide dconf db drop-in (this project's
 #         existing mechanism, see profiles/pulsaros/customize.sh)
 #         instead of one-shot `gsettings set` calls -- declarative,
@@ -78,8 +78,8 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        3%{?dist}
-Summary:        ParchaOS keyboard remap: Cmd as Ctrl and friends, via xremap
+Release:        4%{?dist}
+Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later
 URL:            https://github.com/xremap/xremap
@@ -103,10 +103,10 @@ Obsoletes:      parchaos-macos-remap < %{version}-%{release}
 Provides:       parchaos-macos-remap = %{version}-%{release}
 
 %description
-ParchaOS's keyboard remap: swaps Cmd and Ctrl and layers on a set of
-Cmd-key conventions (Cmd-Left/Right as Home/End,
-Cmd-C/V/T/N/W/Q/F in the terminal, Parcher's Cmd-based file shortcuts,
-app switching on Cmd-Tab) system-wide, via xremap -- a real, actively
+ParchaOS's keyboard remap: swaps Super and Ctrl and layers on a set of
+Super-key conventions (Super-Left/Right as Home/End,
+Super-C/V/T/N/W/Q/F in the terminal, Parcher's Super-based file shortcuts,
+app switching on Super-Tab) system-wide, via xremap -- a real, actively
 maintained userspace evdev key remapper -- and its companion GNOME
 Shell extension. Ported from Pulsar OS's own gnome-macos-remap-wayland,
 adapted from an interactive per-user install script into a real,
@@ -167,6 +167,11 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Fri Sep 25 2026 ParchaOS packaging - 0.15.13-4
+- Describe the remapped key as Super (the key it actually is on PC
+  keyboards) in the summary, description, service description and config
+  comments, instead of the reference desktop's key name. No behavior
+  change.
 * Fri Sep 25 2026 ParchaOS packaging - 0.15.13-3
 - Renamed from parchaos-macos-remap to parchaos-keyboard-remap (and the
   unit, preset, udev rule, modules-load and dconf files with it), per the

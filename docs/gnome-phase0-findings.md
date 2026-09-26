@@ -55,8 +55,8 @@ now met for this profile too.
   Fedora's stock Plymouth spinner theme and a from-scratch dark
   wallpaper, both carrying the project's real passion-fruit logo as a
   subtle watermark.
-- **`parchaos-macos-remap`** — real keyboard remap (Cmd<->Ctrl
-  swap + Cmd-key conventions) via xremap (MIT) + its companion
+- **`parchaos-macos-remap`** — real keyboard remap (Super<->Ctrl
+  swap + Super-key conventions) via xremap (MIT) + its companion
   GNOME Shell extension (GPLv2+), repackaged from Pulsar OS's
   `gnome-macos-remap-wayland` as a declarative RPM (systemd user-preset,
   udev `uaccess`, dconf db) instead of an interactive per-user install
@@ -280,7 +280,7 @@ rule as everything else in this project's history.
   (v19), and were installed and process-level-verified directly on
   real hardware (`pafari`/`yin_yang` launch and stay running, the
   `parchaos-macos-remap.service` xremap daemon and its GNOME Shell
-  extension are both active). **Still needs a human**: does Cmd
+  extension are both active). **Still needs a human**: does Super
   actually act as Ctrl on a real keypress, does pafari visually render
   a page correctly, does yin-yang's theme switch actually look right,
   does TMOG's real download complete, does the cloud-mount flow work

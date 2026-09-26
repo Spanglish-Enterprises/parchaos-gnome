@@ -6,7 +6,7 @@ GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/pulsaros/`) now
 ships 25 real custom packages plus the full Fedora base — dock, global
 menu, Finder (Nautilus fork), GTK/icon/Plymouth/wallpaper theming
 (light + dark), a Chromium-based browser alongside the WebKitGTK one,
-a Cmd-as-Ctrl keyboard remap, cloud drives, focus schedule, auto light/dark,
+a Super-as-Ctrl keyboard remap, cloud drives, focus schedule, auto light/dark,
 TMOG, a hosts-file ad-blocker, a real live/video wallpaper, Desktop
 Icons NG, and 12 of Pulsar OS's own real GNOME Shell extensions for
 desktop polish (traffic-light window buttons, genie minimize
@@ -127,7 +127,7 @@ see phase2/phase3 docs; already shipped before this project's own
 licensing-audit habit started, same missing-LICENSE gap as the rest of
 Inled's work, being replaced with ParchaOS's own implementation rather
 than maintained further), `parchaos-focus-schedule`, `parchaos-yin-yang`
-(auto light/dark), `parchaos-keyboard-remap` (Cmd↔Ctrl via xremap),
+(auto light/dark), `parchaos-keyboard-remap` (Super↔Ctrl via xremap),
 `parchaos-hblock` (real hosts-file ad-blocker).
 
 **Installer**: `parchaos-gnome-calamares-config` — a real disk install
@@ -187,7 +187,9 @@ ParchaOS is meant to ship publicly, so Apple's names stay out of anything
 we name or write ourselves: package names, app/feature names, package
 summaries/descriptions, and docs prose. Describe the feature instead (dock,
 global menu bar, traffic-light window controls, hover magnification,
-Cmd-as-Ctrl) or say "the reference desktop". Renamed so far:
+Super-as-Ctrl) or say "the reference desktop". Its key names and symbols
+count too: the remapped key is Super, never "Cmd" or the command symbol.
+Renamed so far:
 `parchaos-macos-remap` -> `parchaos-keyboard-remap`, "Finder" -> "Parcher",
 Software -> "Parcha Store" ("App Store" is itself a trademark). Approved names for
 upcoming features: Parcha Time (backups), Parcha Controls (control center),

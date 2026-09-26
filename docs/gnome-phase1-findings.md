@@ -321,7 +321,7 @@ journal output before calling a service "working."
 
 **Still needs a real person at the keyboard** (not mechanically
 verifiable over SSH, same class of limitation phase 0 hit with the
-Calamares mouse click): does Cmd actually act as Ctrl on a real
+Calamares mouse click): does Super actually act as Ctrl on a real
 keypress; does `pafari` visually render a real page; does yin-yang's
 theme switch actually change the GTK/icon/wallpaper correctly; does
 TMOG's real first-run AppImage download complete; does the
@@ -1277,7 +1277,7 @@ on. Verified both paths on the live session: DND off -> start -> `false` ->
 end -> `true`; DND already on -> start -> end -> stays `false`.
 
 **Rest of the checklist, same session:**
-- *Cmd acts as Ctrl*: verified at the input-event level. Injected
+- *Super acts as Ctrl*: verified at the input-event level. Injected
   Meta+A through `ydotool` (whose virtual device xremap grabs like a real
   keyboard) and captured xremap's own output device with
   `libinput debug-events --show-keycodes`: it emitted `KEY_LEFTCTRL` +

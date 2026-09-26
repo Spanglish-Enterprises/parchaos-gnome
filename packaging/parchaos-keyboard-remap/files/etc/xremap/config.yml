@@ -2,7 +2,7 @@ keypress_delay_ms: 10
 
 # `modmap` section: key-to-key remapping (no combinations).
 modmap:
-  - name: Make Cmd act as Ctrl
+  - name: Make Super act as Ctrl
     remap:
       LeftCtrl: LeftMeta
       LeftMeta: LeftCtrl
@@ -11,7 +11,7 @@ modmap:
 
 # `keymap` section: remapping a sequence of key combinations to another.
 keymap:
-  - name: Make Cmd-Left/Right work as Home/End (with Shift for selection)
+  - name: Make Super-Left/Right work as Home/End (with Shift for selection)
     remap:
       Ctrl-Left: Home
       Ctrl-Right: End

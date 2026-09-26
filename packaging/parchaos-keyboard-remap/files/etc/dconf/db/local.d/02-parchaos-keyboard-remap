@@ -1,4 +1,4 @@
-# Keybinding defaults to pair with xremap's Cmd<->Ctrl swap
+# Keybinding defaults to pair with xremap's Super<->Ctrl swap
 # (config.yml). Ported from Pulsar OS's gnome-macos-remap-wayland
 # install.sh gsettings calls into this project's existing system-wide
 # dconf db mechanism (see profiles/pulsaros/customize.sh) rather than

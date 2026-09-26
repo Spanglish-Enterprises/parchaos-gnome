@@ -1,5 +1,5 @@
 [Unit]
-Description=ParchaOS keyboard remap: Cmd as Ctrl and friends (xremap)
+Description=ParchaOS keyboard remap: Super as Ctrl and friends (xremap)
 After=graphical-session.target
 PartOf=graphical-session.target
 
