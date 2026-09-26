@@ -131,3 +131,19 @@
     font-size: 11px;
     color: rgba(255, 255, 255, 0.45);
 }
+
+/* Classic style: a calm, even frosted bar; no glow; rounded-rectangle
+   highlights instead of pills. */
+#panel.parchaos-menubar.parchaos-style-classic {
+    background-gradient-direction: none;
+    background-color: rgba(24, 24, 28, 0.42);
+}
+
+#panel.parchaos-style-classic .parchaos-menubar-label,
+#panel.parchaos-style-classic .parchaos-menubar-app-label {
+    text-shadow: none;
+}
+
+#panel.parchaos-style-classic .panel-button.parchaos-menubar-button {
+    border-radius: 5px;
+}

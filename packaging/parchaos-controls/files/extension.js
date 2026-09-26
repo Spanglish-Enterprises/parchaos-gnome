@@ -27,6 +27,20 @@ const CELL = 72;
 const GAP = 10;
 const PAD = 12;
 
+// ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
+// schema shipped by parchaos-desktop; null when the schema isn't installed.
+function styleSettings() {
+    const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.parchaos.desktop', true);
+    return schema ? new Gio.Settings({settings_schema: schema}) : null;
+}
+
+function applyStyleClass(actor, settings) {
+    const style = settings?.get_string('style') ?? 'glass';
+    for (const s of ['glass', 'classic'])
+        actor.remove_style_class_name(`parchaos-style-${s}`);
+    actor.add_style_class_name(`parchaos-style-${style}`);
+}
+
 function spawn(argv) {
     try {
         Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
@@ -174,6 +188,7 @@ const ControlsPanel = GObject.registerClass({
             style_class: 'parchaos-controls-panel',
             orientation: Clutter.Orientation.VERTICAL,
         });
+        applyStyleClass(this, styleSettings());
         this._qs = qs;
         this.add_effect(new Shell.BlurEffect({
             radius: 60,

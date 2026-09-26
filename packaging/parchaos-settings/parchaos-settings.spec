@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -45,5 +45,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Appearance page: choose the Glass or Classic style.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-1
 - Initial package: Keyboard section with the Super as Ctrl switch.

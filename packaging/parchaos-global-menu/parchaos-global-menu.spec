@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-10
+- Follow the ParchaOS style setting live; classic: an even frosted bar,
+  no text glow, rounded-rectangle highlights.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-9
 - New About ParchaOS card: large logo, name, version with the GNOME
   release, a spec sheet (computer, processor, graphics, memory rounded to

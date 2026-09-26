@@ -28,8 +28,10 @@ def keyboard_style():
 class Window(Adw.PreferencesWindow):
     def __init__(self, app):
         super().__init__(application=app, title='ParchaOS Settings')
-        self.set_default_size(560, 420)
+        self.set_default_size(620, 480)
         self.set_search_enabled(False)
+
+        self.add(self._appearance_page())
 
         page = Adw.PreferencesPage(title='Keyboard',
                                    icon_name='input-keyboard-symbolic')
@@ -52,6 +54,56 @@ class Window(Adw.PreferencesWindow):
         self._super_row.connect('notify::active', self._on_super_toggled)
         group.add(self._super_row)
         self.add(page)
+
+    def _appearance_page(self):
+        page = Adw.PreferencesPage(title='Appearance',
+                                   icon_name='applications-graphics-symbolic')
+        group = Adw.PreferencesGroup(
+            title='Style',
+            description='How the menu bar, launcher and Parcha Controls look.')
+        page.add(group)
+
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup('org.parchaos.desktop', True) if source else None
+        if schema is None:
+            row = Adw.ActionRow(title='Styles are not available',
+                                subtitle='The ParchaOS desktop package is not installed.')
+            group.add(row)
+            return page
+        self._desktop = Gio.Settings(settings_schema=schema)
+
+        choices = [
+            ('glass', 'Glass',
+             'Translucent, softly blurred surfaces with rounded shapes.'),
+            ('classic', 'Classic',
+             'Calmer frosted surfaces, more opaque, with tighter corners.'),
+        ]
+        first = None
+        self._style_buttons = {}
+        for value, title, subtitle in choices:
+            check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            if first is None:
+                first = check
+            else:
+                check.set_group(first)
+            row = Adw.ActionRow(title=title, subtitle=subtitle, activatable_widget=check)
+            row.add_prefix(check)
+            group.add(row)
+            self._style_buttons[value] = check
+            check.connect('toggled', self._on_style_toggled, value)
+        self._sync_style()
+        self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        return page
+
+    def _sync_style(self):
+        current = self._desktop.get_string('style')
+        button = self._style_buttons.get(current)
+        if button is not None and not button.get_active():
+            button.set_active(True)
+
+    def _on_style_toggled(self, button, value):
+        if button.get_active() and self._desktop.get_string('style') != value:
+            self._desktop.set_string('style', value)
 
     def _on_super_toggled(self, row, _pspec):
         style = 'mac' if row.get_active() else 'windows'

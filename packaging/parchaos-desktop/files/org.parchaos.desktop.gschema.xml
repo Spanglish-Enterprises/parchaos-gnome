@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ParchaOS desktop-wide preferences, read by ParchaOS's shell extensions
+     and set from ParchaOS Settings. -->
+<schemalist>
+  <schema id="org.parchaos.desktop" path="/org/parchaos/desktop/">
+    <key name="style" type="s">
+      <choices>
+        <choice value="glass"/>
+        <choice value="classic"/>
+      </choices>
+      <default>'glass'</default>
+      <summary>Visual style</summary>
+      <description>
+        "glass": translucent, softly blurred surfaces with rounded shapes.
+        "classic": calmer frosted surfaces, more opaque, with tighter corners.
+      </description>
+    </key>
+  </schema>
+</schemalist>

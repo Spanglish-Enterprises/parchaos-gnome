@@ -167,3 +167,29 @@
 .parchaos-launcher-confirm-button.destructive:focus {
   background-color: #f05a5f;
 }
+
+/* Classic style: a denser tint over the blur, tighter corners. */
+.parchaos-style-classic .parchaos-launcher-backdrop {
+  background-color: rgba(10, 10, 14, 0.34);
+}
+
+.parchaos-style-classic .parchaos-launcher-search {
+  border-radius: 9px;
+}
+
+.parchaos-style-classic .parchaos-launcher-tile {
+  border-radius: 12px;
+}
+
+.parchaos-style-classic .parchaos-launcher-folder-panel {
+  border-radius: 20px;
+  background-color: rgba(40, 40, 44, 0.55);
+}
+
+.parchaos-style-classic .parchaos-launcher-confirm {
+  border-radius: 14px;
+}
+
+.parchaos-style-classic .parchaos-launcher-confirm-button {
+  border-radius: 8px;
+}

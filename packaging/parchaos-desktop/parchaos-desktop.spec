@@ -62,11 +62,14 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        18%{?dist}
+Release:        19%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
 URL:            https://github.com/alexgalicea/parchaos-gnome
+# Desktop-wide ParchaOS preferences (visual style), read by the
+# ParchaOS extensions and set from ParchaOS Settings.
+Source0:        org.parchaos.desktop.gschema.xml
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
@@ -111,6 +114,7 @@ with packages.sh, bump Release on every change).
 %prep
 %build
 %install
+install -Dm0644 %{SOURCE0} %{buildroot}%{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/pulsaros/customize.sh only affects freshly built ISOs).
@@ -150,10 +154,14 @@ dconf update >/dev/null 2>&1 || :
 dconf update >/dev/null 2>&1 || :
 
 %files
+%{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-19
+- Add the org.parchaos.desktop schema with the "style" key (glass or
+  classic) that ParchaOS's extensions follow.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-18
 - Require parchaos-settings (ParchaOS Settings app).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-17

@@ -88,6 +88,20 @@ function loadItems() {
     return [...loose, ...folders];
 }
 
+// ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
+// schema shipped by parchaos-desktop; null when the schema isn't installed.
+function styleSettings() {
+    const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.parchaos.desktop', true);
+    return schema ? new Gio.Settings({settings_schema: schema}) : null;
+}
+
+function applyStyleClass(actor, settings) {
+    const style = settings?.get_string('style') ?? 'glass';
+    for (const s of ['glass', 'classic'])
+        actor.remove_style_class_name(`parchaos-style-${s}`);
+    actor.add_style_class_name(`parchaos-style-${style}`);
+}
+
 const LONG_PRESS_MS = 550;
 
 // Runs argv, resolving to {ok, stdout, stderr}.
@@ -270,6 +284,7 @@ const Launcher = GObject.registerClass({
             opacity: 0,
         });
         this._monitor = monitor;
+        applyStyleClass(this, styleSettings());
         this._page = 0;
         this._scrollAccum = 0;
         this._folderView = null;

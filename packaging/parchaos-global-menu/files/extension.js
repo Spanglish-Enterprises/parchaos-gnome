@@ -74,6 +74,20 @@ function openSpecialDir(dirType) {
 // A single top-bar text button (File, Edit, ... or the bold app-name
 // button). Thin wrapper around PanelMenu.Button with just a label.
 // ---------------------------------------------------------------------
+// ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
+// schema shipped by parchaos-desktop; null when the schema isn't installed.
+function styleSettings() {
+    const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.parchaos.desktop', true);
+    return schema ? new Gio.Settings({settings_schema: schema}) : null;
+}
+
+function applyStyleClass(actor, settings) {
+    const style = settings?.get_string('style') ?? 'glass';
+    for (const s of ['glass', 'classic'])
+        actor.remove_style_class_name(`parchaos-style-${s}`);
+    actor.add_style_class_name(`parchaos-style-${style}`);
+}
+
 const MenuBarButton = GObject.registerClass({
     GTypeName: 'ParchaOSMenuBarButton',
 }, class MenuBarButton extends PanelMenu.Button {
@@ -256,6 +270,10 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
 export default class ParchaOSGlobalMenuExtension extends Extension {
     enable() {
         Main.panel.add_style_class_name('parchaos-menubar');
+        this._styleSettings = styleSettings();
+        applyStyleClass(Main.panel, this._styleSettings);
+        this._styleChangedId = this._styleSettings?.connect('changed::style',
+            () => applyStyleClass(Main.panel, this._styleSettings)) ?? 0;
         this._menuBarButtons = [];
         this._activeAppWindow = null;
         this._focusNotifyId = 0;
@@ -294,6 +312,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
     disable() {
         Main.panel.remove_style_class_name('parchaos-menubar');
+        if (this._styleChangedId)
+            this._styleSettings.disconnect(this._styleChangedId);
+        this._styleChangedId = 0;
+        this._styleSettings = null;
+        for (const s of ['glass', 'classic'])
+            Main.panel.remove_style_class_name(`parchaos-style-${s}`);
         if (this._focusNotifyId) {
             global.display.disconnect(this._focusNotifyId);
             this._focusNotifyId = 0;
