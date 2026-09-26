@@ -78,7 +78,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later
@@ -171,6 +171,10 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 0.15.13-7
+- Rebuild with the current parchaos-keyboard-style (0.15.13-6 was built
+  from a stale copy of the packaged files, so the style names super-ctrl
+  and standard weren't accepted).
 * Sat Sep 26 2026 ParchaOS packaging - 0.15.13-6
 - parchaos-keyboard-style: the styles are now named super-ctrl and
   standard; the old names mac and windows are still accepted, and a

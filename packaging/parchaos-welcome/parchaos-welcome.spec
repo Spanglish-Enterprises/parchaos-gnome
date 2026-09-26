@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/alexgalicea/parchaos-gnome
@@ -15,6 +15,7 @@ Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
 Requires:       parchaos-release
+Requires:       parchaos-keyboard-remap >= 0.15.13-7
 
 %description
 ParchaOS Welcome opens once at an account's first login (and any time
@@ -42,6 +43,8 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
+- Require parchaos-keyboard-remap 0.15.13-7 for the Super key page.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
 - Require parchaos-desktop-schemas (the settings schema) instead of
   relying on the desktop meta-package.

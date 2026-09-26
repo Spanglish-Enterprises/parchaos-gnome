@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -24,7 +24,7 @@ Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
-Requires:       parchaos-keyboard-remap >= 0.15.13-6
+Requires:       parchaos-keyboard-remap >= 0.15.13-7
 
 %description
 ParchaOS Settings holds preferences specific to ParchaOS, starting with
@@ -46,6 +46,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
+- Require parchaos-keyboard-remap 0.15.13-7 (the first build whose
+  keyboard-style accepts super-ctrl and standard).
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9
 - Require parchaos-desktop-schemas (the settings schema) instead of
   relying on the desktop meta-package.
