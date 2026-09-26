@@ -1,0 +1,44 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"   # weekly, so fork-versions notices Fedora updates
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: dnf -y install ShellCheck rpm-build glib2 desktop-file-utils python3 nodejs
+      - name: Run checks
+        run: scripts/lint.sh
+
+  # ParchaOS ships patched builds of some Fedora packages. The ParchaOS
+  # repository has higher dnf priority, so a newer Fedora build does NOT
+  # replace them: users would silently miss Fedora's fixes until the fork
+  # is rebased. Fail when Fedora has a newer version than the fork.
+  fork-versions:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare forks with Fedora
+        run: |
+          status=0
+          for pkg in gnome-control-center; do
+            ours=$(rpmspec -q --srpm --qf '%{version}' packaging/$pkg/$pkg.spec 2>/dev/null)
+            fedora=$(dnf -q repoquery --latest-limit 1 --qf '%{version}' "$pkg" | tail -1)
+            echo "$pkg: ParchaOS $ours, Fedora $fedora"
+            if [ "$(printf '%s\n%s\n' "$ours" "$fedora" | sort -V | tail -1)" != "$ours" ]; then
+              echo "::error::$pkg: Fedora has $fedora, the ParchaOS fork is $ours. Rebase the fork."
+              status=1
+            fi
+          done
+          exit $status

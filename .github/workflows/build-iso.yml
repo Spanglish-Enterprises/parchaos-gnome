@@ -24,27 +24,22 @@ on:
       # for any manual run that forgot to set it. Required now, matching
       # engine/build-iso.sh's own --profile no-longer-has-a-default fix.
       profile:
-        description: "Profile to build (required — profiles/pearos or profiles/pulsaros)"
+        description: "Profile to build (profiles/pulsaros)"
         required: true
       branch:
         description: "Fedora release (a number, or 'rawhide')"
         default: "44"
         required: false
   schedule:
-    # Scheduled runs get no workflow_dispatch inputs at all, so this can't
-    # ask "which profile" the way a manual run can — pearos is a
-    # deliberate, explicit choice for the automated weekly build (the
-    # longer-standing, more stable of the two products as of this
-    # writing), not a leftover default. Revisit this choice, don't just
-    # carry it forward, once the GNOME (pulsaros) variant has had as much
-    # real-hardware mileage as the KDE one.
+    # Scheduled runs get no inputs, so they build the GNOME (pulsaros)
+    # profile, which is the product this repository ships.
     - cron: "0 6 * * 0"   # weekly, Sundays 06:00 UTC
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: fedora:42
+      image: fedora:44
       options: --privileged
     steps:
       - uses: actions/checkout@v4
@@ -57,14 +52,14 @@ jobs:
       - name: Build ISO
         run: |
           ./engine/build-iso.sh \
-            --profile "${{ github.event.inputs.profile || 'pearos' }}" \
+            --profile "${{ github.event.inputs.profile || 'pulsaros' }}" \
             --branch "${{ github.event.inputs.branch || '44' }}" \
             --clean-target
 
       - name: Upload ISO + checksum
         uses: actions/upload-artifact@v4
         with:
-          name: pearos-iso
+          name: parchaos-iso
           path: |
             build/*.iso
             build/*.iso.sha256
