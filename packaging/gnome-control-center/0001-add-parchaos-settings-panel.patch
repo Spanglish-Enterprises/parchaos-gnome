@@ -118,7 +118,7 @@ index 0000000..e7c9e10
 +G_END_DECLS
 diff --git a/panels/parchaos/gnome-parchaos-panel.desktop.in b/panels/parchaos/gnome-parchaos-panel.desktop.in
 new file mode 100644
-index 0000000..efc11a5
+index 0000000..862ace1
 --- /dev/null
 +++ b/panels/parchaos/gnome-parchaos-panel.desktop.in
 @@ -0,0 +1,12 @@
@@ -131,7 +131,7 @@ index 0000000..efc11a5
 +Type=Application
 +NoDisplay=true
 +StartupNotify=true
-+Categories=GNOME;GTK;Settings;DesktopSettings;X-GNOME-Settings-Panel;X-GNOME-SystemSettings;
++Categories=GNOME;GTK;Settings;DesktopSettings;X-GNOME-Settings-Panel;X-GNOME-PersonalizationSettings;
 +OnlyShowIn=GNOME;
 +Keywords=ParchaOS;Super;Ctrl;Command;Keyboard;Style;Appearance;
 diff --git a/panels/parchaos/icons/meson.build b/panels/parchaos/icons/meson.build

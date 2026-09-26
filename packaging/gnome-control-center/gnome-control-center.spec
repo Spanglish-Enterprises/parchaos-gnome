@@ -4,7 +4,7 @@
 # opening ParchaOS Settings (parchaos-settings). Kept deliberately tiny so
 # it can be re-applied on each GNOME release: when Fedora ships a newer
 # gnome-control-center, rebase this spec on it and rebuild. The release
-# suffix (.parchaos1) makes this build win over Fedora's same version.
+# suffix (.parchaosN) makes this build win over Fedora's same version.
 # ==============================================================================
 ## START: Set by rpmautospec
 ## (rpmautospec version 0.8.4)
@@ -36,7 +36,7 @@
 
 Name:           gnome-control-center
 Version:        50.4
-Release:        %autorelease -e parchaos1
+Release:        %autorelease -e parchaos2
 Summary:        Utilities to configure the GNOME desktop
 
 License:        GPL-2.0-or-later AND CC0-1.0
@@ -244,6 +244,11 @@ rm -rf $RPM_BUILD_ROOT%{_datadir}/gnome/cursor-fonts
 %dir %{_datadir}/gnome/wm-properties
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 50.4-1.parchaos2
+- The ParchaOS panel's desktop file used the System category, which
+  Settings treats as a System sub-page and redirected there; use the
+  Personalization category so the panel opens.
+
 * Fri Sep 25 2026 ParchaOS packaging - 50.4-1.parchaos1
 - Add a "ParchaOS" Settings sidebar entry that opens ParchaOS Settings.
 
