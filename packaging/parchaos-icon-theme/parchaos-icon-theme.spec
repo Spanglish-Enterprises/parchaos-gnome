@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,8 @@ Source36:       parchaos-keyboard-symbolic.svg
 # Original file-type icons (one per kind) and the script that maps
 # MacTahoe's file-type icons onto them.
 Source37:       mime-map.py
+# ParchaOS's cloud icon, in place of MacTahoe's icloud.svg.
+Source38:       parchaos-cloud.svg
 Source40:       parchaos-mime-generic.svg
 Source41:       parchaos-mime-text.svg
 Source42:       parchaos-mime-code.svg
@@ -135,7 +137,8 @@ for theme in MacTahoe MacTahoe-dark; do
                 addressbook:%{SOURCE8} internet-mail:%{SOURCE9} preferences-system:%{SOURCE10} \
                 terminal:%{SOURCE11} text-editor:%{SOURCE12} indicator-weather:%{SOURCE13} \
                 accessories-screenshot:%{SOURCE14} utilities-system-monitor:%{SOURCE15} gnome-disks:%{SOURCE16} \
-                org.gnome.Loupe:%{SOURCE31} file-roller:%{SOURCE32} hwinfo:%{SOURCE33}; do
+                org.gnome.Loupe:%{SOURCE31} file-roller:%{SOURCE32} hwinfo:%{SOURCE33} \
+                icloud:%{SOURCE38}; do
         name=${pair%%%%:*}; src=${pair#*:}
         if [ -e "$d/$name.svg" ] || [ -L "$d/$name.svg" ]; then
             rm -f "$d/$name.svg"
@@ -231,6 +234,8 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-12
+- Replace MacTahoe's icloud.svg with ParchaOS's cloud icon.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-11
 - Original file-type icons: MacTahoe's page-style file icons (which
   imitate the reference desktop's document icons) are replaced with
