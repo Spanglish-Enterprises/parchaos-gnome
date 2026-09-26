@@ -55,6 +55,8 @@ PROFILE_REPO_PACKAGES=(
     # ParchaOS os-release branding kept across Fedora updates
     # (packaging/parchaos-release/).
     parchaos-release
+    # First-login assistant (packaging/parchaos-welcome/).
+    parchaos-welcome
 
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice

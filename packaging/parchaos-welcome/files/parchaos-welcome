@@ -1,0 +1,243 @@
+#!/usr/bin/python3
+# ParchaOS Welcome: a short first-login assistant. It sets the few choices
+# that shape the desktop (style, light or dark, the Super key, location for
+# the weather) and shows where things are. It opens once per account (from
+# autostart, with --first-run) and any time from the launcher.
+#
+# Everything it sets can be changed later in ParchaOS Settings or GNOME
+# Settings. Location stays off unless the user turns it on here.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+import subprocess
+import sys
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+APP_ID = 'org.parchaos.Welcome'
+STATE_DIR = os.path.join(GLib.get_user_state_dir(), 'parchaos')
+DONE_FILE = os.path.join(STATE_DIR, 'welcome-done')
+
+
+def schema(schema_id):
+    source = Gio.SettingsSchemaSource.get_default()
+    found = source.lookup(schema_id, True) if source else None
+    return Gio.Settings(settings_schema=found) if found else None
+
+
+def live_session():
+    """The installer's live session: nothing to set up there."""
+    try:
+        with open('/proc/cmdline') as f:
+            return 'rd.live.image' in f.read().split()
+    except OSError:
+        return False
+
+
+def themed_variant(name, style):
+    """MacTahoe theme for a style (Classic uses the solid variants)."""
+    if not name.startswith('MacTahoe'):
+        return name
+    base = name.removesuffix('-solid')
+    return f'{base}-solid' if style == 'classic' else base
+
+
+def apply_style(style):
+    desktop = schema('org.parchaos.desktop')
+    if desktop is not None:
+        desktop.set_string('style', style)
+    for schema_id, key in (('org.gnome.desktop.interface', 'gtk-theme'),
+                           ('org.gnome.shell.extensions.user-theme', 'name')):
+        settings = schema(schema_id)
+        if settings is None:
+            continue
+        current = settings.get_string(key)
+        wanted = themed_variant(current, style)
+        if wanted != current and os.path.isdir(f'/usr/share/themes/{wanted}'):
+            settings.set_string(key, wanted)
+
+
+def keyboard_style():
+    try:
+        out = subprocess.run(['parchaos-keyboard-style', 'status'],
+                             capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() or 'super-ctrl'
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def choice_group(title, description, choices, current, on_choose):
+    """A preferences group of radio rows: (value, title, subtitle)."""
+    group = Adw.PreferencesGroup(title=title, description=description)
+    first = None
+    for value, row_title, subtitle in choices:
+        check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+        if first is None:
+            first = check
+        else:
+            check.set_group(first)
+        check.set_active(value == current)
+        check.connect('toggled', lambda b, v=value: b.get_active() and on_choose(v))
+        row = Adw.ActionRow(title=row_title, subtitle=subtitle, activatable_widget=check)
+        row.add_prefix(check)
+        group.add(row)
+    return group
+
+
+def page(icon_name, title, description, *groups):
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                  margin_top=24, margin_bottom=24, margin_start=36, margin_end=36,
+                  valign=Gtk.Align.CENTER)
+    status = Adw.StatusPage(icon_name=icon_name, title=title, description=description)
+    status.add_css_class('compact')
+    box.append(status)
+    for group in groups:
+        box.append(group)
+    clamp = Adw.Clamp(maximum_size=520, child=box)
+    return Gtk.ScrolledWindow(child=clamp, hscrollbar_policy=Gtk.PolicyType.NEVER,
+                              vexpand=True, hexpand=True)
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title='Welcome to ParchaOS')
+        self.set_default_size(640, 620)
+
+        self.carousel = Adw.Carousel(allow_scroll_wheel=False, vexpand=True)
+        for p in self._pages():
+            self.carousel.append(p)
+        self.carousel.connect('page-changed', lambda *_: self._sync_buttons())
+
+        self.back = Gtk.Button(label='Back')
+        self.back.connect('clicked', lambda *_: self._go(-1))
+        self.next = Gtk.Button(label='Continue')
+        self.next.add_css_class('suggested-action')
+        self.next.connect('clicked', lambda *_: self._go(1))
+        dots = Adw.CarouselIndicatorDots(carousel=self.carousel)
+        bar = Gtk.CenterBox(margin_top=6, margin_bottom=18, margin_start=24, margin_end=24)
+        bar.set_start_widget(self.back)
+        bar.set_center_widget(dots)
+        bar.set_end_widget(self.next)
+
+        view = Adw.ToolbarView(content=self.carousel)
+        view.add_top_bar(Adw.HeaderBar(show_title=False))
+        view.add_bottom_bar(bar)
+        self.set_content(view)
+        self._sync_buttons()
+
+    def _pages(self):
+        pages = [page('parchaos-logo', 'Welcome to ParchaOS',
+                      'A few quick choices and you\'re set. You can change any of '
+                      'them later in ParchaOS Settings.')]
+
+        desktop = schema('org.parchaos.desktop')
+        if desktop is not None:
+            pages.append(page(
+                'applications-graphics-symbolic', 'Pick a Style',
+                'How the menu bar, dock, launcher and Parcha Controls look.',
+                choice_group('Style', None, [
+                    ('glass', 'Glass', 'Translucent, softly blurred surfaces with rounded shapes.'),
+                    ('classic', 'Classic', 'Calmer frosted surfaces, more opaque, with tighter corners.'),
+                ], desktop.get_string('style'), apply_style)))
+
+        interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
+        current = 'dark' if interface.get_string('color-scheme') == 'prefer-dark' else 'light'
+        pages.append(page(
+            'weather-clear-night-symbolic', 'Light or Dark',
+            'Switch any time from Parcha Controls in the top-right corner.',
+            choice_group('Appearance', None, [
+                ('light', 'Light', 'Bright windows and panels.'),
+                ('dark', 'Dark', 'Dark windows and panels, easier on the eyes at night.'),
+            ], current, lambda v: interface.set_string(
+                'color-scheme', 'prefer-dark' if v == 'dark' else 'prefer-light'))))
+
+        style = keyboard_style()
+        if style is not None:
+            pages.append(page(
+                'input-keyboard-symbolic', 'The Super Key',
+                'Choose which key your app shortcuts use.',
+                choice_group('Shortcuts', None, [
+                    ('super-ctrl', 'Super for app shortcuts',
+                     'Super+C copies, Super+V pastes, Super+Q quits. Ctrl stays free in the terminal.'),
+                    ('standard', 'Ctrl for app shortcuts',
+                     'Ctrl+C copies and Ctrl+V pastes; Super opens system features.'),
+                ], 'standard' if style in ('standard', 'windows') else 'super-ctrl',
+                    lambda v: subprocess.Popen(['parchaos-keyboard-style', v]))))
+
+        location = schema('org.gnome.system.location')
+        if location is not None:
+            row = Adw.SwitchRow(
+                title='Location Services',
+                subtitle='Lets the menu bar show the weather where you are, and apps '
+                         'like Maps and Weather find you. Your location is looked up '
+                         'with Wi-Fi networks nearby.')
+            location.bind('enabled', row, 'active', Gio.SettingsBindFlags.DEFAULT)
+            group = Adw.PreferencesGroup()
+            group.add(row)
+            pages.append(page('find-location-symbolic', 'Location',
+                              'Off unless you turn it on. You can change this later '
+                              'in Settings, under Privacy.', group))
+
+        tour = Adw.PreferencesGroup()
+        for icon, title, subtitle in (
+            ('view-app-grid-symbolic', 'Launcher', 'Every app, from the dock\'s last button or Super+A. '
+             'Drag icons to arrange them; hold one over another to make a folder.'),
+            ('preferences-system-symbolic', 'Parcha Controls', 'Wi-Fi, Bluetooth, Focus, Dark Mode, '
+             'brightness and sound, from the top-right corner.'),
+            ('open-menu-symbolic', 'Menu bar', 'The menus of the app you\'re using, always at the top. '
+             'The passion fruit holds About, Settings, Lock and Log Out.'),
+            ('view-restore-symbolic', 'Pick up where you left off', 'Apps you had open come back '
+             'when you log in again.'),
+        ):
+            row = Adw.ActionRow(title=title, subtitle=subtitle)
+            row.add_prefix(Gtk.Image(icon_name=icon, icon_size=Gtk.IconSize.LARGE))
+            tour.add(row)
+        pages.append(page('starred-symbolic', 'Where Things Are', None, tour))
+
+        pages.append(page('emblem-ok-symbolic', 'You\'re All Set',
+                          'Enjoy ParchaOS. Found a bug or have an idea? Help → Report a '
+                          'Bug or Feature Request in the menu bar.'))
+        return pages
+
+    def _go(self, step):
+        n = self.carousel.get_n_pages()
+        position = round(self.carousel.get_position()) + step
+        if position >= n:
+            self.close()
+            return
+        self.carousel.scroll_to(self.carousel.get_nth_page(max(0, position)), True)
+
+    def _sync_buttons(self):
+        position = round(self.carousel.get_position())
+        last = position >= self.carousel.get_n_pages() - 1
+        self.back.set_visible(position > 0)
+        self.next.set_label('Get Started' if last else 'Continue')
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+
+    def do_command_line(self, command_line):
+        first_run = '--first-run' in command_line.get_arguments()
+        if first_run and (os.path.exists(DONE_FILE) or live_session()):
+            return 0
+        if first_run:
+            # Mark it at once, so an interrupted welcome never comes back.
+            os.makedirs(STATE_DIR, exist_ok=True)
+            open(DONE_FILE, 'w').close()
+        self.activate()
+        return 0
+
+    def do_activate(self):
+        win = self.props.active_window or Window(self)
+        win.present()
+
+
+if __name__ == '__main__':
+    sys.exit(App().run(sys.argv))

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ParchaOS Welcome
+Comment=Shown once, at first login
+Exec=parchaos-welcome --first-run
+Icon=parchaos-logo
+NoDisplay=true
+X-GNOME-Autostart-Phase=Applications
+X-GNOME-Autostart-Delay=3

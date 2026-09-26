@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ParchaOS Welcome
+Comment=Set up your style, keyboard and location, and see where things are
+Exec=parchaos-welcome
+Icon=parchaos-logo
+Categories=GNOME;GTK;Settings;DesktopSettings;
+Keywords=welcome;setup;tour;first;
+StartupNotify=true

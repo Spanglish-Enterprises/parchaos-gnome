@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        30%{?dist}
+Release:        31%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -119,6 +119,7 @@ Requires:       parchaos-settings
 Requires:       parchaos-session
 Requires:       parchaos-live-icons
 Requires:       parchaos-release
+Requires:       parchaos-welcome
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -204,6 +205,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-31
+- Require parchaos-welcome (first-login assistant). Location services
+  default to off; the welcome asks.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-30
 - Schema: add launcher-order (the launcher's arrangement).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-29

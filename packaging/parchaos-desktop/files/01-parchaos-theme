@@ -20,8 +20,10 @@ clock-show-weekday=true
 # the built-in weather feature, not a silent override; a user who
 # doesn't want it can turn it back off in Settings like any other
 # GNOME install.
+# Location stays off until the user turns it on (ParchaOS Welcome asks
+# at first login; also in Settings > Privacy).
 [org/gnome/system/location]
-enabled=true
+enabled=false
 
 [org/gnome/desktop/wm/preferences]
 theme='MacTahoe-Dark'
