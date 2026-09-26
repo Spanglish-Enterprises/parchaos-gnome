@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS's Tahoe-styled icon theme
 
 License:        GPL-3.0-or-later
@@ -32,6 +32,20 @@ Source1:        parcher.svg
 Source2:        parcha-store.svg
 Source3:        pafari.svg
 Source4:        parcha-browser.svg
+# Batch 2 (ticket #13): original icons for the most visible apps, generated
+# by parchaos-icons/generate.py, replacing MacTahoe's copies of Apple's.
+Source5:        parchaos-calendar.svg
+Source6:        parchaos-clock.svg
+Source7:        parchaos-calculator.svg
+Source8:        parchaos-contacts.svg
+Source9:        parchaos-mail.svg
+Source10:        parchaos-settings.svg
+Source11:        parchaos-terminal.svg
+Source12:        parchaos-text-editor.svg
+Source13:        parchaos-weather.svg
+Source14:        parchaos-screenshot.svg
+Source15:        parchaos-system-monitor.svg
+Source16:        parchaos-disks.svg
 
 BuildArch:      noarch
 
@@ -59,14 +73,19 @@ upstream MacTahoe-icon-theme using its own install.sh. Default
 mkdir -p %{buildroot}%{_datadir}/icons
 ./install.sh -t default -d %{buildroot}%{_datadir}/icons
 
-# Replace the Apple-look icons. MacTahoe points every alias (e.g.
-# org.gnome.Nautilus, system-file-manager, org.gnome.Software, epiphany)
-# at these four files, so replacing the targets covers all of them.
+# Replace the Apple-look icons with original ParchaOS artwork. MacTahoe
+# points every alias (e.g. org.gnome.Nautilus, org.gnome.Calendar,
+# org.gnome.Settings) at one target file per design, so replacing the
+# targets covers all of them.
 # MacTahoe-light's apps/ dir is a symlink to MacTahoe's.
 for theme in MacTahoe MacTahoe-dark; do
     d=%{buildroot}%{_datadir}/icons/$theme/apps/scalable
     for pair in file-manager:%{SOURCE1} softwarecenter:%{SOURCE2} \
-                web-browser:%{SOURCE3} safari:%{SOURCE4}; do
+                web-browser:%{SOURCE3} safari:%{SOURCE4} \
+                calendar:%{SOURCE5} preferences-system-time:%{SOURCE6} calc:%{SOURCE7} \
+                addressbook:%{SOURCE8} internet-mail:%{SOURCE9} preferences-system:%{SOURCE10} \
+                terminal:%{SOURCE11} text-editor:%{SOURCE12} indicator-weather:%{SOURCE13} \
+                accessories-screenshot:%{SOURCE14} utilities-system-monitor:%{SOURCE15} gnome-disks:%{SOURCE16}; do
         name=${pair%%%%:*}; src=${pair#*:}
         if [ -e "$d/$name.svg" ] || [ -L "$d/$name.svg" ]; then
             rm -f "$d/$name.svg"
@@ -96,6 +115,10 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-6
+- Original ParchaOS icons for Calendar, Clock, Calculator, Contacts, Mail,
+  Settings, Terminal, Text Editor, Weather, Screenshot, System Monitor and
+  Disks, replacing MacTahoe's reproductions of Apple's icons (ticket #13).
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-5
 - Remove MacTahoe's weather condition icons (-large/-small), which
   embed low-resolution raster images and looked pixelated in GNOME
