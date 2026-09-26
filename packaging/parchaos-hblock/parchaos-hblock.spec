@@ -26,7 +26,7 @@
 
 Name:           parchaos-hblock
 Version:        3.5.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Adblocker that creates a hosts file from multiple sources
 
 License:        MIT
@@ -34,6 +34,8 @@ URL:            https://github.com/hectorm/hblock
 %global commit  8bce7f687ff9c29739dce10bbeb59ab1e71d6ff3
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/archive/%{commit}/hblock-%{shortcommit}.tar.gz
+# Keeps the system's own /etc/hosts entries and restores the file on removal.
+Source1:        parchaos-hblock-hosts
 
 BuildArch:      noarch
 BuildRequires:  make
@@ -52,7 +54,10 @@ Requires(postun): systemd
 %description
 hBlock is a POSIX-compliant shell script that fetches a list of domains
 serving ads, tracking scripts, and malware from multiple public sources
-and merges them into /etc/hosts, refreshed on a systemd timer. Real,
+and merges them into /etc/hosts, refreshed on a systemd timer. The
+system's own /etc/hosts entries are kept (/etc/hblock/header), sites
+can be unblocked in /etc/hblock/allow.list, and removing the package
+restores the original file. Real,
 independently-maintained upstream (not Inled-original) -- Pulsar OS's
 own equivalent is blocked on the same missing-LICENSE gap as most of
 their original work; this depends on the real upstream directly
@@ -74,8 +79,12 @@ instead. See this spec's own banner comment for the full reasoning.
 # that runtime check.
 mkdir -p %{buildroot}%{_unitdir}
 install -m 0644 resources/systemd/hblock.service resources/systemd/hblock.timer %{buildroot}%{_unitdir}/
+install -Dm0755 %{SOURCE1} %{buildroot}%{_libexecdir}/parchaos-hblock-hosts
 
 %post
+# Before the first refresh: keep what /etc/hosts already has (install and
+# upgrade; it only acts once).
+%{_libexecdir}/parchaos-hblock-hosts setup || :
 # Real bug caught before shipping, twice over: (1) RPM macro-expands
 # the ENTIRE scriptlet section text, including shell comments -- an
 # earlier version of this comment that just mentioned the macro names
@@ -112,6 +121,8 @@ fi
 if [ $1 -eq 0 ]; then
     # Package removal, not upgrade
     systemctl --no-reload disable --now hblock.timer >/dev/null 2>&1 || :
+    # Take the blocklist out of /etc/hosts again.
+    %{_libexecdir}/parchaos-hblock-hosts restore || :
 fi
 
 %postun
@@ -119,6 +130,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 
 %files
 %{_bindir}/hblock
+%{_libexecdir}/parchaos-hblock-hosts
 %{_unitdir}/hblock.timer
 %{_unitdir}/hblock.service
 %{_mandir}/man1/hblock.1*
@@ -126,6 +138,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %doc README.md
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 3.5.1-3
+- Keep the system's own /etc/hosts entries (seeded into
+  /etc/hblock/header once), add /etc/hblock/allow.list for unblocking
+  sites, and restore the original /etc/hosts when the package is
+  removed.
 * Thu Sep 24 2026 ParchaOS packaging - 3.5.1-2
 - Real bug found live: `systemctl preset` left the timer disabled
   since this project ships no .preset policy file. Switched to

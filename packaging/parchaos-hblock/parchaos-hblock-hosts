@@ -1,0 +1,69 @@
+#!/bin/bash
+# parchaos-hblock-hosts: keep the system's own /etc/hosts entries when
+# hBlock manages the file.
+#
+# hBlock rewrites /etc/hosts as header + blocklist. Without a header file
+# of its own it writes a stock header, so entries the user (or the system)
+# had in /etc/hosts were lost, and removing the package left the
+# blocklist in place.
+#
+#   setup    (install/upgrade) seed /etc/hblock/header from the current
+#            /etc/hosts and keep a copy of the original, once; create an
+#            allow list for sites the user wants unblocked.
+#   restore  (removal) put the original /etc/hosts back.
+#
+# ROOT can point at another tree, for testing.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -eu
+
+ROOT="${ROOT:-}"
+HOSTS="$ROOT/etc/hosts"
+CONF="$ROOT/etc/hblock"
+ORIG="$ROOT/etc/hosts.parchaos-hblock-orig"
+
+setup() {
+    mkdir -p "$CONF"
+    if [ ! -e "$CONF/header" ]; then
+        if grep -q '^# BEGIN HEADER' "$HOSTS" 2>/dev/null; then
+            # Already written by hBlock: its header section is what the
+            # system had (the rest is the blocklist).
+            sed -n '/^# BEGIN HEADER/,/^# END HEADER/{/^# \(BEGIN\|END\) HEADER/d;p}' "$HOSTS" >"$CONF/header"
+        elif [ -f "$HOSTS" ]; then
+            cp -p "$HOSTS" "$CONF/header"
+            [ -e "$ORIG" ] || cp -p "$HOSTS" "$ORIG"
+        fi
+    fi
+    if [ ! -e "$CONF/allow.list" ]; then
+        cat >"$CONF/allow.list" <<'EOF'
+# Sites listed here are never blocked by hBlock, one domain per line,
+# e.g. example.com. Applied at the next refresh:
+#   sudo systemctl start hblock.service
+EOF
+    fi
+}
+
+restore() {
+    local tmp
+    tmp=$(mktemp "$ROOT/etc/.hosts.XXXXXX")
+    if [ -f "$ORIG" ]; then
+        cat "$ORIG" >"$tmp"
+    elif [ -f "$CONF/header" ]; then
+        cat "$CONF/header" >"$tmp"
+    else
+        printf '127.0.0.1   localhost localhost.localdomain\n::1         localhost localhost.localdomain\n' >"$tmp"
+    fi
+    chmod 0644 "$tmp"
+    mv -f "$tmp" "$HOSTS"
+    # /etc/hosts has its own SELinux type (net_conf_t); a file moved in
+    # from a temporary name would keep the generic /etc one.
+    [ -z "$ROOT" ] && command -v restorecon >/dev/null && restorecon "$HOSTS" || :
+    rm -f "$ORIG"
+}
+
+case "${1:-}" in
+    setup) setup ;;
+    restore) restore ;;
+    *) echo "usage: parchaos-hblock-hosts setup|restore" >&2; exit 2 ;;
+esac
