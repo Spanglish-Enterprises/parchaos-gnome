@@ -1,0 +1,41 @@
+#!/bin/bash
+# parchaos-os-release: write /etc/os-release as ParchaOS.
+#
+# fedora-release-common owns /etc/os-release (a symlink to
+# /usr/lib/os-release) and puts Fedora's back on every update, so this
+# runs at install and again from a trigger whenever that package changes.
+# Everything version-related (VERSION_ID, CPE_NAME, SUPPORT_END, ...)
+# comes from Fedora's file unchanged, so dnf and other tools keep working.
+#
+# ID stays "parchaos" (ID_LIKE=fedora): with ID=fedora, the app store
+# would offer new Fedora releases before ParchaOS supports them.
+
+set -eu
+
+SRC=/usr/lib/os-release
+DEST=/etc/os-release
+SITE=https://parchaos-website.vercel.app
+
+[ -r "$SRC" ] || exit 0
+# shellcheck source=/dev/null
+version_id=$(. "$SRC" && echo "${VERSION_ID:-}")
+
+tmp=$(mktemp /etc/.os-release.XXXXXX)
+{
+    grep -vE '^(NAME|VERSION|PRETTY_NAME|ID|ID_LIKE|ANSI_COLOR|LOGO|DEFAULT_HOSTNAME|HOME_URL|DOCUMENTATION_URL|SUPPORT_URL|BUG_REPORT_URL|REDHAT_[A-Z_]*)=' "$SRC"
+    echo 'NAME="ParchaOS"'
+    echo "VERSION=\"${version_id}\""
+    echo "PRETTY_NAME=\"ParchaOS ${version_id}\""
+    echo 'ID=parchaos'
+    echo 'ID_LIKE=fedora'
+    echo 'ANSI_COLOR="0;38;2;93;0;147"'
+    echo 'LOGO=parchaos-logo'
+    echo 'DEFAULT_HOSTNAME="parchaos"'
+    echo "HOME_URL=\"$SITE\""
+    echo "DOCUMENTATION_URL=\"$SITE/#faq\""
+    echo "SUPPORT_URL=\"$SITE/support\""
+    echo "BUG_REPORT_URL=\"$SITE/support\""
+} >"$tmp"
+chmod 0644 "$tmp"
+# Replaces Fedora's symlink (or an older copy) in one step.
+mv -f "$tmp" "$DEST"

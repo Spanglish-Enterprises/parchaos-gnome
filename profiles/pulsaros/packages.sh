@@ -52,6 +52,9 @@ PROFILE_REPO_PACKAGES=(
 
     # Live Clock and Calendar icons (packaging/parchaos-live-icons/).
     parchaos-live-icons
+    # ParchaOS os-release branding kept across Fedora updates
+    # (packaging/parchaos-release/).
+    parchaos-release
 
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice

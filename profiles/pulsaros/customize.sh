@@ -20,20 +20,11 @@ profile_customize() {
     # install+reboot test found showing up verbatim in the installed
     # system's own GRUB boot menu (GRUB's BLS title generation reads
     # os-release's PRETTY_NAME).
+    # parchaos-release (packages.sh) writes it at install and keeps it
+    # across Fedora release-package updates; run it once more here so the
+    # branding is in place however the package set was installed.
     echo "--- Branding /etc/os-release as ParchaOS ---"
-    sed -i \
-        -e 's|^NAME=.*|NAME="ParchaOS"|' \
-        -e 's|^PRETTY_NAME=.*|PRETTY_NAME="ParchaOS 44"|' \
-        -e 's|^ID=.*|ID=parchaos|' \
-        -e 's|^ANSI_COLOR=.*|ANSI_COLOR="0;38;2;93;0;147"|' \
-        -e 's|^HOME_URL=.*|HOME_URL="https://parchaos-website.vercel.app"|' \
-        -e 's|^DOCUMENTATION_URL=.*|DOCUMENTATION_URL="https://parchaos-website.vercel.app/#faq"|' \
-        -e 's|^SUPPORT_URL=.*|SUPPORT_URL="https://parchaos-website.vercel.app/support"|' \
-        -e 's|^BUG_REPORT_URL=.*|BUG_REPORT_URL="https://parchaos-website.vercel.app/support"|' \
-        -e '/^REDHAT_/d' \
-        "$ROOTFS_TARGET/etc/os-release"
-    grep -q '^ID_LIKE=' "$ROOTFS_TARGET/etc/os-release" || \
-        echo 'ID_LIKE=fedora' >> "$ROOTFS_TARGET/etc/os-release"
+    run_in_target /usr/libexec/parchaos-os-release
 
     echo "--- Setting default hostname: parchaos ---"
     echo "parchaos" > "$ROOTFS_TARGET/etc/hostname"
