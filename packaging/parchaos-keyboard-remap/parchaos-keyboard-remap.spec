@@ -60,6 +60,11 @@
 # ==============================================================================
 
 %global xremap_version 0.15.13
+# xremap-crate-licenses.txt carries the license and copyright notices of
+# the Rust crates statically linked into the xremap binary. Regenerate it
+# whenever xremap_version changes:
+#   scripts/xremap-crate-licenses.py VERSION > \
+#       packaging/parchaos-keyboard-remap/xremap-crate-licenses.txt
 %global gnome_ext_commit de79b05989308d717429726dab503e116a141851
 %global gnome_ext_shortcommit %(c=%{gnome_ext_commit}; echo ${c:0:7})
 
@@ -75,10 +80,10 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
-License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later
+License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
 URL:            https://github.com/xremap/xremap
 Source0:        https://github.com/xremap/xremap/releases/download/v%{xremap_version}/xremap-linux-x86_64-gnome.zip
 Source1:        https://github.com/xremap/xremap-gnome/archive/%{gnome_ext_commit}/xremap-gnome-%{gnome_ext_shortcommit}.tar.gz
@@ -87,6 +92,7 @@ Source90:       LICENSE
 Source91:       GPL-2.0.txt
 Source92:       THIRD-PARTY-LICENSES.md
 Source93:       https://raw.githubusercontent.com/xremap/xremap/v%{xremap_version}/LICENSE#/xremap-LICENSE
+Source94:       xremap-crate-licenses.txt
 
 ExclusiveArch:  x86_64
 
@@ -119,7 +125,7 @@ mkdir xremap-bin
 (cd xremap-bin && unzip -o %{SOURCE0})
 tar xzf %{SOURCE1}
 tar xzf %{SOURCE2}
-cp -p %{SOURCE90} %{SOURCE91} %{SOURCE92} %{SOURCE93} .
+cp -p %{SOURCE90} %{SOURCE91} %{SOURCE92} %{SOURCE93} %{SOURCE94} .
 
 %build
 # Nothing to compile: xremap ships as a prebuilt binary (Source0), and
@@ -164,6 +170,7 @@ dconf update >/dev/null 2>&1 || :
 %license GPL-2.0.txt
 %license THIRD-PARTY-LICENSES.md
 %license xremap-LICENSE
+%license xremap-crate-licenses.txt
 %{_bindir}/xremap
 %{_bindir}/parchaos-keyboard-style
 %{_datadir}/gnome-shell/extensions/xremap@k0kubun.com/
@@ -175,6 +182,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - %{xremap_version}-10
+- Ship the license and copyright notices of the Rust crates linked into
+  the xremap binary (xremap-crate-licenses.txt).
 * Sat Sep 26 2026 ParchaOS packaging - 0.15.13-9
 - ParchaOS's own remap configuration and keybinding defaults, written
   from a plain list of the wanted shortcuts; the key mappings are
