@@ -1,0 +1,94 @@
+#!/bin/bash
+# parchaos-grub-setup: make kernel updates reach the boot menu on UEFI
+# installs.
+#
+# ParchaOS installs run GRUB without BLS (GRUB_ENABLE_BLSCFG=false: GRUB's
+# own btrfs driver couldn't find the loader entries in the @root
+# subvolume). Without BLS, Fedora's kernel-install hook
+# (99-grub-mkconfig.install) regenerates /boot/grub2/grub.cfg on every
+# kernel update -- but the installer had written GRUB's whole config to
+# the EFI partition instead (plus a custom.cfg pinned to the install-time
+# kernel), and GRUB on UEFI reads that copy. New kernels never appeared,
+# and once dnf removed the original kernel the system couldn't boot.
+#
+# This puts things the way Fedora lays them out: the real config at
+# /boot/grub2/grub.cfg (regenerated on every kernel update) and a small
+# stub on the EFI partition that loads it. It's safe to run any number of
+# times; it does nothing on BIOS installs or when BLS is enabled.
+#
+#   parchaos-grub-setup            set up (installer and package scriptlet)
+#   parchaos-grub-setup --check    report what would change, change nothing
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -euo pipefail
+
+ESP_DIR=/boot/efi/EFI/fedora
+ESP_CFG=$ESP_DIR/grub.cfg
+REAL_CFG=/boot/grub2/grub.cfg
+CHECK=0
+[ "${1:-}" = --check ] && CHECK=1
+
+say() { echo "parchaos-grub-setup: $*"; }
+
+if [ ! -d /sys/firmware/efi ] || [ ! -d "$ESP_DIR" ]; then
+    say "not a UEFI install with $ESP_DIR; nothing to do"
+    exit 0
+fi
+if ! grep -sq '^GRUB_ENABLE_BLSCFG="*false"*\s*$' /etc/default/grub; then
+    say "BLS is enabled; Fedora's defaults apply; nothing to do"
+    exit 0
+fi
+
+stub_ok() {
+    [ -f "$ESP_CFG" ] && grep -q '^configfile ' "$ESP_CFG" && ! grep -q '^menuentry ' "$ESP_CFG"
+}
+
+if [ $CHECK -eq 1 ]; then
+    if [ -f "$REAL_CFG" ]; then say "$REAL_CFG exists"; else say "$REAL_CFG missing: would generate it"; fi
+    if stub_ok; then say "$ESP_CFG is already a stub"; else say "$ESP_CFG is a full config: would replace it with a stub"; fi
+    [ -f "$ESP_DIR/custom.cfg" ] && say "would retire $ESP_DIR/custom.cfg"
+    exit 0
+fi
+
+# 1. The real config, generated where kernel updates will regenerate it.
+new=$(mktemp /boot/grub2/.grub.cfg.XXXXXX)
+trap 'rm -f "$new"' EXIT
+grub2-mkconfig -o "$new" >/dev/null 2>&1
+grub2-script-check "$new"
+# It must have boot entries for an installed kernel.
+if ! grep -q 'vmlinuz-' "$new"; then
+    say "generated config has no kernel entries; leaving the boot setup unchanged"
+    exit 1
+fi
+chmod 0600 "$new"
+mv -f "$new" "$REAL_CFG"
+trap - EXIT
+
+# 2. The EFI stub that loads it. The path is the one GRUB sees inside the
+# filesystem (with the btrfs subvolume, e.g. /@root/boot/grub2).
+if ! stub_ok; then
+    uuid=$(grub2-probe --target=fs_uuid /boot/grub2)
+    prefix=$(grub2-mkrelpath /boot/grub2)
+    [ -n "$uuid" ] && [ -n "$prefix" ] || { say "couldn't work out the /boot/grub2 location"; exit 1; }
+    stub=$(mktemp "$ESP_DIR/.grub.cfg.XXXXXX")
+    cat >"$stub" <<EOF
+# Loads the real GRUB configuration from /boot/grub2/grub.cfg, which is
+# regenerated on every kernel update (written by parchaos-grub-setup).
+search --no-floppy --fs-uuid --set=dev $uuid
+set prefix=(\$dev)$prefix
+export \$prefix
+configfile \$prefix/grub.cfg
+EOF
+    grub2-script-check "$stub"
+    [ -f "$ESP_CFG" ] && cp -p "$ESP_CFG" "$ESP_CFG.parchaos-before-stub"
+    mv -f "$stub" "$ESP_CFG"
+    say "EFI config now loads $prefix/grub.cfg (previous copy kept as grub.cfg.parchaos-before-stub)"
+fi
+
+# 3. The old static entry pinned to the install-time kernel.
+if [ -f "$ESP_DIR/custom.cfg" ]; then
+    mv -f "$ESP_DIR/custom.cfg" "$ESP_DIR/custom.cfg.parchaos-retired"
+    say "retired $ESP_DIR/custom.cfg"
+fi
+say "done"
