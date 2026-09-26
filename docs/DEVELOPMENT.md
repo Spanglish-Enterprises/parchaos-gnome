@@ -13,7 +13,7 @@ panel in GNOME Settings), session restore, live Clock and Calendar
 icons, two visual styles (Glass and Classic), GTK/icon/Plymouth/wallpaper
 theming (light + dark) with original ParchaOS icons, a Chromium-based
 browser, a Super-as-Ctrl keyboard remap, scheduled Do Not Disturb, auto
-light/dark, TMOG, a hosts-file ad-blocker, a live/video wallpaper,
+light/dark, a hosts-file ad-blocker, a live/video wallpaper,
 Desktop Icons NG, and GNOME Shell extensions from Pulsar OS's own list
 for desktop polish (traffic-light window buttons, magic-lamp minimize effect,
 top-right notification banners, blur, and more). The KDE-only
@@ -125,7 +125,7 @@ build the ParchaOS repository is preferred for), `parchaos-browser` ("Parcha Bro
 rebrand and the default web browser; it replaced and Obsoletes `pafari`, the
 old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Preview,
 Clocks → Clock, Geary → Mail, Software → Parcha Store),
-`parchaos-tmog`, `parchaos-cloud` (rclone wrapper — **deprioritized**,
+`parchaos-cloud` (rclone wrapper — **deprioritized**,
 see phase2/phase3 docs; already shipped before this project's own
 licensing-audit habit started, same missing-LICENSE gap as the rest of
 Inled's work, being replaced with ParchaOS's own implementation rather

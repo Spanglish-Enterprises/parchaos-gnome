@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        36%{?dist}
+Release:        37%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -105,7 +105,6 @@ Requires:       parchaos-keyboard-remap
 Requires:       parchaos-cloud
 Requires:       parchaos-focus-schedule
 Requires:       parchaos-yin-yang
-Requires:       parchaos-tmog
 Requires:       parchaos-browser
 Requires:       parchaos-app-renames
 Requires:       parchaos-notification-position
@@ -125,6 +124,9 @@ Requires:       parchaos-release
 Requires:       parchaos-welcome
 Requires:       parchaos-boot
 Requires:       parchaos-desktop-schemas = %{version}-%{release}
+
+# TMOG is no longer part of ParchaOS; remove the launcher on update.
+Obsoletes:      parchaos-tmog < 1.0.0-3
 
 %description
 A real, no-content meta-package: installing it (or updating it) simply
@@ -230,6 +232,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-37
+- Drop TMOG: no longer part of ParchaOS; Obsoletes parchaos-tmog so
+  existing installs remove it.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-36
 - Turn off Just Perfection's support pop-up, which showed donation
   buttons on new installs and extension updates.
