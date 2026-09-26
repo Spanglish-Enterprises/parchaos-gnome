@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,13 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-11
+- Edit, View, File and Go items send each kind of app the right keys:
+  Ctrl+Shift+C/V in terminals, file-view items only in the file
+  manager, Redo as Ctrl+Shift+Z; items an app lacks are greyed out.
+- Quit asks the whole app to quit; Hide minimizes all its windows.
+- Close Window closes the window directly.
+- One virtual keyboard, released on disable.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-10
 - Follow the ParchaOS style setting live; classic: an even frosted bar,
   no text glow, rounded-rectangle highlights.

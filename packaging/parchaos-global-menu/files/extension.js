@@ -45,11 +45,16 @@ const IGNORED_APP_IDS = [
 // keyboard shortcuts (Ctrl+C, Ctrl+1, etc.) from a menu click. This is a
 // standard GNOME Shell technique (Clutter's virtual input device API);
 // see e.g. any accessibility or automation extension for the same
-// general pattern.
+// general pattern. One virtual keyboard is shared and dropped on disable.
 // ---------------------------------------------------------------------
+let _keyboard = null;
+
 function sendKeyCombo(modifierKeyvals, keyval) {
-    const seat = Clutter.get_default_backend().get_default_seat();
-    const keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+    if (!_keyboard) {
+        const seat = Clutter.get_default_backend().get_default_seat();
+        _keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+    }
+    const keyboard = _keyboard;
 
     for (const mod of modifierKeyvals)
         keyboard.notify_keyval(0, mod, Clutter.KeyState.PRESSED);
@@ -57,6 +62,63 @@ function sendKeyCombo(modifierKeyvals, keyval) {
     keyboard.notify_keyval(0, keyval, Clutter.KeyState.RELEASED);
     for (const mod of [...modifierKeyvals].reverse())
         keyboard.notify_keyval(0, mod, Clutter.KeyState.RELEASED);
+}
+
+// Menu actions that are sent to the app as keyboard shortcuts. The same
+// action needs different keys in different kinds of app: in a terminal
+// Ctrl+C interrupts the running command, so Copy is Ctrl+Shift+C there,
+// and the file-view items only mean something in the file manager.
+// null = the app has no such command; the item is greyed out.
+const CTRL = [Clutter.KEY_Control_L];
+const CTRL_SHIFT = [Clutter.KEY_Control_L, Clutter.KEY_Shift_L];
+
+const SHORTCUTS = {
+    'new-window': {default: [CTRL, Clutter.KEY_n], terminal: [CTRL_SHIFT, Clutter.KEY_N]},
+    'undo': {default: [CTRL, Clutter.KEY_z], terminal: null},
+    // Ctrl+Shift+Z is the redo GTK, Chromium, Electron and LibreOffice
+    // all accept; Ctrl+Y isn't bound in most GTK 4 apps.
+    'redo': {default: [CTRL_SHIFT, Clutter.KEY_Z], terminal: null},
+    'cut': {default: [CTRL, Clutter.KEY_x], terminal: null},
+    'copy': {default: [CTRL, Clutter.KEY_c], terminal: [CTRL_SHIFT, Clutter.KEY_C]},
+    'paste': {default: [CTRL, Clutter.KEY_v], terminal: [CTRL_SHIFT, Clutter.KEY_V]},
+    'view-icons': {default: null, files: [CTRL, Clutter.KEY_1]},
+    'view-list': {default: null, files: [CTRL, Clutter.KEY_2]},
+    'hidden-files': {default: null, files: [CTRL, Clutter.KEY_h]},
+    'back': {default: [[Clutter.KEY_Alt_L], Clutter.KEY_Left], terminal: null},
+};
+
+const TERMINAL_IDS = /^(org\.gnome\.(terminal|ptyxis|console)|kgx|com\.mitchellh\.ghostty|org\.wezfurlong\.wezterm|kitty|alacritty|foot|xterm|org\.kde\.konsole|konsole|com\.gexperts\.tilix|com\.raggesilver\.blackbox)/i;
+const FILES_IDS = /^org\.gnome\.nautilus/i;
+
+function appKind(window) {
+    if (!window)
+        return null;
+    const app = Shell.WindowTracker.get_default().get_window_app(window);
+    const ids = [
+        app?.get_id()?.replace(/\.desktop$/, ''),
+        window.get_gtk_application_id?.(),
+        window.get_wm_class?.(),
+    ].filter(Boolean);
+    if (ids.some(id => TERMINAL_IDS.test(id)))
+        return 'terminal';
+    if (ids.some(id => FILES_IDS.test(id)))
+        return 'files';
+    return 'default';
+}
+
+function shortcutFor(action, kind) {
+    if (!kind)
+        return null;
+    const entry = SHORTCUTS[action];
+    return kind in entry ? entry[kind] : entry.default;
+}
+
+function openHome() {
+    try {
+        Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(GLib.get_home_dir(), null), null);
+    } catch (e) {
+        console.error('[ParchaOSGlobalMenu] Failed to open home folder:', e);
+    }
 }
 
 function openSpecialDir(dirType) {
@@ -275,6 +337,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._styleChangedId = this._styleSettings?.connect('changed::style',
             () => applyStyleClass(Main.panel, this._styleSettings)) ?? 0;
         this._menuBarButtons = [];
+        this._shortcutItems = [];
         this._activeAppWindow = null;
         this._focusNotifyId = 0;
 
@@ -326,6 +389,8 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         for (const button of this._menuBarButtons)
             button.destroy();
         this._menuBarButtons = [];
+        this._shortcutItems = [];
+        _keyboard = null;
 
         if (this._weatherIndicator) {
             this._weatherIndicator.destroy();
@@ -611,12 +676,22 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         appBtn.menu.addMenuItem(this._aboutAppItem);
 
         this._hideAppItem = new PopupMenu.PopupMenuItem(`Hide ${DEFAULT_APP_NAME}`);
-        this._hideAppItem.connect('activate', () => this._activeAppWindow?.minimize());
+        this._hideAppItem.connect('activate', () => {
+            const app = this._activeApp();
+            if (app)
+                app.get_windows().forEach(w => w.minimize());
+            else
+                this._activeAppWindow?.minimize();
+        });
         appBtn.menu.addMenuItem(this._hideAppItem);
 
         this._quitAppItem = new PopupMenu.PopupMenuItem(`Quit ${DEFAULT_APP_NAME}`);
         this._quitAppItem.connect('activate', () => {
-            this._activeAppWindow?.delete(global.get_current_time());
+            const app = this._activeApp();
+            if (app)
+                app.request_quit();
+            else
+                this._activeAppWindow?.delete(global.get_current_time());
         });
         appBtn.menu.addMenuItem(this._quitAppItem);
 
@@ -647,6 +722,39 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const isIdleState = appName === DEFAULT_APP_NAME && !this._activeAppWindow;
         this._hideAppItem.setSensitive(!isIdleState);
         this._quitAppItem.setSensitive(!isIdleState);
+        this._updateShortcutItems();
+    }
+
+    _activeApp() {
+        const win = this._activeAppWindow;
+        return win ? Shell.WindowTracker.get_default().get_window_app(win) : null;
+    }
+
+    // A menu item that sends the focused app one of SHORTCUTS' actions.
+    _shortcutItem(menu, label, action) {
+        const item = new PopupMenu.PopupMenuItem(label);
+        item.connect('activate', () => {
+            // With no app focused the menu bar belongs to the file
+            // manager, so New Window opens one.
+            if (action === 'new-window' && !this._activeAppWindow) {
+                openHome();
+                return;
+            }
+            const combo = shortcutFor(action, appKind(this._activeAppWindow));
+            if (combo)
+                sendKeyCombo(...combo);
+        });
+        menu.addMenuItem(item);
+        this._shortcutItems.push([item, action]);
+        return item;
+    }
+
+    _updateShortcutItems() {
+        const kind = appKind(this._activeAppWindow);
+        for (const [item, action] of this._shortcutItems) {
+            item.setSensitive(shortcutFor(action, kind) !== null ||
+                (action === 'new-window' && !kind));
+        }
     }
 
     _isIgnoredWindow(window) {
@@ -679,12 +787,14 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const fileBtn = new MenuBarButton('File');
         fileBtn.roleId = 'file';
 
-        const newWindowItem = new PopupMenu.PopupMenuItem('New Window');
-        newWindowItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Control_L], Clutter.KEY_n));
-        fileBtn.menu.addMenuItem(newWindowItem);
+        this._shortcutItem(fileBtn.menu, 'New Window', 'new-window');
 
+        // Closing is done directly: Ctrl+W closes a tab in browsers and
+        // does nothing in a terminal.
         const closeWindowItem = new PopupMenu.PopupMenuItem('Close Window');
-        closeWindowItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Control_L], Clutter.KEY_w));
+        closeWindowItem.connect('activate', () => {
+            this._activeAppWindow?.delete(global.get_current_time());
+        });
         fileBtn.menu.addMenuItem(closeWindowItem);
 
         this._menuBarButtons.push(fileBtn);
@@ -696,28 +806,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const editBtn = new MenuBarButton('Edit');
         editBtn.roleId = 'edit';
 
-        const bindings = [
-            ['Undo', [Clutter.KEY_Control_L], Clutter.KEY_z],
-            ['Redo', [Clutter.KEY_Control_L], Clutter.KEY_y],
-        ];
-        for (const [label, mods, key] of bindings) {
-            const item = new PopupMenu.PopupMenuItem(label);
-            item.connect('activate', () => sendKeyCombo(mods, key));
-            editBtn.menu.addMenuItem(item);
-        }
-
+        this._shortcutItem(editBtn.menu, 'Undo', 'undo');
+        this._shortcutItem(editBtn.menu, 'Redo', 'redo');
         editBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const clipboardBindings = [
-            ['Cut', [Clutter.KEY_Control_L], Clutter.KEY_x],
-            ['Copy', [Clutter.KEY_Control_L], Clutter.KEY_c],
-            ['Paste', [Clutter.KEY_Control_L], Clutter.KEY_v],
-        ];
-        for (const [label, mods, key] of clipboardBindings) {
-            const item = new PopupMenu.PopupMenuItem(label);
-            item.connect('activate', () => sendKeyCombo(mods, key));
-            editBtn.menu.addMenuItem(item);
-        }
+        this._shortcutItem(editBtn.menu, 'Cut', 'cut');
+        this._shortcutItem(editBtn.menu, 'Copy', 'copy');
+        this._shortcutItem(editBtn.menu, 'Paste', 'paste');
 
         this._menuBarButtons.push(editBtn);
     }
@@ -728,19 +822,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const viewBtn = new MenuBarButton('View');
         viewBtn.roleId = 'view';
 
-        const iconViewItem = new PopupMenu.PopupMenuItem('as Icons');
-        iconViewItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Control_L], Clutter.KEY_1));
-        viewBtn.menu.addMenuItem(iconViewItem);
-
-        const listViewItem = new PopupMenu.PopupMenuItem('as List');
-        listViewItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Control_L], Clutter.KEY_2));
-        viewBtn.menu.addMenuItem(listViewItem);
-
+        this._shortcutItem(viewBtn.menu, 'as Icons', 'view-icons');
+        this._shortcutItem(viewBtn.menu, 'as List', 'view-list');
         viewBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        const hiddenFilesItem = new PopupMenu.PopupMenuItem('Show Hidden Files');
-        hiddenFilesItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Control_L], Clutter.KEY_h));
-        viewBtn.menu.addMenuItem(hiddenFilesItem);
+        this._shortcutItem(viewBtn.menu, 'Show Hidden Files', 'hidden-files');
 
         this._menuBarButtons.push(viewBtn);
     }
@@ -751,20 +836,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const goBtn = new MenuBarButton('Go');
         goBtn.roleId = 'go';
 
-        const backItem = new PopupMenu.PopupMenuItem('Back');
-        backItem.connect('activate', () => sendKeyCombo([Clutter.KEY_Alt_L], Clutter.KEY_Left));
-        goBtn.menu.addMenuItem(backItem);
+        this._shortcutItem(goBtn.menu, 'Back', 'back');
 
         goBtn.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const homeItem = new PopupMenu.PopupMenuItem('Home');
-        homeItem.connect('activate', () => {
-            try {
-                Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(GLib.get_home_dir(), null), null);
-            } catch (e) {
-                console.error('[ParchaOSGlobalMenu] Failed to open home folder:', e);
-            }
-        });
+        homeItem.connect('activate', () => openHome());
         goBtn.menu.addMenuItem(homeItem);
 
         const documentsItem = new PopupMenu.PopupMenuItem('Documents');
