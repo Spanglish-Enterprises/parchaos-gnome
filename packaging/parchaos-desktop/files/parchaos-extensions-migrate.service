@@ -1,0 +1,11 @@
+[Unit]
+Description=Turn on newly added ParchaOS desktop extensions
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/parchaos-extensions-migrate
+
+[Install]
+WantedBy=graphical-session.target

@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        NOASSERTION
@@ -77,10 +77,16 @@ Source2:        02-parchaos-extensions-tuning
 # Flathub as a static system remote (flatpak reads remotes.d), instead of
 # a one-off `flatpak remote-add` in the ISO build.
 Source3:        flathub.flatpakrepo
+# Adds newly shipped default extensions to users who have their own
+# enabled-extensions list (which otherwise hides new defaults forever).
+Source4:        parchaos-extensions-migrate
+Source5:        parchaos-extensions-migrate.service
 BuildArch:      noarch
 Requires(post): dconf
 Requires(postun): dconf
 Requires:       flatpak
+Requires:       python3-gobject
+BuildRequires:  systemd-rpm-macros
 
 Requires:       parchaos-finder
 Requires:       parchaos-dock
@@ -128,6 +134,11 @@ install -Dm0644 %{SOURCE0} %{buildroot}%{_datadir}/glib-2.0/schemas/org.parchaos
 mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 install -m0644 %{SOURCE1} %{SOURCE2} %{buildroot}%{_sysconfdir}/dconf/db/local.d/
 install -Dm0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
+install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-extensions-migrate
+install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
+mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
+ln -s ../parchaos-extensions-migrate.service \
+    %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/pulsaros/customize.sh only affects freshly built ISOs).
 # Default extensions for new user accounts. Previously written only by the
@@ -171,9 +182,14 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-extensions-tuning
 %{_sysconfdir}/flatpak/remotes.d/flathub.flatpakrepo
+%{_libexecdir}/parchaos-extensions-migrate
+%{_userunitdir}/parchaos-extensions-migrate.service
+%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-23
+- Turn on newly added ParchaOS extensions for users with their own extension list (parchaos-extensions-migrate user service, once per extension).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-22
 - Ship the theme (01-parchaos-theme) and extension tuning (02-parchaos-extensions-tuning) dconf defaults and a static Flathub remote, previously written only by the ISO build.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-21

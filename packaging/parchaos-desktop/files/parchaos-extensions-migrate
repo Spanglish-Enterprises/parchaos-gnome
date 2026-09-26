@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+# parchaos-extensions-migrate: turn on newly added default extensions for
+# users who have their own enabled-extensions list.
+#
+# The default list ships in /etc/dconf/db/local.d/00-parchaos-extensions,
+# but it's only a default: once a user has turned any extension on or off,
+# their own list replaces it, and extensions ParchaOS adds later (the
+# launcher, Controls, session restore, ...) never turn on for them.
+#
+# Runs at login. Each default extension is offered once: if it isn't in
+# the user's list, it's added, and it's remembered so an extension the
+# user turns off afterwards stays off. Extensions in the user's
+# disabled-extensions list are never added.
+#
+# The first run on an existing account only adds ParchaOS's own
+# extensions (*@parchaos.org); other defaults may have been turned off on
+# purpose before this tool existed, so they're only recorded as offered.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+
+import gi
+
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib  # noqa: E402
+
+STATE_DIR = os.path.join(GLib.get_user_state_dir(), 'parchaos')
+STATE_FILE = os.path.join(STATE_DIR, 'extensions-offered')
+
+
+def main():
+    settings = Gio.Settings.new('org.gnome.shell')
+    defaults = settings.get_default_value('enabled-extensions').unpack()
+
+    first_run = not os.path.exists(STATE_FILE)
+    offered = set()
+    if not first_run:
+        with open(STATE_FILE) as f:
+            offered = {line.strip() for line in f if line.strip()}
+
+    user_value = settings.get_user_value('enabled-extensions')
+    if user_value is not None:
+        enabled = list(user_value.unpack())
+        disabled = set(settings.get_strv('disabled-extensions'))
+        added = []
+        for uuid in defaults:
+            if uuid in offered or uuid in enabled or uuid in disabled:
+                continue
+            if first_run and not uuid.endswith('@parchaos.org'):
+                continue
+            enabled.append(uuid)
+            added.append(uuid)
+        if added:
+            settings.set_strv('enabled-extensions', enabled)
+            Gio.Settings.sync()
+            print('enabled:', ' '.join(added))
+
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(STATE_FILE, 'w') as f:
+        f.write('\n'.join(sorted(offered | set(defaults))) + '\n')
+
+
+if __name__ == '__main__':
+    main()
