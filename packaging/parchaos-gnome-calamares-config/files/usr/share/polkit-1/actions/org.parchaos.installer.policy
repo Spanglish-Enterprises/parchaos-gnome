@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- The installer's own action, so the live session can allow exactly this
+     one program (see the live rule in profiles/pulsaros/customize.sh), the
+     way Fedora's live media allow org.fedoraproject.pkexec.liveinst.
+     Everywhere else it needs an administrator password. -->
+<policyconfig>
+  <vendor>ParchaOS</vendor>
+  <action id="org.parchaos.pkexec.installer">
+    <description>Install ParchaOS</description>
+    <message>Authentication is required to install ParchaOS</message>
+    <icon_name>calamares</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/calamares</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

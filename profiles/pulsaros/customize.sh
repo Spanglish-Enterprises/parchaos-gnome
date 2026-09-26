@@ -43,6 +43,19 @@ lock-enabled=false
 idle-delay=uint32 0
 FOE
 glib-compile-schemas /usr/share/glib-2.0/schemas
+
+# The live user has no password, so the installer's authentication prompt
+# could never succeed. Allow exactly the installer's own action for the
+# local live user, the same rule Fedora's live media use for their
+# installer. Written at live boot only, so installed systems never get it.
+cat > /etc/polkit-1/rules.d/20-parchaos-live-installer.rules << FOE
+polkit.addRule(function(action, subject) {
+    if (subject.local && subject.user === 'liveuser' &&
+        action.id === 'org.parchaos.pkexec.installer')
+        return 'yes';
+    return undefined;
+});
+FOE
 LIVE
 
     echo "--- Setting default hostname: parchaos ---"

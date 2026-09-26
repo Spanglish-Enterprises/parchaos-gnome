@@ -20,4 +20,8 @@ export DISPLAY XAUTHORITY
 
 xhost "+si:localuser:root" >/dev/null 2>&1 || true
 
-exec pkexec env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" QT_QPA_PLATFORM=xcb /usr/bin/calamares
+# Run the program directly, not through env, so pkexec matches the
+# installer's own polkit action (org.parchaos.pkexec.installer). Its
+# allow_gui annotation keeps DISPLAY and XAUTHORITY; with no
+# WAYLAND_DISPLAY in the cleaned environment, Qt uses X11 (XWayland).
+exec pkexec /usr/bin/calamares
