@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -119,7 +119,7 @@ sed -i \
     -e 's/pulsar-dock@inled\.es/parcha-dock@parchaos.org/g' \
     -e 's/"name": "Pulsar Dock"/"name": "Parcha Dock"/' \
     -e 's/original-author": "Inled-Pulsar-OS"/original-author": "ParchaOS"/' \
-    -e 's#"url": "https://github.com/Inled-Pulsar-OS/dash-to-dock"#"url": "https://github.com/alexgalicea/parchaos-gnome"#' \
+    -e 's#"url": "https://github.com/Inled-Pulsar-OS/dash-to-dock"#"url": "https://parchaos-website.vercel.app"#' \
     metadata.json Makefile
 
 %build
@@ -170,6 +170,8 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 106-12
+- Point the extension's website link at the ParchaOS website.
 * Fri Sep 25 2026 ParchaOS packaging - 106-11
 - Fix "remoteModel is undefined" errors building dock icons right after
   Do Not Disturb turns off (badge indicator created before its model).

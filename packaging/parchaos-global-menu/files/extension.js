@@ -33,6 +33,9 @@ import Geoclue from 'gi://Geoclue';
 const DEFAULT_APP_NAME = 'Parcher';
 const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
 
+// The public ParchaOS website (help, FAQ, bug reports).
+const SITE_URL = 'https://parchaos-website.vercel.app';
+
 // A small set of window identities that represent desktop-shell helper
 // surfaces (icon grids, overlays) rather than real user applications --
 // these should never be tracked as "the focused app."
@@ -257,7 +260,7 @@ const WeatherIndicator = GObject.registerClass({
 
         this._weatherInfo = new GWeather.Info({
             application_id: 'org.parchaos.globalmenu',
-            contact_info: 'https://github.com/alexgalicea/parchaos-gnome',
+            contact_info: SITE_URL,
             location,
             enabled_providers: GWeather.Provider.MET_NO | GWeather.Provider.METAR,
         });
@@ -893,7 +896,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const helpItem = new PopupMenu.PopupMenuItem('ParchaOS Help');
         helpItem.connect('activate', () => {
             try {
-                Gio.AppInfo.launch_default_for_uri('https://github.com/alexgalicea/parchaos-gnome', null);
+                Gio.AppInfo.launch_default_for_uri(`${SITE_URL}/#faq`, null);
             } catch (e) {
                 console.error('[ParchaOSGlobalMenu] Failed to open help link:', e);
             }
@@ -905,7 +908,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         const reportBugItem = new PopupMenu.PopupMenuItem('Report a Bug or Feature Request…');
         reportBugItem.connect('activate', () => {
             try {
-                Gio.AppInfo.launch_default_for_uri('https://parchaos-website.vercel.app/support', null);
+                Gio.AppInfo.launch_default_for_uri(`${SITE_URL}/support`, null);
             } catch (e) {
                 console.error('[ParchaOSGlobalMenu] Failed to open support link:', e);
             }

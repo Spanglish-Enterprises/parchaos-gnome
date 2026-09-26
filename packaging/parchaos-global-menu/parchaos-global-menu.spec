@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        MIT
@@ -95,6 +95,8 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-12
+- Help opens the ParchaOS website FAQ, and the weather service contact and extension link point at the website instead of the private source repository.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-11
 - Edit, View, File and Go items send each kind of app the right keys:
   Ctrl+Shift+C/V in terminals, file-view items only in the file

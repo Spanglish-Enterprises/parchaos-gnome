@@ -7,7 +7,7 @@
 
 Name:           parchaos-live-icons
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Live Clock and Calendar app icons for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -38,6 +38,8 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-live-icons@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Point the extension's website link at the ParchaOS website.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
 - Initial package: live Clock (updates every minute) and Calendar
   (updates at midnight) icons. Verified in a headless shell (dock and

@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -43,6 +43,8 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2
+- Point the extension's website link at the ParchaOS website.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Verified across two headless shell sessions: apps
   relaunch, windows return to their saved position and size, a
