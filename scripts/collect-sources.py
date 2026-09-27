@@ -89,14 +89,18 @@ def sha256(path):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    prefix = "parchaos"
+    if "--prefix" in argv:
+        i = argv.index("--prefix")
+        if i + 1 >= len(argv):
+            sys.exit(__doc__)
+        prefix = argv[i + 1]
+        del argv[i:i + 2]
+    args = [a for a in argv if not a.startswith("--")]
     if len(args) != 2:
         sys.exit(__doc__)
     rootfs, outdir = args
-    prefix = "parchaos"
-    if "--prefix" in sys.argv:
-        prefix = sys.argv[sys.argv.index("--prefix") + 1]
-        args = [a for a in args if a != prefix]
     listing_only = "--no-download" in sys.argv
 
     srpms = installed_sources(rootfs)
