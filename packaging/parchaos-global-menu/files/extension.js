@@ -157,7 +157,7 @@ function applyStyleClass(actor, settings) {
 }
 
 // ---------------------------------------------------------------------
-// Adaptive bar tint. Like the macOS menu bar, the bar switches between
+// Adaptive bar tint. The bar switches between
 // light text (over dark wallpaper) and dark text (over light wallpaper).
 // The strip of wallpaper under the bar on the primary monitor is sampled
 // from the background image itself, with the same zoom/scale placement

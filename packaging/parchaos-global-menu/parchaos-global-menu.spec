@@ -104,7 +104,7 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %changelog
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-21
 - Adaptive menu bar: samples the wallpaper under the bar and switches
-  between light and dark text (like the macOS menu bar); light text
+  between light and dark text for contrast; light text
   again in the overview and lock screen.
 - No per-item fills: the shell theme's solid box behind every panel
   button and the clock is removed while the menu bar runs; items only
