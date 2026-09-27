@@ -8,13 +8,13 @@
 #   - openh264: Cisco's license covers it only when users download it
 #     from Cisco (the ISO carries Fedora's noopenh264 stub instead)
 #   - fedora-logos: Fedora's logos are for official Fedora media only
-#     (the ISO carries generic-logos instead)
+#     (the ISO carries parchaos-logos instead, Obsoletes: generic-logos)
 #   - anything from RPM Fusion, including its repo definitions
 #     (patent-encumbered or non-free software; release images don't
 #     enable it)
 #   - packages ParchaOS dropped: pafari, pearos-*, parchaos-finder,
 #     parchaos-macos-remap, parchaos-tmog
-# It also fails if noopenh264 or generic-logos is missing.
+# It also fails if noopenh264 or parchaos-logos is missing.
 #
 # Reads the rootfs's RPM database with the host's rpm, so it doesn't
 # depend on a container starting inside the image.
@@ -40,7 +40,7 @@ while IFS=$'\t' read -r name _license vendor; do
     fi
 done < "$out"
 
-for required in noopenh264 generic-logos; do
+for required in noopenh264 parchaos-logos; do
     # awk reads the whole file: `cut | grep -q` under pipefail can report a
     # present package as missing when grep exits early (SIGPIPE).
     if ! awk -F'\t' -v n="$required" '$1 == n { found = 1 } END { exit !found }' "$out"; then

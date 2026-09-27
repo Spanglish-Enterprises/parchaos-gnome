@@ -55,6 +55,9 @@ PROFILE_REPO_PACKAGES=(
     # ParchaOS os-release branding kept across Fedora updates
     # (packaging/parchaos-release/).
     parchaos-release
+    # ParchaOS system logos, replacing generic-logos' remaining live-
+    # visible fallbacks (packaging/parchaos-logos/).
+    parchaos-logos
     # First-login assistant (packaging/parchaos-welcome/).
     parchaos-welcome
     # Keeps new kernels in the boot menu (packaging/parchaos-boot/).

@@ -128,7 +128,7 @@ something ParchaOS can't redistribute or no longer ships: `openh264`
 (Fedora's logos are for official Fedora media), any package built by RPM
 Fusion other than its repo definitions, or `pafari`, `pearos-*`,
 `parchaos-finder`, `parchaos-macos-remap`, `parchaos-tmog`. It also fails
-if `noopenh264` or `generic-logos` is missing. `--skip-branding` test
+if `noopenh264` or `parchaos-logos` is missing. `--skip-branding` test
 builds skip it.
 
 The swap itself is in `profiles/parchaos/customize.sh`. Cisco's

@@ -27,14 +27,17 @@ profile_customize() {
     run_in_target /usr/libexec/parchaos-os-release
 
     # Distribution rules for the ISO itself:
-    # - Fedora's logos are only for official Fedora media, so a remix ships
-    #   generic-logos (same file paths, neutral artwork).
+    # - Fedora's logos are only for official Fedora media, so a remix
+    #   swaps them for its own (packaging/parchaos-logos/, Provides:
+    #   system-logos, Obsoletes: generic-logos -- so a plain `dnf swap
+    #   fedora-logos parchaos-logos` also replaces generic-logos cleanly
+    #   if that was ever installed on an older image).
     # - Cisco's patent license covers openh264 only when users download it
     #   from Cisco, so the ISO carries Fedora's noopenh264 stub instead.
     #   The fedora-cisco-openh264 repo stays enabled, so installed systems
     #   can fetch the real library from Cisco (dnf swap noopenh264 openh264).
-    echo "--- Swapping in generic-logos and noopenh264 ---"
-    run_in_target dnf -y swap fedora-logos generic-logos
+    echo "--- Swapping in parchaos-logos and noopenh264 ---"
+    run_in_target dnf -y swap fedora-logos parchaos-logos
     # Cisco's openh264 Obsoletes noopenh264, and dnf honors that even for
     # the installed copy, so `dnf swap` just reinstalls openh264. Remove it
     # at the rpm level (noopenh264 provides the same library right after),
@@ -46,7 +49,7 @@ profile_customize() {
         set -e
         if rpm -q openh264 >/dev/null; then rpm -e --nodeps openh264; fi
         dnf -y --disablerepo=fedora-cisco-openh264 install noopenh264'
-    run_in_target rpm -q generic-logos noopenh264
+    run_in_target rpm -q parchaos-logos noopenh264
     for pkg in fedora-logos openh264; do
         if run_in_target rpm -q "$pkg" >/dev/null 2>&1; then
             echo "ERROR: $pkg is still in the image" >&2
