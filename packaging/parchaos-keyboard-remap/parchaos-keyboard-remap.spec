@@ -80,7 +80,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        10%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
@@ -100,6 +100,7 @@ BuildRequires:  unzip
 
 Requires:       systemd
 Requires:       gnome-shell >= 45
+Requires:       acl
 Requires(post): systemd-udev
 BuildRequires:  systemd-rpm-macros
 %{?systemd_requires}
@@ -115,9 +116,11 @@ Super-key conventions (Super-Left/Right as Home/End,
 Super-C/V/T/N/W/Q/F in the terminal, Parcher's Super-based file shortcuts,
 app switching on Super-Tab) system-wide, via xremap -- a real, actively
 maintained userspace evdev key remapper -- and its companion GNOME
-Shell extension. Packaged declaratively (systemd user-preset, udev
-uaccess, dconf defaults), so it works for whatever user account the
-installer creates.
+Shell extension. Runs as its own unprivileged system service (not the
+logged-in user), so no real user account ever needs raw keyboard/uinput
+access. Packaged declaratively (sysusers, systemd system unit, udev,
+dconf defaults), so it works for whatever user account the installer
+creates.
 
 %prep
 %setup -q -c -T -n %{name}-%{version}
@@ -142,8 +145,10 @@ install -Dm0644 xremap-gnome-%{gnome_ext_commit}/extension.js "$EXTDIR"/extensio
 install -Dm0644 xremap-gnome-%{gnome_ext_commit}/metadata.json "$EXTDIR"/metadata.json
 
 install -Dm0644 etc/xremap/config.yml %{buildroot}%{_sysconfdir}/xremap/config.yml
-install -Dm0644 usr/lib/systemd/user/parchaos-keyboard-remap.service %{buildroot}%{_prefix}/lib/systemd/user/parchaos-keyboard-remap.service
-install -Dm0644 usr/lib/systemd/user-preset/90-parchaos-keyboard-remap.preset %{buildroot}%{_prefix}/lib/systemd/user-preset/90-parchaos-keyboard-remap.preset
+install -Dm0644 usr/lib/systemd/system/parchaos-keyboard-remap.service %{buildroot}%{_prefix}/lib/systemd/system/parchaos-keyboard-remap.service
+install -Dm0644 "usr/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf" "%{buildroot}%{_prefix}/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf"
+install -Dm0755 usr/libexec/parchaos-keyboard-remap-socket-dir %{buildroot}%{_prefix}/libexec/parchaos-keyboard-remap-socket-dir
+install -Dm0644 usr/share/polkit-1/rules.d/49-parchaos-keyboard-remap.rules %{buildroot}%{_datadir}/polkit-1/rules.d/49-parchaos-keyboard-remap.rules
 install -Dm0644 usr/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules %{buildroot}%{_prefix}/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules
 install -Dm0644 usr/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf %{buildroot}%{_prefix}/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf
 install -Dm0644 etc/dconf/db/local.d/02-parchaos-keyboard-remap %{buildroot}%{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
@@ -151,19 +156,59 @@ install -Dm0644 etc/dconf/db/local.d/02-parchaos-keyboard-remap %{buildroot}%{_s
 # used by Parcha Controls' "Super as Ctrl" tile.
 install -Dm0755 usr/bin/parchaos-keyboard-style %{buildroot}%{_bindir}/parchaos-keyboard-style
 
+%pre
+%sysusers_create_inline u xremap - "ParchaOS keyboard remap service" - -
+%sysusers_create_inline m xremap input
+
 %post
 udevadm control --reload-rules >/dev/null 2>&1 || :
+# uinput is created at module load, not hot-plugged -- reloading the
+# rules alone doesn't touch its already-existing device node. Retrigger
+# it so the new GROUP/MODE (and the dropped uaccess tag) apply without a
+# reboot.
+udevadm trigger --subsystem-match=misc --sysname-match=uinput >/dev/null 2>&1 || :
 dconf update >/dev/null 2>&1 || :
-# Enables the unit globally for every user on first install -- including
-# the upgrade from parchaos-macos-remap, whose users only had the old unit
-# name enabled (per-user, by systemd's first-login preset run).
-%systemd_user_post parchaos-keyboard-remap.service
+# This unit is new (it replaces a --user unit of the same name, a
+# genuinely different unit path and type, not a same-name file swap), so
+# %%systemd_post's usual "only auto-enable on a first install" rule would
+# leave it disabled and stopped on every real-world `dnf upgrade` --
+# nothing carries an old --user unit's enabled state forward to it.
+# Enable and start it unconditionally instead.
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl enable --now parchaos-keyboard-remap.service >/dev/null 2>&1 || :
+# Security fix (ticket #22): on an upgrade from a version that ran as a
+# --user unit, stop that now-orphaned per-user process (removing its unit
+# file doesn't stop an already-running instance) and take real users out
+# of the `input` group -- membership there is exactly the raw-keyboard-
+# access bug this release closes, so an upgrade must not leave it in
+# place until each user's next login.
+#
+# Signal the old process by pid rather than reaching into that user's own
+# --user manager over D-Bus (`runuser ... systemctl --user stop`): tried
+# first, and on real hardware it silently did nothing, almost certainly
+# because dnf5 runs %%post scriptlets inside their own systemd scope,
+# which the old session's D-Bus socket isn't reliably reachable from.
+# Any *real* uid running xremap is necessarily the old per-user instance
+# -- the new system service always runs as the unprivileged `xremap`
+# account, well under 1000.
+if [ "$1" -gt 1 ] 2>/dev/null; then
+    for pid in $(pgrep -x xremap 2>/dev/null); do
+        puid=$(awk '/^Uid:/{print $2}' "/proc/$pid/status" 2>/dev/null)
+        if [ -n "$puid" ] && [ "$puid" -ge 1000 ] 2>/dev/null && [ "$puid" -lt 60000 ] 2>/dev/null; then
+            kill "$pid" >/dev/null 2>&1 || :
+        fi
+    done
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 {print $1}' | while read -r u; do
+        gpasswd -d "$u" input >/dev/null 2>&1 || :
+    done
+fi
 
 %preun
-%systemd_user_preun parchaos-keyboard-remap.service
+%systemd_preun parchaos-keyboard-remap.service
 
 %postun
 dconf update >/dev/null 2>&1 || :
+%systemd_postun_with_restart parchaos-keyboard-remap.service
 
 %files
 %license LICENSE
@@ -173,15 +218,66 @@ dconf update >/dev/null 2>&1 || :
 %license xremap-crate-licenses.txt
 %{_bindir}/xremap
 %{_bindir}/parchaos-keyboard-style
+%{_prefix}/libexec/parchaos-keyboard-remap-socket-dir
 %{_datadir}/gnome-shell/extensions/xremap@k0kubun.com/
+%{_datadir}/polkit-1/rules.d/49-parchaos-keyboard-remap.rules
 %{_sysconfdir}/xremap/config.yml
-%{_prefix}/lib/systemd/user/parchaos-keyboard-remap.service
-%{_prefix}/lib/systemd/user-preset/90-parchaos-keyboard-remap.preset
+%{_prefix}/lib/systemd/system/parchaos-keyboard-remap.service
+%{_prefix}/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf
 %{_prefix}/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules
 %{_prefix}/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-13
+- Real bug found installing -12 on real hardware: the old --user
+  instance was still running after the upgrade (confirmed by `ps`, two
+  live xremap processes) because `runuser -u ... systemctl --user stop`
+  in %%post silently did nothing -- reaching into another already-running
+  session's D-Bus from a root scriptlet isn't reliable under dnf5's own
+  scriptlet sandboxing. Kill the old process by pid instead (any *real*
+  uid running xremap is necessarily the old instance; the new system
+  service always runs as the unprivileged `xremap` account). Verified
+  live: exactly one xremap process, owned by `xremap`, after the upgrade.
+* Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-12
+- Real bug found installing -11 on real hardware: the new system unit is
+  genuinely new (it replaces a --user unit of the same name, not a
+  same-name file swap), so %%systemd_post's "only auto-enable on a first
+  install" rule left it disabled and stopped on the upgrade that
+  introduced it -- nothing carries the old --user unit's enabled state
+  forward to a differently-typed unit with the same name. %%post now
+  enables and starts it unconditionally, and also stops the old, now file
+  -less --user instance in every logged-in real user's own session
+  (removing a unit's file doesn't stop an already-running instance of
+  it) before dropping them from `input`, instead of leaving both the old
+  process and the group membership in place until their next login.
+* Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-11
+- Security fix (ticket #22, High): xremap moves from a --user unit to
+  its own system service running as a new unprivileged `xremap` account
+  (systemd-sysusers), and the uinput udev rule drops the `uaccess` tag.
+  No real user account is in the `input` group or has /dev/uinput access
+  any more -- an upgrade removes existing users from `input` directly, in
+  the same package, since normal typing goes through Mutter/libinput's
+  own independent seat access and never depended on that group; only the
+  Super<->Ctrl remap did.
+- Per-app remaps (Terminal, Parcher) keep working over xremap's own
+  `--desktop=socket` feature: the xremap-gnome extension already speaks
+  it (checked against the exact pinned commit), answering only "what app
+  is focused" over a socket under /run/xremap/<uid>, which the system
+  service connects into. A new user@.service.d drop-in and
+  parchaos-keyboard-remap-socket-dir create and ACL that one directory
+  to that one uid at login, with no per-username packaging step and no
+  supplementary-group login-timing race.
+- parchaos-keyboard-style now controls the system unit over D-Bus
+  (systemctl, not systemctl --user), authorized for the active local
+  session by a new polkit rule scoped to this one unit -- Super-as-Ctrl
+  toggling still needs no password, but is now machine-wide rather than
+  per-user, since the remap itself is now one process for the whole
+  machine. Acceptable given ParchaOS is a single-real-user desktop.
+- Needs real-hardware verification before this reaches every install:
+  confirm the remap still works after a clean login and after
+  `dnf upgrade`, and that Super-as-Ctrl toggling still works, before
+  wider rollout.
 * Sat Sep 26 2026 ParchaOS packaging - %{xremap_version}-10
 - Ship the license and copyright notices of the Rust crates linked into
   the xremap binary (xremap-crate-licenses.txt).

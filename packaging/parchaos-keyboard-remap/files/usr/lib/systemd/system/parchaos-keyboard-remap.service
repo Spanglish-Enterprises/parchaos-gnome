@@ -1,0 +1,31 @@
+[Unit]
+Description=ParchaOS keyboard remap: Super as Ctrl and friends (xremap)
+Documentation=https://github.com/xremap/xremap
+After=systemd-udevd.service local-fs.target
+Wants=systemd-udevd.service
+
+[Service]
+Type=simple
+# --desktop=socket: a second, unprivileged instance of xremap runs inside
+# each user's own GNOME session (the xremap-gnome shell extension acts as
+# it) and only ever answers "what app is focused" over a socket this
+# service connects into -- see user@.service.d/ and
+# parchaos-keyboard-remap-socket-dir. That second instance never touches
+# /dev/uinput or /dev/input itself.
+ExecStart=/usr/bin/xremap --desktop=socket --watch=device /etc/xremap/config.yml
+Restart=on-failure
+RestartSec=10
+User=xremap
+Group=xremap
+SupplementaryGroups=input
+RuntimeDirectory=xremap
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/xremap
+Environment=RUST_LOG=warn
+
+[Install]
+WantedBy=multi-user.target
