@@ -160,6 +160,12 @@ by the Fedora Project, Red Hat, the GNOME Foundation, Apple, Inled
 trademark of the GNOME Foundation; other names belong to their owners
 and are used only to identify those projects.
 
+ParchaOS respects other people's intellectual property. If you believe
+anything in ParchaOS infringes your copyright or trademark, please tell us
+through https://parchaos.org/support (choose **Question**). We'll review
+it promptly and in good faith, and change or remove the material where
+appropriate.
+
 ## License
 
 ParchaOS code, packaging and docs are licensed under
