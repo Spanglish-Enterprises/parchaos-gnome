@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,13 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 2.1.0-21
+- Adaptive menu bar: samples the wallpaper under the bar and switches
+  between light and dark text (like the macOS menu bar); light text
+  again in the overview and lock screen.
+- No per-item fills: the shell theme's solid box behind every panel
+  button and the clock is removed while the menu bar runs; items only
+  get a highlight on hover or while their menu is open.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-20
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.
