@@ -19,7 +19,10 @@
 #     for an RPM shipped on a live ISO where the eventual real user's
 #     username isn't known until Calamares creates their account:
 #       * xremap's binary is a pinned Source0 download (v0.15.13,
-#         xremap-linux-x86_64-gnome.zip) resolved at SRPM-build time
+#         xremap-linux-x86_64-full.zip -- the "gnome" build only speaks
+#         GNOME's own D-Bus desktop client, not --desktop=socket, which
+#         the system-service split (below) needs) resolved at SRPM-build
+#         time
 #         (this project's own established Source0-URL convention, see
 #         parchaos-dock/pearos-branding), not fetched live by a
 #         postinst script -- reproducible, and works in COPR's
@@ -49,10 +52,13 @@
 #     rules (org.gnome.Nautilus for Parcher, org.gnome.Terminal).
 #
 # Depends on xremap's own real, separate GNOME Shell extension
-# (xremap/xremap-gnome, GPLv2+, uuid xremap@k0kubun.com) -- xremap's
-# "gnome" feature build needs it to learn the focused app's WM_CLASS
-# over a local D-Bus/socket, the same underlying mechanism GNOME
-# Shell itself uses (see that repo's own extension.js). Pinned to
+# (xremap/xremap-gnome, GPLv2+, uuid xremap@k0kubun.com) to learn the
+# focused app's WM_CLASS: it exposes a D-Bus interface (unused here) and,
+# since it already speaks xremap's --desktop=socket protocol, answers
+# focus queries over a Unix socket under /run/xremap/<uid> instead --
+# the same directory the system-service split (below) already needs to
+# exist per user, with no extra moving part on the GNOME Shell side.
+# Pinned to
 # commit de79b05989308d717429726dab503e116a141851 (no tagged releases
 # exist upstream). NOT rebranded (unlike parcha-dock/global-menu) --
 # this is a small, purely functional upstream helper extension with
@@ -80,12 +86,12 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
 URL:            https://github.com/xremap/xremap
-Source0:        https://github.com/xremap/xremap/releases/download/v%{xremap_version}/xremap-linux-x86_64-gnome.zip
+Source0:        https://github.com/xremap/xremap/releases/download/v%{xremap_version}/xremap-linux-x86_64-full.zip
 Source1:        https://github.com/xremap/xremap-gnome/archive/%{gnome_ext_commit}/xremap-gnome-%{gnome_ext_shortcommit}.tar.gz
 Source2:        parchaos-keyboard-remap-files.tar.gz
 Source90:       LICENSE
@@ -229,6 +235,17 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-14
+- Real bug found logging out and back in to test -13 on real hardware:
+  the journal showed "This variant of xremap doesn't support 'Socket'.
+  Supported: GNOME" and "application-client: none (supported: false)" --
+  the "gnome" release build only speaks xremap's own GNOME D-Bus client,
+  not the generic --desktop=socket protocol the system-service split
+  needs. It ran, and the plain Super<->Ctrl swap kept working (no
+  per-app scoping needed), but every per-app rule (Terminal, Parcher)
+  silently stopped matching anything -- no crash, so this was easy to
+  miss without checking the journal. Source0 now pulls xremap's "full"
+  release build instead, which the socket feature actually needs.
 * Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-13
 - Real bug found installing -12 on real hardware: the old --user
   instance was still running after the upgrade (confirmed by `ps`, two
