@@ -1,6 +1,6 @@
 # ==============================================================================
 # Hosts-file ad-blocker -- one of the "bigger, unscoped" features scoped
-# in docs/gnome-phase3-findings.md. Pulsar OS's own `pulsaros-hblock` is
+# in the project's development notes. Pulsar OS's own `pulsaros-hblock` is
 # blocked (lives inside the license-less Inled-Pulsar-OS/PKG monorepo,
 # same as everything else in that bucket), but it's itself almost
 # certainly built on the same real, independent upstream used here:
@@ -150,5 +150,5 @@ systemctl daemon-reload >/dev/null 2>&1 || :
   install, not just present.
 * Thu Sep 24 2026 ParchaOS packaging - 3.5.1-1
 - Initial package, one of the three "bigger feature" gaps scoped in
-  docs/gnome-phase3-findings.md that don't depend on Inled's licensing
+  the project's development notes that don't depend on Inled's licensing
   answer. Adapted from the real upstream's own working RPM spec.

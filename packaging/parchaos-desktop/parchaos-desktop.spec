@@ -40,7 +40,7 @@
 #
 # Also deliberately excludes parchaos-gnome-calamares-config, even
 # though it IS one of packages.sh's PROFILE_REPO_PACKAGES entries. Real
-# bug found 2026-09-24 (see docs/gnome-phase2-findings.md's sibling
+# bug found 2026-09-24 (see the project's development notes sibling
 # incident, fixed here): parchaos-gnome-calamares-config Requires:
 # calamares, and this meta-package used to Require:
 # parchaos-gnome-calamares-config in turn. The Calamares-removal

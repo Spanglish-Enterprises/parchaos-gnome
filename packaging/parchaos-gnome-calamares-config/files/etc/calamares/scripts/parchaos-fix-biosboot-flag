@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Workaround for a real KPMCore bug found via an end-to-end install test
-# (2026-09-20, see docs/phase4-findings.md and this package's own
+# (2026-09-20, see the project's development notes and this package's own
 # partition.conf comment): partition.conf's `partitionLayout` creates a
 # correctly-sized/positioned 1MiB BIOS Boot Partition via its `type:`
 # GUID field, but KPMCore silently does not apply that GUID to the

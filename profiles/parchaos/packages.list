@@ -136,7 +136,7 @@ mt7xxx-firmware
 # gsettings override) -- the reference desktop shows a permanent
 # Bluetooth icon regardless of connection state, a genuine GNOME design
 # difference, not a bug this package addition fixes by itself. See
-# docs/gnome-phase1-findings.md for the full trace.
+# the project's development notes for the full trace.
 bluez
 gnome-bluetooth
 # Real bug found via a real installed system on actual hardware

@@ -19,7 +19,7 @@ name: Build ISO
 on:
   workflow_dispatch:
     inputs:
-      # Real bug found 2026-09-24 (see docs/gnome-phase0-findings.md): this
+      # Real bug found 2026-09-24 (see the project's development notes): this
       # used to default to "pearos", silently building the wrong product
       # for any manual run that forgot to set it. Required now, matching
       # engine/build-iso.sh's own --profile no-longer-has-a-default fix.

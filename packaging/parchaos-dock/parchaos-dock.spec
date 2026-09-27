@@ -30,7 +30,7 @@
 # Patch0: real, reproducible crash found via log-based live testing
 # 2026-09-25 (first misattributed to parchaos-desktop-icons/DING, whose
 # activity just happened to coincide with it -- see
-# docs/gnome-phase1-findings.md). dash.js's getAppIcons() includes the
+# the project's development notes). dash.js's getAppIcons() includes the
 # "Show Applications" grid button alongside real app icons (needed so
 # hover-magnification/drag reordering treat it consistently), but
 # _updateNumberOverlay()/toggleNumberOverlay() call
@@ -242,7 +242,7 @@ fi
   own master, checked directly): the Show Apps grid button lacks the
   number-overlay methods that getAppIcons() assumes every icon has.
   Patch0 guards both call sites. See spec banner comment and
-  docs/gnome-phase1-findings.md for the full trace.
+  the project's development notes for the full trace.
 * Thu Sep 24 2026 ParchaOS packaging - 106-2
 - Real bug found on real hardware: the dock was enabled in dconf but
   crashed at enable() with State: ERROR (missing
