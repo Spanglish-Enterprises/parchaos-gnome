@@ -183,8 +183,10 @@ echo "=== ParchaOS build: profile=$PROFILE branch=$BRANCH nvidia=$NVIDIA local=$
 
 # ---- Phase 2: base cache (dnf --installroot bootstrap) ------------------------
 # Mirrors the Debian engine's mmdebstrap step: a minimal Fedora rootfs shared
-# across builds of the same branch, rebuilt only when packages.list changes
-# or --clean-base is passed.
+# across builds of the same branch, rebuilt when packages.list changes or
+# --clean-base is passed. Repos are defined explicitly here rather than taken
+# from the build host, and Phase 5 runs `dnf upgrade` so a reused cache can't
+# freeze old package versions into the image (ticket #68).
 PKGLIST_HASH="$(sha256sum "$PROFILE_DIR/packages.list" | cut -d' ' -f1)"
 BASE_MARKER="$BASE_CACHE/.parchaos-base-hash"
 
@@ -197,16 +199,72 @@ if [ ! -f "$BASE_MARKER" ] || [ "$(cat "$BASE_MARKER" 2>/dev/null)" != "$PKGLIST
     rm -rf "$BASE_CACHE"
     mkdir -p "$BASE_CACHE"
     mapfile -t base_packages < <(grep -vE '^\s*(#|$)' "$PROFILE_DIR/packages.list")
-    # --use-host-config: this engine assumes it runs on a Fedora build host,
-    # so it reuses the host's own repo definitions (fedora/updates mirrors)
-    # rather than seeding /etc/yum.repos.d by hand inside the installroot.
+
+    # TICKET #68: repos used to come from --use-host-config, i.e. whatever
+    # the build host happened to have in /etc/yum.repos.d leaked into every
+    # image (a local mirror, a stale .repo, an extra third-party repo).
+    # Define them here instead: the standard fedora + updates metalinks for
+    # $BRANCH, nothing else, pinned in a file we write ourselves.
+    mkdir -p "$BASE_CACHE/etc/yum.repos.d" "$BASE_CACHE/etc/pki/rpm-gpg"
+    cat > "$BASE_CACHE/etc/yum.repos.d/00-parchaos-bootstrap.repo" <<'REPO'
+[fedora]
+name=Fedora $releasever - $basearch
+metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch
+enabled=1
+gpgcheck=1
+countme=1
+metadata_expire=7d
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch
+
+[updates]
+name=Fedora $releasever - $basearch - Updates
+metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch
+enabled=1
+gpgcheck=1
+countme=1
+metadata_expire=7d
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch
+REPO
+
+    # gpgkey= above is resolved INSIDE the installroot, which is empty at
+    # this point, so seed the keys from the build host first (the host is
+    # assumed Fedora, same as before) and import them into the installroot's
+    # rpmdb so the very first transaction can verify signatures.
+    seeded_keys=0
+    for k in /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-*; do
+        [ -f "$k" ] || continue
+        cp -f "$k" "$BASE_CACHE/etc/pki/rpm-gpg/"
+        rpm --root "$BASE_CACHE" --import "$k"
+        seeded_keys=$((seeded_keys + 1))
+    done
+    if [ "$seeded_keys" -eq 0 ]; then
+        echo "ERROR: no /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-* on this build host." >&2
+        echo "       The base cache needs explicit repo definitions now (ticket #68)" >&2
+        echo "       and cannot verify them without the keys. Run on Fedora." >&2
+        exit 1
+    fi
+
     dnf -y \
         --installroot="$BASE_CACHE" \
         --releasever="$BRANCH" \
-        --use-host-config \
+        --setopt=reposdir="$BASE_CACHE/etc/yum.repos.d" \
         --setopt=install_weak_deps=False \
         --setopt=keepcache=True \
         install "${base_packages[@]}"
+
+    # packages.list includes fedora-release, so the installroot now carries
+    # Fedora's own canonical /etc/yum.repos.d/{fedora,updates}.repo. Drop our
+    # temporary seed so the image ships exactly one definition per repo (a
+    # leftover would mean two [fedora] sections, which dnf5 rejects). If the
+    # canonical files somehow didn't land, keep the seed rather than ship an
+    # image with no repos, and say so.
+    if [ -f "$BASE_CACHE/etc/yum.repos.d/fedora.repo" ] \
+        && [ -f "$BASE_CACHE/etc/yum.repos.d/updates.repo" ]; then
+        rm -f "$BASE_CACHE/etc/yum.repos.d/00-parchaos-bootstrap.repo"
+    else
+        echo "WARNING: fedora-release did not ship its repo files; keeping" >&2
+        echo "         00-parchaos-bootstrap.repo as the repo definition." >&2
+    fi
     echo "$PKGLIST_HASH" > "$BASE_MARKER"
     # FOOTGUN FIX (2026-09-18): a rebuilt base cache is worthless if
     # ROOTFS_TARGET already existed and Phase 3 below just reuses it
@@ -250,6 +308,15 @@ if [ "$SKIP_BRANDING" -eq 1 ]; then
 else
     echo "--- Configuring repositories ---"
     profile_setup_repo   # defined in profiles/$PROFILE/repo.sh — COPR + RPM Fusion
+
+    # TICKET #68: the base cache is only rebuilt when packages.list changes,
+    # so an image built weeks after the cache was created shipped whatever
+    # versions happened to be current then -- no upgrade ever ran. Run one
+    # every build, after repo setup (so it covers base + profile/COPR
+    # packages) and before PROFILE_REPO_PACKAGES is installed, so the
+    # install below only has to add what's still missing.
+    echo "--- Upgrading the target to current packages ---"
+    run_in_target dnf -y --refresh --setopt=install_weak_deps=False upgrade
 
     if [ "$NVIDIA" -eq 1 ]; then
         PROFILE_REPO_PACKAGES+=("${PROFILE_NVIDIA_PACKAGES[@]}")
