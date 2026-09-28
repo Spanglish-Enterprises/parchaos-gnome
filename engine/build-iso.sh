@@ -2,9 +2,9 @@
 # ==============================================================================
 # ParchaOS build engine — generic, profile-driven Fedora live-ISO builder.
 #
-# Mirrors the phase structure and engine/profile split of Pear-Project/iso's
-# build-iso.sh (the Debian pearOS build), rewritten against Fedora's own
-# tooling (dnf/rpm/dracut) instead of debootstrap/apt/dpkg. Nothing
+# Borrows only the phase structure and engine/profile split (not the text)
+# from Pear-Project/iso's build-iso.sh (the Debian pearOS build), rewritten
+# against Fedora's own tooling (dnf/rpm/dracut) instead of debootstrap/apt/dpkg. Nothing
 # profile-specific belongs in this file — package lists, repo definitions,
 # branding, and boot menu text all live under profiles/<name>/.
 #
