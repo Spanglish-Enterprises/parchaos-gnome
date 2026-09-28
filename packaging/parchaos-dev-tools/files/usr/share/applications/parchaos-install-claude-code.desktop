@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Install Developer Tools
+Comment=Install Claude Code and other development utilities
+Exec=parchaos-install-claude-code
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+Keywords=claude;code;ai;anthropic;dev;tools;

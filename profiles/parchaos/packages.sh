@@ -129,6 +129,7 @@ PROFILE_REPO_PACKAGES=(
     # deliberately dropped (real trademarks, never actually used by the
     # script itself).
     parchaos-cloud
+    parchaos-dev-tools
 
     # Scheduled Do Not Disturb (packaging/parchaos-focus-schedule/): a
     # user service that turns GNOME's Do Not Disturb on during a daily

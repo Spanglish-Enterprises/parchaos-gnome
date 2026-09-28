@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Installs Anthropic's official Claude Code CLI in a terminal window,
+# as requested in Ticket #121.
+
+set -euo pipefail
+
+cmd_install() {
+    echo "=========================================================="
+    echo " Installing Claude Code (Anthropic's official CLI tool)   "
+    echo "=========================================================="
+    echo ""
+    echo "This will download and install Claude Code to ~/.local/bin/claude."
+    echo "It requires your own Anthropic API key to use."
+    echo ""
+    read -rp "Press Enter to continue, or Ctrl+C to cancel..."
+
+    if curl -fsSL https://claude.ai/install.sh | bash; then
+        echo ""
+        echo "=========================================================="
+        echo " Success! Claude Code is installed."
+        echo " You can now run 'claude' from any terminal."
+        echo "=========================================================="
+        read -rp "Press Enter to close this window..."
+    else
+        echo ""
+        echo "Installation failed."
+        read -rp "Press Enter to close this window..."
+    fi
+}
+
+cmd_launch() {
+    # Shells out to a terminal window so the user sees the output/prompts
+    exec gnome-terminal -- bash -lc 'parchaos-install-claude-code do-install'
+}
+
+if [[ "${1:-}" == "do-install" ]]; then
+    cmd_install
+else
+    cmd_launch
+fi
