@@ -135,6 +135,33 @@ using its own install.sh. Default
 mkdir -p %{buildroot}%{_datadir}/icons
 ./install.sh -t default -d %{buildroot}%{_datadir}/icons
 
+# Ticket #100: install.sh still lays the themes down under upstream's
+# MacTahoe names -- a real COPR build log quoted above shows exactly
+# those three being installed. Settings and Tweaks read the directory
+# name (and index.theme's Name=), so the ticket is only done when the
+# names users see are ParchaOS's. Every edit below already addresses
+# ParchaOS* paths, so this rename has to happen first; without it they
+# all match nothing and the grep guard at the end of %install fails.
+# The light variant's apps/ is a symlink into the base theme, so its
+# target has to be rewritten too -- renaming the dirs alone would leave
+# it pointing at a MacTahoe path that no longer exists.
+for old in MacTahoe MacTahoe-dark MacTahoe-light; do
+    if [ -d %{buildroot}%{_datadir}/icons/$old ]; then
+        mv %{buildroot}%{_datadir}/icons/$old \
+           %{buildroot}%{_datadir}/icons/ParchaOS${old#MacTahoe}
+    fi
+done
+find %{buildroot}%{_datadir}/icons -type l | while read -r link; do
+    target=$(readlink "$link")
+    case $target in
+        *MacTahoe*)
+            ln -sfn "$(printf '%s' "$target" | sed 's/MacTahoe/ParchaOS/g')" "$link"
+            ;;
+    esac
+done
+find %{buildroot}%{_datadir}/icons -name index.theme -exec \
+    sed -i 's/MacTahoe/ParchaOS/g' {} +
+
 # Replace the Apple-look icons with original ParchaOS artwork. MacTahoe
 # points every alias (e.g. org.gnome.Nautilus, org.gnome.Calendar,
 # org.gnome.Settings) at one target file per design, so replacing the
@@ -224,7 +251,7 @@ done
 # view-app-grid-symbolic exactly -- not an Apple copy, just not
 # distinctly ParchaOS. xsi-view-app-grid-symbolic is the same icon under
 # an alternate name some lookups use.
-find %{buildroot}%{_datadir}/icons/MacTahoe* -type f \
+find %{buildroot}%{_datadir}/icons/ParchaOS* -type f \
     \( -name 'view-app-grid-symbolic.svg' -o -name 'xsi-view-app-grid-symbolic.svg' \) |
 while read -r f; do
     install -m 0644 %{SOURCE60} "$f"

@@ -204,6 +204,38 @@ HOME=%{buildroot}%{_sysconfdir}/skel ./install.sh -l -c dark --silent-mode
 # itself, so it isn't shipped.
 rm -rf %{buildroot}%{_sysconfdir}/skel/.local
 
+# Ticket #100: same gap as parchaos-icon-theme's spec -- install.sh still
+# names what it builds after upstream, so the dirs are MacTahoe-Dark /
+# MacTahoe-Light in /usr/share/themes and the same names under
+# /etc/skel/.themes. dconf's default (01-parchaos-theme), theme-sync and
+# yin-yang's GNOME plugin all ask for ParchaOS-Dark/ParchaOS-Light, so
+# without this rename the theme actually shipped is not the theme any of
+# them name, and the ticket's "ls shows no MacTahoe*" is unmet. Runs
+# after all three install.sh invocations so every copy comes out renamed.
+# Only text files are rewritten (grep -I skips binaries), and only the
+# ones that can carry a theme name or path -- index.theme and CSS, not
+# LICENSE/README, so upstream credits stay intact.
+for root in %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel/.themes; do
+    [ -d "$root" ] || continue
+    for dir in "$root"/MacTahoe*; do
+        [ -e "$dir" ] || continue
+        mv "$dir" "$root/ParchaOS${dir##*MacTahoe}"
+    done
+    find "$root" -type l | while read -r link; do
+        target=$(readlink "$link")
+        case $target in
+            *MacTahoe*)
+                ln -sfn "$(printf '%s' "$target" | sed 's/MacTahoe/ParchaOS/g')" "$link"
+                ;;
+        esac
+    done
+    grep -rIl MacTahoe "$root" 2>/dev/null | while read -r f; do
+        case $f in
+            *.css|*.ini|*/index.theme|*/gtkrc) sed -i 's/MacTahoe/ParchaOS/g' "$f" ;;
+        esac
+    done
+done
+
 # config_gtk4() creates gtk.css/gtk-dark.css as symlinks built from the
 # literal $HOME we passed above -- since that $HOME IS the buildroot
 # path, the symlinks point INTO the buildroot itself

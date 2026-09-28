@@ -24,6 +24,7 @@ gi.require_version('Gio', '2.0')
 from gi.repository import Gio, GLib  # noqa: E402
 
 THEMES_DIR = '/usr/share/themes'
+ICONS_DIR = '/usr/share/icons'
 TARGETS = [
     ('org.gnome.desktop.interface', 'gtk-theme'),
     ('org.gnome.desktop.wm.preferences', 'theme'),
@@ -41,11 +42,37 @@ def wanted_theme(dark, classic):
     return f'ParchaOS-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
 
 
+def available(name, roots):
+    return any(os.path.isdir(os.path.join(root, name)) for root in roots)
+
+
+def migrated(value, system_root, private_roots):
+    """Carry a pre-rename theme name across ticket #100.
+
+    #100 renamed the installed theme dirs from MacTahoe* to ParchaOS*,
+    so an existing account's stored value can name a theme the package
+    no longer ships and silently fall back to the default. Only rewrite
+    in that case: a MacTahoe name that still resolves -- a user's own
+    copy under ~/.themes or ~/.icons -- is their choice, and left alone
+    just like any other non-ParchaOS theme.
+    """
+    if not value.startswith('MacTahoe'):
+        return value
+    renamed = 'ParchaOS' + value[len('MacTahoe'):]
+    if available(value, [system_root] + private_roots):
+        return value
+    return renamed if available(renamed, [system_root]) else value
+
+
 class ThemeSync:
     def __init__(self):
         self.interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
         self.desktop = settings('org.parchaos.desktop')
         self.targets = [(s, key) for s, key in ((settings(i), k) for i, k in TARGETS) if s]
+        home = os.path.expanduser('~')
+        self.private_themes = [os.path.join(home, '.themes')]
+        self.private_icons = [os.path.join(home, '.icons'),
+                              os.path.join(home, '.local', 'share', 'icons')]
 
     def watch(self):
         self.interface.connect('changed::color-scheme', lambda *_: self.apply())
@@ -53,6 +80,23 @@ class ThemeSync:
             self.desktop.connect('changed::style', lambda *_: self.apply())
 
     def apply(self):
+        # #100 migration first, so it runs even when the wanted theme is
+        # missing and a stale name is the reason nothing can be applied.
+        changed = False
+        for target, key in self.targets:
+            current = target.get_string(key)
+            name = migrated(current, THEMES_DIR, self.private_themes)
+            if name != current:
+                target.set_string(key, name)
+                changed = True
+        icon = self.interface.get_string('icon-theme')
+        icon_name = migrated(icon, ICONS_DIR, self.private_icons)
+        if icon_name != icon:
+            self.interface.set_string('icon-theme', icon_name)
+            changed = True
+        if changed:
+            Gio.Settings.sync()
+
         dark = self.interface.get_string('color-scheme') == 'prefer-dark'
         classic = self.desktop is not None and self.desktop.get_string('style') == 'classic'
         theme = wanted_theme(dark, classic)

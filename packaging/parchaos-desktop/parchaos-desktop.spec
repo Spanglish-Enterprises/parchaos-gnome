@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        41%{?dist}
+Release:        42%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -245,6 +245,11 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-42
+- theme-sync: migrate stored MacTahoe* theme values to ParchaOS* (ticket
+  #100). Existing accounts kept the pre-rename name in their own dconf,
+  which no longer matches any shipped dir; only values that no longer
+  resolve are rewritten, so a user's own MacTahoe install is left alone.
 * Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-41
 - Require parchaos-updates so the update-checking timer reaches existing
   installs on dnf update.
