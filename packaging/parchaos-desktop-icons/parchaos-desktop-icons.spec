@@ -2,7 +2,7 @@
 # Desktop Icons NG (DING) -- real icons on the desktop background, one
 # of the GNOME Shell extensions Pulsar OS's own real config enables
 # (ding@rastersoft.com) that this profile didn't ship yet (see
-# docs/gnome-phase1-findings.md's extension-polish pass). Real,
+# the project's development notes extension-polish pass). Real,
 # GPL-3.0-licensed (confirmed via a real COPYING file in the GitLab
 # repo tree, not just a license= field claim -- same diligence used
 # for everything Pulsar-adjacent in this project) upstream, maintained

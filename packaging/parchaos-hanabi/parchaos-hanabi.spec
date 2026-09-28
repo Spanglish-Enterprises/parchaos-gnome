@@ -1,6 +1,6 @@
 # ==============================================================================
 # Live/video wallpaper for GNOME -- the third of the three "bigger
-# feature" gaps scoped in docs/gnome-phase3-findings.md as not
+# feature" gaps scoped in the project's development notes as not
 # depending on Inled's licensing answer.
 #
 # Real upstream picked with the same diligence used everywhere else:
@@ -101,7 +101,7 @@ GNOME 50+ on Wayland specifically, unlike most live-wallpaper
 extensions which depend on X11-only tricks. Ships as a prebuilt static
 bundle (the upstream TypeScript/esbuild toolchain doesn't run at RPM
 build time -- see this spec's own banner comment for why). See
-docs/gnome-phase3-findings.md for how this was picked over Pulsar OS's
+the project's development notes for how this was picked over Pulsar OS's
 own (Wayland-incompatible) equivalent.
 
 %prep

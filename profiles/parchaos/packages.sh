@@ -55,6 +55,9 @@ PROFILE_REPO_PACKAGES=(
     # ParchaOS os-release branding kept across Fedora updates
     # (packaging/parchaos-release/).
     parchaos-release
+    # ParchaOS system logos, replacing generic-logos' remaining live-
+    # visible fallbacks (packaging/parchaos-logos/).
+    parchaos-logos
     # First-login assistant (packaging/parchaos-welcome/).
     parchaos-welcome
     # Keeps new kernels in the boot menu (packaging/parchaos-boot/).
@@ -187,14 +190,14 @@ PROFILE_REPO_PACKAGES=(
 
     # Hosts-file ad-blocker (packaging/parchaos-hblock/) -- one of the
     # three "bigger feature" gaps that doesn't depend on Inled's
-    # licensing answer (docs/gnome-phase3-findings.md). Built from the
+    # licensing answer (the project's development notes). Built from the
     # real, independent hectorm/hblock upstream directly, not Pulsar
     # OS's own (blocked) pulsaros-hblock.
     parchaos-hblock
 
     # Live/video wallpaper (packaging/parchaos-hanabi/) -- the third
     # "bigger feature" gap that doesn't depend on Inled's licensing
-    # answer (docs/gnome-phase3-findings.md). Built from the real,
+    # answer (the project's development notes). Built from the real,
     # actively-maintained jeffshee/gnome-ext-hanabi upstream, picked
     # over Pulsar OS's own live-wallpaper analog after confirming that
     # one needs X11-only xwinwrap and doesn't work on this profile's
@@ -205,7 +208,7 @@ PROFILE_REPO_PACKAGES=(
     # Desktop Icons NG (packaging/parchaos-desktop-icons/) -- real
     # icons on the desktop background, one more piece of Pulsar OS's
     # extension list this profile didn't ship yet
-    # (docs/gnome-phase1-findings.md's extension-polish pass flagged
+    # (the project's development notes extension-polish pass flagged
     # it as needing a heavier meson build; turned out simpler than
     # feared once actually read -- see the spec's own banner comment).
     parchaos-desktop-icons

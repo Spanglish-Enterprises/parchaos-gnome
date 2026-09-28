@@ -143,8 +143,7 @@ Please report security problems privately (see [SECURITY.md](SECURITY.md)).
 ParchaOS stands on the shoulders of:
 
 - **[Fedora](https://fedoraproject.org)** and **[GNOME](https://www.gnome.org)**, the foundation.
-- **[Pulsar OS "Bitten Fruit"](https://bittenfruit.inled.es/)** by Inled
-  and **[pearOS](https://github.com/pearOS-archlinux)**, whose desktops inspired this one.
+- **Inled**, whose dock and file manager Parcha Dock and Parcher are based on.
 - **[MacTahoe](https://github.com/vinceliuice/MacTahoe-gtk-theme)** themes by
   vinceliuice, **Dash to Dock**, **xremap**, and the GNOME Shell extension
   authors credited in each package.
@@ -160,6 +159,12 @@ by the Fedora Project, Red Hat, the GNOME Foundation, Apple, Inled
 (Pulsar OS) or pearOS. Fedora is a trademark of Red Hat, LLC; GNOME is a
 trademark of the GNOME Foundation; other names belong to their owners
 and are used only to identify those projects.
+
+ParchaOS respects other people's intellectual property. If you believe
+anything in ParchaOS infringes your copyright or trademark, please tell us
+through https://parchaos.org/support (choose **Question**). We'll review
+it promptly and in good faith, and change or remove the material where
+appropriate.
 
 ## License
 

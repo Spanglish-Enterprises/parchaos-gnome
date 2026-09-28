@@ -151,7 +151,7 @@ Requires:       shared-mime-info
 # providing this schema is `localsearch` (Fedora's rename of
 # tracker-miners) -- never installed here because this profile
 # deliberately doesn't pull in Fedora's full comps.xml package bundle
-# (see docs/gnome-phase1-findings.md's own reasoning for that choice),
+# (see the project's development notes own reasoning for that choice),
 # so this hard dependency was simply missing.
 Requires:       localsearch
 

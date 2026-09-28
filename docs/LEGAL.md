@@ -32,6 +32,12 @@ a trademark of Red Hat, LLC; GNOME is a trademark of the GNOME
 Foundation; Chromium is a trademark of Google LLC. Other names belong to
 their owners and are used only to identify those projects and services.
 
+ParchaOS respects other people's intellectual property. If you believe
+anything in ParchaOS infringes your copyright or trademark, please tell us
+through https://parchaos.org/support (choose **Question**). We'll review
+it promptly and in good faith, and change or remove the material where
+appropriate.
+
 ## Credits
 
 - **The ParchaOS logo** is original artwork, (c) Spanglish Enterprises

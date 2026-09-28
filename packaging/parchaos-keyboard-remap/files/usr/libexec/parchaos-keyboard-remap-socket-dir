@@ -1,0 +1,37 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Run by systemd as root (user@<uid>.service ExecStartPre, see
+# usr/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf),
+# once at the start of each real login, before that user's own processes
+# (including the GNOME Shell session and its xremap-gnome extension)
+# start.
+#
+# Creates that one user's xremap socket directory and grants exactly that
+# uid access to it via a POSIX ACL -- not a supplementary group, which
+# would need the user to already be a group member before this hook runs
+# (a real ordering hazard at login) and would need a per-username group
+# nobody can create at package-build time (Calamares picks the username,
+# not this package). An ACL applies immediately, no re-login needed, and
+# grants access to that uid alone -- never to `input`, and never to any
+# other local account.
+#
+# The directory only ever carries a Unix socket that answers "what app is
+# focused" (see xremap-gnome's extension.js); it cannot read keystrokes or
+# inject them. parchaos-keyboard-remap.service (running as the unprivileged
+# `xremap` system user) is the only process that reads /dev/uinput and
+# /dev/input, and connects into this directory to ask that question.
+set -euo pipefail
+
+uid="${1:?usage: parchaos-keyboard-remap-socket-dir UID}"
+[[ "$uid" =~ ^[0-9]+$ ]] || exit 0
+# System accounts (including the xremap service account itself) have no
+# GNOME session and don't need a socket directory.
+(( uid >= 1000 )) || exit 0
+
+install -d -m 0755 -o xremap -g xremap /run/xremap
+install -d -m 0750 -o xremap -g xremap "/run/xremap/$uid"
+if command -v setfacl >/dev/null 2>&1; then
+    setfacl -m "u:$uid:rwx" "/run/xremap/$uid"
+else
+    logger -t parchaos-keyboard-remap "setfacl not found (acl package missing); per-app remaps will not work for uid $uid"
+fi

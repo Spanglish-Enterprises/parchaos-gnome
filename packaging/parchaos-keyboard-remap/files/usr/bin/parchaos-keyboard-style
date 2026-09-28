@@ -15,7 +15,12 @@
 # The old names "mac" and "windows" are still accepted, and a state file
 # written with them is read (and rewritten) as the new names.
 #
-# Takes effect immediately, no log out needed.
+# Takes effect immediately, no log out needed. parchaos-keyboard-remap is
+# a system service now (ticket #22: /dev/uinput must not be reachable
+# from any logged-in user's own session), so this controls it via
+# `systemctl` against systemd's system manager over D-Bus, authorized
+# for the active local session by 49-parchaos-keyboard-remap.rules --
+# not `systemctl --user`, which no longer has anything to control.
 
 set -u
 
@@ -68,8 +73,8 @@ current() {
 set_standard() {
     # The unit is enabled system-wide, so a per-user disable wouldn't stick
     # across logins; masking does.
-    systemctl --user stop "$SERVICE" >/dev/null 2>&1
-    systemctl --user mask "$SERVICE" >/dev/null 2>&1
+    systemctl stop "$SERVICE" >/dev/null 2>&1
+    systemctl mask "$SERVICE" >/dev/null 2>&1
     for entry in "${KEYS[@]}"; do
         read -r schema key <<<"$entry"
         schema_exists "$schema" || continue
@@ -87,8 +92,8 @@ set_super_ctrl() {
         schema_exists "$schema" || continue
         gsettings reset "$schema" "$key"
     done
-    systemctl --user unmask "$SERVICE" >/dev/null 2>&1
-    systemctl --user start "$SERVICE" >/dev/null 2>&1
+    systemctl unmask "$SERVICE" >/dev/null 2>&1
+    systemctl start "$SERVICE" >/dev/null 2>&1
     mkdir -p "$STATE_DIR"
     echo super-ctrl >"$STATE_FILE"
 }

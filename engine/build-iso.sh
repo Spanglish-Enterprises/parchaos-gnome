@@ -18,7 +18,7 @@
 # below proves too fragile in practice.
 #
 # UNTESTED: this repo was written without access to a Fedora build host
-# (see docs/phase0-findings.md for the environment this was developed in).
+# (see the project's development notes for the environment this was developed in).
 # Steps marked "VERIFY ON REAL HOST" are the ones most likely to need
 # iteration — everything else (arg parsing, profile loading, dnf bootstrap
 # logic) is straightforward enough to be confident in, but none of it has
@@ -31,7 +31,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)"
 REPO_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
 # ---- defaults ----------------------------------------------------------------
-# Real bug found 2026-09-24 (see docs/gnome-phase0-findings.md's "KDE-only
+# Real bug found 2026-09-24 (see the project's development notes "KDE-only
 # cruft" section): this used to default to "pearos" when --profile was
 # omitted, which silently built the wrong product for any invocation that
 # forgot the flag, and made it unsafe to ever delete profiles/pearos/ (a
@@ -166,7 +166,7 @@ BRANCH="${BRANCH:-${PROFILE_FEDORA_RELEASE:-44}}"
 : "${PROFILE_DISPLAY_NAME:?profile.conf must set PROFILE_DISPLAY_NAME}"
 : "${PROFILE_SLUG:?profile.conf must set PROFILE_SLUG}"
 : "${PROFILE_ISO_LABEL:?profile.conf must set PROFILE_ISO_LABEL}"
-: "${PROFILE_SESSION:=wayland}"   # "wayland" or "x11" — see docs/phase0-findings.md
+: "${PROFILE_SESSION:=wayland}"   # "wayland" or "x11" — see the project's development notes
 
 BUILD_DIR="$REPO_ROOT/build"
 BASE_CACHE="$BUILD_DIR/base-cache-$BRANCH"
@@ -472,7 +472,7 @@ cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.
 # use. Shim's hardcoded next-stage filename is grubx64.efi, sitting next
 # to it — see profiles/pearos/ploader/secureboot/ for the signing
 # artifacts (key generation + signing documented in
-# docs/phase4-findings.md). If those artifacts aren't present, fall back
+# the project's development notes). If those artifacts aren't present, fall back
 # to shipping unsigned Ploader directly as BOOTX64.EFI (works fine with
 # Secure Boot disabled, which is the state most VMs/test hardware default
 # to; real hardware with Secure Boot on needs the shim chain).
@@ -490,7 +490,7 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx6
     echo "Building UEFI boot image..."
     mkdir -p "$ISO_WORKDIR/EFI/BOOT"
     EFIBOOT_IMG="$ISO_WORKDIR/EFI/efiboot.img"
-    # VERIFIED ROOT CAUSE (2026-09-21, see docs/phase4-findings.md "UEFI
+    # VERIFIED ROOT CAUSE (2026-09-21, see the project's development notes "UEFI
     # reboot loop" section): the real UEFI reboot loop was neither the
     # shim/Ploader signature (a stale signed binary was a real, separate
     # bug, fixed above) nor fbx64.efi/pearos-mok.cer/theme content — it's
@@ -517,7 +517,7 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx6
     # this project on 2026-09-21 — a checked-in signed binary that was
     # byte-for-byte plausible but made shim reset-loop on real UEFI
     # firmware; a fresh sbsign of the same unsigned input fixed it
-    # immediately, see docs/phase4-findings.md).
+    # immediately, see the project's development notes).
     # This script normally runs under `sudo`, which resets $HOME to /root —
     # resolve the invoking user's real home (via $SUDO_USER) so the default
     # path below actually finds a key placed in a normal user's homedir.
@@ -552,7 +552,7 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx6
     # Ploader is parked (still built/signed above) for future
     # re-integration as a branded front-end once this real boot path is
     # solid — shipping a working UEFI boot took priority over Ploader's
-    # branding under the "ship today" call, see docs/phase4-findings.md.
+    # branding under the "ship today" call, see the project's development notes.
     UEFI_GRUB_EFI="$(find "$ROOTFS_TARGET/usr/lib/efi/grub2" -name gcdx64.efi 2>/dev/null | head -1)"
     if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi" ]; then
         UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi"
@@ -635,7 +635,7 @@ fi
 # grub.cfg never relies on automatic detection — it explicitly searches
 # for a known file and sets $root from that before referencing anything
 # via ($root)/... . Doing the same here — confirmed by the next real
-# boot that this fixed the relocator OOM (see docs/phase1-findings.md).
+# boot that this fixed the relocator OOM (see the project's development notes).
 # Also switched root=live:LABEL= to root=live:CDLABEL=, matching
 # Fedora's exact dracut-live invocation for optical media.
 #
@@ -654,7 +654,7 @@ fi
 # captured screendumps of the main console plus all four VT-switch
 # targets — all five came back byte-identical (same blank-cursor
 # frame as before), so this was never a video-mode mismatch. See
-# docs/phase1-findings.md.
+# the project's development notes.
 #
 # SERIAL CONSOLE (2026-09-18): screendump/VT-switch has now given the
 # same non-answer twice, so it can no longer distinguish "still
@@ -664,7 +664,7 @@ fi
 # messages actually appear on it; `console=tty0` is kept first so the
 # local VGA console/screendump path still gets something too. This
 # needs a matching `--serial0 socket` device added to the VM
-# to actually capture it — see docs/phase1-findings.md.
+# to actually capture it — see the project's development notes.
 echo "Writing grub.cfg for grub2-mkrescue ---"
 mkdir -p "$ISO_WORKDIR/boot/grub"
 cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
@@ -685,7 +685,7 @@ ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-x86_64.iso"
 STAGING_ISO="$BUILD_DIR/.staging-$ISO_NAME"
 grub2-mkrescue -o "$STAGING_ISO" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
 
-# VERIFIED ROOT CAUSE (2026-09-18, later session, see docs/phase4-findings.md
+# VERIFIED ROOT CAUSE (2026-09-18, later session, see the project's development notes
 # "Secure Boot" section): grub2-mkrescue does NOT use our own
 # $ISO_WORKDIR/EFI/efiboot.img (the signed shim/Ploader chain built above)
 # for the actual El Torito UEFI boot catalog entry — it silently builds its

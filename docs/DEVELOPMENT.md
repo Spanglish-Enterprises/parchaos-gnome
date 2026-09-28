@@ -3,73 +3,32 @@
 Notes for contributors and coding agents. The project overview for users
 is in the top-level [README](../README.md).
 
-**Status as of 2026-09-26**: a real disk install, reboot, and login has
-happened on the actual physical machine this variant ships to (MSI B650
-GAMING PLUS WIFI / AM5 desktop). This profile (`profiles/parchaos/`) now
-ships 31 custom packages plus the full Fedora base — dock, global menu
-bar, a full-screen app launcher, Parcha Controls (control center),
-Parcher (the Nautilus-based file manager), ParchaOS Settings (plus a
-panel in GNOME Settings), session restore, live Clock and Calendar
-icons, two visual styles (Glass and Classic), GTK/icon/Plymouth/wallpaper
-theming (light + dark) with original ParchaOS icons, a Chromium-based
-browser, a Super-as-Ctrl keyboard remap, scheduled Do Not Disturb, auto
-light/dark, a hosts-file ad-blocker, a live/video wallpaper,
-Desktop Icons NG, and GNOME Shell extensions from Pulsar OS's own list
-for desktop polish (traffic-light window buttons, magic-lamp minimize effect,
-top-right notification banners, blur, and more). The KDE-only
-cruft this repo inherited from its original fork (`profiles/pearos/`
-and its packaging) has been fully removed.
+**Status as of 2026-09-26**: installs and runs on real hardware (an AM5
+desktop) and in VMs with Secure Boot on. The profile
+(`profiles/parchaos/`) ships ParchaOS's own packages on top of the
+Fedora base: dock, global menu bar, app launcher, Parcha Controls,
+Parcher (the file manager), ParchaOS Settings, session restore, live
+Clock and Calendar icons, two visual styles (Glass and Classic),
+GTK/icon/Plymouth/wallpaper theming with original ParchaOS icons, a
+Chromium-based browser, a keyboard remap, scheduled Do Not Disturb, auto
+light/dark, a hosts-file ad-blocker, a live wallpaper and Desktop Icons
+NG.
 
-**If you're an agent picking this up, read the phase docs before
-touching code** — they are the authoritative, chronological record of
-what's real, what's verified, and what's still open, and this README's
-job is now just to orient you to them, not to duplicate their detail:
-- `docs/gnome-phase0-findings.md` — the original GRUB/boot/disk-install
-  saga and early packaging work.
-- `docs/gnome-phase1-findings.md` — the real-hardware crisis (boot,
-  locale, fonts, WiFi/Bluetooth firmware, a clock/signature-verification
-  bug) plus everything from the theming/extension-polish pass: traffic
-  lights, light mode, the browser, app renames, the GDM logo, and a
-  full extension-parity pass against Pulsar OS's own real config.
-- `docs/gnome-phase2-findings.md` — a licensing audit of Pulsar OS's
-  remaining ports: several components have no LICENSE file, so they
-  aren't packaged until licensing is clarified with the Inled team.
-- `docs/gnome-phase4-findings.md` — the ParchaOS-original desktop pieces
-  (launcher, Parcha Controls, settings, session restore, live icons,
-  styles, original icons) and the September 2026 audits.
-- `docs/gnome-phase3-findings.md` — scoping and shipping the three
-  "bigger feature" gaps that don't depend on Inled's answer
-  (`gnome-software`, a real hosts-file ad-blocker, a real Wayland-native
-  live wallpaper) and closing the last extension gap (Desktop Icons
-  NG). Also documents a real five-bug dependency chain found in the
-  since-removed `pafari` package while adding `gnome-software` — worth
-  reading before touching RPM `Epoch`/`Provides`/`Obsoletes` on any
-  package in this repo.
+Each package's spec starts with a banner comment explaining what it is,
+why it exists and the bugs found building or shipping it; read it before
+changing the package. Open work is tracked in the issue tracker.
 
 ## What this repo is
 
-This is a **GNOME-based** sibling of `parchaos` (KDE, private)
-(the original, working, KDE Plasma–based ParchaOS — a Fedora port of
-[pearOS](https://github.com/pearOS-archlinux), a macOS-styled Linux distro).
-
-**Why a second repo instead of continuing the KDE one**: pearOS's own
-desktop look is itself downstream of a much larger, more mature, more
-complete project called **Pulsar OS "Bitten Fruit"**
-(https://bittenfruit.inled.es/, source at
-[`Inled-Pulsar-OS/PKG`](https://github.com/Inled-Pulsar-OS/PKG),
-GNOME-based). Pulsar OS already has working, polished,
-actively-maintained implementations of nearly everything on this
-project's roadmap. All of it is GNOME Shell-extension-based, so **none
-of it runs under KDE Plasma** — hence a separate repo rather than
-trying to bolt GNOME Shell extensions onto the existing KDE build.
-
-The KDE variant is kept as a separate, working project; this repo
-doesn't replace it.
+ParchaOS is a GNOME desktop built on Fedora Linux. This repository holds
+the ISO build engine, the one build profile, and every package ParchaOS
+adds on top of Fedora. Where a package is based on someone else's code,
+its spec says so and credits the upstream project (see also
+`docs/LEGAL.md`).
 
 **Licensing of upstream components**: only package code with a real
-LICENSE file behind it. Several Pulsar OS components have none (see
-`docs/gnome-phase2-findings.md`), so they aren't packaged until that is
-clarified with the Inled team. Don't rely on a license field in a
+LICENSE file behind it. Upstream components without one aren't
+packaged; ParchaOS writes its own version instead. Don't rely on a license field in a
 PKGBUILD or `DEBIAN/control` alone.
 
 ## Layout
@@ -91,13 +50,11 @@ packaging/          One directory per custom package, each with a
                     explaining what it is, why it exists, and the
                     real bugs found building/shipping it — read the
                     spec before assuming what a package does.
-docs/               gnome-phase{0,1,2,3,4}-findings.md — see above.
+docs/               LEGAL.md, SOURCES.md, the release notes template.
 scripts/lint.sh     The static checks CI runs on every push.
-                    pearos-ui-reference/ — historical KDE-era design
-                    reference, not this repo's own history.
 ```
 
-## What's actually shipped (see the phase docs for the "why" and the real bugs behind each)
+## What's actually shipped
 
 **Desktop shell**: `parchaos-dock` (Dash-to-Dock fork, magic-lamp minimize
 effect via `parchaos-magic-lamp-effect`), `parchaos-global-menu` (global
@@ -107,15 +64,14 @@ menu bar with the About ParchaOS card and weather), `parchaos-launcher`
 `parchaos-session` (reopens the last session's apps and windows),
 `parchaos-live-icons` (live Clock and Calendar icons),
 `parchaos-gtk-theme`/`parchaos-icon-theme` (MacTahoe, light and dark,
-with original ParchaOS icons replacing the Apple-look ones),
+with original ParchaOS app icons),
 `parchaos-gnome-wallpaper`, `parchaos-gnome-plymouth-theme`
 (parcha-plymouth boot splash), `parchaos-gdm-logo`, `parchaos-desktop-icons`
 (DING), `parchaos-hanabi` (real video wallpaper), plus 8 more
 independently-licensed GNOME Shell extensions for polish
 (`blur-my-shell`, Just Perfection, No Overview, AppIndicator,
 `parchaos-notification-position`, `parchaos-wiggle`,
-`parchaos-ui-tune`) — 12 of Pulsar OS's own real ~15-extension list in
-total.
+`parchaos-ui-tune`).
 
 **Apps and settings**: `parcher` (Parcher, a Nautilus fork,
 GPL-3.0), `parchaos-settings` (ParchaOS Settings: style, session
@@ -125,17 +81,14 @@ build the ParchaOS repository is preferred for), `parchaos-browser` ("Parcha Bro
 rebrand and the default web browser; it replaced and Obsoletes `pafari`, the
 old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Image Viewer,
 Clocks → Clock, Geary → Mail, Software → Parcha Store),
-`parchaos-cloud` (rclone wrapper — **deprioritized**,
-see phase2/phase3 docs; already shipped before this project's own
-licensing-audit habit started, same missing-LICENSE gap as the rest of
-Inled's work, being replaced with ParchaOS's own implementation rather
-than maintained further), `parchaos-focus-schedule`, `parchaos-yin-yang`
+`parchaos-cloud` (rclone wrapper, **deprioritized**; being replaced
+with ParchaOS's own implementation), `parchaos-focus-schedule`, `parchaos-yin-yang`
 (auto light/dark), `parchaos-keyboard-remap` (Super↔Ctrl via xremap),
 `parchaos-hblock` (real hosts-file ad-blocker).
 
 **Installer**: `parchaos-gnome-calamares-config` — a real disk install
 that boots, with the real partitioning/kernel-install/EFI fixes this
-took (see phase0/phase1 docs for the full saga: BIOS boot partitions,
+took (BIOS boot partitions,
 kernel-install-on-target, EFI System Partition population, a Calamares
 app-removal cascade-removal regression caught and fixed twice).
 
@@ -154,24 +107,15 @@ not just upgrade ones already present. **Must be kept in sync by hand**
 whenever `packages.sh`'s `PROFILE_REPO_PACKAGES` changes — bump its
 `Release` and add the new `Requires:` line, or a real user's `dnf
 update` silently won't pick up the new package. This has bitten this
-project's own real hardware more than once; see phase1/phase3 docs.
+project's own real hardware more than once.
 
 ## Still deferred (explicit user calls, not forgotten)
 
 - Deeper Calamares installer skinning to match the desktop's look (real QML/UI work,
-  not started — could be done as this project's own original work,
-  doesn't need Pulsar's blocked `calamares-themes`).
+  not started; ParchaOS's own original work).
 - Deeper glass effects (refraction, highlights) beyond the blur the
   Glass style uses today (a candidate source: `ryohsuke1231/liquid-glass`).
 - `parchaos-cloud`'s replacement (see above).
-
-## Waiting on upstream licensing
-
-Sayri, Time Machine, Welcome, Cloud, the keyboard remapper, the Plymouth,
-Calamares and sound themes, Spotlight, Circle-to-Search, a control center,
-a notification island, an app store and a driver manager from Pulsar OS
-have no LICENSE file. ParchaOS writes its own versions instead where it
-needs them (Parcha Controls, the launcher, Welcome).
 
 ## Release image gate
 
@@ -184,7 +128,7 @@ something ParchaOS can't redistribute or no longer ships: `openh264`
 (Fedora's logos are for official Fedora media), any package built by RPM
 Fusion other than its repo definitions, or `pafari`, `pearos-*`,
 `parchaos-finder`, `parchaos-macos-remap`, `parchaos-tmog`. It also fails
-if `noopenh264` or `generic-logos` is missing. `--skip-branding` test
+if `noopenh264` or `parchaos-logos` is missing. `--skip-branding` test
 builds skip it.
 
 The swap itself is in `profiles/parchaos/customize.sh`. Cisco's
@@ -270,8 +214,7 @@ not legal clearance -- get a real legal review before a public launch.
 ## A note on working style, for any agent picking this up
 
 **Verify against real hands-on results, not assumptions.** This
-project's whole history (this repo's own phase docs, and the KDE
-repo's before it) is one long demonstration that "should work" claims
+project's whole history is one long demonstration that "should work" claims
 hide real bugs: a missing RPM `Release` bump silently no-op'ing a fix,
 an RPM `Epoch` mismatch quietly defeating a `Provides`/`Obsoletes`
 declaration, a build-time macro getting expanded inside what was meant

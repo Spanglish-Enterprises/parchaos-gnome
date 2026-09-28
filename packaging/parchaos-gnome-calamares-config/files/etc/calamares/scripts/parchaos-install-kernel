@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Real bug found via a full end-to-end install+reboot test (2026-09-20,
-# see docs/phase4-findings.md): the installed system's disk never
+# see the project's development notes): the installed system's disk never
 # contained a bootable kernel at all. Root cause: unpackfs.conf's single
 # unpack entry (the squashfs) unpacks the target's rootfs including the
 # kernel-core RPM's own files (modules, etc.), but engine/build-iso.sh
@@ -34,7 +34,7 @@
 # both have real content to work with.
 set -e
 
-# Real end-to-end UEFI install test (2026-09-21, see docs/phase4-findings.md):
+# Real end-to-end UEFI install test (2026-09-21, see the project's development notes):
 # `kernel-install add` (below) internally calls `grub2-editenv`, which fails
 # with "failed to get canonical path of /boot/grub2" on a fresh install --
 # grub2-common's own package would normally create that directory via its

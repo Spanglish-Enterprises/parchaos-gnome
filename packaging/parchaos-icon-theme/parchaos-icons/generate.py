@@ -329,6 +329,46 @@ def keyboard_symbolic():
 
 
 OWN['parchaos-keyboard-symbolic'] = keyboard_symbolic
+
+
+def launcher_symbolic():
+    # A 3x3 grid of small rounded squares, not MacTahoe's plain dots
+    # (byte-identical to Adwaita's own view-app-grid-symbolic -- not an
+    # Apple copy, just not distinctly ParchaOS either; ticket #113 asked
+    # for something custom).
+    s, gap, m = 3.2, 1.7, 1.5
+    squares = ''.join(
+        f'<rect x="{m + c * (s + gap):.1f}" y="{m + r * (s + gap):.1f}" '
+        f'width="{s}" height="{s}" rx="1"/>'
+        for r in range(3) for c in range(3))
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
+            f'<g fill="#2e3436">{squares}</g></svg>\n')
+
+
+OWN['parchaos-launcher-symbolic'] = launcher_symbolic
+
+
+def launcher():
+    # Full-color "show apps" glyph for the dock button (parchaos-gtk-
+    # theme's .show-apps-icon background-image), replacing MacTahoe's
+    # near-exact copy of Apple's Launchpad icon (rounded square, search
+    # bar, pastel 2x3 grid) -- no search bar, ParchaOS's own palette
+    # (passion-fruit gold/purple, not Apple's pastels), tiles instead of
+    # circles to read as "apps" without echoing either design too
+    # closely. 64 px canvas to match the CSS's `background-size: contain`
+    # use inside a small button, not the 512 px app-icon tile.
+    tiles = ''
+    colors = ['#f5b700', '#a98cf6', '#6ed48b', '#ff9a7a', '#7cc4ff', '#3b0764']
+    for i, color in enumerate(colors):
+        col, row = i % 2, i // 2
+        x, y = 14 + col * 20, 12 + row * 14
+        tiles += f'<rect x="{x}" y="{y}" width="16" height="12" rx="4" fill="{color}"/>'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+            '<rect x="4" y="4" width="56" height="56" rx="16" fill="#3b0764" fill-opacity="0.08"/>'
+            + tiles + '</svg>\n')
+
+
+OWN['parchaos-launcher'] = launcher
 # --- File-type (mimetype) icons: a white page with a folded corner, a
 # category-colored band and a glyph for the kind of file. 64 px canvas,
 # like the ParchaOS icons they replace (see mime-map.py for which file

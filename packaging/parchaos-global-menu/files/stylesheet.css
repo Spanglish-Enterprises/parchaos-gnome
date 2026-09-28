@@ -148,3 +148,79 @@
 #panel.parchaos-style-classic .panel-button.parchaos-menubar-button {
     border-radius: 5px;
 }
+
+/* No per-item fills. The shell theme paints every panel button (and the
+   clock) with a solid inset box-shadow, which shows up as dark blocks on
+   a translucent bar. While the menu bar runs, items sit directly on the
+   bar and only get a highlight on hover or while their menu is open. */
+#panel.parchaos-menubar .panel-button,
+#panel.parchaos-menubar .panel-button:focus,
+#panel.parchaos-menubar .panel-button.clock-display .clock,
+#panel.parchaos-menubar .panel-button:focus.clock-display .clock {
+    box-shadow: none !important;
+    background-color: transparent !important;
+}
+
+#panel.parchaos-menubar .panel-button:hover,
+#panel.parchaos-menubar .panel-button:hover.clock-display .clock {
+    box-shadow: none !important;
+    background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+#panel.parchaos-menubar .panel-button:active,
+#panel.parchaos-menubar .panel-button:checked,
+#panel.parchaos-menubar .panel-button:active.clock-display .clock,
+#panel.parchaos-menubar .panel-button:checked.clock-display .clock {
+    box-shadow: none !important;
+    background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* The clock button keeps its own highlight on the inner .clock label. */
+#panel.parchaos-menubar .panel-button.clock-display:hover,
+#panel.parchaos-menubar .panel-button.clock-display:active,
+#panel.parchaos-menubar .panel-button.clock-display:checked {
+    background-color: transparent !important;
+}
+
+/* Light bar: dark text over a light wallpaper strip, chosen at runtime
+   by the extension (parchaos-menubar-light on #panel). */
+#panel.parchaos-menubar.parchaos-menubar-light {
+    background-gradient-direction: vertical;
+    background-gradient-start: rgba(255, 255, 255, 0.22);
+    background-gradient-end: rgba(255, 255, 255, 0.0);
+}
+
+#panel.parchaos-menubar.parchaos-menubar-light.parchaos-style-classic {
+    background-gradient-direction: none;
+    background-color: rgba(246, 246, 248, 0.55);
+}
+
+#panel.parchaos-menubar-light .panel-button,
+#panel.parchaos-menubar-light .panel-button:hover,
+#panel.parchaos-menubar-light .panel-button:active,
+#panel.parchaos-menubar-light .panel-button:checked,
+#panel.parchaos-menubar-light .panel-button .clock,
+#panel.parchaos-menubar-light .parchaos-menubar-label,
+#panel.parchaos-menubar-light .parchaos-menubar-app-label,
+#panel.parchaos-menubar-light .parchaos-weather-label {
+    color: rgba(0, 0, 0, 0.85);
+    text-shadow: none;
+}
+
+#panel.parchaos-menubar-light .panel-button:hover,
+#panel.parchaos-menubar-light .panel-button:hover.clock-display .clock {
+    background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+#panel.parchaos-menubar-light .panel-button:active,
+#panel.parchaos-menubar-light .panel-button:checked,
+#panel.parchaos-menubar-light .panel-button:active.clock-display .clock,
+#panel.parchaos-menubar-light .panel-button:checked.clock-display .clock {
+    background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+#panel.parchaos-menubar-light .panel-button.clock-display:hover,
+#panel.parchaos-menubar-light .panel-button.clock-display:active,
+#panel.parchaos-menubar-light .panel-button.clock-display:checked {
+    background-color: transparent !important;
+}

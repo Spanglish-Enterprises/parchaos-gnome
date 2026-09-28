@@ -1,1 +1,8 @@
-KERNEL=="uinput", GROUP="input", TAG+="uaccess"
+# /dev/uinput is only for the parchaos-keyboard-remap system service (see
+# parchaos-keyboard-remap.service, User=xremap SupplementaryGroups=input) --
+# no `uaccess` tag here. uaccess would hand the logged-in user's own
+# session dynamic ACL access to this device, meaning any process that
+# user runs (a browser tab, a script) could read every keystroke system-
+# wide (passwords, the lock screen, sudo prompts) and inject its own.
+# Real users are never members of `input` for the same reason.
+KERNEL=="uinput", GROUP="input", MODE="0660"

@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Lets the active local session user pause/resume ParchaOS's own keyboard
+// remap (Parcha Controls' "Super as Ctrl" tile / `parchaos-keyboard-style`)
+// without a password prompt. Needed because the remap runs as a system
+// service, not a per-user one, so a plain `systemctl --user` can't
+// control it any more -- keeping /dev/uinput out of every logged-in
+// user's own reach (real users are never in the `input` group) is the
+// whole point of that split. Scoped to this one unit only.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") == "parchaos-keyboard-remap.service" &&
+        subject.active && subject.local) {
+        return polkit.Result.YES;
+    }
+});

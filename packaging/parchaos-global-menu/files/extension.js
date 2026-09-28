@@ -27,6 +27,7 @@ import Shell from 'gi://Shell';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Meta from 'gi://Meta';
 import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
@@ -153,6 +154,202 @@ function applyStyleClass(actor, settings) {
     for (const s of ['glass', 'classic'])
         actor.remove_style_class_name(`parchaos-style-${s}`);
     actor.add_style_class_name(`parchaos-style-${style}`);
+}
+
+// ---------------------------------------------------------------------
+// Adaptive bar tint. The bar switches between
+// light text (over dark wallpaper) and dark text (over light wallpaper).
+// The strip of wallpaper under the bar on the primary monitor is sampled
+// from the background image itself, with the same zoom/scale placement
+// GNOME uses, and the text color with the better WCAG contrast against
+// its average luminance wins. Re-sampled whenever the wallpaper, its
+// placement, the color scheme or the monitor layout changes.
+// ---------------------------------------------------------------------
+const SAMPLE_WIDTH = 480;          // wallpaper is decoded at this width
+const LIGHT_BAR_THRESHOLD = 0.22;  // WCAG crossover is ~0.18; bias to white text
+
+function srgbToLinear(c) {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(r, g, b) {
+    return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+function parseColor(str) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(str ?? '');
+    return m ? m.slice(1).map(h => parseInt(h, 16)) : [0, 0, 0];
+}
+
+class MenuBarTint {
+    constructor(panel) {
+        this._panel = panel;
+        this._cancellable = new Gio.Cancellable();
+        this._background = new Gio.Settings({schema_id: 'org.gnome.desktop.background'});
+        this._interface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+        this._fileMonitor = null;
+        this._timeoutId = 0;
+        this._light = false;
+        this._signals = [
+            // The overview (and lock screen) draw their own dark backdrop
+            // behind the bar, so it goes back to light text there.
+            [Main.overview, Main.overview.connect('showing', () => this._apply())],
+            [Main.overview, Main.overview.connect('hidden', () => this._apply())],
+            [Main.sessionMode, Main.sessionMode.connect('updated', () => this._apply())],
+            [this._background, this._background.connect('changed', () => this._queue())],
+            [this._interface, this._interface.connect('changed::color-scheme', () => this._queue())],
+            [Main.layoutManager, Main.layoutManager.connect('monitors-changed', () => this._queue())],
+        ];
+        this._queue();
+    }
+
+    destroy() {
+        this._cancellable.cancel();
+        if (this._timeoutId)
+            GLib.source_remove(this._timeoutId);
+        this._timeoutId = 0;
+        for (const [obj, id] of this._signals)
+            obj.disconnect(id);
+        this._signals = [];
+        this._fileMonitor?.cancel();
+        this._fileMonitor = null;
+        this._panel.remove_style_class_name('parchaos-menubar-light');
+    }
+
+    // Wallpaper tools often rewrite the same file (GNOME's own
+    // ~/.config/background), so settings changes alone aren't enough.
+    _queue() {
+        if (this._timeoutId)
+            GLib.source_remove(this._timeoutId);
+        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+            this._timeoutId = 0;
+            this._update().catch(e => console.warn(`ParchaOS menu bar tint: ${e.message}`));
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _pictureUri() {
+        const dark = this._interface.get_string('color-scheme') === 'prefer-dark';
+        const uri = this._background.get_string(dark ? 'picture-uri-dark' : 'picture-uri');
+        return uri || this._background.get_string('picture-uri');
+    }
+
+    _watch(file) {
+        if (this._fileMonitor && this._watched?.equal(file))
+            return;
+        this._fileMonitor?.cancel();
+        this._watched = file;
+        try {
+            this._fileMonitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+            this._fileMonitor.connect('changed', (_m, _f, _o, event) => {
+                if (event === Gio.FileMonitorEvent.CHANGES_DONE_HINT || event === Gio.FileMonitorEvent.CREATED)
+                    this._queue();
+            });
+        } catch {
+            this._fileMonitor = null;
+        }
+    }
+
+    async _loadPixbuf(file) {
+        // GNOME dynamic wallpapers are XML slideshows; use the first image.
+        if (file.get_path()?.endsWith('.xml')) {
+            const [bytes] = await file.load_contents_async(this._cancellable);
+            const m = /<file>\s*([^<]+?)\s*<\/file>/.exec(new TextDecoder().decode(bytes));
+            if (!m)
+                return null;
+            file = Gio.File.new_for_path(m[1]);
+        }
+        const stream = await file.read_async(GLib.PRIORITY_DEFAULT, this._cancellable);
+        return new Promise((resolve, reject) => {
+            GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(stream, SAMPLE_WIDTH, -1, true,
+                this._cancellable, (_src, res) => {
+                    try {
+                        resolve(GdkPixbuf.Pixbuf.new_from_stream_finish(res));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+        });
+    }
+
+    // Average relative luminance of the part of the image that ends up
+    // under the bar, given GNOME's picture-options placement.
+    _stripLuminance(pixbuf, monitor, barHeight) {
+        const w = pixbuf.get_width(), h = pixbuf.get_height();
+        const opt = this._background.get_string('picture-options');
+        let x0 = 0, x1 = w, y0 = 0, y1;
+
+        if (opt === 'zoom' || opt === 'spanned') {
+            const scale = Math.max(monitor.width / w, monitor.height / h);
+            const cropX = (w * scale - monitor.width) / 2 / scale;
+            const cropY = (h * scale - monitor.height) / 2 / scale;
+            x0 = cropX;
+            x1 = w - cropX;
+            y0 = cropY;
+            y1 = cropY + barHeight / scale;
+        } else if (opt === 'scaled' || opt === 'centered') {
+            const scale = opt === 'scaled' ? Math.min(monitor.width / w, monitor.height / h) : 1;
+            const top = (monitor.height - h * scale) / 2;
+            if (top >= barHeight) // bar sits over the plain primary color
+                return relativeLuminance(...parseColor(this._background.get_string('primary-color')));
+            y0 = Math.max(0, -top / scale);
+            y1 = y0 + barHeight / scale;
+        } else if (opt === 'none') {
+            return relativeLuminance(...parseColor(this._background.get_string('primary-color')));
+        } else { // stretched, wallpaper (tiled)
+            y1 = barHeight * h / monitor.height;
+        }
+
+        x0 = Math.max(0, Math.floor(x0));
+        x1 = Math.min(w, Math.ceil(x1));
+        y0 = Math.max(0, Math.floor(y0));
+        y1 = Math.min(h, Math.max(y0 + 1, Math.ceil(y1)));
+
+        const pixels = pixbuf.get_pixels();
+        const stride = pixbuf.get_rowstride();
+        const n = pixbuf.get_n_channels();
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y++) {
+            for (let x = x0; x < x1; x++) {
+                const i = y * stride + x * n;
+                sum += relativeLuminance(pixels[i], pixels[i + 1], pixels[i + 2]);
+                count++;
+            }
+        }
+        return count ? sum / count : 0;
+    }
+
+    async _update() {
+        const monitor = Main.layoutManager.primaryMonitor;
+        if (!monitor)
+            return;
+        let luminance = 0;
+        const uri = this._pictureUri();
+        if (uri && this._background.get_string('picture-options') !== 'none') {
+            const file = Gio.File.new_for_uri(uri);
+            this._watch(file);
+            const pixbuf = await this._loadPixbuf(file);
+            if (!pixbuf)
+                return;
+            luminance = this._stripLuminance(pixbuf, monitor, this._panel.height || 32);
+        } else {
+            luminance = relativeLuminance(...parseColor(this._background.get_string('primary-color')));
+        }
+
+        this._light = luminance > LIGHT_BAR_THRESHOLD;
+        console.debug(`ParchaOS menu bar tint: luminance ${luminance.toFixed(3)} -> ${this._light ? 'light' : 'dark'}`);
+        this._apply();
+    }
+
+    _apply() {
+        const overDesktop = !Main.overview.visible && !Main.overview.animationInProgress &&
+            Main.sessionMode.currentMode === 'user';
+        if (this._light && overDesktop)
+            this._panel.add_style_class_name('parchaos-menubar-light');
+        else
+            this._panel.remove_style_class_name('parchaos-menubar-light');
+    }
 }
 
 const MenuBarButton = GObject.registerClass({
@@ -464,6 +661,8 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             Main.panel.addToStatusArea(`parchaos-global-menu-${button.roleId}`, button, index + 1, 'left');
         }
 
+        this._tint = new MenuBarTint(Main.panel);
+
         this._weatherIndicator = new WeatherIndicator();
         Main.panel.addToStatusArea('parchaos-weather', this._weatherIndicator, 0, 'right');
 
@@ -474,6 +673,8 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
     disable() {
         Main.panel.remove_style_class_name('parchaos-menubar');
+        this._tint?.destroy();
+        this._tint = null;
         if (this._styleChangedId)
             this._styleSettings.disconnect(this._styleChangedId);
         this._styleChangedId = 0;

@@ -51,10 +51,20 @@ def split_nvr(srpm):
     return name, version, release
 
 
+def urlopen(url, tries=3):
+    """urlopen with a timeout, retried: a stalled connection must not hang the run."""
+    for attempt in range(tries):
+        try:
+            return urllib.request.urlopen(url, timeout=120)
+        except OSError:
+            if attempt == tries - 1:
+                raise
+
+
 def copr_url(name, version, release):
     query = (f"{COPR_API}/build/list?ownername={COPR_OWNER}&projectname={COPR_PROJECT}"
              f"&packagename={name}&limit=200")
-    with urllib.request.urlopen(query) as r:
+    with urlopen(query) as r:
         builds = json.load(r)["items"]
     for b in builds:
         pkg = b.get("source_package") or {}
@@ -74,7 +84,7 @@ def source_url(srpm, vendor):
 
 def download(url, dest):
     tmp = dest + ".part"
-    with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
+    with urlopen(url) as r, open(tmp, "wb") as f:
         while chunk := r.read(1 << 20):
             f.write(chunk)
     os.replace(tmp, dest)
@@ -89,14 +99,18 @@ def sha256(path):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    prefix = "parchaos"
+    if "--prefix" in argv:
+        i = argv.index("--prefix")
+        if i + 1 >= len(argv):
+            sys.exit(__doc__)
+        prefix = argv[i + 1]
+        del argv[i:i + 2]
+    args = [a for a in argv if not a.startswith("--")]
     if len(args) != 2:
         sys.exit(__doc__)
     rootfs, outdir = args
-    prefix = "parchaos"
-    if "--prefix" in sys.argv:
-        prefix = sys.argv[sys.argv.index("--prefix") + 1]
-        args = [a for a in args if a != prefix]
     listing_only = "--no-download" in sys.argv
 
     srpms = installed_sources(rootfs)
