@@ -123,7 +123,7 @@ restore, Focus schedule, keyboard; also reachable from a ParchaOS panel
 in GNOME Settings, `packaging/gnome-control-center/`, a patched Fedora
 build the ParchaOS repository is preferred for), `parchaos-browser` ("Parcha Browser": thin Chromium
 rebrand and the default web browser; it replaced and Obsoletes `pafari`, the
-old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Preview,
+old WebKitGTK/Epiphany fork), `parchaos-app-renames` (Loupe → Image Viewer,
 Clocks → Clock, Geary → Mail, Software → Parcha Store),
 `parchaos-cloud` (rclone wrapper — **deprioritized**,
 see phase2/phase3 docs; already shipped before this project's own
@@ -247,6 +247,14 @@ Renamed so far:
 Software -> "Parcha Store" ("App Store" is itself a trademark). Approved names for
 upcoming features: Parcha Time (backups), Parcha Controls (control center),
 ParchaOS Recovery.
+
+Approved display names for renamed stock apps (ticket #101): **Image Viewer**
+(Loupe), **Clock** (GNOME Clocks), **Mail** (Geary), **Parcha Store**
+(GNOME Software), **Terminal**, **Text Editor**, **Weather**, **Screenshot**,
+**System Monitor**, **Disks**. These are either GNOME's own generic names or
+plain English words with no vendor modifier; "Preview" was dropped as another
+vendor's app name. New renames must be added here when they are approved.
+
 Still needing a ParchaOS name before it's built: system-wide search.
 
 Deliberately kept: upstream project names and URLs (e.g. `MacTahoe` --

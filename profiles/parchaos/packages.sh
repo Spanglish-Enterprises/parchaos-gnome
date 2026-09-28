@@ -155,7 +155,7 @@ PROFILE_REPO_PACKAGES=(
     parchaos-browser
 
     # ParchaOS app-display-name overrides (packaging/parchaos-app-renames/)
-    # -- Loupe -> Preview, GNOME Clocks -> Clock, Geary -> Mail. Their
+    # -- Loupe -> Image Viewer, GNOME Clocks -> Clock, Geary -> Mail. Their
     # icons already come from the ParchaOS icon theme for free; this is
     # display-name-only, via a %post sed on the real installed .desktop
     # files (see the spec's own banner comment for why, and for Amberol/

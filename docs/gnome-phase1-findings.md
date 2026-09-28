@@ -457,7 +457,8 @@ more app rebrands like the browser's).
   etc.) -- zero new icon work needed, only display names were off.
   Renamed Loupe -> Preview, GNOME Clocks -> Clock, Geary -> Mail (added
   to packages.list) via a `%post` sed on the real installed `.desktop`
-  files. **Real bug found and fixed within the same session**: the
+  files. (2026-09-27, ticket #101: "Preview" was later replaced by
+  "Image Viewer" -- another vendor's app name, not ours.) **Real bug found and fixed within the same session**: the
   first version of that sed had no line-range restriction, so on
   Geary's desktop file (the only one of the three with `[Desktop
   Action ...]` blocks) it also renamed the "Compose Message" and "New
