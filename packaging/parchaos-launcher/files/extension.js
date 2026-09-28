@@ -1134,9 +1134,10 @@ const Launcher = GObject.registerClass({
         // the removal takes with it, which the dialog then lists.
         remove.reactive = false;
         remove.opacity = 128;
+        let confirmedPackages = [];
         remove.connect('clicked', () => {
             this._closeConfirm();
-            this._uninstall(app);
+            this._uninstall(app, confirmedPackages);
         });
         runAsync([this._helper, 'plan', app.get_id()]).then(({stdout}) => {
             if (this._destroyed || this._confirm !== shade)
@@ -1152,6 +1153,7 @@ const Launcher = GObject.registerClass({
                 body.text = result.error || 'Couldn\'t check what would be removed.';
                 return;
             }
+            confirmedPackages = packages;
             body.text = packages.length > 1
                 ? `${baseText}\n\nThis also removes: ${packages.join(', ')}.`
                 : baseText;
@@ -1183,12 +1185,15 @@ const Launcher = GObject.registerClass({
 
     // The password prompt for system packages is a shell dialog that would
     // sit under the launcher, so close first and report by notification.
-    _uninstall(app) {
+    _uninstall(app, confirmedPackages) {
         const name = app.get_name();
         const id = app.get_id();
         const helper = this._helper;
         this.close();
-        runAsync([helper, 'uninstall', id]).then(({ok, stderr}) => {
+        const args = confirmedPackages.length > 0
+            ? [helper, 'uninstall', id, ...confirmedPackages]
+            : [helper, 'uninstall', id];
+        runAsync(args).then(({ok, stderr}) => {
             if (ok) {
                 Main.notify(`${name} was uninstalled`, '');
             } else {

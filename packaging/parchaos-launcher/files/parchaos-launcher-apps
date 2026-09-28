@@ -79,7 +79,15 @@ def removable(desktop_id):
     if src is None:
         return False
     if src[0] == 'flatpak':
-        return True
+        # Non-wheel users can't authenticate polkit for flatpak uninstall,
+        # so don't show the badge if the user isn't an admin.
+        import grp
+        try:
+            user = __import__('os').environ.get('USER', '')
+            groups = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+            return 'wheel' in groups
+        except Exception:
+            return False
     pkg = src[1]
     if pkg.startswith('parchaos') or pkg in protected():
         return False
@@ -145,21 +153,29 @@ def plan(desktop_id):
         session.close()
 
 
-def uninstall(desktop_id):
-    packages, error = plan(desktop_id)
-    if packages is None:
-        print(error, file=sys.stderr)
-        return 1
+def uninstall(desktop_id, confirmed_packages=None):
     src = source_of(desktop_id)
+    if src is None:
+        print('App not found.', file=sys.stderr)
+        return 1
     if src[0] == 'flatpak':
         out = run(['flatpak', 'uninstall', '-y', '--noninteractive', src[2], src[1]])
         if out.returncode != 0:
             msg = (out.stderr or out.stdout).strip().splitlines()
             print(msg[-1] if msg else 'Removal failed.', file=sys.stderr)
         return out.returncode
-    session = DnfSession(src[1])
+    # Use the confirmed package list from the UI instead of re-planning.
+    # Re-planning could give a different answer if the system changed between
+    # the user confirming and the uninstall running.
+    if confirmed_packages is None:
+        confirmed_packages, error = plan(desktop_id)
+        if confirmed_packages is None:
+            print(error, file=sys.stderr)
+            return 1
+    session = DnfSession(confirmed_packages[0])
     try:
-        if session.packages != packages:
+        # Verify the confirmed packages still match what dnf would do.
+        if session.packages != sorted(confirmed_packages):
             print('The system changed; try again.', file=sys.stderr)
             return 1
         session.run()
@@ -179,9 +195,9 @@ def main(argv):
         packages, error = plan(argv[2])
         print(json.dumps({'packages': packages or [], 'error': error}))
         return 0 if packages is not None else 1
-    if len(argv) == 3 and argv[1] == 'uninstall':
-        return uninstall(argv[2])
-    print('usage: parchaos-launcher-apps removable ID... | plan ID | uninstall ID',
+    if len(argv) >= 3 and argv[1] == 'uninstall':
+        return uninstall(argv[2], argv[3:] or None)
+    print('usage: parchaos-launcher-apps removable ID... | plan ID | uninstall ID [pkg...]',
           file=sys.stderr)
     return 2
 
