@@ -13,6 +13,7 @@ The app provides automated, versioned backups with a browsable historical timeli
 ## 2. Storage Targets
 - **Local Disks**: The user can designate an external USB/SATA drive as the primary repository.
 - **Cloud Destinations**: Reuses the work from `parchaos-cloud`. If a user has `~/Cloud/<provider>` mounted via rclone, `restic` can seamlessly target it as an off-site repository.
+- **NAS & Network Shares**: Supports mounting local SMB/NFS network attached storage (NAS) via standard `gvfs-smb` or system-level mounts, granting users the privacy of local network backups without being locked into the classic macOS "Time Capsule" proprietary network requirements.
 
 ## 3. User Interface (GTK4/Libadwaita)
 - **Settings & Status**: A simple GTK4 control panel showing the backup destination, next scheduled backup time, and total disk space used.
