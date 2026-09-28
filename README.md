@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/Spanglish-Enterprises/parchaos-gnome/releases/latest"><img alt="Download" src="https://img.shields.io/badge/download-ISO-7c3aed?style=for-the-badge"></a>
-  <a href="https://parchaos-website.vercel.app"><img alt="Website" src="https://img.shields.io/badge/website-parchaos-f59e0b?style=for-the-badge"></a>
+  <a href="https://parchaos.org"><img alt="Website" src="https://img.shields.io/badge/website-parchaos-f59e0b?style=for-the-badge"></a>
 </p>
 
 <p align="center">

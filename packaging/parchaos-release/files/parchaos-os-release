@@ -15,7 +15,7 @@ set -eu
 
 SRC=/usr/lib/os-release
 DEST=/etc/os-release
-SITE=https://parchaos-website.vercel.app
+SITE=https://parchaos.org
 
 [ -r "$SRC" ] || exit 0
 # shellcheck source=/dev/null
