@@ -1,7 +1,7 @@
 # ==============================================================================
 # ParchaOS (GNOME) default desktop wallpaper -- a single 4K (3840x2160)
 # PNG, generated from branding/logo/: a dark vertical gradient (0x16161e
-# to 0x26262e, matching parchaos-gtk-theme's MacTahoe-Dark palette) with
+# to 0x26262e, matching parchaos-gtk-theme's ParchaOS-Dark palette) with
 # ParchaOS's real passion-fruit logo centered as a very subtle (~6%
 # opacity) watermark, not a loud centerpiece -- meant to look like a
 # clean dark desktop background first, ParchaOS-branded second.

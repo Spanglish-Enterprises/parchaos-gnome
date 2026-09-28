@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
@@ -135,8 +135,8 @@ mkdir -p %{buildroot}%{_datadir}/icons
 # points every alias (e.g. org.gnome.Nautilus, org.gnome.Calendar,
 # org.gnome.Settings) at one target file per design, so replacing the
 # targets covers all of them.
-# MacTahoe-light's apps/ dir is a symlink to MacTahoe's.
-for theme in MacTahoe MacTahoe-dark; do
+# ParchaOS-light's apps/ dir is a symlink to ParchaOS's.
+for theme in ParchaOS ParchaOS-dark; do
     d=%{buildroot}%{_datadir}/icons/$theme/apps/scalable
     for pair in file-manager:%{SOURCE1} softwarecenter:%{SOURCE2} \
                 web-browser:%{SOURCE3} safari:%{SOURCE4} \
@@ -158,7 +158,7 @@ done
 # Apple-look ones. Unlike apps/, each variant has its own places/ dir.
 # The fixed-size copies (16/22/24) are overwritten with the same scalable
 # SVGs (other icons link to them), so the new art shows at every size.
-for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+for theme in ParchaOS ParchaOS-dark ParchaOS-light; do
     d=%{buildroot}%{_datadir}/icons/$theme/places/scalable
     for pair in \
                 folder:%{SOURCE17} folder-open:%{SOURCE18} folder-documents:%{SOURCE19} \
@@ -195,7 +195,7 @@ done
 # logo) and the Budgie launcher applet. Overwrite every real file (the
 # aliases link to them) with the ParchaOS mark, symbolic where the name
 # asks for it. folder-apple gets the plain ParchaOS folder.
-find %{buildroot}%{_datadir}/icons/MacTahoe* -type f \
+find %{buildroot}%{_datadir}/icons/ParchaOS* -type f \
     \( -name 'start-here*.svg' -o -name 'budgie-app-launcher-applet*.svg' \) |
 while read -r f; do
     case "$f" in
@@ -203,7 +203,7 @@ while read -r f; do
         *) install -m 0644 %{SOURCE34} "$f" ;;
     esac
 done
-find %{buildroot}%{_datadir}/icons/MacTahoe* -type f -name 'folder-apple*.svg' |
+find %{buildroot}%{_datadir}/icons/ParchaOS* -type f -name 'folder-apple*.svg' |
 while read -r f; do
     case "$f" in
         *-symbolic.svg) install -m 0644 %{SOURCE35} "$f" ;;
@@ -211,7 +211,7 @@ while read -r f; do
     esac
 done
 
-find %{buildroot}%{_datadir}/icons/MacTahoe* -type f -name 'input-keyboard-symbolic.svg' |
+find %{buildroot}%{_datadir}/icons/ParchaOS* -type f -name 'input-keyboard-symbolic.svg' |
 while read -r f; do
     install -m 0644 %{SOURCE36} "$f"
 done
@@ -225,25 +225,25 @@ python3 %{SOURCE37} %{buildroot}%{_datadir}/icons %{_sourcedir}
 # images, so they came out dotted/pixelated. Without them the lookup
 # falls through to hicolor, where GNOME Weather ships crisp scalable
 # originals. The *-symbolic weather icons are untouched.
-find %{buildroot}%{_datadir}/icons/MacTahoe* \
+find %{buildroot}%{_datadir}/icons/ParchaOS* \
     \( -name 'weather-*-large.svg' -o -name 'weather-*-small.svg' \) \
     \( -type f -o -type l \) -delete
 
 # Keep only ParchaOS's own app icons: everything else falls back to
 # GNOME's (Adwaita, hicolor). Fails the build if an excluded name survives.
 python3 %{SOURCE70} %{buildroot}%{_datadir}/icons %{SOURCE71}
-for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+for theme in ParchaOS ParchaOS-dark ParchaOS-light; do
     sed -i 's/^Inherits=.*/Inherits=Adwaita,hicolor/' %{buildroot}%{_datadir}/icons/$theme/index.theme
 done
-grep -q '^Inherits=Adwaita,hicolor' %{buildroot}%{_datadir}/icons/MacTahoe/index.theme
+grep -q '^Inherits=Adwaita,hicolor' %{buildroot}%{_datadir}/icons/ParchaOS/index.theme
 
 # ParchaOS uses GNOME's Adwaita cursors; MacTahoe's copy the reference
 # desktop's cursor designs, so they aren't shipped.
-rm -rf %{buildroot}%{_datadir}/icons/MacTahoe*/cursors
+rm -rf %{buildroot}%{_datadir}/icons/ParchaOS*/cursors
 
 # install.sh built icon-theme.cache before the edits above; rebuild it so
 # it matches what we actually ship.
-for theme in MacTahoe MacTahoe-dark MacTahoe-light; do
+for theme in ParchaOS ParchaOS-dark ParchaOS-light; do
     gtk-update-icon-cache -f -q %{buildroot}%{_datadir}/icons/$theme
 done
 
@@ -253,6 +253,10 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-18
+- Rename installed icon theme directories from MacTahoe/MacTahoe-dark/
+  MacTahoe-light to ParchaOS/ParchaOS-dark/ParchaOS-light (ticket #100).
+  Upstream credits and URLs unchanged.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-17
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.

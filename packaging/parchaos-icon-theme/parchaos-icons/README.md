@@ -1,11 +1,11 @@
 # ParchaOS app icons
 
 Original ParchaOS artwork (hand-written SVG), made to replace icons in the
-MacTahoe theme that reproduce Apple's own app icons (Finder, App Store,
+ParchaOS theme that reproduce Apple's own app icons (Finder, App Store,
 Safari) -- those designs are Apple trademarks/trade dress. Licensed CC BY-SA 4.0
 (see LICENSE-ARTWORK at the repository root).
 
-| File | Replaces (MacTahoe file) | Used by |
+| File | Replaces (ParchaOS file) | Used by |
 |---|---|---|
 | parcher.svg | file-manager.svg (+ ~45 aliases, incl. org.gnome.Nautilus) | Parcher |
 | parcha-store.svg | softwarecenter.svg (+ ~45 aliases, incl. org.gnome.Software) | Parcha Store |

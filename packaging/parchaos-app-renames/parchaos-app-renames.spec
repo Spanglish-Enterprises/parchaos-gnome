@@ -1,14 +1,10 @@
 # ==============================================================================
-# Cosmetic display-name overrides for stock GNOME apps whose real icon is
-# already covered for free by the MacTahoe icon theme (confirmed via
-# `find /usr/share/icons/MacTahoe -iname` on real hardware, 2026-09-24 --
-# org.gnome.Loupe.svg, org.gnome.clocks.svg, org.gnome.Geary.svg,
-# org.gnome.Calculator.svg, org.gnome.Calendar.svg, org.gnome.Weather.svg,
-# org.gnome.Contacts.svg, io.bassi.Amberol.svg all already exist in the
-# theme this profile ships), but whose GNOME-project display NAME doesn't
-# match the short, familiar app name this desktop should show.
-# Calculator/Calendar/Weather/Contacts already have short names
-# as-is -- only Loupe, GNOME Clocks, and Geary
+# Cosmetic display-name overrides for stock GNOME apps whose icons are
+# already covered by the ParchaOS icon theme this profile ships (the
+# original artwork replaces the MacTahoe theme's Apple-look icons), but
+# whose GNOME-project display NAME doesn't match the short, familiar app
+# name this desktop should show. Calculator/Calendar/Weather/Contacts
+# already have short names as-is -- only Loupe, GNOME Clocks, and Geary
 # needed a rename here.
 #
 # Mechanism: %post sed on the real installed .desktop file, not a
@@ -51,7 +47,7 @@ Requires(post): sed
 Renames a handful of stock GNOME apps' launcher display names to their
 short, familiar names (Loupe -> Preview, GNOME Clocks -> Clock, Geary ->
 Mail), via a %post sed on the real installed .desktop file. Their icons
-already come from the MacTahoe icon theme with no changes needed -- see
+already come from the ParchaOS icon theme with no changes needed -- see
 this spec's own banner comment for the full reasoning and what was
 deliberately left out (Amberol/Music, no native Fedora RPM).
 

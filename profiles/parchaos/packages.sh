@@ -62,8 +62,8 @@ PROFILE_REPO_PACKAGES=(
 
     # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
-    # MacTahoe-gtk-theme (MIT), dark variant. Installs as
-    # /usr/share/themes/MacTahoe-Dark. Applied by default via
+    # ParchaOS-gtk-theme (MIT), dark variant. Installs as
+    # /usr/share/themes/ParchaOS-Dark. Applied by default via
     # customize.sh's dconf override -- GTK apps read
     # org.gnome.desktop.interface gtk-theme directly, but GNOME Shell
     # itself needs the user-theme extension (below) to pick up its own
@@ -71,9 +71,9 @@ PROFILE_REPO_PACKAGES=(
     parchaos-gtk-theme
 
     # ParchaOS's Tahoe-styled icon theme (packaging/parchaos-icon-theme/),
-    # real upstream vinceliuice MacTahoe-icon-theme (GPL-3.0). Installs
-    # three real variants (MacTahoe, MacTahoe-light, MacTahoe-dark --
-    # confirmed via rpm -qlp on the built RPM); MacTahoe-dark is applied
+    # real upstream vinceliuice ParchaOS-icon-theme (GPL-3.0). Installs
+    # three real variants (ParchaOS, ParchaOS-light, ParchaOS-dark --
+    # confirmed via rpm -qlp on the built RPM); ParchaOS-dark is applied
     # by default via customize.sh to pair with the dark GTK theme.
     parchaos-icon-theme
 
@@ -156,7 +156,7 @@ PROFILE_REPO_PACKAGES=(
 
     # ParchaOS app-display-name overrides (packaging/parchaos-app-renames/)
     # -- Loupe -> Preview, GNOME Clocks -> Clock, Geary -> Mail. Their
-    # icons already come from the MacTahoe icon theme for free; this is
+    # icons already come from the ParchaOS icon theme for free; this is
     # display-name-only, via a %post sed on the real installed .desktop
     # files (see the spec's own banner comment for why, and for Amberol/
     # Music being deliberately left out -- no native Fedora RPM).

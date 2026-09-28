@@ -83,11 +83,11 @@ glib-compile-schemas "$DEST/schemas"
 
 %changelog
 * Sat Sep 26 2026 ParchaOS packaging - 5-5
-- Drop the MacTahoe cursor images; the default Adwaita cursors match
+- Drop the ParchaOS cursor images; the default Adwaita cursors match
   Wiggle's own enlarged arrow.
 * Fri Sep 25 2026 ParchaOS packaging - 5-4
 - Shaking the cursor no longer swaps it for a different-looking arrow:
-  the enlarged cursor uses MacTahoe's own dark/light arrow matching the
+  the enlarged cursor uses ParchaOS's own dark/light arrow matching the
   active cursor theme (generic arrow for other themes).
 * Fri Sep 25 2026 ParchaOS packaging - 5-3
 - Fix the magnified cursor getting stuck on screen: port cursor hiding to

@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """prune-apps.py <icons-dir> <allowlist>
 
-Keeps only ParchaOS's own application icons in the MacTahoe-based themes.
+Keeps only ParchaOS's own application icons in the ParchaOS-based themes.
 
-MacTahoe draws near-copies of the reference desktop's app icons. The
+ParchaOS draws near-copies of the reference desktop's app icons. The
 spec already replaces the ones ParchaOS uses with original artwork; this
 removes every other app icon so apps fall back to GNOME's own icons
 (Adwaita, hicolor):
@@ -16,7 +16,7 @@ removes every other app icon so apps fall back to GNOME's own icons
   and the links to them are repointed.
 - Every fixed-size and symbolic apps directory is emptied: the replaced
   art is scalable and covers every size.
-- Outside apps/, MacTahoe's drawings of Apple hardware and file types
+- Outside apps/, ParchaOS's drawings of Apple hardware and file types
   (iPhone, iPad, iPod, disk images, Wallet passes; names matching
   APPLE_ART) are removed so GNOME's own icons show instead.
 - Links left dangling by the removals are deleted everywhere.
@@ -83,7 +83,7 @@ def main():
     keep = {l.strip() for l in open(allowlist) if l.strip() and not l.startswith("#")}
     for theme in sorted(os.listdir(icons)):
         root = os.path.join(icons, theme)
-        if not theme.startswith("MacTahoe") or not os.path.isdir(root):
+        if not theme.startswith("ParchaOS") or not os.path.isdir(root):
             continue
         for top in os.listdir(root):
             apps = os.path.join(root, top)
@@ -100,7 +100,7 @@ def main():
 
     # Apple hardware and file-type drawings outside apps/.
     for theme in sorted(os.listdir(icons)):
-        if not theme.startswith("MacTahoe"):
+        if not theme.startswith("ParchaOS"):
             continue
         for dirpath, _, files in os.walk(os.path.join(icons, theme)):
             if "/apps" in dirpath:

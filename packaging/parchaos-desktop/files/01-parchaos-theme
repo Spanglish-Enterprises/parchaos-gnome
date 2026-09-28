@@ -1,6 +1,6 @@
 [org/gnome/desktop/interface]
-gtk-theme='MacTahoe-Dark'
-icon-theme='MacTahoe-dark'
+gtk-theme='ParchaOS-Dark'
+icon-theme='ParchaOS-dark'
 cursor-theme='Adwaita'
 color-scheme='prefer-dark'
 # Real gap found via a live reference-desktop comparison 2026-09-25: the
@@ -19,11 +19,53 @@ clock-show-weekday=true
 enabled=false
 
 [org/gnome/desktop/wm/preferences]
-theme='MacTahoe-Dark'
+theme='ParchaOS-Dark'
 button-layout='close,minimize,maximize:'
 
 [org/gnome/shell/extensions/user-theme]
-name='MacTahoe-Dark'
+name='ParchaOS-Dark'
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+# Default dock favorites so Parcha Browser appears out of the box.
+# Previously only the live session's customize.sh set these; installed
+# systems fell back to Fedora's list (no browser).
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.Software.desktop', 'org.gnome.Geary.desktop', 'org.gnome.Calendar.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
 
 [org/gnome/desktop/background]
 picture-uri='file:///usr/share/backgrounds/parchaos/parchaos-wallpaper.png'

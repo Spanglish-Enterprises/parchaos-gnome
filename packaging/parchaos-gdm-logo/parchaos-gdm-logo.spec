@@ -38,7 +38,7 @@
 # "ParchaOS" text, ~197x48, matching Fedora's real proportions/height)
 # using the same branding/logo/parcha-logo-white.png icon plus Nunito
 # Sans (already present on the system) for the text -- white for the
-# same MacTahoe-Dark/color-scheme='prefer-dark' reason as before.
+# same ParchaOS-Dark/color-scheme='prefer-dark' reason as before.
 #
 # %post explicitly re-runs glib-compile-schemas rather than relying on
 # glib2's own RPM file-trigger to catch the new override file -- same

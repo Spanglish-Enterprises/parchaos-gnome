@@ -63,8 +63,8 @@ index 276d040..2b8cc77 100755
 +        # ParchaOS: upstream's 'Default'/'Default' names no real theme, and
 +        # identical light/dark names made the color-scheme check below
 +        # always pick prefer-dark. Default to the GTK themes ParchaOS ships.
-+        self.theme_light = 'MacTahoe-Light'
-+        self.theme_dark = 'MacTahoe-Dark'
++        self.theme_light = 'ParchaOS-Light'
++        self.theme_dark = 'ParchaOS-Dark'
  
      @property
      def available(self) -> bool:
@@ -105,8 +105,8 @@ index 7c52339..6245569 100644
                  # than duplicating it.
                  super().__init__(_Budgie())
 +                # ParchaOS: ship real defaults instead of Budgie's 'Default'
-+                self.theme_light = 'MacTahoe-light'
-+                self.theme_dark = 'MacTahoe-dark'
++                self.theme_light = 'ParchaOS-light'
++                self.theme_dark = 'ParchaOS-dark'
              case Desktop.KDE:
                  super().__init__(_Kde())
              case _:
@@ -121,8 +121,8 @@ index fb94da1..5c20633 100644
 +        # ParchaOS: upstream sets no default at all, so enabling this
 +        # plugin raised 'Theme "" is invalid'. Default to the shipped
 +        # GNOME Shell user-themes.
-+        self.theme_light = 'MacTahoe-Light'
-+        self.theme_dark = 'MacTahoe-Dark'
++        self.theme_light = 'ParchaOS-Light'
++        self.theme_dark = 'ParchaOS-Dark'
  
      @property
      def available(self) -> bool:

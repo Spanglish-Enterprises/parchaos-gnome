@@ -1,6 +1,6 @@
-# App icons ParchaOS keeps in the MacTahoe-based themes: the targets the
+# App icons ParchaOS keeps in the ParchaOS-based themes: the targets the
 # spec replaces with original ParchaOS artwork (aliases that link to them
-# are kept too). Every other MacTahoe app icon is removed by
+# are kept too). Every other ParchaOS app icon is removed by
 # prune-apps.py, so apps fall back to GNOME's own icons.
 file-manager
 softwarecenter

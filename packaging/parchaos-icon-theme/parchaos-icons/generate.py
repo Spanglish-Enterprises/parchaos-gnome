@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # Generates the ParchaOS app icons (original artwork, CC BY-SA 4.0) that
-# replace MacTahoe's reproductions of Apple's app icons. Every icon shares
+# replace ParchaOS's reproductions of Apple's app icons. Every icon shares
 # the ParchaOS tile: a 448 px rounded square on a 512 grid with a vertical
 # gradient, a light top gloss, a thin light rim and a soft drop shadow.
 #
@@ -186,7 +186,7 @@ def cloud():
     return tile('#7cc4ff', '#3b82e0', body)
 
 
-# name -> (generator, MacTahoe file(s) it replaces)
+# name -> (generator, ParchaOS file(s) it replaces)
 ICONS = {
     'parchaos-calendar': (calendar, ['calendar']),
     'parchaos-clock': (clock, ['preferences-system-time']),
@@ -206,7 +206,7 @@ ICONS = {
 }
 
 # Icons for ParchaOS's own apps, shipped by those apps (hicolor), not
-# replacing anything in MacTahoe.
+# replacing anything in ParchaOS.
 OWN = {
     'parchaos-cloud': cloud,
 }
@@ -277,7 +277,7 @@ def trash(full):
 
 
 # --- The ParchaOS mark: a halved passion fruit (parcha) with its stem and
-# leaf, full color and symbolic. Replaces MacTahoe's start-here logos. ---
+# leaf, full color and symbolic. Replaces ParchaOS's start-here logos. ---
 
 def logo():
     import math
@@ -332,7 +332,7 @@ def keyboard_symbolic():
 OWN['parchaos-keyboard-symbolic'] = keyboard_symbolic
 # --- File-type (mimetype) icons: a white page with a folded corner, a
 # category-colored band and a glyph for the kind of file. 64 px canvas,
-# like the MacTahoe icons they replace (see mime-map.py for which file
+# like the ParchaOS icons they replace (see mime-map.py for which file
 # types get which). ---
 
 MIME_KINDS = {
@@ -398,7 +398,7 @@ OWN['parchaos-logo'] = logo
 OWN['parchaos-logo-symbolic'] = logo_symbolic
 
 
-# name -> (svg text factory, MacTahoe places file(s) it replaces)
+# name -> (svg text factory, ParchaOS places file(s) it replaces)
 PLACES = {
     'parchaos-folder': (lambda: folder('plain'), ['folder']),
     'parchaos-folder-open': (lambda: folder('plain', open_=True), ['folder-open']),

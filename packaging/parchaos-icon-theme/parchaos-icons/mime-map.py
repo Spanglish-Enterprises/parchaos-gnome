@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Replace MacTahoe's scalable file-type (mimetype) icons with ParchaOS's
+# Replace ParchaOS's scalable file-type (mimetype) icons with ParchaOS's
 # own: every real file in <theme>/mimes/scalable becomes the
 # parchaos-mime-<kind>.svg for its kind, picked from the file name.
 # (The 16/22/24 px and symbolic file-type icons are plain line glyphs and
@@ -64,7 +64,7 @@ def kind_of(name):
 def targets(icons_dir):
     for theme in sorted(os.listdir(icons_dir)):
         d = os.path.join(icons_dir, theme, 'mimes', 'scalable')
-        if not theme.startswith('MacTahoe') or not os.path.isdir(d) or os.path.islink(d):
+        if not theme.startswith('ParchaOS') or not os.path.isdir(d) or os.path.islink(d):
             continue
         for f in sorted(os.listdir(d)):
             path = os.path.join(d, f)

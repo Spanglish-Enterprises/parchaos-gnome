@@ -20,9 +20,9 @@
 # the `fedora-cisco-openh264` repo this profile already enables, not from
 # a rpmfusion nonfree codec package.
 #
-# Icon: `safari` -- a real, existing icon in the MacTahoe icon theme
-# already ported to this profile (confirmed via `find` on real hardware,
-# not created for this package), so no new icon asset was needed.
+# Icon: original ParchaOS artwork (a fruit-globe on a white tile),
+# created for this package and shipped as parcha-browser.svg -- replaces
+# the MacTahoe theme's `safari` icon that was used in early builds.
 #
 # Real, existing binary/desktop-file paths (confirmed via
 # `dnf repoquery -l chromium` and the real installed

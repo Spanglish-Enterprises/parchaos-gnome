@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -159,7 +159,7 @@ mkdir -p %{buildroot}%{_datadir}/themes
 # beyond what this profile ships (only the default Tahoe-style,
 # standard-scheme, normal-opacity combination) -- two separate calls,
 # each still implicitly scoped to that one default combination, stay
-# fast and produce exactly MacTahoe-Dark and MacTahoe-Light, nothing
+# fast and produce exactly ParchaOS-Dark and ParchaOS-Light, nothing
 # more.
 ./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
 
@@ -223,7 +223,7 @@ done
 %{_sysconfdir}/skel/.config/gtk-4.0/
 # install.sh -l's main() doesn't scope itself to just the gtk-4.0
 # config -- it also runs the plain per-user GTK3 install (duplicate
-# .themes/MacTahoe-Dark* variants) and installs the bundled
+# .themes/ParchaOS-Dark* variants) and installs the bundled
 # "gnome-theme-switcher" helper app, all under the same $HOME we
 # pointed at skel. Found via a real COPR build failure ("Installed
 # but unpackaged"), not guessed. Harmless/expected content for a
@@ -234,6 +234,10 @@ done
 %{_sysconfdir}/skel/.local/
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-17
+- Rename installed theme directories from MacTahoe-Dark/MacTahoe-Light
+  to ParchaOS-Dark/ParchaOS-Light (ticket #100). Upstream credits and
+  URLs unchanged.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-16
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.
@@ -251,7 +255,7 @@ done
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-11
 - Release 10's COPR build failed with "Installed (but unpackaged)
   file(s)": install.sh -l's main() also installs the plain per-user
-  GTK3 theme (.themes/MacTahoe-Dark* variants) and the bundled
+  GTK3 theme (.themes/ParchaOS-Dark* variants) and the bundled
   gnome-theme-switcher app into the same $HOME, not just the gtk-4.0
   libadwaita config. Added %files entries for %{_sysconfdir}/skel/.themes/
   and %{_sysconfdir}/skel/.local/ rather than fighting upstream's
@@ -282,7 +286,7 @@ done
   color variant (COMMAND_COLOR_VARIANTS=('light' 'dark')) -- this spec
   only ever built 'dark'. Added a second install.sh -c light
   invocation; %files' existing %{_datadir}/themes/* wildcard already
-  picks up the new MacTahoe-Light output with no further changes
+  picks up the new ParchaOS-Light output with no further changes
   needed.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-7
 - Real fifth root cause found -- this time not from a COPR build (which
@@ -340,7 +344,7 @@ done
   unconditionally, explaining why testing as genuine verified root
   never helped. Fixed with a real always-false relational test
   (`1 -eq 2`). Verified clean (exit 0) locally as a normal non-root
-  user: produces real MacTahoe-Dark / MacTahoe-Dark-solid (+ hdpi/xhdpi
+  user: produces real ParchaOS-Dark / ParchaOS-Dark-solid (+ hdpi/xhdpi
   density variants) directories.
 * Wed Sep 23 2026 ParchaOS packaging - 2026.09.23-2
 - Real bug found via a real COPR build attempt: --silent-mode's actual
