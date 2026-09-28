@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,11 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 2.1.0-22
+- Help menu: "ParchaOS Help" opens the support page (ticket #136), which
+  is the channel the README, LEGAL and SOURCES docs already point at.
+  It previously opened the site's front page and stopped there. The FAQ
+  stays reachable as its own item instead of being lost behind the change.
 * Sat Sep 26 2026 ParchaOS packaging - 2.1.0-21
 - Adaptive menu bar: samples the wallpaper under the bar and switches
   between light and dark text for contrast; light text

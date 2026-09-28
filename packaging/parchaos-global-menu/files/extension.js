@@ -624,7 +624,13 @@ const MENU_TABLE = [
     },
     {
         role: 'help', title: 'Help', items: [
-            { label: 'ParchaOS Help', run: () => openSiteLink('/#faq') },
+            // Ticket #136: "ParchaOS Help" opened the site's front page and
+            // never reached support. The support form is the documented
+            // channel (README, LEGAL, SOURCES all point at /support), so
+            // that is what a help-seeking click should open. The FAQ keeps
+            // its own item rather than being lost behind the change.
+            { label: 'ParchaOS Help', run: () => openSiteLink('/support') },
+            { label: 'Questions & Answers (FAQ)', run: () => openSiteLink('/#faq') },
             SEPARATOR,
             { label: 'Report a Bug or Feature Request…', run: () => openSiteLink('/support') },
         ],
