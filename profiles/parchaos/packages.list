@@ -428,3 +428,5 @@ gnome-software
 # default video sink for the live-wallpaper renderer. Confirmed as a
 # real Fedora package via `dnf list --available` on real hardware.
 gstreamer1-plugin-gtk4
+gvfs-smb
+samba-client
