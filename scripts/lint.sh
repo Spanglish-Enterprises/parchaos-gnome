@@ -64,6 +64,55 @@ while IFS= read -r js; do
     node --check "$js" 2>&1 | head -5 | grep . && fail "$js"
 done < <(find packaging -path '*/files/*' -name '*.js')
 
+echo "== no macOS-comparison narratives =="
+# Ticket #102: ADDED lines in packaging/**, docs/** and README.md must not
+# narrate macOS fidelity (trade-dress risk); pre-existing text is cleaned
+# up separately. Allow-listed as nominative/rationale: the naming-policy
+# doc, trademark-rationale wording (replaced/renamed/trademark/...), terms
+# that sit inside quotes or backticks (icon file names, sed replacements),
+# and the icon-theme's de-apple-ing scripts and README, which exist to
+# discuss exactly those names.
+narrative_lines=""
+if [ -d .git ]; then
+    narrative_range=HEAD
+    # In CI, compare against the pushed/PR base so "new lines" is non-empty.
+    if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "${GITHUB_EVENT_PATH}" ]; then
+        narrative_base=$(python3 - "$GITHUB_EVENT_PATH" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+sha = (d.get("pull_request") or {}).get("base", {}).get("sha") or d.get("before") or ""
+if sha and set(sha) != {"0"}:
+    print(sha)
+PY
+)
+        if [ -n "$narrative_base" ] && git fetch -q --depth=1 origin "$narrative_base" 2>/dev/null; then
+            narrative_range=$narrative_base
+        fi
+    fi
+    # Lines added relative to that base (empty on a clean tree at HEAD).
+    narrative_lines=$(git diff --unified=0 "$narrative_range" -- packaging docs README.md 2>/dev/null |
+        awk '/^\+\+\+ / { f = ($0 ~ /^\+\+\+ b\//) ? substr($0, 7) : ""; next }
+             /^\+/ && f != "" { print f ": " substr($0, 2) }' || true)
+    # Untracked files are new in their entirety.
+    narrative_new=$(while IFS= read -r f; do
+        [ -f "$f" ] && awk -v f="$f" '{ print f ": " $0 }' "$f"
+    done < <(git ls-files --others --exclude-standard -- packaging docs README.md 2>/dev/null) || true)
+    if [ -n "$narrative_new" ]; then
+        narrative_lines="${narrative_lines}
+${narrative_new}"
+    fi
+fi
+if [ -n "$narrative_lines" ]; then
+    bad=$(printf '%s\n' "$narrative_lines" |
+        grep -Ei 'macOS|Apple|Finder|Spotlight|Launchpad|iCloud|Safari|genie' |
+        grep -vEi '^docs/DEVELOPMENT\.md: .*(naming|approved|policy|Apple-|not renamed|renamed from)' |
+        grep -vEi 'trademark|trade dress|naming policy|instead of|in place of|replac|remov|renam|copied|reproduce|original artwork' |
+        grep -vEi "[\`'\"][^\`'\"]*(macos|apple|finder|spotlight|launchpad|icloud|safari)[^\`'\"]*[\`'\"]" |
+        grep -vE '^packaging/parchaos-icon-theme/parchaos-icons/' ||
+        true)
+    [ -z "$bad" ] || { echo "$bad"; fail macos-narrative; }
+fi
+
 echo "== packages.sh vs parchaos-desktop Requires =="
 # Every non-comment, non-conditional package in packages.sh should appear
 # in the meta-package's Requires list.
