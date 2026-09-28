@@ -279,39 +279,38 @@ def trash(full):
 # --- The ParchaOS mark: a halved passion fruit (parcha) with its stem and
 # leaf, full color and symbolic. Replaces ParchaOS's start-here logos. ---
 
+# The ParchaOS mark: an open ring (halved passion-fruit rind) around a
+# seeded pulp, 64 px. This is the design every shipped copy uses --
+# packaging/parchaos-release/files/parchaos-logo{,-symbolic}.svg, the
+# icon-theme's own copies, and the start-here/appointment icons in the
+# theme. The artwork was drawn in branding/logo/make-brand.py; it is
+# inlined here (rather than imported) so this generator stays a
+# dependency-free stdlib script like the rest of this file.
+#
+# Do NOT replace this with a "newer-looking" drawing: doing so is what
+# caused ticket #133 -- running generate.py silently overwrote the
+# shipped logos with a different design that shipped nowhere.
 def logo():
-    import math
-    seeds = []
-    for ring, count, r in ((0, 1, 0), (1, 6, 50), (2, 12, 96)):
-        for i in range(count):
-            a = 2 * math.pi * i / count + ring * 0.26
-            x = 256 + r * math.cos(a)
-            y = 300 + r * math.sin(a)
-            seeds.append(f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="15" ry="19" fill="#fff1c4" fill-opacity="0.55"/>'
-                         f'<ellipse cx="{x:.1f}" cy="{y + 2:.1f}" rx="8" ry="11" fill="#3a1d05"/>')
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">'
-            '<defs><radialGradient id="rind" cx="0.4" cy="0.35" r="0.75">'
-            '<stop offset="0" stop-color="#9b4fe0"/><stop offset="1" stop-color="#4b0f86"/></radialGradient>'
-            '<radialGradient id="pulp" cx="0.45" cy="0.4" r="0.7">'
-            '<stop offset="0" stop-color="#ffd35c"/><stop offset="1" stop-color="#ec9a1f"/></radialGradient>'
-            '<filter id="lsh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000" flood-opacity="0.22"/></filter></defs>'
-            '<g filter="url(#lsh)">'
-            '<rect x="244" y="64" width="24" height="70" rx="12" fill="#6b4a1e"/>'
-            '<path d="M266 110 C266 58 316 30 384 38 C382 96 336 122 266 110 Z" fill="#4caf50"/>'
-            '<path d="M276 104 C306 80 336 64 368 52" fill="none" stroke="#2e7d32" stroke-width="7" stroke-linecap="round"/>'
-            '<circle cx="256" cy="300" r="180" fill="url(#rind)"/>'
-            '<circle cx="256" cy="300" r="146" fill="#f7f0de"/>'
-            '<circle cx="256" cy="300" r="134" fill="url(#pulp)"/>'
-            + ''.join(seeds) +
-            '</g></svg>\n')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
+            '<path fill="#6d28d9" d="M58.49 17.92A30 30 0 1 1 46.08 5.51L43.50 10.37A24.5 24.5 0 1 0 53.63 20.50Z"/>'
+            '<circle cx="32" cy="32" r="24.5" fill="#fde68a"/>'
+            '<circle cx="32" cy="32" r="21.5" fill="#f5b700"/>'
+            '<path fill="#3b0764" d="M27.86 20.65A4.10 2.50 -35.0 1 0 21.14 25.35A4.10 2.50 -35.0 1 0 27.86 20.65Z"/>'
+            '<path fill="#3b0764" d="M38.57 21.80A3.80 2.40 20.0 1 0 31.43 19.20A3.80 2.40 20.0 1 0 38.57 21.80Z"/>'
+            '<path fill="#3b0764" d="M44.37 31.76A4.00 2.50 70.0 1 0 41.63 24.24A4.00 2.50 70.0 1 0 44.37 31.76Z"/>'
+            '<path fill="#3b0764" d="M28.27 35.38A3.60 2.30 110.0 1 0 30.73 28.62A3.60 2.30 110.0 1 0 28.27 35.38Z"/>'
+            '<path fill="#3b0764" d="M42.56 35.41A4.20 2.60 -15.0 1 0 34.44 37.59A4.20 2.60 -15.0 1 0 42.56 35.41Z"/>'
+            '<path fill="#3b0764" d="M23.95 42.38A3.90 2.40 60.0 1 0 20.05 35.62A3.90 2.40 60.0 1 0 23.95 42.38Z"/>'
+            '<path fill="#3b0764" d="M33.00 40.54A4.00 2.50 -60.0 1 0 29.00 47.46A4.00 2.50 -60.0 1 0 33.00 40.54Z"/>'
+            '<path fill="#3b0764" d="M45.37 45.51A3.50 2.20 35.0 1 0 39.63 41.49A3.50 2.20 35.0 1 0 45.37 45.51Z"/>'
+            '</svg>\n')
 
 
 def logo_symbolic():
-    # Same drawing as the menu-bar glyph (16 px grid).
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">'
-            '<circle fill="#bebebe" cx="8" cy="9.75" r="5.75"/>'
-            '<rect fill="#bebebe" x="7" y="1" width="2" height="4"/>'
-            '<path fill="#bebebe" d="M9 4.6C9 1.6 11.5 0 15 0.4C14.9 3.6 12.6 5.2 9 4.6Z"/>'
+    # Same mark flattened to a single colour for symbolic contexts.
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 64 64">'
+            '<path class="ParchaOS-mark" fill="#2e3436" d="M60.32 19.39A31 31 0 1 1 46.55 4.63L43.74 9.93A25 25 0 1 0 54.84 21.83Z"/>'
+            '<path class="ParchaOS-mark" fill="#2e3436" fill-rule="evenodd" d="M11.500 32.000a20.500 20.500 0 1 0 41.000 0a20.500 20.500 0 1 0 -41.000 0zM29.60 21.63A5.00 3.20 -35.0 1 0 21.40 27.37A5.00 3.20 -35.0 1 0 29.60 21.63ZM42.43 27.75A4.80 3.10 35.0 1 0 34.57 22.25A4.80 3.10 35.0 1 0 42.43 27.75ZM30.13 39.42A5.00 3.20 100.0 1 0 31.87 29.58A5.00 3.20 100.0 1 0 30.13 39.42ZM26.02 42.46A4.60 3.00 40.0 1 0 18.98 36.54A4.60 3.00 40.0 1 0 26.02 42.46ZM45.20 38.79A5.00 3.20 -20.0 1 0 35.80 42.21A5.00 3.20 -20.0 1 0 45.20 38.79Z"/>'
             '</svg>\n')
 
 
