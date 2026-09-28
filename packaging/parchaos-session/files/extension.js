@@ -25,6 +25,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+const LOGIND = 'org.freedesktop.login1';
+
 const SAVE_INTERVAL = 30;          // seconds
 const PLACE_WINDOW_S = 90;         // how long to wait for restored windows
 const STATE_DIR = GLib.build_filenamev([GLib.get_user_state_dir(), 'parchaos']);
@@ -68,8 +70,10 @@ export default class ParchaSessionExtension extends Extension {
         this._pending = new Map();   // appId -> [saved window, ...]
         this._handlers = [];
         this._sources = new Set();
+        this._windowHandlers = new Map();  // window -> shown handler id
         this._ending = false;
         this._hookEndSession();
+        this._hookLogind();
 
         if (!restoredThisLogin) {
             restoredThisLogin = true;
@@ -97,6 +101,12 @@ export default class ParchaSessionExtension extends Extension {
         for (const id of this._sources)
             GLib.source_remove(id);
         this._sources.clear();
+        for (const [win, handlerId] of this._windowHandlers)
+            win.disconnect(handlerId);
+        this._windowHandlers.clear();
+        if (this._logindId)
+            Gio.bus_unown_name(this._logindId);
+        this._logindId = 0;
         if (this._startupId)
             Main.layoutManager.disconnect(this._startupId);
         this._startupId = 0;
@@ -131,6 +141,35 @@ export default class ParchaSessionExtension extends Extension {
             self._ending = false;
             return original.apply(this, args);
         });
+    }
+
+    // A reboot that skips the end-session dialog (systemctl reboot, offline
+    // update) doesn't go through EndSessionDialog, so also save when logind
+    // signals PrepareForShutdown.
+    _hookLogind() {
+        try {
+            this._logindId = Gio.bus_own_name(
+                Gio.BusType.SYSTEM, LOGIND,
+                Gio.BusNameOwnerFlags.NONE,
+                (bus, name) => {
+                    bus.signal_subscribe(
+                        LOGIND, 'org.freedesktop.DBus.Properties',
+                        'PropertiesChanged', '/org/freedesktop/login1',
+                        null, Gio.DBusSignalFlags.NONE,
+                        (_conn, _sender, _path, _iface, signal, params) => {
+                            if (signal !== 'PropertiesChanged')
+                                return;
+                            const [iface, changed] = params.deep_unpack();
+                            if (iface === LOGIND && 'PrepareForShutdown' in changed) {
+                                if (changed['PrepareForShutdown'].deep_unpack())
+                                    this._save();
+                            }
+                        });
+                },
+                null, null);
+        } catch (e) {
+            logError(e, 'parchaos-session: could not watch logind');
+        }
     }
 
     _whenStarted(callback) {
@@ -252,11 +291,13 @@ export default class ParchaSessionExtension extends Extension {
         // right after), so match it to its app once it's shown.
         const id = win.connect('shown', () => {
             win.disconnect(id);
+            this._windowHandlers.delete(win);
             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 this._matchAndPlace(win);
                 return GLib.SOURCE_REMOVE;
             });
         });
+        this._windowHandlers.set(win, id);
     }
 
     _matchAndPlace(win) {

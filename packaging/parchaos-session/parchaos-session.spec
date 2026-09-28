@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,11 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Sat Sep 27 2026 ParchaOS packaging - 1.0.0-6
+- Track per-window 'shown' handlers so they're disconnected on disable
+  (previously leaked if the extension was disabled before the window was
+  shown). Also save the session on logind PrepareForShutdown, so a reboot
+  that skips the end-session dialog doesn't lose the session.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-5
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-4
