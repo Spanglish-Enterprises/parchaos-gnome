@@ -198,6 +198,7 @@ sed -i "s/dependency('gexiv2'/dependency('gexiv2-0.16'/" meson.build
 # guessed) — overriding to our own name rather than either upstream's
 # own default or Apple's "Finder".
 sed -i 's/^Name=Files$/Name=Parcher/' data/org.gnome.Nautilus.desktop.in.in
+grep -q '^Name=Parcher$' data/org.gnome.Nautilus.desktop.in.in
 
 # Real bug found via log-based live testing 2026-09-25 (real user
 # report: the file manager's window title said "Finder").
@@ -212,7 +213,9 @@ sed -i 's/^Name=Files$/Name=Parcher/' data/org.gnome.Nautilus.desktop.in.in
 # name. The banner comment above only ever accounted for the .desktop
 # file's app-launcher identity, missing these in-UI strings entirely.
 sed -i 's/"Finder"/"Parcher"/' src/nautilus-window.c
+grep -q '"Parcher"' src/nautilus-window.c
 sed -i 's/_About Finder/_About Parcher/; s/>Finder</>Parcher</' src/resources/ui/nautilus-window.ui
+grep -q '_About Parcher' src/resources/ui/nautilus-window.ui
 
 # About dialog: send users to ParchaOS for help and bug reports instead
 # of the upstream fork's site, and describe where Parcher comes from.
@@ -324,7 +327,7 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
   Desktop, Network, Trash, Recents, Starred, cloud-provider bookmarks,
   mounted volumes/drives, and user-added bookmarks) were all forced to
   their monochrome -symbolic variants -- real macOS Finder uses
-  full-color icons throughout. Confirmed MacTahoe-dark ships real
+  full-color icons throughout. Confirmed ParchaOS-dark ships real
   non-symbolic equivalents for every icon name changed here (checked
   directly against the real installed theme, not assumed) before
   patching. Added Patch0: renames the hardcoded ICON_NAME_* constants
