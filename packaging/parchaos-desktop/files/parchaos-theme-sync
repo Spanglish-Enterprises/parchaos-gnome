@@ -5,10 +5,10 @@
 #
 # Light/dark is GNOME's color-scheme; libadwaita apps follow it on their
 # own, but GTK 3 apps and the Shell theme use a named theme. This service
-# picks MacTahoe-Light or MacTahoe-Dark, with the -solid variant for the
+# picks ParchaOS-Light or ParchaOS-Dark, with the -solid variant for the
 # Classic style, whenever either setting changes (Parcha Controls, ParchaOS
 # Welcome, ParchaOS Settings or GNOME Settings). Themes that aren't
-# MacTahoe are the user's own choice and are left alone.
+# ParchaOS are the user's own choice and are left alone.
 #
 #   parchaos-theme-sync            run as a user service
 #   parchaos-theme-sync --once     apply once and exit
@@ -38,7 +38,7 @@ def settings(schema_id):
 
 
 def wanted_theme(dark, classic):
-    return f'MacTahoe-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
+    return f'ParchaOS-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
 
 
 class ThemeSync:
@@ -60,7 +60,7 @@ class ThemeSync:
             return
         for target, key in self.targets:
             current = target.get_string(key)
-            if current.startswith('MacTahoe') and current != theme:
+            if current.startswith('ParchaOS') and current != theme:
                 target.set_string(key, theme)
         Gio.Settings.sync()
 
