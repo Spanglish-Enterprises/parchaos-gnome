@@ -31,7 +31,7 @@
 Name:           parchaos-app-renames
 Version:        1.0.0
 Release:        7%{?dist}
-Summary:        ParchaOS display-name overrides for stock GNOME apps (Image Viewer, Clock, Mail)
+Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail)
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -45,7 +45,7 @@ Requires(post): sed
 
 %description
 Renames a handful of stock GNOME apps' launcher display names to their
-short, familiar names (Loupe -> Image Viewer, GNOME Clocks -> Clock, Geary ->
+short, familiar names (Loupe -> Parcha Preview, GNOME Clocks -> Clock, Geary ->
 Mail), via a %post sed on the real installed .desktop file. Their icons
 already come from the ParchaOS icon theme with no changes needed -- see
 this spec's own banner comment for the full reasoning and what was
@@ -68,14 +68,18 @@ rename() { # file name generic
     [ -f "$apps/$1" ] || return 0
     sed -i "0,/^\[Desktop Action/{s/^Name=.*/Name=$2/;s/^GenericName=.*/GenericName=$3/}" "$apps/$1"
 }
-rename org.gnome.Loupe.desktop 'Image Viewer' 'Image Viewer'
+rename org.gnome.Loupe.desktop 'Parcha Preview' 'Image Viewer'
 rename org.gnome.clocks.desktop 'Clock' 'Clock'
-rename org.gnome.Geary.desktop 'Mail' 'Mail Client'
+rename org.gnome.Geary.desktop 'Parcha Mail' 'Mail Client'
 rename org.gnome.Software.desktop 'Parcha Store' 'Software Store'
-# "Parcha Store" is a brand name: drop the translated Name[xx]= lines in
-# the main section so every language shows it, not a translated "Software".
-[ -f "$apps/org.gnome.Software.desktop" ] && \
-    sed -i '0,/^\[Desktop Action/{/^Name\[[^]]*\]=/d}' "$apps/org.gnome.Software.desktop"
+# The Parcha-prefixed names are brand names: drop the translated Name[xx]=
+# lines in the main section so every language shows them, not a translated
+# "Preview"/"Mail" (the same rule this package already applied to
+# "Parcha Store"). Plain words like "Clock" keep their translations.
+for brand in org.gnome.Loupe org.gnome.Geary org.gnome.Software; do
+    [ -f "$apps/$brand.desktop" ] && \
+        sed -i '0,/^\[Desktop Action/{/^Name\[[^]]*\]=/d}' "$apps/$brand.desktop"
+done
 exit 0
 RENAMES
 chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-renames
@@ -107,12 +111,12 @@ update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
 * Sun Sep 27 2026 ParchaOS packaging - 1.0.0-7
-- Rename "Preview" to "Image Viewer", the neutral name GNOME itself
-  uses (upstream GenericName), so no stock app is renamed to another
-  vendor's app name (ticket #101). "Clock" and "Mail" were reviewed
-  against docs/DEVELOPMENT.md's naming policy and kept: plain English
-  words, not product names, and already spelled without the vendor's
-  modifiers.
+- Owner-picked display names (ticket #101): Loupe -> "Parcha Preview",
+  Geary -> "Parcha Mail"; "Clock" stays as it was. The Parcha-prefixed
+  names now also drop their translated Name[xx]= lines, the rule this
+  package already used for "Parcha Store", so the brand shows in every
+  language. GenericName= keeps GNOME's own generic wording
+  ("Image Viewer" / "Mail Client") for file-type and search contexts.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5

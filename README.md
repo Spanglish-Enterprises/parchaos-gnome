@@ -70,7 +70,7 @@
 | | |
 |---|---|
 | **Desktop** | Parcha Dock · global menu bar with an About card and weather · full-screen launcher · Parcha Controls · live Clock and Calendar icons · desktop icons · notifications in the top-right corner · optional video wallpaper |
-| **Apps** | Parcher (files) · Parcha Browser (Chromium-based) · Parcha Store (apps and updates, Flathub included) · Image Viewer · Mail · Clock · Weather |
+| **Apps** | Parcher (files) · Parcha Browser (Chromium-based) · Parcha Store (apps and updates, Flathub included) · Parcha Preview · Parcha Mail · Clock · Weather |
 | **Comfort** | Session restore (your apps and windows come back after a restart) · scheduled Focus (Do Not Disturb) · automatic light/dark · Super-as-Ctrl shortcuts (optional) · system-wide ad blocking |
 | **Look** | Glass and Classic styles · light and dark themes · original ParchaOS icons · ParchaOS boot splash and login screen |
 | **Under the hood** | Fedora 44 · GNOME on Wayland · Btrfs · Secure Boot (Microsoft-signed shim) · a graphical installer |

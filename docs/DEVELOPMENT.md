@@ -248,12 +248,15 @@ Software -> "Parcha Store" ("App Store" is itself a trademark). Approved names f
 upcoming features: Parcha Time (backups), Parcha Controls (control center),
 ParchaOS Recovery.
 
-Approved display names for renamed stock apps (ticket #101): **Image Viewer**
-(Loupe), **Clock** (GNOME Clocks), **Mail** (Geary), **Parcha Store**
-(GNOME Software), **Terminal**, **Text Editor**, **Weather**, **Screenshot**,
-**System Monitor**, **Disks**. These are either GNOME's own generic names or
-plain English words with no vendor modifier; "Preview" was dropped as another
-vendor's app name. New renames must be added here when they are approved.
+Approved display names for renamed stock apps (owner-picked, ticket #101):
+**Parcha Preview** (Loupe), **Clock** (GNOME Clocks), **Parcha Mail** (Geary),
+**Parcha Store** (GNOME Software); plain stock names kept as-is: **Terminal**,
+**Text Editor**, **Weather**, **Screenshot**, **System Monitor**, **Disks**.
+Rule: a renamed stock app either gets a **Parcha-prefixed brand name** or stays
+a plain English word — never another vendor's app name (the bare "Preview" and
+"Mail" were replaced on 2026-09-27 for this reason). Brand names also drop
+their translated `Name[xx]=` lines so every language shows the same brand.
+New renames must be added here when they are approved.
 
 Still needing a ParchaOS name before it's built: system-wide search.
 

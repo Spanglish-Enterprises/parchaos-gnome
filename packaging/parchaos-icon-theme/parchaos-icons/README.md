@@ -12,7 +12,7 @@ Safari) -- those designs are Apple trademarks/trade dress. Licensed CC BY-SA 4.0
 | pafari.svg | web-browser.svg (+ ~70 aliases, incl. org.gnome.Epiphany) | generic browser icon (named for the since-removed Pafari) |
 | parcha-browser.svg | safari.svg | Parcha Browser (also shipped as es.parchaos.Browser in hicolor) |
 | parchaos-calendar.svg | calendar.svg | Calendar |
-| parchaos-preview.svg | org.gnome.Loupe.svg | Image Viewer |
+| parchaos-preview.svg | org.gnome.Loupe.svg | Parcha Preview |
 | parchaos-clock.svg | preferences-system-time.svg | Clock |
 | parchaos-calculator.svg | calc.svg | Calculator |
 | parchaos-contacts.svg | addressbook.svg | Contacts |

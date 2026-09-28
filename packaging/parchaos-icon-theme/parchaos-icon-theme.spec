@@ -292,7 +292,7 @@ done
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-9
 - Replace the Apple-logo start-here, Budgie launcher and folder-apple icons with the ParchaOS mark (a halved passion fruit) and the ParchaOS folder.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-8
-- Original icons for the image viewer (Image Viewer), Archive Manager and
+- Original icons for the image viewer (Parcha Preview), Archive Manager and
   Firmware; MacTahoe's copied Apple's Preview and Archive Utility, and its
   Firmware icon carried a chip maker's logo (ticket #13).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-7
