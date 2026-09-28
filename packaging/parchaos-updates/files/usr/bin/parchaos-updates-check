@@ -1,0 +1,56 @@
+#!/bin/bash
+# parchaos-updates-check: check for COPR + Fedora updates and notify the user.
+#
+# Runs as a systemd user service from parchaos-updates.timer. Calls
+# `dnf check-update` against the system repos (including the ParchaOS
+# COPR override), and if any packages are available, sends a desktop
+# notification telling the user how many and how to install them.
+#
+# Exit codes: 0 = no updates or notification sent, 1 = error.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -eu
+
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
+
+# Check for updates. dnf check-update exits 100 when updates are available,
+# 0 when the system is up to date, and 1 on error.
+output=$(dnf check-update --refresh 2>/dev/null) || {
+    rc=$?
+    if [ "$rc" -ne 100 ]; then
+        # Error (not "updates available"). Silently exit — don't nag the
+        # user about transient network/repo issues.
+        exit 0
+    fi
+}
+
+# Count the number of update lines (skip the header and any empty lines).
+count=$(echo "$output" | grep -cE '^[a-zA-Z0-9]' || true)
+
+if [ "$count" -eq 0 ]; then
+    exit 0
+fi
+
+# Build the notification text.
+if [ "$count" -eq 1 ]; then
+    body="1 update available. Run 'sudo dnf upgrade' to install it."
+else
+    body="$count updates available. Run 'sudo dnf upgrade' to install them."
+fi
+
+# Send the notification. Prefer notify-send, fall back to a GNOME Shell
+# notification via gdbus if available.
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u normal -a ParchaOS "Software Updates" "$body"
+else
+    # Fallback: use the session bus to show a GNOME notification.
+    gdbus call --session \
+        --dest org.freedesktop.Notifications \
+        --object-path /org/freedesktop/Notifications \
+        --method org.freedesktop.Notifications.Notify \
+        "ParchaOS" 0 "software-update-available" "Software Updates" "$body" \
+        "['default', 'Run sudo dnf upgrade']" "{}" 10000 >/dev/null 2>&1 || :
+fi
+
+exit 0

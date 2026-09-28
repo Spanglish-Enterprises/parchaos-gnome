@@ -1,0 +1,6 @@
+[Unit]
+Description=Check for ParchaOS updates and notify
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/parchaos-updates-check

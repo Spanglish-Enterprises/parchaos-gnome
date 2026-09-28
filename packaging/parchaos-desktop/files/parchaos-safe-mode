@@ -1,0 +1,35 @@
+#!/bin/bash
+# parchaos-safe-mode: disable all ParchaOS GNOME Shell extensions.
+#
+# When a dnf update breaks the desktop (e.g. an extension is incompatible
+# with a new gnome-shell and crashes it before gdm shows the login screen),
+# boot into a recovery console, touch /run/parchaos-safe-mode, and reboot.
+# This service runs before gdm and writes a dconf override that disables
+# every ParchaOS extension, giving the user a stock GNOME desktop they can
+# log into and fix the problem.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -eu
+
+MARKER=/run/parchaos-safe-mode
+DCONF_OVERRIDE=/etc/dconf/db/local.d/lockdown-disable-parchaos-extensions
+
+if [ ! -f "$MARKER" ]; then
+    exit 0
+fi
+
+mkdir -p "$(dirname "$DCONF_OVERRIDE")"
+
+# Lock the enabled-extensions key to an empty list.
+cat > "$DCONF_OVERRIDE" <<'DCONF'
+[org/gnome/shell]
+enabled-extensions=[]
+DCONF
+
+mkdir -p /etc/dconf/db/local.d/locks
+cat > /etc/dconf/db/local.d/locks/parchaos-safe-mode <<'DCONF'
+/org/gnome/shell/enabled-extensions
+DCONF
+
+dconf update >/dev/null 2>&1 || :

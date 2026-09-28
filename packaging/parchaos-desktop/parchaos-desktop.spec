@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        38%{?dist}
+Release:        41%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -87,6 +87,9 @@ Source6:        80-parchaos-copr.repo
 # Keeps the GTK, window and Shell themes matching light/dark and the style.
 Source7:        parchaos-theme-sync
 Source8:        parchaos-theme-sync.service
+# Safe mode: disable all extensions when /run/parchaos-safe-mode exists.
+Source9:        parchaos-safe-mode
+Source10:       parchaos-safe-mode.service
 Source90:       LICENSE
 BuildArch:      noarch
 Requires(post): dconf
@@ -122,6 +125,7 @@ Requires:       parchaos-settings
 Requires:       parchaos-session
 Requires:       parchaos-live-icons
 Requires:       parchaos-release
+Requires:       parchaos-updates
 Requires:       parchaos-welcome
 Requires:       parchaos-boot
 Requires:       parchaos-desktop-schemas = %{version}-%{release}
@@ -165,6 +169,8 @@ install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/dnf5/repos.override.d/80-parc
 install -Dm0755 %{SOURCE7} %{buildroot}%{_libexecdir}/parchaos-theme-sync
 install -Dm0644 %{SOURCE8} %{buildroot}%{_userunitdir}/parchaos-theme-sync.service
 install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
+install -Dm0755 %{SOURCE9} %{buildroot}%{_bindir}/parchaos-safe-mode
+install -Dm0644 %{SOURCE10} %{buildroot}%{_userunitdir}/parchaos-safe-mode.service
 mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
 ln -s ../parchaos-extensions-migrate.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
@@ -234,9 +240,39 @@ fi
 %{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
 %{_userunitdir}/parchaos-extensions-migrate.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
+%{_bindir}/parchaos-safe-mode
+%{_userunitdir}/parchaos-safe-mode.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-41
+- Require parchaos-updates so the update-checking timer reaches existing
+  installs on dnf update.
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-40
+- Add parchaos-safe-mode: a oneshot service that disables all ParchaOS
+  extensions when /run/parchaos-safe-mode exists, so a broken update
+  that crashes GNOME Shell can be recovered from a stock desktop.
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so Parcha Browser appears in the dock
+  on fresh installs (previously only the live session set this).
+* Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-39
+- Add a favorite-apps dconf default so ParchaOS Browser appears in the dock
+  on fresh installs (previously only the live session set this).
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-38
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-37
@@ -255,7 +291,7 @@ fi
   subpackage that other packages can require.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-32
 - Add parchaos-theme-sync, a user service that switches the GTK, window
-  and Shell themes between MacTahoe Light and Dark (solid for Classic)
+  and Shell themes between ParchaOS Light and Dark (solid for Classic)
   whenever light/dark or the style changes. Fix a stale comment about
   location.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-31

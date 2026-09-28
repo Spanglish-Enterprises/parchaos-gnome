@@ -1,0 +1,12 @@
+[Unit]
+Description=ParchaOS safe mode (disable extensions)
+Before=gdm.service
+ConditionPathExists=/run/parchaos-safe-mode
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/parchaos-safe-mode
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
