@@ -1,40 +1,22 @@
 # ==============================================================================
-# A recurring nightly "Focus mode" / Do Not Disturb schedule -- real
-# research (2026-09-22, 4th round) confirmed KDE Plasma 6's own
-# notification system has manual and trigger-based DND (screen
-# sharing, fullscreen apps) but no time-of-day recurring schedule, and
-# no third-party fix exists either. Rather than patch KDE upstream
-# (out of scope for this project), this achieves the practical
-# result -- no notification popups during set hours -- with two
-# systemd --user timers calling the real, standard
-# freedesktop.org Notifications Inhibit/UnInhibit D-Bus methods (the
-# same mechanism apps use to silence notifications during, e.g., a
-# fullscreen presentation).
+# A recurring nightly "Focus mode" / Do Not Disturb schedule for GNOME.
+# Toggles GNOME's own Do Not Disturb switch
+# (org.gnome.desktop.notifications show-banners) on at the start time and
+# off at the end time, and works out the right state from the clock at
+# login, after sleep, and whenever the schedule changes in Settings.
 #
 # Default schedule: 22:00-08:00 nightly. Change by editing the
 # installed *.timer files' OnCalendar= values (or copying them to
 # ~/.config/systemd/user/ for a per-user override, standard systemd
 # practice).
 #
-# Verification note: confirmed the Inhibit/UnInhibit D-Bus calls
-# themselves succeed and are idempotent-safe (checked directly against
-# a real running Plasma session on the build VM, including cleaning up cookie
-# numbers left over from manual testing). Did NOT get a clean visual
-# confirmation that a real notification's popup is actually suppressed
-# while inhibited (would need a live screenshot cycle to prove
-# pixel-for-pixel, not attempted) -- trusting the D-Bus-spec-level
-# correctness of Inhibit/UnInhibit here, the same class of
-# verification this project already accepted for
-# parchaos-appmenu-gtk-module's KWin protocol binding. Flagged
-# honestly rather than claimed as fully proven.
-#
-# GNOME correction (2026-09-25, found on real hardware): everything above
-# was verified against Plasma only. GNOME Shell does not implement
-# Notifications.Inhibit at all ("No such method"), so on the GNOME variant
-# focus-start failed every night and never silenced anything. 1.0.0-2
-# switches to GNOME's own Do Not Disturb switch
-# (org.gnome.desktop.notifications show-banners), and only undoes it in
-# the morning if the schedule is what turned it on.
+# History: 1.0.0-1/1.0.0-2 used two systemd --user timers calling the
+# freedesktop.org Notifications Inhibit/UnInhibit D-Bus methods. That
+# worked on KDE Plasma but GNOME Shell does not implement
+# Notifications.Inhibit at all ("No such method"), so on GNOME the
+# timers fired but never silenced anything. 1.1.0 switches to GNOME's
+# own show-banners setting, and only undoes it in the morning if the
+# schedule is what turned it on.
 #
 # parchaos-* since this is a product-original addition with no pearOS
 # upstream relationship at all.
@@ -42,7 +24,7 @@
 
 Name:           parchaos-focus-schedule
 Version:        1.1.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
 License:        GPL-3.0-or-later
@@ -91,6 +73,10 @@ rm -f %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-start.timer
 %{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.1.0-4
+- Rewrite the spec banner: the package is GNOME-only now (toggles
+  show-banners), so lead with that instead of the old KDE/timers
+  research. Keep the history as a note.
 * Sat Sep 26 2026 ParchaOS packaging - 1.1.0-3
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.1.0-2
