@@ -107,17 +107,30 @@ class Window(Adw.ApplicationWindow):
         switch = Adw.SwitchRow(title='Scheduled Do Not Disturb')
         settings.bind('focus-schedule', switch, 'active', Gio.SettingsBindFlags.DEFAULT)
         group.add(switch)
-        for key, title in (('focus-start', 'From'), ('focus-end', 'To')):
-            row = self._time_row(settings, key, title)
+        self._focus_start_row = self._time_row(settings, 'focus-start', 'From')
+        self._focus_end_row = self._time_row(settings, 'focus-end', 'To')
+        for row in (self._focus_start_row, self._focus_end_row):
             switch.bind_property('active', row, 'sensitive', GObject.BindingFlags.SYNC_CREATE)
             group.add(row)
+        self._update_focus_hint()
         return group
 
+    def _update_focus_hint(self):
+        try:
+            start = self._focus_start_row.get_subtitle()
+            end = self._focus_end_row.get_subtitle()
+        except AttributeError:
+            return
+        if start and end and start == end:
+            self._focus_start_row.set_subtitle(f'{start} (same as end — schedule disabled)')
+        else:
+            self._focus_start_row.set_subtitle('From')
+
     def _time_row(self, settings, key, title):
-        row = Adw.ActionRow(title=title)
+        row = Adw.ActionRow(title=title, subtitle=title)
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
         hours = Gtk.SpinButton.new_with_range(0, 23, 1)
-        minutes = Gtk.SpinButton.new_with_range(0, 55, 5)
+        minutes = Gtk.SpinButton.new_with_range(0, 59, 1)
         for spin in (hours, minutes):
             spin.set_numeric(True)
             spin.set_wrap(True)
@@ -133,17 +146,20 @@ class Window(Adw.ApplicationWindow):
             except ValueError:
                 return
             hours.set_value(h)
-            minutes.set_value(m - m % 5)
+            minutes.set_value(m)
 
         def store(*_):
             value = f'{int(hours.get_value()):02d}:{int(minutes.get_value()):02d}'
             if settings.get_string(key) != value:
                 settings.set_string(key, value)
+            self._update_focus_hint()
 
         load()
         hours.connect('value-changed', store)
         minutes.connect('value-changed', store)
-        settings.connect(f'changed::{key}', load)
+        # Don't write back on load -- that would round any non-5-minute
+        # value the user typed. Only write when the user actually changes
+        # a spinbutton.
         return row
 
     @staticmethod

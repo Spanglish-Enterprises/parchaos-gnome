@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Sat Sep 26 2026 ParchaOS packaging - 1.0.0-12
+- Focus times: minute step is 1 (was 5), no write-back on load, and a
+  hint appears when start equals end (which disables the schedule).
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-11
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
@@ -60,7 +63,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-8
 - The style switch leaves theme switching to parchaos-theme-sync.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-7
-- Choosing Classic also switches the GTK and Shell themes to MacTahoe's
+- Choosing Classic also switches the GTK and Shell themes to ParchaOS's
   solid variants (and Glass back to the normal ones), keeping light or
   dark; other themes are left alone.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
