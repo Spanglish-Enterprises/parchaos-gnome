@@ -110,6 +110,236 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        if (launcher) {
+            // Search, edit mode, and drag while the launcher is open.
+            await this._check('launcher search/edit/drag', async () => {
+                launcher.toggle();
+                await sleep(800);
+                const view = launcher._launcher;
+                if (!view)
+                    throw new Error('launcher did not open');
+                // Search
+                view._searchEntry?.set_text('a');
+                await sleep(300);
+                view._searchEntry?.set_text('');
+                await sleep(200);
+                // Edit mode
+                view._setEditing(true);
+                await sleep(300);
+                view._setEditing(false);
+                await sleep(200);
+                // Drag (simulate by calling the drag handler directly)
+                const tiles = view._tiles;
+                if (tiles.length >= 2) {
+                    const src = tiles[0];
+                    const dst = tiles[1];
+                    view._onDragStart?.(src);
+                    view._onDragEnd?.(src, dst);
+                }
+                view.close();
+                await sleep(600);
+            });
+        }
+
+        if (launcher) {
+            // Disable while the launcher is open — must not crash.
+            await this._check('launcher disable while open', async () => {
+                launcher.toggle();
+                await sleep(800);
+                await Main.extensionManager.disableExtension('parchaos-launcher@parchaos.org');
+                await sleep(500);
+                await Main.extensionManager.enableExtension('parchaos-launcher@parchaos.org');
+                for (let i = 0; i < 30 && ext('parchaos-launcher@parchaos.org').state !== 1; i++)
+                    await sleep(100);
+                if (ext('parchaos-launcher@parchaos.org').state !== 1)
+                    throw new Error(`state ${ext('parchaos-launcher@parchaos.org').state}`);
+            });
+        }
+
+        if (launcher) {
+            // Search, edit mode, and drag while the launcher is open.
+            await this._check('launcher search/edit/drag', async () => {
+                launcher.toggle();
+                await sleep(800);
+                const view = launcher._launcher;
+                if (!view)
+                    throw new Error('launcher did not open');
+                // Search
+                view._searchEntry?.set_text('a');
+                await sleep(300);
+                view._searchEntry?.set_text('');
+                await sleep(200);
+                // Edit mode
+                view._setEditing(true);
+                await sleep(300);
+                view._setEditing(false);
+                await sleep(200);
+                // Drag (simulate by calling the drag handler directly)
+                const tiles = view._tiles;
+                if (tiles.length >= 2) {
+                    const src = tiles[0];
+                    const dst = tiles[1];
+                    view._onDragStart?.(src);
+                    view._onDragEnd?.(src, dst);
+                }
+                view.close();
+                await sleep(600);
+            });
+        }
+
+        if (launcher) {
+            // Disable while the launcher is open — must not crash.
+            await this._check('launcher disable while open', async () => {
+                launcher.toggle();
+                await sleep(800);
+                await Main.extensionManager.disableExtension('parchaos-launcher@parchaos.org');
+                await sleep(500);
+                await Main.extensionManager.enableExtension('parchaos-launcher@parchaos.org');
+                for (let i = 0; i < 30 && ext('parchaos-launcher@parchaos.org').state !== 1; i++)
+                    await sleep(100);
+                if (ext('parchaos-launcher@parchaos.org').state !== 1)
+                    throw new Error(`state ${ext('parchaos-launcher@parchaos.org').state}`);
+            });
+        }
+
+        if (launcher) {
+            // Search, edit mode, and drag while the launcher is open.
+            await this._check('launcher search/edit/drag', async () => {
+                launcher.toggle();
+                await sleep(800);
+                const view = launcher._launcher;
+                if (!view)
+                    throw new Error('launcher did not open');
+                // Search
+                view._searchEntry?.set_text('a');
+                await sleep(300);
+                view._searchEntry?.set_text('');
+                await sleep(200);
+                // Edit mode
+                view._setEditing(true);
+                await sleep(300);
+                view._setEditing(false);
+                await sleep(200);
+                // Drag (simulate by calling the drag handler directly)
+                const tiles = view._tiles;
+                if (tiles.length >= 2) {
+                    const src = tiles[0];
+                    const dst = tiles[1];
+                    view._onDragStart?.(src);
+                    view._onDragEnd?.(src, dst);
+                }
+                view.close();
+                await sleep(600);
+            });
+        }
+
+        if (launcher) {
+            // Disable while the launcher is open — must not crash.
+            await this._check('launcher disable while open', async () => {
+                launcher.toggle();
+                await sleep(800);
+                await Main.extensionManager.disableExtension('parchaos-launcher@parchaos.org');
+                await sleep(500);
+                await Main.extensionManager.enableExtension('parchaos-launcher@parchaos.org');
+                for (let i = 0; i < 30 && ext('parchaos-launcher@parchaos.org').state !== 1; i++)
+                    await sleep(100);
+                if (ext('parchaos-launcher@parchaos.org').state !== 1)
+                    throw new Error(`state ${ext('parchaos-launcher@parchaos.org').state}`);
+            });
+        }
+
+        if (launcher) {
+            // Search, edit mode, and drag while the launcher is open.
+            await this._check('launcher search/edit/drag', async () => {
+                launcher.toggle();
+                await sleep(800);
+                const view = launcher._launcher;
+                if (!view)
+                    throw new Error('launcher did not open');
+                // Search
+                view._searchEntry?.set_text('a');
+                await sleep(300);
+                view._searchEntry?.set_text('');
+                await sleep(200);
+                // Edit mode
+                view._setEditing(true);
+                await sleep(300);
+                view._setEditing(false);
+                await sleep(200);
+                // Drag (simulate by calling the drag handler directly)
+                const tiles = view._tiles;
+                if (tiles.length >= 2) {
+                    const src = tiles[0];
+                    const dst = tiles[1];
+                    view._onDragStart?.(src);
+                    view._onDragEnd?.(src, dst);
+                }
+                view.close();
+                await sleep(600);
+            });
+        }
+
+        if (launcher) {
+            // Disable while the launcher is open — must not crash.
+            await this._check('launcher disable while open', async () => {
+                launcher.toggle();
+                await sleep(800);
+                await Main.extensionManager.disableExtension('parchaos-launcher@parchaos.org');
+                await sleep(500);
+                await Main.extensionManager.enableExtension('parchaos-launcher@parchaos.org');
+                for (let i = 0; i < 30 && ext('parchaos-launcher@parchaos.org').state !== 1; i++)
+                    await sleep(100);
+                if (ext('parchaos-launcher@parchaos.org').state !== 1)
+                    throw new Error(`state ${ext('parchaos-launcher@parchaos.org').state}`);
+            });
+        }
+
+        if (launcher) {
+            // Search, edit mode, and drag while the launcher is open.
+            await this._check('launcher search/edit/drag', async () => {
+                launcher.toggle();
+                await sleep(800);
+                const view = launcher._launcher;
+                if (!view)
+                    throw new Error('launcher did not open');
+                // Search
+                view._searchEntry?.set_text('a');
+                await sleep(300);
+                view._searchEntry?.set_text('');
+                await sleep(200);
+                // Edit mode
+                view._setEditing(true);
+                await sleep(300);
+                view._setEditing(false);
+                await sleep(200);
+                // Drag (simulate by calling the drag handler directly)
+                const tiles = view._tiles;
+                if (tiles.length >= 2) {
+                    const src = tiles[0];
+                    const dst = tiles[1];
+                    view._onDragStart?.(src);
+                    view._onDragEnd?.(src, dst);
+                }
+                view.close();
+                await sleep(600);
+            });
+        }
+
+        if (launcher) {
+            // Disable while the launcher is open — must not crash.
+            await this._check('launcher disable while open', async () => {
+                launcher.toggle();
+                await sleep(800);
+                await Main.extensionManager.disableExtension('parchaos-launcher@parchaos.org');
+                await sleep(500);
+                await Main.extensionManager.enableExtension('parchaos-launcher@parchaos.org');
+                for (let i = 0; i < 30 && ext('parchaos-launcher@parchaos.org').state !== 1; i++)
+                    await sleep(100);
+                if (ext('parchaos-launcher@parchaos.org').state !== 1)
+                    throw new Error(`state ${ext('parchaos-launcher@parchaos.org').state}`);
+            });
+        }
+
         const menu = ext('parchaos-global-menu@parchaos.org')?.stateObj;
         if (menu) {
             await this._check('about card', async () => {
@@ -127,6 +357,29 @@ export default class SmokeTest extends Extension {
                     settings.set_string('style', style);
                     await sleep(400);
                 }
+            });
+        }
+
+        // Color-scheme toggle: theme-sync should follow.
+        const interface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+        await this._check('color-scheme toggle', async () => {
+            for (const scheme of ['prefer-light', 'prefer-dark']) {
+                interface.set_string('color-scheme', scheme);
+                await sleep(400);
+            }
+            interface.set_string('color-scheme', 'prefer-dark');
+            await sleep(300);
+        });
+
+        // EndSessionDialog hooks: session extension must save without crashing.
+        const session = ext('parchaos-session@parchaos.org')?.stateObj;
+        if (session) {
+            await this._check('session EndSessionDialog hooks', async () => {
+                // Trigger the _confirm path that the injection hooks into.
+                session._ending = true;
+                session._save();
+                session._ending = false;
+                await sleep(300);
             });
         }
 
