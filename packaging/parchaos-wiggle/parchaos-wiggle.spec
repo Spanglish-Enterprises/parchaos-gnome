@@ -25,7 +25,7 @@
 
 Name:           parchaos-wiggle
 Version:        5
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Cursor-magnification-on-shake GNOME Shell extension ("shake to locate cursor")
 
 License:        GPL-2.0-only
@@ -55,12 +55,9 @@ Requires:       gnome-shell >= 45
 Requires:       dconf
 
 %description
-A real, independently-maintained (not Inled-original) GNOME Shell
-extension that magnifies the mouse cursor when shaken/moved rapidly --
-"shake to locate cursor". Same real
-upstream Pulsar OS's own config uses. See this spec's own banner
-comment for the license diligence and the compatibility gap it relies
-on customize.sh to work around.
+Shake the mouse and the pointer magnifies, so it is easy to find on a
+busy screen. Wraps a real, independently maintained GNOME Shell
+extension.
 
 %prep
 %autosetup -p1 -n wiggle-%{commit}
@@ -82,6 +79,11 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/wiggle@mechtifs/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 5-6
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sat Sep 26 2026 ParchaOS packaging - 5-5
 - Drop the ParchaOS cursor images; the default Adwaita cursors match
   Wiggle's own enlarged arrow.

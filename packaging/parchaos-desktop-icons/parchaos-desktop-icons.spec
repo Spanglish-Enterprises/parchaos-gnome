@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -67,12 +67,11 @@ Requires:       dconf
 Requires:       nautilus
 
 %description
-Desktop Icons NG (DING) is a real, actively-maintained GNOME Shell
-extension (GPL-3.0) that puts real file icons on the desktop
-background -- the piece many desktop users expect and this profile
-didn't have yet. Same real upstream Pulsar OS's own config uses
-(ding@rastersoft.com). See this spec's own banner comment for the
-build/license diligence.
+Puts real files and folders on the desktop background: double-click to
+open, drag to move, right-click for the usual file actions, and set
+per-file permissions from the file's own properties. Wraps Desktop
+Icons NG (ding@rastersoft.com), a real, actively-maintained GNOME
+Shell extension (GPL-3.0), enabled by default on ParchaOS.
 
 %prep
 %autosetup -n desktop-icons-ng-%{commit}
@@ -101,6 +100,11 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 50-3
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Fri Sep 25 2026 ParchaOS packaging - 50-2
 - Reworded summary/description/comments to describe features instead of
   naming macOS, per the project's trademark-caution naming policy.

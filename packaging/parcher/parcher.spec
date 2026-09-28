@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -176,14 +176,11 @@ Requires:       localsearch
 Requires:       glycin-thumbnailer
 
 %description
-Parcher is ParchaOS's real, working fork of GNOME Files
-(Nautilus), built from Pulsar OS's real public fork: real traffic-light
-window controls, live folder color tagging with a dedicated per-color
-filter sidebar section, and cloud drive sidebar integration — a genuine
-derivative work of GNOME Files, not a theme applied on top of stock
-Nautilus. Renamed from upstream's own "Files" (itself derived from
-Pulsar OS's own "Finder" branding) to avoid trademark exposure ahead of
-a planned public release — see this spec's own banner comment.
+Parcher is ParchaOS's file manager: a real fork of GNOME Files
+(Nautilus), not a theme on top of stock Files. It adds real
+traffic-light window controls, folder color tags with a dedicated
+per-color filter in the sidebar, and cloud drive integration in the
+sidebar.
 
 %prep
 %autosetup -n nautilus-%{version} -p1
@@ -279,6 +276,11 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 %{_datadir}/nautilus/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 48.7-16
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sat Sep 26 2026 ParchaOS packaging - 48.7-15
 - About dialog: website, issue and support links go to ParchaOS;
   ParchaOS copyright and contributors added while keeping the Inled and

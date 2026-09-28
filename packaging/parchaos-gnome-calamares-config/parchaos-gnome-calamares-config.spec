@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        GPL-3.0-or-later AND CC0-1.0 AND CC-BY-SA-4.0
@@ -86,11 +86,7 @@ ParchaOS passion-fruit branding (logo, icon, welcome image, slideshow,
 stylesheet, sidebar) and module configuration (install sequence, live
 squashfs unpack source, BIOS Boot Partition + KPMCore workaround,
 kernel/EFI installation, bootloader branding, post-install
-finalization) ported from the KDE (pearos) variant's own
-pearos-calamares-config, which carries three real fixes found via that
-variant's own end-to-end install+reboot tests. See this spec's banner
-comment for the full list of what changed for this GNOME product and
-why.
+finalization).
 
 %prep
 %setup -q -c -n %{name}-%{version}
@@ -124,6 +120,11 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 %{_datadir}/polkit-1/actions/org.parchaos.installer.policy
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 2026.09.23-30
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-29
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.

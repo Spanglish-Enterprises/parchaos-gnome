@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -107,10 +107,11 @@ Requires:       gnome-shell >= 45
 Requires:       dconf
 
 %description
-Parcha Dock is ParchaOS's build of Pulsar Dock (Inled Pulsar OS), a fork
-of the Dash to Dock GNOME Shell extension by Michele Gaio and contributors: hover magnification,
-launch bounce animations, a downloads-folder stack, and live
-minimized-window previews. Enabled by default as ParchaOS's dock.
+Parcha Dock is ParchaOS's dock: a fork of the Dash to Dock GNOME Shell
+extension by Michele Gaio and contributors, adding hover
+magnification, launch bounce animations, a downloads-folder stack and
+live minimized window previews. Enabled by default as ParchaOS's
+dock.
 
 %prep
 %autosetup -n dash-to-dock-%{commit} -p1
@@ -124,10 +125,13 @@ sed -i \
     -e 's#"url": "https://github.com/Inled-Pulsar-OS/dash-to-dock"#"url": "https://parchaos.org"#' \
     metadata.json Makefile
 # Keep the upstream authors credited (GPL-2.0 fork of a fork), and describe
-# the dock without naming another desktop.
+# the dock without naming another desktop (ticket #105: descriptions must not
+# claim a lineage from another distribution). Full provenance stays in the
+# original-author field below, which is where an extensions app shows credit;
+# the description names only the true upstream project.
 sed -i \
     -e 's/"original-author": "Inled-Pulsar-OS"/"original-author": "Michele Gaio (Dash to Dock) and Inled Pulsar OS (Pulsar Dock)"/' \
-    -e 's/"description": "[^"]*"/"description": "Parcha Dock for ParchaOS: hover magnification, launch bounce animations, a downloads folder stack and live minimized window previews. Based on Pulsar Dock by Inled Pulsar OS, a fork of Dash to Dock by Michele Gaio and contributors."/' \
+    -e 's/"description": "[^"]*"/"description": "Parcha Dock for ParchaOS: a fork of the Dash to Dock GNOME Shell extension by Michele Gaio and contributors, with hover magnification, launch bounce animations, a downloads folder stack and live minimized window previews."/' \
     metadata.json
 grep -q '"name": "Parcha Dock"' metadata.json
 grep -q 'Michele Gaio (Dash to Dock)' metadata.json
@@ -182,6 +186,14 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 106-15
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
+- Same for the shipped metadata.json description: it now names only
+  the true upstream (Dash to Dock), while full provenance for every
+  source of the fork stays in the original-author field.
 * Sat Sep 26 2026 ParchaOS packaging - 106-14
 - Credit Dash to Dock (Michele Gaio) and Pulsar Dock (Inled) in
   metadata.json instead of replacing the author; neutral description;

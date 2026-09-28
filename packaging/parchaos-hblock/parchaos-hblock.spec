@@ -26,7 +26,7 @@
 
 Name:           parchaos-hblock
 Version:        3.5.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Adblocker that creates a hosts file from multiple sources
 
 License:        MIT
@@ -52,16 +52,12 @@ Requires(preun): systemd
 Requires(postun): systemd
 
 %description
-hBlock is a POSIX-compliant shell script that fetches a list of domains
-serving ads, tracking scripts, and malware from multiple public sources
-and merges them into /etc/hosts, refreshed on a systemd timer. The
-system's own /etc/hosts entries are kept (/etc/hblock/header), sites
-can be unblocked in /etc/hblock/allow.list, and removing the package
-restores the original file. Real,
-independently-maintained upstream (not Inled-original) -- Pulsar OS's
-own equivalent is blocked on the same missing-LICENSE gap as most of
-their original work; this depends on the real upstream directly
-instead. See this spec's own banner comment for the full reasoning.
+Blocks ads, tracking scripts and malware system-wide: fetches lists of
+offending domains from several public sources and merges them into
+/etc/hosts on a systemd timer. Your own entries are kept
+(/etc/hblock/header), individual sites can be allowed again in
+/etc/hblock/allow.list, and removing the package restores the
+original file.
 
 %prep
 %autosetup -n hblock-%{commit}
@@ -138,6 +134,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %doc README.md
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 3.5.1-4
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sat Sep 26 2026 ParchaOS packaging - 3.5.1-3
 - Keep the system's own /etc/hosts entries (seeded into
   /etc/hblock/header once), add /etc/hblock/allow.list for unblocking

@@ -164,6 +164,99 @@ macOS-remap, TMOG, pre-rewrite global-menu and cloud builds) and
 ParchaOS-related repositories that are public by mistake. Run it before
 every release.
 
+## COPR publishing (terms check, account, descriptions) — ticket #105
+
+Checked 2026-09-28 against COPR's own User Documentation / FAQ
+(<https://docs.copr.fedorainfracloud.org/user_documentation.html#faq>) and
+Fedora's licensing lists.
+
+### What COPR actually requires
+
+COPR states that packages there **do not need to follow the Fedora
+Packaging Guidelines**, though they are recommended to. The stated
+requirements are:
+
+1. you have the right to upload the material (no third-party rights
+   infringed);
+2. every license involved is on Fedora's **allowed list**
+   (<https://docs.fedoraproject.org/en-US/legal/allowed-licenses/>);
+3. nothing involved is on Fedora's **not-allowed list**
+   (<https://docs.fedoraproject.org/en-US/legal/not-allowed-licenses/>);
+4. the package does not abuse the build system;
+5. it breaks no Fedora rule — chiefly the Code of Conduct — and no law.
+
+Plus: **you are responsible for the licenses and for the resulting
+repository being legally public**, and COPR suggests naming the license in
+the description.
+
+### Compliance result: checked, passes
+
+Every distinct identifier in all 37 `License:` fields in
+`packaging/*/*.spec` was looked up in Fedora's allowed list **as a table
+entry** (not a prose mention) and in the not-allowed list:
+
+| Shipped | Allowed-list entry? | Not-allowed entry? |
+|---|---|---|
+| `GPL-3.0-or-later`, `GPL-3.0-only`, `GPL-2.0-only`, `GPL-2.0-or-later`, `LGPL-3.0-or-later` | yes | no |
+| `MIT`, `Apache-2.0`, `BSD-3-Clause`, `BSL-1.0`, `Unicode-3.0`, `Unlicense` | yes | no |
+| `CC-BY-SA-4.0`, `CC0-1.0` | yes | no |
+
+The `AND`/`OR` combinations are built from those same identifiers. Three
+strings do appear on the not-allowed page — but only **inside longer
+identifiers or prose** (`LicenseRef-GPL-2.0-or-later-WITH-UPX`,
+`LicenseRef-MIT-CRL-Xim`, `BSD-3-Clause-Clear`); none of them is a
+not-allowed entry.
+
+### Prebuilt binaries (the xremap question)
+
+`parchaos-keyboard-remap` ships `xremap-linux-x86_64-full.zip` straight from
+upstream's release — a prebuilt binary, `%build` compiles nothing. That is
+**permitted by COPR's terms**: the guidelines exemption above means the
+Fedora "no prebuilt binaries" packaging rule does not apply, and what
+matters is requirement 2. The binary is MIT, its sibling `xremap-gnome`
+component is GPL-2.0-or-later, and the statically linked Rust crates are
+enumerated — all on the allowed list. The package already ships
+`THIRD-PARTY-LICENSES.md`, `xremap-crate-licenses.txt` and upstream's own
+`LICENSE` as sources, which covers COPR's "state the license" suggestion.
+
+### Descriptions are neutral (done)
+
+`%description` is what `rpm -qi` and `dnf info` show, and it is the field
+COPR suggests reading for licensing. Ten specs had grown internal
+build-diligence notes and lineage wording toward other distributions —
+`parchaos-desktop-icons`, `parchaos-dock`,
+`parchaos-gnome-calamares-config`, `parchaos-gtk-theme`,
+`parchaos-hanabi`, `parchaos-hblock`, `parchaos-magic-lamp-effect`,
+`parchaos-ui-tune`, `parchaos-wiggle`, `parcher`. All ten were rewritten to
+describe the software for a user; upstream project credit (authors and
+licenses) is retained, but no other distribution is named as an ancestor.
+The same applies to the one user-facing extension description that named
+another distribution — Parcha Dock's shipped `metadata.json` — where full
+provenance stays in `original-author`, its dedicated credit field.
+
+**Going forward:** `Summary:` and `%description` describe what the package
+does and credit the *upstream project*; they do not narrate how the package
+was built, where the diligence notes live, or which other distribution the
+work resembles. Those belong in spec comments and `%changelog`.
+
+### Account decision — owner call, still open
+
+Item 2 (move the update COPR to a group/organization account, or self-host
+a signed repo) is **not something this agent can decide or execute** — it
+needs FAS account access and an owner decision. If it is decided, the
+repoint is small and mechanical:
+
+1. `profiles/parchaos/repo.sh` — `dnf copr enable -y "$PROFILE_COPR"`.
+2. The shipped repo file `80-parchaos-copr.repo` (release package), which
+   carries the baseurl and `metadata_expire`.
+3. `scripts/public-surface-audit.sh`, which reads the project names to
+   audit them.
+
+Change all three together, keep the old name alive with a redirect for one
+release, and rebuild `parchaos-release` last so installed systems pick up
+the new baseurl.
+
+
 ## License
 
 - **Code, packaging and docs** written for ParchaOS: **GPL-3.0-or-later**

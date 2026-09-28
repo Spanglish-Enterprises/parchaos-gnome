@@ -78,7 +78,7 @@
 
 Name:           parchaos-hanabi
 Version:        1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Live video wallpaper for GNOME Shell (Wayland)
 
 License:        GPL-3.0-or-later
@@ -95,14 +95,11 @@ Requires:       dconf
 Requires:       gstreamer1-plugin-gtk4
 
 %description
-Hanabi is a real, actively-maintained GNOME Shell extension (GPL-3.0)
-that plays a looping video as the desktop wallpaper -- built targeting
-GNOME 50+ on Wayland specifically, unlike most live-wallpaper
-extensions which depend on X11-only tricks. Ships as a prebuilt static
-bundle (the upstream TypeScript/esbuild toolchain doesn't run at RPM
-build time -- see this spec's own banner comment for why). See
-the project's development notes for how this was picked over Pulsar OS's
-own (Wayland-incompatible) equivalent.
+Plays a looping video as the desktop wallpaper. Wraps Hanabi, a real,
+actively-maintained GNOME Shell extension (GPL-3.0) built for GNOME
+50+ on Wayland, unlike most live-wallpaper extensions which depend on
+X11-only tricks. Ships as a prebuilt static bundle from upstream's
+own toolchain.
 
 %prep
 %setup -q -c -n %{name}-%{version}
@@ -123,6 +120,11 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 1-3
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sat Sep 26 2026 ParchaOS packaging - 1-2
 - Ship the upstream source (commit b18e041) in the SRPM and record how
   the bundled JS is reproduced from it.

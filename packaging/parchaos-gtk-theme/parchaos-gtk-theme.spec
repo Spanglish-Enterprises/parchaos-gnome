@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        19%{?dist}
+Release:        20%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -95,12 +95,9 @@ BuildRequires:  sudo
 Requires:       gtk-murrine-engine
 
 %description
-ParchaOS's GTK3/GTK4 and GNOME Shell theme (translucent panels,
-colored window controls), built from vinceliuice's real
-upstream MacTahoe-gtk-theme (MIT) using its own install.sh — the same
-underlying theme Pulsar OS ships (Inled's own fork adds only
-non-essential accent-color polish this package doesn't yet replicate).
-Dark variant only for this initial release.
+ParchaOS's GTK3/GTK4 and GNOME Shell theme: translucent panels and
+colored window controls. Built with vinceliuice's own install.sh from
+MacTahoe-gtk-theme (MIT). Ships both the dark and the light variant.
 
 %prep
 %autosetup -n MacTahoe-gtk-theme-%{commit}
@@ -285,6 +282,11 @@ done
 %{_sysconfdir}/skel/.themes/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 2026.09.23-20
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-19
 - Rename installed theme directories from MacTahoe-Dark/MacTahoe-Light
   to ParchaOS-Dark/ParchaOS-Light (ticket #100). Upstream credits and

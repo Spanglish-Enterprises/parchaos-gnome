@@ -30,7 +30,7 @@
 
 Name:           parchaos-ui-tune
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GNOME Overview UI tuning (wallpaper-on-thumbnails, hide-search-until-typing, PIP in overview)
 
 License:        GPL-3.0-only
@@ -46,12 +46,10 @@ Requires:       gnome-shell >= 45
 Requires:       dconf
 
 %description
-A real, independently-maintained (not Inled-original) GNOME Shell
-extension that tunes the Overview UI: hidden-until-typing search box,
-restored wallpaper on workspace thumbnails, larger thumbnails, and
-Firefox picture-in-picture shown in the overview. Same real upstream
-Pulsar OS's own config uses (UUID confirmed matching exactly). See
-this spec's own banner comment for the license diligence.
+Tunes the GNOME Overview: the search box stays hidden until you start
+typing, workspace thumbnails show the wallpaper and are larger, and
+Firefox picture-in-picture appears in the overview. Wraps a real,
+independently maintained GNOME Shell extension.
 
 %prep
 %autosetup -n gnome-ui-tune-%{commit}
@@ -73,6 +71,11 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/gnome-ui-tune@itstime.tech/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 1.0.0-2
+- Rewrote %description to be user-facing and neutral (ticket
+  #105): dropped internal build-diligence notes and lineage
+  wording toward other distributions. Upstream project credit
+  (authors, licenses) is kept.
 * Thu Sep 24 2026 ParchaOS packaging - 1.0.0-1
 - Initial package, part of the extension-polish gap-closing pass. Real
   upstream, real GPL-3.0 LICENSE confirmed before packaging, UUID
