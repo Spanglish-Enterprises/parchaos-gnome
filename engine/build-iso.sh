@@ -396,6 +396,15 @@ run_in_target systemctl set-default graphical.target
 : "${PROFILE_LIVESYS_SESSION:=kde}"
 sed -i "s/^livesys_session=.*/livesys_session=\"$PROFILE_LIVESYS_SESSION\"/" "$ROOTFS_TARGET/etc/sysconfig/livesys"
 
+# VERIFIED (2026-09-29, first boot of the ISO built after ticket #68): the
+# image booted to an empty GDM "Username" prompt because livesys.service and
+# livesys-late.service were disabled, so liveuser was never created and no
+# autologin was configured. Fedora's own presets (fedora-release) enable
+# them; the ParchaOS image installs generic-release instead, whose presets
+# don't. Enable them explicitly so the live boot doesn't depend on which
+# release package the profile uses.
+run_in_target systemctl enable livesys.service livesys-late.service
+
 # ---- Phase 6: initramfs ---------------------------------------------------------
 echo "--- Regenerating initramfs (dracut) ---"
 # systemd-nspawn allocates a pty for run_in_target by default (needed for
