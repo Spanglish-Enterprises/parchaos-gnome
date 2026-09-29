@@ -25,8 +25,12 @@ output=$(dnf check-update --refresh 2>/dev/null) || {
     fi
 }
 
-# Count the number of update lines (skip the header and any empty lines).
-count=$(echo "$output" | grep -cE '^[a-zA-Z0-9]' || true)
+# Count the packages. dnf5 prints an "Upgrades" heading (and possibly
+# "Obsoleting packages" etc.) above lines shaped "name.arch  version  repo";
+# counting every line starting with a letter counted the heading too, so the
+# notification always said one more than there were. Match the package
+# lines only: unindented, with a name.arch first column.
+count=$(printf '%s\n' "$output" | awk '/^[^ \t]/ && $1 ~ /\.(noarch|x86_64|aarch64|i686|src)$/ {n++} END {print n+0}')
 
 if [ "$count" -eq 0 ]; then
     exit 0
