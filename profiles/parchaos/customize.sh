@@ -81,6 +81,23 @@ idle-delay=uint32 0
 FOE
 glib-compile-schemas /usr/share/glib-2.0/schemas
 
+# The schema override above loses to the desktop's own dconf defaults
+# (/etc/dconf/db/local.d/01-parchaos-theme sets favorite-apps), so the live
+# boot showed a dock without the installer. Say the same thing in dconf, in
+# a file that sorts after the desktop's, so it wins.
+mkdir -p /etc/dconf/db/local.d
+cat > /etc/dconf/db/local.d/99-parchaos-live << FOE
+[org/gnome/shell]
+favorite-apps=['calamares.desktop', 'org.gnome.Nautilus.desktop', 'es.parchaos.Browser.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Calculator.desktop']
+
+[org/gnome/desktop/screensaver]
+lock-enabled=false
+
+[org/gnome/desktop/session]
+idle-delay=uint32 0
+FOE
+dconf update
+
 # The live user has no password, so the installer's authentication prompt
 # could never succeed. Allow exactly the installer's own action for the
 # local live user, the same rule Fedora's live media use for their
