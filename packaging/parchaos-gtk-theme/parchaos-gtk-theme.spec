@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -159,11 +159,20 @@ mkdir -p %{buildroot}%{_datadir}/themes
 # install.sh's own default behavior when given multiple -c values is
 # to build every combination of ALL variant axes (opacity/theme-accent/
 # scheme) for EACH color, multiplying build time and output size far
-# beyond what this profile ships (only the default Tahoe-style,
-# standard-scheme, normal-opacity combination) -- two separate calls,
-# each still implicitly scoped to that one default combination, stay
-# fast and produce exactly ParchaOS-Dark and ParchaOS-Light, nothing
-# more.
+# beyond what this profile ships -- two separate calls, one per color,
+# keep the output to the variants below.
+#
+# CORRECTION (2026-09-29, found on a real build): an earlier version of
+# this comment claimed each call produces "exactly ParchaOS-Dark and
+# ParchaOS-Light, nothing more" (a normal-opacity combination only).
+# That is wrong. install.sh sets its opacity list to all variants after
+# sourcing lib-install.sh, so each call also builds the -solid variant,
+# plus -hdpi/-xhdpi sizes; the shipped tree has ParchaOS-Dark,
+# ParchaOS-Dark-solid, ParchaOS-Light and ParchaOS-Light-solid. The
+# -solid ones are NOT extras: the Classic style's theme lookup
+# (parchaos-theme-sync's wanted_theme(), ParchaOS-<Dark|Light>-solid)
+# needs them, so "cleaning up" the extra variants would silently break
+# Classic.
 ./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
 
 # Real bug found via log-based live testing 2026-09-25 (real user
@@ -282,6 +291,10 @@ done
 %{_sysconfdir}/skel/.config/gtk-4.0/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-22
+- Comment-only: correct the build comment that claimed the build makes
+  "exactly ParchaOS-Dark and ParchaOS-Light" (ticket #135). It also makes
+  the -solid variants, which the Classic style needs.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-21
 - Stop shipping /etc/skel/.themes (ticket #100 item 3). It gave every new
   account a frozen private copy of all the themes that GNOME Shell and

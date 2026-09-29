@@ -1,12 +1,13 @@
 [Unit]
-Description=ParchaOS safe mode (disable extensions)
-Before=gdm.service
-ConditionPathExists=/run/parchaos-safe-mode
+Description=ParchaOS safe mode (extensions off when booted with parchaos.safe-mode)
+Documentation=https://parchaos.org/support
+# Has to be in place before anyone can log in.
+Before=display-manager.service gdm.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/parchaos-safe-mode
+ExecStart=/usr/libexec/parchaos-safe-mode
 RemainAfterExit=yes
 
 [Install]
-WantedBy=graphical.target
+WantedBy=multi-user.target

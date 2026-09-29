@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        44%{?dist}
+Release:        45%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -87,7 +87,8 @@ Source6:        80-parchaos-copr.repo
 # Keeps the GTK, window and Shell themes matching light/dark and the style.
 Source7:        parchaos-theme-sync
 Source8:        parchaos-theme-sync.service
-# Safe mode: disable all extensions when /run/parchaos-safe-mode exists.
+# Safe mode: all extensions off for a boot that has parchaos.safe-mode on
+# the kernel command line (ticket #115).
 Source9:        parchaos-safe-mode
 Source10:       parchaos-safe-mode.service
 Source90:       LICENSE
@@ -171,8 +172,14 @@ install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/dnf5/repos.override.d/80-parc
 install -Dm0755 %{SOURCE7} %{buildroot}%{_libexecdir}/parchaos-theme-sync
 install -Dm0644 %{SOURCE8} %{buildroot}%{_userunitdir}/parchaos-theme-sync.service
 install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
-install -Dm0755 %{SOURCE9} %{buildroot}%{_bindir}/parchaos-safe-mode
-install -Dm0644 %{SOURCE10} %{buildroot}%{_userunitdir}/parchaos-safe-mode.service
+install -Dm0755 %{SOURCE9} %{buildroot}%{_libexecdir}/parchaos-safe-mode
+install -Dm0644 %{SOURCE10} %{buildroot}%{_unitdir}/parchaos-safe-mode.service
+# Enabled by a packaged symlink (as the user units below are), not by
+# %%systemd_post: that only enables on a first install, so an upgrade from a
+# release without this unit would leave it off.
+mkdir -p %{buildroot}%{_unitdir}/multi-user.target.wants
+ln -s ../parchaos-safe-mode.service \
+    %{buildroot}%{_unitdir}/multi-user.target.wants/parchaos-safe-mode.service
 mkdir -p %{buildroot}%{_userunitdir}/graphical-session.target.wants
 ln -s ../parchaos-extensions-migrate.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
@@ -242,11 +249,29 @@ fi
 %{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
 %{_userunitdir}/parchaos-extensions-migrate.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
-%{_bindir}/parchaos-safe-mode
-%{_userunitdir}/parchaos-safe-mode.service
+%{_libexecdir}/parchaos-safe-mode
+%{_unitdir}/parchaos-safe-mode.service
+%{_unitdir}/multi-user.target.wants/parchaos-safe-mode.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-45
+- Rebuild safe mode (ticket #115); the version shipped in -40 could not work,
+  found by checking the installed files on a real desktop:
+  * it was a *user* unit -- it can't order against gdm.service, runs only
+    after login (the thing that is broken), needs root to write /etc/dconf,
+    and wasn't enabled anywhere;
+  * its trigger was /run/parchaos-safe-mode, and /run is a tmpfs wiped on
+    every boot, so "touch the marker, then reboot" always lost it;
+  * once triggered there was no way back.
+  Now: a system service, enabled by a packaged multi-user.target.wants
+  symlink, running /usr/libexec/parchaos-safe-mode on every boot before the
+  display manager. Booting with `parchaos.safe-mode` on the kernel command
+  line (GRUB: press e, append it to the linux line, Ctrl-X) writes a locked
+  empty enabled-extensions override; a boot without it removes the override
+  again. Sandbox-tested (on/off/idempotent/look-alike word/unreadable
+  cmdline; the generated override compiles with dconf). Not yet proven
+  across a real reboot with the flag.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-44
 - theme-sync (ticket #100): a private ~/.themes or ~/.icons copy of an old
   MacTahoe* name no longer stops the migration. Found on real hardware

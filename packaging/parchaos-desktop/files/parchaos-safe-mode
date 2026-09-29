@@ -1,35 +1,61 @@
 #!/bin/bash
-# parchaos-safe-mode: disable all ParchaOS GNOME Shell extensions.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-safe-mode: turn every GNOME Shell extension off for one boot.
 #
-# When a dnf update breaks the desktop (e.g. an extension is incompatible
-# with a new gnome-shell and crashes it before gdm shows the login screen),
-# boot into a recovery console, touch /run/parchaos-safe-mode, and reboot.
-# This service runs before gdm and writes a dconf override that disables
-# every ParchaOS extension, giving the user a stock GNOME desktop they can
-# log into and fix the problem.
+# For when an update leaves the desktop unable to start (ticket #115: a
+# `dnf update` that ended with no login screen). Boot with
+# `parchaos.safe-mode` on the kernel command line -- at the GRUB menu press
+# `e`, add it to the end of the line starting with `linux`, press Ctrl-X.
+# That needs no working shell, login or writable filesystem beyond what
+# boot already has. The system then comes up as stock GNOME so the user can
+# log in and fix or roll back whatever broke.
+#
+# Runs at EVERY boot, before the display manager (parchaos-safe-mode.service):
+#   flag present -> write a locked dconf override with an empty
+#                   enabled-extensions list (the lock makes it win over a
+#                   user's own saved list);
+#   flag absent  -> remove that override again, so the next normal boot is
+#                   back to normal without anyone doing anything.
+#
+# An earlier version was triggered by a marker file in /run and installed as
+# a user unit. /run is a tmpfs wiped on every boot, so the marker could never
+# survive the reboot the instructions asked for, and a user unit neither
+# orders against gdm nor runs as root.
 #
 # Original code for ParchaOS, GPL-3.0-or-later.
 
-set -eu
+set -u
 
-MARKER=/run/parchaos-safe-mode
-DCONF_OVERRIDE=/etc/dconf/db/local.d/lockdown-disable-parchaos-extensions
+CMDLINE=${PARCHAOS_SAFE_MODE_CMDLINE:-/proc/cmdline}
+DIR=${PARCHAOS_SAFE_MODE_DCONF_DIR:-/etc/dconf/db/local.d}
+OVERRIDE="$DIR/90-parchaos-safe-mode"
+LOCK="$DIR/locks/parchaos-safe-mode"
 
-if [ ! -f "$MARKER" ]; then
-    exit 0
+want=0
+for word in $(cat "$CMDLINE" 2>/dev/null); do
+    [ "$word" = parchaos.safe-mode ] && want=1
+done
+
+changed=0
+if [ "$want" = 1 ]; then
+    mkdir -p "$DIR/locks"
+    tmp_override=$(mktemp "$DIR/.safe-mode.XXXXXX")
+    tmp_lock=$(mktemp "$DIR/locks/.safe-mode.XXXXXX")
+    printf '%s\n' '[org/gnome/shell]' 'enabled-extensions=@as []' > "$tmp_override"
+    printf '%s\n' '/org/gnome/shell/enabled-extensions' > "$tmp_lock"
+    chmod 0644 "$tmp_override" "$tmp_lock"
+    cmp -s "$tmp_override" "$OVERRIDE" 2>/dev/null || { mv -f "$tmp_override" "$OVERRIDE"; changed=1; }
+    cmp -s "$tmp_lock" "$LOCK" 2>/dev/null || { mv -f "$tmp_lock" "$LOCK"; changed=1; }
+    rm -f "$tmp_override" "$tmp_lock"
+    logger -t parchaos-safe-mode "parchaos.safe-mode on the kernel command line: GNOME Shell extensions disabled for this boot"
+else
+    for f in "$OVERRIDE" "$LOCK"; do
+        if [ -e "$f" ]; then rm -f "$f"; changed=1; fi
+    done
+    [ "$changed" = 1 ] && logger -t parchaos-safe-mode "safe mode off: extension override removed"
 fi
 
-mkdir -p "$(dirname "$DCONF_OVERRIDE")"
-
-# Lock the enabled-extensions key to an empty list.
-cat > "$DCONF_OVERRIDE" <<'DCONF'
-[org/gnome/shell]
-enabled-extensions=[]
-DCONF
-
-mkdir -p /etc/dconf/db/local.d/locks
-cat > /etc/dconf/db/local.d/locks/parchaos-safe-mode <<'DCONF'
-/org/gnome/shell/enabled-extensions
-DCONF
-
-dconf update >/dev/null 2>&1 || :
+if [ "$changed" = 1 ] && [ -z "${PARCHAOS_SAFE_MODE_DCONF_DIR:-}" ]; then
+    dconf update || logger -t parchaos-safe-mode "dconf update failed"
+fi
+exit 0

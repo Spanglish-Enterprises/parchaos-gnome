@@ -321,3 +321,22 @@ LICENSE file, not a claim. Check real package/service state with real
 commands, not memory. Build it, install it, run it, and look at a real
 screenshot (or a real `dnf`/`systemctl`/`gsettings` result) before
 calling something done.
+
+## Recovery: the desktop won't start after an update
+
+If an update leaves you without a working login screen or desktop (ticket
+#115), start once in safe mode. It turns every GNOME Shell extension off for
+that boot, so you get stock GNOME, can log in, and can fix or roll back the
+update.
+
+1. Restart the computer. At the GRUB menu, highlight the ParchaOS entry and
+   press `e`.
+2. Go to the line that starts with `linux`, move to its end, and add a space
+   and `parchaos.safe-mode`.
+3. Press `Ctrl-X` to boot.
+
+Nothing needs to work for this, not the desktop, not a login. Safe mode lasts
+one boot: the next normal start removes it again
+(`/usr/libexec/parchaos-safe-mode`, run by `parchaos-safe-mode.service` before
+the display manager on every boot). Check it took effect with
+`journalctl -t parchaos-safe-mode -b`.
