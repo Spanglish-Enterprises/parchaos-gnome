@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        43%{?dist}
+Release:        44%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -247,6 +247,16 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-44
+- theme-sync (ticket #100): a private ~/.themes or ~/.icons copy of an old
+  MacTahoe* name no longer stops the migration. Found on real hardware
+  after upgrading from COPR: the first version left such a copy alone as
+  "the user's own choice", but the only such copies are the ones useradd
+  made from /etc/skel at account creation, so the migration did nothing
+  for anyone whose account came from the installer -- gtk-theme, window
+  theme and Shell theme all kept pointing at the stale copy, which also
+  hid every later theme update (the ticket #113 dock artwork never
+  appeared). The old files stay in place, just unused.
 * Mon Sep 28 2026 ParchaOS packaging - 2026.09.23-43
 - Require parchaos-dev-tools and parchaos-app-store in meta-package
   to align with profiles/parchaos/packages.sh (tickets #121, #125).

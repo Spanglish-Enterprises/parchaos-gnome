@@ -46,21 +46,27 @@ def available(name, roots):
     return any(os.path.isdir(os.path.join(root, name)) for root in roots)
 
 
-def migrated(value, system_root, private_roots):
+def migrated(value, system_root):
     """Carry a pre-rename theme name across ticket #100.
 
-    #100 renamed the installed theme dirs from MacTahoe* to ParchaOS*,
-    so an existing account's stored value can name a theme the package
-    no longer ships and silently fall back to the default. Only rewrite
-    in that case: a MacTahoe name that still resolves -- a user's own
-    copy under ~/.themes or ~/.icons -- is their choice, and left alone
-    just like any other non-ParchaOS theme.
+    #100 renamed the installed theme dirs from MacTahoe* to ParchaOS*, so
+    an existing account's stored value names a theme the package no longer
+    ships. Rewrite it to the ParchaOS name whenever that theme is installed
+    system-wide.
+
+    A private ~/.themes or ~/.icons copy of the old name does NOT keep it:
+    ParchaOS ships no MacTahoe-named theme any more, and the only such
+    copies in practice are the ones useradd made from /etc/skel at account
+    creation. Those are frozen at that moment, and the Shell and GTK 3
+    prefer them over /usr/share, so honoring them (as the first version of
+    this function did, treating them as "the user's own choice") meant the
+    migration did nothing for anyone whose account came from the installer
+    -- found on real hardware, where it also hid every later theme update.
+    The old files are left in place, just no longer used.
     """
     if not value.startswith('MacTahoe'):
         return value
     renamed = 'ParchaOS' + value[len('MacTahoe'):]
-    if available(value, [system_root] + private_roots):
-        return value
     return renamed if available(renamed, [system_root]) else value
 
 
@@ -69,10 +75,6 @@ class ThemeSync:
         self.interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
         self.desktop = settings('org.parchaos.desktop')
         self.targets = [(s, key) for s, key in ((settings(i), k) for i, k in TARGETS) if s]
-        home = os.path.expanduser('~')
-        self.private_themes = [os.path.join(home, '.themes')]
-        self.private_icons = [os.path.join(home, '.icons'),
-                              os.path.join(home, '.local', 'share', 'icons')]
 
     def watch(self):
         self.interface.connect('changed::color-scheme', lambda *_: self.apply())
@@ -85,12 +87,12 @@ class ThemeSync:
         changed = False
         for target, key in self.targets:
             current = target.get_string(key)
-            name = migrated(current, THEMES_DIR, self.private_themes)
+            name = migrated(current, THEMES_DIR)
             if name != current:
                 target.set_string(key, name)
                 changed = True
         icon = self.interface.get_string('icon-theme')
-        icon_name = migrated(icon, ICONS_DIR, self.private_icons)
+        icon_name = migrated(icon, ICONS_DIR)
         if icon_name != icon:
             self.interface.set_string('icon-theme', icon_name)
             changed = True

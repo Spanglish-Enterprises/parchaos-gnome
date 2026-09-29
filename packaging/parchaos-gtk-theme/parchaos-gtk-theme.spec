@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -200,6 +200,16 @@ HOME=%{buildroot}%{_sysconfdir}/skel ./install.sh -l -c dark --silent-mode
 # would show up in every new user's launcher, and ParchaOS sets the theme
 # itself, so it isn't shipped.
 rm -rf %{buildroot}%{_sysconfdir}/skel/.local
+# The same install.sh run also puts a full second copy of every theme in
+# /etc/skel/.themes (ticket #100 item 3). useradd copies skel into each new
+# account once, so that copy is frozen at account creation -- and GNOME
+# Shell and GTK 3 look in ~/.themes *before* /usr/share/themes, so it
+# shadows every later theme update forever. Confirmed on the desktop this
+# was found on: ~/.themes/MacTahoe-Dark-solid still had the old dock
+# button artwork (ticket #113) months of updates after it was replaced in
+# /usr/share/themes. The system copy is the only one that should exist;
+# the GTK 4 config in skel/.config/gtk-4.0 does not depend on it.
+rm -rf %{buildroot}%{_sysconfdir}/skel/.themes
 
 # Ticket #100: same gap as parchaos-icon-theme's spec -- install.sh still
 # names what it builds after upstream, so the dirs are MacTahoe-Dark /
@@ -270,18 +280,17 @@ done
 %doc README.md
 %{_datadir}/themes/*
 %{_sysconfdir}/skel/.config/gtk-4.0/
-# install.sh -l's main() doesn't scope itself to just the gtk-4.0
-# config -- it also runs the plain per-user GTK3 install (duplicate
-# .themes/ParchaOS-Dark* variants) and installs the bundled
-# "gnome-theme-switcher" helper app, all under the same $HOME we
-# pointed at skel. Found via a real COPR build failure ("Installed
-# but unpackaged"), not guessed. Harmless/expected content for a
-# per-user skel (a real theme-switcher app and standard ~/.themes
-# entries are normal desktop-Linux conventions), so packaged as-is
-# rather than fighting upstream's own bundling.
-%{_sysconfdir}/skel/.themes/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-21
+- Stop shipping /etc/skel/.themes (ticket #100 item 3). It gave every new
+  account a frozen private copy of all the themes that GNOME Shell and
+  GTK 3 prefer over /usr/share/themes, so no theme update ever reached
+  anyone whose account came from the installer. Found on real hardware:
+  the previous fix for ticket #113 (dock button artwork) was installed
+  system-wide but never appeared, because ~/.themes still held the old
+  copy. Existing accounts keep their old ~/.themes files; the
+  parchaos-desktop theme-sync now moves them off them.
 * Mon Sep 28 2026 ParchaOS packaging - 2026.09.23-20
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage
