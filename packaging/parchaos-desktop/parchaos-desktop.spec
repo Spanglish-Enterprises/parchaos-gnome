@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        46%{?dist}
+Release:        47%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -255,6 +255,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-47
+- parchaos-extensions-migrate clears GNOME Shell's crash guard
+  (disable-user-extensions) at login unless booted in safe mode. A shell
+  crash during login left a desktop with no menu bar, dock or launcher.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-46
 - parchaos-theme-sync recolors an older account's ~/.config/gtk-4.0 window
   buttons with the helper from parchaos-gtk-theme (ticket #111).

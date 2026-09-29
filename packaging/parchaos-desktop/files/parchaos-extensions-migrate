@@ -17,6 +17,13 @@
 # extensions (*@parchaos.org); other defaults may have been turned off on
 # purpose before this tool existed, so they're only recorded as offered.
 #
+# It also undoes GNOME Shell's crash guard. When the shell dies while
+# starting (or restarts several times in quick succession) it switches
+# off every extension by setting disable-user-extensions, and the next
+# login comes up with no menu bar, dock or launcher and nothing to say
+# why. ParchaOS is those extensions, so the flag is cleared at login
+# unless the boot asked for safe mode (see parchaos-safe-mode).
+#
 # Original code for ParchaOS, GPL-3.0-or-later.
 
 import os
@@ -30,8 +37,20 @@ STATE_DIR = os.path.join(GLib.get_user_state_dir(), 'parchaos')
 STATE_FILE = os.path.join(STATE_DIR, 'extensions-offered')
 
 
+def safe_mode():
+    try:
+        with open(os.environ.get('PARCHAOS_SAFE_MODE_CMDLINE', '/proc/cmdline')) as f:
+            return 'parchaos.safe-mode' in f.read().split()
+    except OSError:
+        return False
+
+
 def main():
     settings = Gio.Settings.new('org.gnome.shell')
+    if settings.get_boolean('disable-user-extensions') and not safe_mode():
+        settings.set_boolean('disable-user-extensions', False)
+        Gio.Settings.sync()
+        print('cleared disable-user-extensions (shell crash guard)')
     defaults = settings.get_default_value('enabled-extensions').unpack()
 
     first_run = not os.path.exists(STATE_FILE)
