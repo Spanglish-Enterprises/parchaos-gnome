@@ -12,7 +12,7 @@
 
 Name:           parchaos-updates
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Check for ParchaOS updates and notify
 
 License:        GPL-3.0-or-later
@@ -22,6 +22,8 @@ Source1:        usr/lib/systemd/user/parchaos-updates.service
 Source2:        usr/lib/systemd/user/parchaos-updates.timer
 Source90:       LICENSE
 BuildArch:      noarch
+
+BuildRequires:  systemd-rpm-macros
 
 Requires:       dnf
 Requires(post): systemd
@@ -61,6 +63,12 @@ install -Dm0644 %{SOURCE2} %{buildroot}%{_userunitdir}/parchaos-updates.timer
 %{_userunitdir}/parchaos-updates.timer
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-2
+- Fix the first COPR build (1.0.0-1 failed): %%{_userunitdir} and the
+  %%systemd_user_* scriptlet macros come from systemd-rpm-macros, which
+  was never a BuildRequires -- the spec parsed fine on a machine that
+  happened to have it installed, but a clean build chroot doesn't, so the
+  unit paths expanded to nothing ("File must begin with /").
 * Sun Sep 27 2026 ParchaOS packaging - 1.0.0-1
 - Initial package. Adds a systemd user timer + service that checks for
   updates every 6 hours and sends a desktop notification.
