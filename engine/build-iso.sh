@@ -253,13 +253,15 @@ REPO
         install "${base_packages[@]}"
 
     # packages.list includes fedora-release, so the installroot now carries
-    # Fedora's own canonical /etc/yum.repos.d/{fedora,updates}.repo. Drop our
+    # Fedora's own canonical /etc/yum.repos.d/{fedora,fedora-updates}.repo
+    # (found by the first real build: this used to test for updates.repo, a
+    # name Fedora has never shipped, so the seed always stayed). Drop our
     # temporary seed so the image ships exactly one definition per repo (a
     # leftover would mean two [fedora] sections, which dnf5 rejects). If the
     # canonical files somehow didn't land, keep the seed rather than ship an
     # image with no repos, and say so.
     if [ -f "$BASE_CACHE/etc/yum.repos.d/fedora.repo" ] \
-        && [ -f "$BASE_CACHE/etc/yum.repos.d/updates.repo" ]; then
+        && [ -f "$BASE_CACHE/etc/yum.repos.d/fedora-updates.repo" ]; then
         rm -f "$BASE_CACHE/etc/yum.repos.d/00-parchaos-bootstrap.repo"
     else
         echo "WARNING: fedora-release did not ship its repo files; keeping" >&2
