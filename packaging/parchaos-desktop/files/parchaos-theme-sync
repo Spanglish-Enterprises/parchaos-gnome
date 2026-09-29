@@ -16,6 +16,7 @@
 # Original code for ParchaOS, GPL-3.0-or-later.
 
 import os
+import subprocess
 import sys
 
 import gi
@@ -111,7 +112,23 @@ class ThemeSync:
         Gio.Settings.sync()
 
 
+RECOLOR = '/usr/libexec/parchaos-recolor-titlebuttons'
+
+
+def recolor_user_buttons():
+    """Give an older account's libadwaita window buttons the ParchaOS colours.
+
+    ~/.config/gtk-4.0 is a copy of /etc/skel made when the account was
+    created, so it still holds the original button art (ticket #111). The
+    helper skips files it already recolored, so this is cheap to repeat.
+    """
+    assets = os.path.expanduser('~/.config/gtk-4.0/windows-assets')
+    if os.path.isdir(assets) and os.access(RECOLOR, os.X_OK):
+        subprocess.run([RECOLOR, assets], check=False, capture_output=True)
+
+
 def main(argv):
+    recolor_user_buttons()
     sync = ThemeSync()
     sync.apply()
     if '--once' in argv:
