@@ -406,6 +406,9 @@ chromium
 geary
 # Clock.app equivalent -- renamed to "Clock" by parchaos-app-renames.
 gnome-clocks
+# Backups (ticket #116): GNOME's Backups app, which uses restic; shown as
+# "Parcha Backup" by parchaos-app-renames.
+deja-dup
 
 # Real desktop-polish extensions, matching Pulsar OS's own real config
 # (see customize.sh's 00-parchaos-extensions comment for the full

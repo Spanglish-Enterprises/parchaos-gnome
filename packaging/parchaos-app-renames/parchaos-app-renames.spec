@@ -30,8 +30,8 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        7%{?dist}
-Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail)
+Release:        8%{?dist}
+Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail, Parcha Backup)
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -41,6 +41,7 @@ BuildArch:      noarch
 Requires(post): loupe
 Requires(post): gnome-clocks
 Requires(post): geary
+Requires(post): deja-dup
 Requires(post): sed
 
 %description
@@ -72,11 +73,12 @@ rename org.gnome.Loupe.desktop 'Parcha Preview' 'Image Viewer'
 rename org.gnome.clocks.desktop 'Clock' 'Clock'
 rename org.gnome.Geary.desktop 'Parcha Mail' 'Mail Client'
 rename org.gnome.Software.desktop 'Parcha Store' 'Software Store'
+rename org.gnome.DejaDup.desktop 'Parcha Backup' 'Backup Tool'
 # The Parcha-prefixed names are brand names: drop the translated Name[xx]=
 # lines in the main section so every language shows them, not a translated
 # "Preview"/"Mail" (the same rule this package already applied to
 # "Parcha Store"). Plain words like "Clock" keep their translations.
-for brand in org.gnome.Loupe org.gnome.Geary org.gnome.Software; do
+for brand in org.gnome.Loupe org.gnome.Geary org.gnome.Software org.gnome.DejaDup; do
     [ -f "$apps/$brand.desktop" ] && \
         sed -i '0,/^\[Desktop Action/{/^Name\[[^]]*\]=/d}' "$apps/$brand.desktop"
 done
@@ -105,11 +107,16 @@ chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-renames
 %{_libexecdir}/parchaos-app-renames
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
-%triggerin -- loupe, gnome-clocks, geary, gnome-software
+%triggerin -- loupe, gnome-clocks, geary, gnome-software, deja-dup
 %{_libexecdir}/parchaos-app-renames
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-8
+- Ticket #116: Deja Dup (GNOME's Backups app, which uses restic) is shown
+  as "Parcha Backup", with its translated names dropped like the other
+  Parcha-prefixed brand names. The package depends on deja-dup so it is
+  on the ISO. The About window keeps upstream's credits.
 * Sun Sep 27 2026 ParchaOS packaging - 1.0.0-7
 - Owner-picked display names (ticket #101): Loupe -> "Parcha Preview",
   Geary -> "Parcha Mail"; "Clock" stays as it was. The Parcha-prefixed
