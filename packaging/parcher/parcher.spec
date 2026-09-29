@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -241,6 +241,19 @@ grep -q '© 1999-2026 The Nautilus Authors' src/nautilus-window.c
 sed -i 's/_("iCloud & Cloud Drives")/_("Cloud Drives")/' src/gtk/nautilusgtkplacessidebar.c
 grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 
+# Neutralize internal Apple/Finder references in embedded CSS and UI comments (ticket #109)
+sed -i \
+    -e 's/Apple macOS Finder Styling/ParchaOS File Manager Styling/g' \
+    -e 's/Finder Window Base/Parcher Window Base/g' \
+    -e 's/Finder Color Tags/Parcher Color Tags/g' \
+    -e 's/Finder Pill View Switcher/Parcher Pill View Switcher/g' \
+    -e 's/Finder Bottom Status/Parcher Bottom Status/g' \
+    src/resources/css/Adwaita.css 2>/dev/null || :
+sed -i \
+    -e 's/Finder Title/Parcher Title/g' \
+    -e 's/Segmented Finder Views (Icons, List, Sort) with macOS pill container/Segmented Parcher Views (Icons, List, Sort) with pill container/g' \
+    src/resources/ui/nautilus-window.ui 2>/dev/null || :
+
 %build
 %meson -Ddocs=false -Dtests=none
 %meson_build
@@ -276,6 +289,9 @@ grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 %{_datadir}/nautilus/
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 48.7-17
+- Scrub internal Apple and Finder references from embedded CSS/UI
+  comments (ticket #109).
 * Mon Sep 28 2026 ParchaOS packaging - 48.7-16
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage
