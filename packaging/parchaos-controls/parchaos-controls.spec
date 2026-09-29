@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -20,11 +20,18 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-controls-symbolic.svg
+Source4:        parchaos-screenshot
+Source5:        org.parchaos.Screenshot.desktop
 Source90:       LICENSE
 
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
+# The Screenshot app (ticket #130) replaces the old standalone one, which
+# cannot reach GNOME Shell's capture tool on Wayland.
+Obsoletes:      gnome-screenshot < 99
+Requires:       libnotify
+BuildRequires:  desktop-file-utils
 
 %description
 Parcha Controls is ParchaOS's control center: a tiled panel for Wi-Fi,
@@ -47,11 +54,23 @@ mkdir -p "$DEST/icons"
 install -m 0644 src/extension.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
+install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
+desktop-file-validate %{SOURCE5}
+install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Screenshot.desktop
+
 %files
 %license LICENSE
+%{_bindir}/parchaos-screenshot
+%{_datadir}/applications/org.parchaos.Screenshot.desktop
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-11
+- Ticket #130: a working Screenshot app. The extension answers an
+  org.parchaos.Shell.OpenScreenshotUI call on the session bus by opening
+  GNOME Shell's own capture tool (the Print key's), and the new
+  "Screenshot" launcher calls it. The old gnome-screenshot app, which fell
+  back to X11 and failed on Wayland, is obsoleted.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-10
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-9

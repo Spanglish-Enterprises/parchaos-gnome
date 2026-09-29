@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot
+Comment=Capture the screen, a window or an area
+Exec=parchaos-screenshot
+Icon=accessories-screenshot
+Terminal=false
+StartupNotify=false
+Categories=GNOME;GTK;Utility;
+Keywords=capture;print;snapshot;screen;record;

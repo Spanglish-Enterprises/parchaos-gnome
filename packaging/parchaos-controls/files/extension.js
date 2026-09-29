@@ -636,8 +636,31 @@ class ControlsButton extends PanelMenu.Button {
     }
 });
 
+// A tiny D-Bus method for the Screenshot app in the app grid (ticket #130):
+// GNOME Shell's capture tool can only be opened from inside the Shell, and
+// the old standalone screenshot app cannot reach it on Wayland.
+const SHELL_BUS_XML = `<node><interface name="org.parchaos.Shell">
+  <method name="OpenScreenshotUI"/>
+</interface></node>`;
+
 export default class ParchaControlsExtension extends Extension {
+    _exportShellBus() {
+        this._shellBus = Gio.DBusExportedObject.wrapJSObject(SHELL_BUS_XML, {
+            OpenScreenshotUI() {
+                // Let the app that asked finish closing before the tool grabs input.
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+                    Main.screenshotUI.open().catch(logError);
+                    return GLib.SOURCE_REMOVE;
+                });
+            },
+        });
+        this._shellBus.export(Gio.DBus.session, '/org/parchaos/Shell');
+        this._shellBusName = Gio.bus_own_name_on_connection(
+            Gio.DBus.session, 'org.parchaos.Shell', Gio.BusNameOwnerFlags.NONE, null, null);
+    }
+
     enable() {
+        this._exportShellBus();
         this._injections = new InjectionManager();
         this._waitId = 0;
         // Quick Settings builds its indicators asynchronously at startup.
@@ -681,6 +704,12 @@ export default class ParchaControlsExtension extends Extension {
     }
 
     disable() {
+        this._shellBus?.unexport();
+        this._shellBus = null;
+        if (this._shellBusName) {
+            Gio.bus_unown_name(this._shellBusName);
+            this._shellBusName = 0;
+        }
         if (this._waitId) {
             GLib.source_remove(this._waitId);
             this._waitId = 0;

@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Opens GNOME Shell's screenshot tool, the same one the Print key opens
+# (ticket #130). The Parcha Controls extension answers on the session bus.
+# If it is not running (safe mode), say how to take one with the keyboard:
+# the Print key is handled by the Shell itself and always works.
+if gdbus call --session --dest org.parchaos.Shell --object-path /org/parchaos/Shell \
+        --method org.parchaos.Shell.OpenScreenshotUI >/dev/null 2>&1; then
+    exit 0
+fi
+exec notify-send --app-name=Screenshot --icon=accessories-screenshot \
+    "Screenshot" "Press the Print Screen key to take a screenshot."
