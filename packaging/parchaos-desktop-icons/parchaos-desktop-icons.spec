@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -43,6 +43,10 @@ URL:            https://gitlab.com/rastersoft/desktop-icons-ng
 %global commit  ec2800c8f9d987d8ce2a7a6bd21d283da4e3b270
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 Source0:        %{url}/-/archive/%{commit}/desktop-icons-ng-%{commit}.tar.gz
+# ParchaOS (ticket #127): a "Snap icons to the grid" setting, off by default.
+# Off, an icon stays exactly where it is dropped; on, icons sit in grid cells
+# as upstream does. New files and "Arrange Icons" still use the grid.
+Patch0:         0001-snap-to-grid-setting.patch
 
 BuildArch:      noarch
 BuildRequires:  meson
@@ -100,6 +104,12 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 50-4
+- Ticket #127: free placement of desktop icons. New gsettings key
+  snap-to-grid (default false) and a switch in the preferences window. With
+  it off, icons stay exactly where they are dropped and keep their position
+  across restarts; with it on, behaviour is upstream's. Carried as
+  0001-snap-to-grid-setting.patch.
 * Mon Sep 28 2026 ParchaOS packaging - 50-3
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage

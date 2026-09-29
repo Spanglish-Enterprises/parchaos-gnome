@@ -1,0 +1,209 @@
+diff --git a/app/desktopGrid.js b/app/desktopGrid.js
+index a5013bd..6524e04 100644
+--- a/app/desktopGrid.js
++++ b/app/desktopGrid.js
+@@ -191,6 +191,7 @@ export var DesktopGrid = class extends SignalManager.SignalManager {
+ 
+     setGridStatus() {
+         this._fileItems = {};
++        this._freeItems = {};
+         this._gridStatus = {};
+         for (let y = 0; y < this._maxRows; y++) {
+             for (let x = 0; x < this._maxColumns; x++)
+@@ -238,8 +239,10 @@ export var DesktopGrid = class extends SignalManager.SignalManager {
+             if (dropInfo === null)
+                 return false;
+ 
+-            x = this._elementWidth * Math.floor(x / this._elementWidth);
+-            y = this._elementHeight * Math.floor(y / this._elementHeight);
++            if (!this._desktopManager.isFreePlacement()) {
++                x = this._elementWidth * Math.floor(x / this._elementWidth);
++                y = this._elementHeight * Math.floor(y / this._elementHeight);
++            }
+             [x, y] = this.coordinatesLocalToGlobal(x, y);
+             try {
+                 this._desktopManager.onDragDataReceived(dropInfo, x, y, dropInfo.action === Gdk.DragAction.MOVE);
+@@ -296,6 +299,11 @@ export var DesktopGrid = class extends SignalManager.SignalManager {
+     }
+ 
+     refreshDrag(selectedList, ox, oy) {
++        if (this._desktopManager.isFreePlacement()) {
++            // No grid cell to highlight when icons land where they are dropped.
++            this._paintContainer.selectedList = null;
++            return;
++        }
+         if (selectedList === null) {
+             this._paintContainer.selectedList = null;
+             return;
+@@ -392,13 +400,71 @@ export var DesktopGrid = class extends SignalManager.SignalManager {
+     removeItem(fileItem) {
+         if (fileItem.uri in this._fileItems) {
+             const [column, row] = this._fileItems[fileItem.uri];
+-            this._setGridUse(column, row, false);
++            if (column >= 0)
++                this._setGridUse(column, row, false);
++            delete this._freeItems[fileItem.uri];
+             this._container.remove(fileItem.container);
+             delete this._fileItems[fileItem.uri];
+         }
+     }
+ 
++    /**
++     * Free placement (ParchaOS): put the icon at these global coordinates
++     * exactly, kept inside the grid area. Its cells are not marked as used
++     * one by one; _isEmptyAt() checks the free icons' rectangles instead, so
++     * icons that are placed automatically never land on top of one.
++     */
++    _addFreeFileItem(fileItem, targetX, targetY, coordinatesAction) {
++        if (this._destroying)
++            return;
++
++        let [localX, localY] = this.coordinatesGlobalToLocal(targetX, targetY);
++        localX = DesktopIconsUtil.clamp(localX, 0, Math.max(0, this._width - this._elementWidth));
++        localY = DesktopIconsUtil.clamp(localY, 0, Math.max(0, this._height - this._elementHeight));
++        this._container.put(fileItem.container, localX, localY);
++        const [x, y] = this.coordinatesLocalToGlobal(localX, localY);
++        fileItem.setCoordinates(
++            x,
++            y,
++            this._elementWidth - 2 * elementSpacing,
++            this._elementHeight - 2 * elementSpacing,
++            elementSpacing,
++            this,
++            localX / this._width);
++        this._freeItems[fileItem.uri] = [localX, localY];
++        this._fileItems[fileItem.uri] = [-1, -1, fileItem];
++        if ((fileItem.savedCoordinates === null) || (coordinatesAction === Enums.StoredCoordinates.OVERWRITE))
++            fileItem.savedCoordinates = [x, y];
++    }
++
++    _freeItemBlocks(column, row) {
++        const cellX = column * this._elementWidth;
++        const cellY = row * this._elementHeight;
++        for (const uri in this._freeItems) {
++            const [freeX, freeY] = this._freeItems[uri];
++            const overlapW = Math.min(cellX + this._elementWidth, freeX + this._elementWidth) - Math.max(cellX, freeX);
++            const overlapH = Math.min(cellY + this._elementHeight, freeY + this._elementHeight) - Math.max(cellY, freeY);
++            if (overlapW > this._elementWidth / 2 && overlapH > this._elementHeight / 2)
++                return true;
++
++            const centerX = freeX + this._elementWidth / 2;
++            const centerY = freeY + this._elementHeight / 2;
++            if (centerX >= cellX && centerX < cellX + this._elementWidth && centerY >= cellY && centerY < cellY + this._elementHeight)
++                return true;
++        }
++        return false;
++    }
++
+     addFileItemCloseTo(fileItem, x, y, coordinatesAction) {
++        if (this._desktopManager.isFreePlacement() && coordinatesAction !== Enums.StoredCoordinates.ASSIGN) {
++            // A new drop has no saved position yet: centre the icon on the drop point.
++            const newDrop = fileItem.savedCoordinates === null;
++            this._addFreeFileItem(fileItem,
++                newDrop ? x - this._elementWidth / 2 : x,
++                newDrop ? y - this._elementHeight / 2 : y,
++                coordinatesAction);
++            return;
++        }
+         const addVolumesOpposite = Prefs.desktopSettings.get_boolean('add-volumes-opposite');
+         const [column, row] = this._getEmptyPlaceClosestTo(x,
+             y,
+@@ -408,7 +474,7 @@ export var DesktopGrid = class extends SignalManager.SignalManager {
+     }
+ 
+     _isEmptyAt(x, y) {
+-        return this._gridStatus[y * this._maxColumns + x] === false;
++        return this._gridStatus[y * this._maxColumns + x] === false && !this._freeItemBlocks(x, y);
+     }
+ 
+     _setGridUse(x, y, inUse) {
+diff --git a/app/desktopManager.js b/app/desktopManager.js
+index cfe02d6..7c12212 100644
+--- a/app/desktopManager.js
++++ b/app/desktopManager.js
+@@ -415,22 +415,48 @@ export var DesktopManager = class {
+         }
+     }
+ 
++    /**
++     * True when icons are placed exactly where they are dropped instead of
++     * in a grid cell (ParchaOS: the "Snap icons to the grid" setting is off).
++     * Keeping icons arranged or stacked always uses the grid.
++     *
++     * @returns {boolean}
++     */
++    isFreePlacement() {
++        if (this.keepArranged || this.keepStacked)
++            return false;
++
++        return !Prefs.desktopSettings.get_boolean('snap-to-grid');
++    }
++
+     doMoveWithDragAndDrop(xOrigin, yOrigin, xDestination, yDestination) {
+         const keepArranged = this.keepArranged || this.keepStacked;
+         if (this.sortSpecialFolders && keepArranged)
+             return;
+ 
+-        // Find the grid where the destination lies and aim towards the positive side, middle of grid to ensure drop in the grid
+-        for (const desktop of this._desktops) {
+-            const grid = desktop.getGridAt(xDestination, yDestination, true);
+-            if (grid !== null) {
+-                xDestination = grid[0] + desktop._elementWidth / 2;
+-                yDestination = grid[1] + desktop._elementHeight / 2;
+-                break;
++        let deltaX;
++        let deltaY;
++        if (this.isFreePlacement()) {
++            // Move by how far the pointer travelled, so an icon keeps the
++            // spot it was grabbed at: its new top-left corner is the drop
++            // point minus the offset of the press inside the icon.
++            const grabX = this.dragItem?._buttonPressInitialX ?? 0;
++            const grabY = this.dragItem?._buttonPressInitialY ?? 0;
++            deltaX = xDestination - grabX - xOrigin;
++            deltaY = yDestination - grabY - yOrigin;
++        } else {
++            // Find the grid where the destination lies and aim towards the positive side, middle of grid to ensure drop in the grid
++            for (const desktop of this._desktops) {
++                const grid = desktop.getGridAt(xDestination, yDestination, true);
++                if (grid !== null) {
++                    xDestination = grid[0] + desktop._elementWidth / 2;
++                    yDestination = grid[1] + desktop._elementHeight / 2;
++                    break;
++                }
+             }
++            deltaX = xDestination - xOrigin;
++            deltaY = yDestination - yOrigin;
+         }
+-        const deltaX = xDestination - xOrigin;
+-        const deltaY = yDestination - yOrigin;
+         let fileItems = [];
+         for (const item of this._fileList) {
+             if (item.isSelected) {
+diff --git a/app/prefswindow.js b/app/prefswindow.js
+index df4de00..ccec63c 100644
+--- a/app/prefswindow.js
++++ b/app/prefswindow.js
+@@ -89,6 +89,7 @@ export function preferencesFrame(desktopSettings, nautilusSettings, gtkSettings)
+             'bottom-right': _('Bottom-right corner'),
+         }));
+     frame.add(buildSwitcher(desktopSettings, 'add-volumes-opposite', _('Add new drives to the opposite side of the screen')));
++    frame.add(buildSwitcher(desktopSettings, 'snap-to-grid', _('Snap icons to the grid')));
+     frame.add(buildSwitcher(desktopSettings, 'show-drop-place', _("Highlight the drop place during Drag'n'Drop")));
+     frame.add(buildSwitcher(desktopSettings, 'use-nemo', _('Use Nemo to open folders')));
+ 
+diff --git a/schemas/org.gnome.shell.extensions.ding.gschema.xml b/schemas/org.gnome.shell.extensions.ding.gschema.xml
+index d29f569..54b21ca 100644
+--- a/schemas/org.gnome.shell.extensions.ding.gschema.xml
++++ b/schemas/org.gnome.shell.extensions.ding.gschema.xml
+@@ -65,6 +65,11 @@
+         <summary>Sort Special Folders - Home/Trash Drives.</summary>
+         <description>When arranging Icons on desktop, to sort and change the position of the Home, Trash and mounted Network or External Drives</description>
+     </key>
++    <key type="b" name="snap-to-grid">
++        <default>false</default>
++        <summary>Snap icons to the grid</summary>
++        <description>When on, icons always sit in a grid cell. When off (the default), an icon stays exactly where it is dropped. "Arrange Icons" always tidies icons onto the grid.</description>
++    </key>
+     <key type="b" name="keep-arranged">
+         <default>false</default>
+         <summary>Keep Icons Arranged</summary>
