@@ -11,7 +11,7 @@ index f5e2272..b45c8bd 100644
    'nautilus-scheme.c',
    'nautilus-scheme.h',
 diff --git a/src/nautilus-query-editor.c b/src/nautilus-query-editor.c
-index 5748ed3..52094e2 100644
+index 5748ed3..42d6ae5 100644
 --- a/src/nautilus-query-editor.c
 +++ b/src/nautilus-query-editor.c
 @@ -32,6 +32,8 @@
@@ -50,7 +50,7 @@ index 5748ed3..52094e2 100644
  
      g_signal_handlers_disconnect_by_func (nautilus_preferences,
                                            recursive_search_preferences_changed,
-@@ -480,6 +495,121 @@ entry_activate_cb (GtkWidget           *entry,
+@@ -480,6 +495,120 @@ entry_activate_cb (GtkWidget           *entry,
      g_signal_emit (editor, signals[ACTIVATED], 0);
  }
  
@@ -98,12 +98,13 @@ index 5748ed3..52094e2 100644
 +                      const gchar         *text)
 +{
 +    g_autofree gchar *remaining = NULL;
++    g_autofree gchar *phrase = NULL;
 +    g_autoptr (GArray) groups = NULL;
 +    g_autoptr (GDateTime) from = NULL;
 +    g_autoptr (GDateTime) to = NULL;
 +    g_autoptr (GDateTime) now = g_date_time_new_now_local ();
 +
-+    if (!parcher_natural_search_parse (text, now, &remaining, &groups, &from, &to))
++    if (!parcher_natural_search_parse (text, now, &remaining, &phrase, &groups, &from, &to))
 +    {
 +        nautilus_query_set_text (editor->query, text);
 +        if (editor->natural_active)
@@ -121,7 +122,6 @@ index 5748ed3..52094e2 100644
 +
 +    {
 +        g_autoptr (GPtrArray) date_range = g_ptr_array_new_full (2, (GDestroyNotify) g_date_time_unref);
-+        g_autofree gchar *date_text = NULL;
 +
 +        g_ptr_array_add (date_range, g_date_time_ref (from));
 +        g_ptr_array_add (date_range, g_date_time_ref (to));
@@ -133,8 +133,7 @@ index 5748ed3..52094e2 100644
 +        editor->natural_active = TRUE;
 +        clear_natural_tags (editor);
 +
-+        date_text = get_text_for_date_range (date_range, TRUE);
-+        editor->natural_date_tag = create_tag (editor, date_text, G_CALLBACK (natural_tag_reset));
++        editor->natural_date_tag = create_tag (editor, phrase, G_CALLBACK (natural_tag_reset));
 +        gtk_box_append (GTK_BOX (editor->tags_box), editor->natural_date_tag);
 +    }
 +
@@ -172,7 +171,7 @@ index 5748ed3..52094e2 100644
  static gboolean
  entry_changed_internal (NautilusQueryEditor *editor)
  {
-@@ -491,10 +621,7 @@ entry_changed_internal (NautilusQueryEditor *editor)
+@@ -491,10 +620,7 @@ entry_changed_internal (NautilusQueryEditor *editor)
      {
          create_query (editor);
      }
@@ -184,7 +183,7 @@ index 5748ed3..52094e2 100644
  
      nautilus_query_editor_changed (editor);
  
-@@ -583,6 +710,8 @@ search_popover_date_range_changed_cb (NautilusSearchPopover *popover,
+@@ -583,6 +709,8 @@ search_popover_date_range_changed_cb (NautilusSearchPopover *popover,
      }
  
      nautilus_query_set_date_range (editor->query, date_range);
@@ -193,7 +192,7 @@ index 5748ed3..52094e2 100644
  
      nautilus_query_editor_changed (editor);
      gtk_widget_set_visible (editor->tags_box,
-@@ -638,6 +767,8 @@ search_popover_mime_type_changed_cb (NautilusSearchPopover *popover,
+@@ -638,6 +766,8 @@ search_popover_mime_type_changed_cb (NautilusSearchPopover *popover,
          gtk_box_append (GTK_BOX (editor->tags_box), editor->mime_types_tag);
      }
      nautilus_query_set_mime_types (editor->query, mimetypes);
@@ -204,10 +203,10 @@ index 5748ed3..52094e2 100644
      gtk_widget_set_visible (editor->tags_box,
 diff --git a/src/parcher-natural-search.c b/src/parcher-natural-search.c
 new file mode 100644
-index 0000000..e3352ef
+index 0000000..1ccec49
 --- /dev/null
 +++ b/src/parcher-natural-search.c
-@@ -0,0 +1,402 @@
+@@ -0,0 +1,425 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later
 + *
 + * See parcher-natural-search.h.
@@ -422,6 +421,7 @@ index 0000000..e3352ef
 +parcher_natural_search_parse (const char  *text,
 +                              GDateTime   *now,
 +                              char       **remaining_text,
++                              char       **time_phrase,
 +                              GArray     **groups,
 +                              GDateTime  **from,
 +                              GDateTime  **to)
@@ -431,6 +431,7 @@ index 0000000..e3352ef
 +    g_autoptr (GDateTime) today = NULL;
 +    GDateTime *range_from = NULL;
 +    GDateTime *range_to = NULL;
++    g_autofree char *phrase_label = NULL;
 +    g_auto (GStrv) tokens = NULL;
 +    g_autoptr (GPtrArray) words = NULL;
 +    g_autoptr (GArray) found_groups = NULL;
@@ -537,7 +538,24 @@ index 0000000..e3352ef
 +
 +        if (range_from != NULL && g_match_info_fetch_pos (info, 0, &start, &end))
 +        {
++            g_autofree char *matched = g_strstrip (g_strndup (rest + start, end - start));
++            const char *label = matched;
++            static const char *const prefixes[] = {"in ", "from ", "during ", "the ", NULL};
 +            g_autofree char *before = g_strndup (rest, start);
++
++            for (int pi = 0; prefixes[pi] != NULL; pi++)
++            {
++                if (g_str_has_prefix (label, prefixes[pi]))
++                {
++                    label += strlen (prefixes[pi]);
++                    pi = -1;
++                }
++            }
++            phrase_label = g_strdup (label);
++            if (phrase_label[0] != '\0')
++            {
++                phrase_label[0] = g_ascii_toupper (phrase_label[0]);
++            }
 +            g_autofree char *after = g_strdup (rest + end);
 +            g_free (rest);
 +            rest = g_strconcat (before, " ", after, NULL);
@@ -588,6 +606,10 @@ index 0000000..e3352ef
 +    {
 +        *remaining_text = g_strjoinv (" ", (char **) words->pdata);
 +    }
++    if (time_phrase != NULL)
++    {
++        *time_phrase = g_steal_pointer (&phrase_label);
++    }
 +    if (groups != NULL)
 +    {
 +        *groups = g_steal_pointer (&found_groups);
@@ -612,10 +634,10 @@ index 0000000..e3352ef
 +}
 diff --git a/src/parcher-natural-search.h b/src/parcher-natural-search.h
 new file mode 100644
-index 0000000..d933aee
+index 0000000..e75949d
 --- /dev/null
 +++ b/src/parcher-natural-search.h
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,35 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later
 + *
 + * Natural-language file search for Parcher (ParchaOS ticket #120).
@@ -634,6 +656,7 @@ index 0000000..d933aee
 + * @text: the text typed in the search entry
 + * @now: the current time (tests pass a fixed one)
 + * @remaining_text: (out): the words left after the phrases are removed
++ * @time_phrase: (out): the time phrase as typed, cleaned up ("Last week")
 + * @groups: (out): a GArray of guint, the file-type group indexes named
 + *   (indexes of Files' mime type groups; empty when no type was named)
 + * @from: (out): first day of the range (local midnight)
@@ -646,6 +669,7 @@ index 0000000..d933aee
 +gboolean parcher_natural_search_parse (const char  *text,
 +                                       GDateTime   *now,
 +                                       char       **remaining_text,
++                                       char       **time_phrase,
 +                                       GArray     **groups,
 +                                       GDateTime  **from,
 +                                       GDateTime  **to);

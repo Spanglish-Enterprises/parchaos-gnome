@@ -45,6 +45,7 @@ typedef struct
     const char *range;
     const char *groups;
     const char *words;
+    const char *phrase;
 } Case;
 
 int
@@ -54,37 +55,38 @@ main (void)
     g_autoptr (GDateTime) now = g_date_time_new_local (2026, 9, 30, 15, 30, 0);
     const char *plain[] = {"firefox", "pdf", "photos", "terminal", "text editor", "last", "week", "ab", "", NULL};
     const Case cases[] = {
-        {"pdf from last week", "2026-09-21..2026-09-27", "6", ""},
-        {"that PDF from last week", "2026-09-21..2026-09-27", "6", ""},
-        {"spreadsheets from yesterday", "2026-09-29..2026-09-29", "9", ""},
-        {"photos today", "2026-09-30..2026-09-30", "7", ""},
-        {"documents this week", "2026-09-28..2026-09-30", "3,6", ""},
-        {"videos last month", "2026-08-01..2026-08-31", "11", ""},
-        {"invoice pdf last month", "2026-08-01..2026-08-31", "6", "invoice"},
-        {"files from the last 7 days", "2026-09-23..2026-09-30", "", ""},
-        {"images past 2 weeks", "2026-09-16..2026-09-30", "7", ""},
-        {"slides 3 days ago", "2026-09-27..2026-09-27", "8", ""},
-        {"music and podcasts this year", "2026-01-01..2026-09-30", "5", "podcasts"},
-        {"budget this month", "2026-09-01..2026-09-30", "", "budget"},
-        {"last year", "2025-01-01..2025-12-31", "", ""},
-        {"  Photos   YESTERDAY  ", "2026-09-29..2026-09-29", "7", ""},
+        {"pdf from last week", "2026-09-21..2026-09-27", "6", "", "Last week"},
+        {"that PDF from last week", "2026-09-21..2026-09-27", "6", "", "Last week"},
+        {"spreadsheets from yesterday", "2026-09-29..2026-09-29", "9", "", "Yesterday"},
+        {"photos today", "2026-09-30..2026-09-30", "7", "", "Today"},
+        {"documents this week", "2026-09-28..2026-09-30", "3,6", "", "This week"},
+        {"videos last month", "2026-08-01..2026-08-31", "11", "", "Last month"},
+        {"invoice pdf last month", "2026-08-01..2026-08-31", "6", "invoice", "Last month"},
+        {"files from the last 7 days", "2026-09-23..2026-09-30", "", "", "Last 7 days"},
+        {"images past 2 weeks", "2026-09-16..2026-09-30", "7", "", "Past 2 weeks"},
+        {"slides 3 days ago", "2026-09-27..2026-09-27", "8", "", "3 days ago"},
+        {"music and podcasts this year", "2026-01-01..2026-09-30", "5", "podcasts", "This year"},
+        {"budget this month", "2026-09-01..2026-09-30", "", "budget", "This month"},
+        {"last year", "2025-01-01..2025-12-31", "", "", "Last year"},
+        {"  Photos   YESTERDAY  ", "2026-09-29..2026-09-29", "7", "", "Yesterday"},
     };
 
     for (int i = 0; plain[i] != NULL; i++)
     {
-        check (!parcher_natural_search_parse (plain[i], now, NULL, NULL, NULL, NULL), "plain search left alone", plain[i]);
+        check (!parcher_natural_search_parse (plain[i], now, NULL, NULL, NULL, NULL, NULL), "plain search left alone", plain[i]);
     }
 
     for (gsize i = 0; i < G_N_ELEMENTS (cases); i++)
     {
         g_autofree char *rest = NULL;
+        g_autofree char *phrase = NULL;
         g_autofree char *r = NULL;
         g_autofree char *g = NULL;
         g_autoptr (GArray) groups = NULL;
         g_autoptr (GDateTime) from = NULL;
         g_autoptr (GDateTime) to = NULL;
 
-        if (!parcher_natural_search_parse (cases[i].text, now, &rest, &groups, &from, &to))
+        if (!parcher_natural_search_parse (cases[i].text, now, &rest, &phrase, &groups, &from, &to))
         {
             check (FALSE, "should parse", cases[i].text);
             continue;
@@ -94,6 +96,7 @@ main (void)
         check (g_str_equal (r, cases[i].range), cases[i].text, r);
         check (g_str_equal (g, cases[i].groups), cases[i].text, g);
         check (g_str_equal (rest, cases[i].words), cases[i].text, rest);
+        check (g_str_equal (phrase, cases[i].phrase), cases[i].text, phrase);
     }
 
     /* Hostile punctuation never becomes a name word. */
@@ -103,7 +106,7 @@ main (void)
         g_autoptr (GDateTime) from = NULL;
         g_autoptr (GDateTime) to = NULL;
 
-        check (parcher_natural_search_parse ("pdf x\") } DELETE { \\ '' from last week", now, &rest, &groups, &from, &to),
+        check (parcher_natural_search_parse ("pdf x\") } DELETE { \\ '' from last week", now, &rest, NULL, &groups, &from, &to),
                "hostile text still parses", NULL);
         check (rest != NULL && strpbrk (rest, "\"'\\(){}") == NULL, "no punctuation in the words", rest);
     }
