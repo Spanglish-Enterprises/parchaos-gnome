@@ -130,6 +130,7 @@ PROFILE_REPO_PACKAGES=(
     # script itself).
     parchaos-cloud
     parchaos-dev-tools
+    parchaos-app-store
 
     # Scheduled Do Not Disturb (packaging/parchaos-focus-schedule/): a
     # user service that turns GNOME's Do Not Disturb on during a daily

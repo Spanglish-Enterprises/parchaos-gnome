@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# ParchaOS Clean App Uninstaller (Ticket #125)
+# Designed to be called by the future ParchaOS App Store.
+# Safely uninstalls Flatpak or RPM apps and cleans orphaned directories.
+
+set -euo pipefail
+
+APP_ID="${1:-}"
+
+if [[ -z "$APP_ID" ]]; then
+    echo "Usage: parchaos-uninstall <app-id-or-package-name>"
+    exit 1
+fi
+
+echo "Uninstalling $APP_ID..."
+
+# 1. Check if it's a Flatpak
+if flatpak info "$APP_ID" >/dev/null 2>&1; then
+    echo "=> Flatpak app detected. Removing package..."
+    flatpak uninstall -y "$APP_ID"
+    
+    echo "=> Cleaning orphaned Flatpak data directories..."
+    rm -rf "${HOME}/.var/app/${APP_ID}"
+    echo "=> Cleaned ~/.var/app/${APP_ID}"
+else
+    # 2. Check if it's an RPM package
+    if rpm -q "$APP_ID" >/dev/null 2>&1; then
+        echo "=> RPM package detected. Removing package..."
+        sudo dnf remove -y "$APP_ID"
+        
+        # RPM packages drop caches in standard XDG dirs.
+        # We prompt before nuking them just in case.
+        CACHE_DIR="${HOME}/.cache/${APP_ID}"
+        CONFIG_DIR="${HOME}/.config/${APP_ID}"
+        
+        if [[ -d "$CACHE_DIR" ]]; then
+            echo "=> Found orphaned cache: $CACHE_DIR"
+            rm -rf "$CACHE_DIR"
+            echo "   Removed."
+        fi
+        
+        if [[ -d "$CONFIG_DIR" ]]; then
+            echo "=> Found orphaned config: $CONFIG_DIR"
+            rm -rf "$CONFIG_DIR"
+            echo "   Removed."
+        fi
+    else
+        echo "Error: App '$APP_ID' not found in Flatpak or DNF."
+        exit 1
+    fi
+fi
+
+echo "=> Uninstallation complete."
