@@ -18,7 +18,8 @@
 # ==============================================================================
 
 # --- Core system ---
-fedora-release
+generic-release
+generic-logos
 dnf
 systemd
 systemd-udev

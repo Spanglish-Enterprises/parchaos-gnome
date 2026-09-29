@@ -15,7 +15,7 @@ Source5:        LICENSE
 Source6:        SOURCES.md
 BuildArch:      noarch
 
-Requires:       fedora-release-common
+Requires:       generic-release-common
 Requires(post): coreutils, grep
 
 %description
@@ -41,7 +41,7 @@ install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/p
 %post
 %{_libexecdir}/parchaos-os-release || :
 
-%triggerin -- fedora-release-common
+%triggerin -- generic-release-common
 %{_libexecdir}/parchaos-os-release || :
 
 %postun
