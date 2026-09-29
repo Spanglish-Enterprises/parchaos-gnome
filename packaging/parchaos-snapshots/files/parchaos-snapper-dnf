@@ -1,0 +1,24 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Takes a snapshot of the system before and after a package transaction
+# (ticket #116), so an update that breaks something can be compared with and
+# put back from the state before it. Called by dnf's actions plugin:
+#   parchaos-snapper-dnf pre | post
+# Never fails: a missing snapshot must not stop an update.
+config=${PARCHAOS_SNAPPER_CONFIG:-root}
+state=${PARCHAOS_SNAPPER_STATE:-/run/parchaos-snapper-pre}
+[ -e "/etc/snapper/configs/$config" ] || exit 0
+case "${1:-}" in
+    pre)
+        if n=$(snapper -c "$config" create --type pre --cleanup-algorithm number --print-number --description "dnf" 2>/dev/null) && [ -n "$n" ]; then
+            echo "$n" > "$state"
+        fi
+        ;;
+    post)
+        if [ -s "$state" ]; then
+            snapper -c "$config" create --type post --pre-number "$(cat "$state")" --cleanup-algorithm number --description "dnf" >/dev/null 2>&1
+            rm -f "$state"
+        fi
+        ;;
+esac
+exit 0

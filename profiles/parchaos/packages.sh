@@ -188,6 +188,10 @@ PROFILE_REPO_PACKAGES=(
     # Clipboard history in the top bar (packaging/parchaos-clipboard/).
     parchaos-clipboard
 
+    # Snapshots of the system and home folders, with a top-bar menu
+    # (packaging/parchaos-snapshots/).
+    parchaos-snapshots
+
     # ParchaOS's real logo on the GDM login screen, replacing Fedora's
     # default (packaging/parchaos-gdm-logo/) -- real user feedback
     # (the login screen still showed the Fedora logo).

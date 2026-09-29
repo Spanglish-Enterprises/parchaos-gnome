@@ -1,0 +1,12 @@
+[Unit]
+Description=Set up snapshots of the system and home folders
+ConditionPathExists=/usr/bin/snapper
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/parchaos-snapper-setup
+
+[Install]
+WantedBy=multi-user.target

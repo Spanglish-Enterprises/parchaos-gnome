@@ -1,0 +1,4 @@
+# Snapshot the system around every package transaction (ticket #116).
+# A failing hook is only logged; it never stops an update.
+pre_transaction::::/usr/libexec/parchaos-snapper-dnf pre
+post_transaction::::/usr/libexec/parchaos-snapper-dnf post

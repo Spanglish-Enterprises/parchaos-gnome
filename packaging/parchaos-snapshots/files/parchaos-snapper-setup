@@ -1,0 +1,59 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sets up snapper for the system and home subvolumes (ticket #116).
+#
+# Run by parchaos-snapper-setup.service at boot and once when the package is
+# installed. It only acts on Btrfs subvolumes and only once per config, so it
+# is safe to run again. Members of the wheel group can read the configs, which
+# is what lets the top-bar snapshot menu (Wisp) work for the admin account
+# without a password.
+#
+# Snapshots live on the same disk as the data they copy: they are history for
+# undoing mistakes, not a backup.
+set -u
+
+log() { logger -t parchaos-snapper-setup -- "$*"; echo "$*"; }
+
+command -v snapper >/dev/null 2>&1 || exit 0
+
+setup() {
+    local name=$1 mount=$2
+    if [ -e "/etc/snapper/configs/$name" ]; then
+        return 0
+    fi
+    if [ "$(findmnt -no FSTYPE --target "$mount" 2>/dev/null)" != btrfs ]; then
+        log "$mount is not on Btrfs; no snapshots for it"
+        return 0
+    fi
+    # Snapper needs the path to be a subvolume of its own.
+    if ! btrfs subvolume show "$mount" >/dev/null 2>&1; then
+        log "$mount is not a Btrfs subvolume; no snapshots for it"
+        return 0
+    fi
+    if ! snapper -c "$name" create-config "$mount"; then
+        log "could not create the snapper config for $mount"
+        return 0
+    fi
+    # Six hourly, five daily, two weekly and one monthly snapshot are kept,
+    # plus the last ten before/after package updates. Small on purpose.
+    snapper -c "$name" set-config \
+        ALLOW_GROUPS=wheel SYNC_ACL=yes \
+        TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes TIMELINE_MIN_AGE=1800 \
+        TIMELINE_LIMIT_HOURLY=6 TIMELINE_LIMIT_DAILY=5 TIMELINE_LIMIT_WEEKLY=2 \
+        TIMELINE_LIMIT_MONTHLY=1 TIMELINE_LIMIT_YEARLY=0 \
+        NUMBER_CLEANUP=yes NUMBER_MIN_AGE=1800 NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 \
+        EMPTY_PRE_POST_CLEANUP=yes
+    log "snapshots are on for $mount"
+}
+
+main() {
+    setup root /
+    setup home /home
+    # The hourly snapshots and their cleanup are snapper's own timers.
+    systemctl enable --now snapper-timeline.timer snapper-cleanup.timer >/dev/null 2>&1 || true
+}
+
+# Sourced by the tests, which call setup() on a scratch filesystem.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main
+fi
