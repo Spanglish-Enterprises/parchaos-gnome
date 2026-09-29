@@ -12,7 +12,7 @@
 
 Name:           parchaos-updates
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Check for ParchaOS updates and notify
 
 License:        GPL-3.0-or-later
@@ -71,6 +71,11 @@ ln -s ../parchaos-updates.timer \
 %{_userunitdir}/timers.target.wants/parchaos-updates.timer
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-4
+- The notification now says that updating from Parcha Store restarts the
+  computer a few times and that this is normal (ticket #134: an update that
+  restarted "like 3 times" looked like a crash), and points at the Store as
+  well as `sudo dnf upgrade`.
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-3
 - Two bugs found by running it on a real Fedora 44 desktop (ticket #37):
   the timer was installed but disabled (nothing enabled it: no wants

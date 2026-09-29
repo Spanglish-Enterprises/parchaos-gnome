@@ -36,12 +36,19 @@ if [ "$count" -eq 0 ]; then
     exit 0
 fi
 
-# Build the notification text.
+# Build the notification text. Installing from Parcha Store applies updates
+# with a restart into an update screen and another back (more with a kernel
+# update); a user who does not expect that can think the machine has crashed
+# (ticket #134). Say so up front.
 if [ "$count" -eq 1 ]; then
-    body="1 update available. Run 'sudo dnf upgrade' to install it."
+    what="1 update is"
+    it="it"
 else
-    body="$count updates available. Run 'sudo dnf upgrade' to install them."
+    what="$count updates are"
+    it="them"
 fi
+body="$what ready. Install $it from Parcha Store, or run 'sudo dnf upgrade'. "
+body+="Updating from the Store restarts the computer a few times. That is normal, so let it finish."
 
 # Send the notification. Prefer notify-send, fall back to a GNOME Shell
 # notification via gdbus if available.

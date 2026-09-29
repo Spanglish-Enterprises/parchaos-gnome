@@ -180,6 +180,9 @@ class Window(Adw.ApplicationWindow):
              'The passion fruit holds About, Settings, Lock and Log Out.'),
             ('view-restore-symbolic', 'Pick up where you left off', 'Apps you had open come back '
              'when you log in again.'),
+            ('software-update-available-symbolic', 'Updates', 'ParchaOS tells you when updates are '
+             'ready. Installing them from Parcha Store restarts the computer a few times. That is '
+             'normal, so let it finish. You can also run sudo dnf upgrade in a terminal.'),
         ):
             row = Adw.ActionRow(title=title, subtitle=subtitle)
             row.add_prefix(Gtk.Image(icon_name=icon, icon_size=Gtk.IconSize.LARGE))
