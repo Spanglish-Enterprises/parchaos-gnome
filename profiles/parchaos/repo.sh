@@ -33,6 +33,17 @@ profile_setup_repo() {
         echo "         fedora-44-x86_64). Use --local with hand-built RPMs" >&2
         echo "         in build/local-rpms/ as a fallback." >&2
     fi
+
+    # Something in the base pulls in fedora-logos as the default provider of
+    # system-logos (nothing else provides it now that generic-logos is not in
+    # packages.list). Installing parchaos-logos over it fails on file
+    # conflicts, and that install runs before customize.sh's own swap.
+    # Swap here, in one transaction, as soon as the COPR that carries
+    # parchaos-logos is enabled. Found by the first real build of #68.
+    if run_in_target rpm -q fedora-logos >/dev/null 2>&1; then
+        echo "--- Swapping fedora-logos for parchaos-logos ---"
+        run_in_target dnf -y swap fedora-logos parchaos-logos
+    fi
 }
 
 profile_teardown_repo() {
