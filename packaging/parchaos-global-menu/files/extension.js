@@ -33,6 +33,14 @@ import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
+// The adaptive bar tint awaits these two calls. GJS only lets a Gio async
+// method be awaited (called without a callback) after it has been
+// promisified, and nothing guarantees some other module already did it: a
+// headless shell with just the ParchaOS extensions logged "Gio.File.read_async:
+// At least 3 arguments required, but only 2 passed" and the bar never tinted.
+Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
+Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+
 const DEFAULT_APP_NAME = 'Parcher';
 const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
 

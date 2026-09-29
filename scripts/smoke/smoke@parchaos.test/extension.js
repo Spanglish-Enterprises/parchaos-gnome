@@ -6,6 +6,7 @@
 // Original code for ParchaOS, GPL-3.0-or-later.
 
 import GLib from 'gi://GLib';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -26,8 +27,21 @@ const sleep = ms => new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAUL
 
 const ext = uuid => Main.extensionManager.lookup(uuid);
 
+let started = false;
+
 export default class SmokeTest extends Extension {
     enable() {
+        // The checks below rewrite enabled-extensions (disable/enable of each
+        // ParchaOS extension), and every rewrite makes the Shell enable this
+        // extension again -- which used to start another complete run on top of
+        // the first. The overlapping runs disabled extensions under each other:
+        // a false "controls is disabled" failure and a disposed-menu error.
+        // Run once per shell.
+        if (started)
+            return;
+        started = true;
+        if (GLib.getenv('SMOKE_DEBUG'))
+            write(`RUN START ${GLib.get_monotonic_time()}`);
         this._run().catch(e => write(`FAIL harness: ${e}\n${e.stack}`)).finally(() => {
             write('DONE');
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
@@ -40,11 +54,16 @@ export default class SmokeTest extends Extension {
     disable() {}
 
     async _check(name, fn) {
+        // SMOKE_DEBUG=1: also report every extension's state after each check,
+        // to find which step switched one off.
+        const states = () => GLib.getenv('SMOKE_DEBUG')
+            ? ' [' + UUIDS.map(u => `${u.split('@')[0].replace('parchaos-', '')}=${Main.extensionManager.lookup(u)?.state}`).join(' ') + ']'
+            : '';
         try {
             await fn();
-            write(`PASS ${name}`);
+            write(`PASS ${name}${states()}`);
         } catch (e) {
-            write(`FAIL ${name}: ${e}`);
+            write(`FAIL ${name}: ${e}${states()}`);
         }
     }
 
@@ -176,14 +195,43 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        // The menu bar picks light or dark text from the wallpaper under it.
+        // Exercises the real path (decode the image, average its top strip,
+        // set a style class): a light wallpaper must give the light bar, a
+        // dark one must not. Catches errors in the async image loading, which
+        // otherwise only show up as a bar that silently never tints.
+        if (ext('parchaos-global-menu@parchaos.org')) {
+            await this._check('menu bar tint follows the wallpaper', async () => {
+                const bg = new Gio.Settings({schema_id: 'org.gnome.desktop.background'});
+                const image = (name, rgba) => {
+                    const px = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, false, 8, 64, 64);
+                    px.fill(rgba);
+                    const path = `${OUT}/${name}.png`;
+                    px.savev(path, 'png', [], []);
+                    return path;
+                };
+                const light = image('bg-light', 0xf2efe8ff);
+                const dark = image('bg-dark', 0x1b2233ff);
+                bg.set_string('picture-options', 'zoom');
+                for (const [path, wantLight] of [[light, true], [dark, false], [light, true]]) {
+                    bg.set_string('picture-uri', `file://${path}`);
+                    bg.set_string('picture-uri-dark', `file://${path}`);
+                    for (let i = 0; i < 40 && Main.panel.has_style_class_name('parchaos-menubar-light') !== wantLight; i++)
+                        await sleep(100);
+                    if (Main.panel.has_style_class_name('parchaos-menubar-light') !== wantLight)
+                        throw new Error(`bar not ${wantLight ? 'light' : 'dark'} for ${path}`);
+                }
+            });
+        }
+
         // Color-scheme toggle: theme-sync should follow.
-        const interface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+        const desktopIface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
         await this._check('color-scheme toggle', async () => {
             for (const scheme of ['prefer-light', 'prefer-dark']) {
-                interface.set_string('color-scheme', scheme);
+                desktopIface.set_string('color-scheme', scheme);
                 await sleep(400);
             }
-            interface.set_string('color-scheme', 'prefer-dark');
+            desktopIface.set_string('color-scheme', 'prefer-dark');
             await sleep(300);
         });
 

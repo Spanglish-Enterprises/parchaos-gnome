@@ -60,9 +60,18 @@ echo "== file-type icon mapping =="
 python3 -B packaging/parchaos-icon-theme/parchaos-icons/mime-map.py --self-test || fail mime-map
 
 echo "== GNOME Shell extension JavaScript syntax =="
+# GNOME Shell loads extensions as ES modules, which are strict mode (`interface`,
+# `package`, `let` as a name... are reserved). Node parses a plain .js file as
+# sloppy-mode CommonJS unless it happens to detect ESM syntax, so check a copy
+# named .mjs to get the same rules the Shell applies. The smoke-test extension
+# is included: a syntax error there (`const interface = ...`) meant the whole
+# smoke test silently never ran, and this check used to skip scripts/.
+js_tmp=$(mktemp -d)
 while IFS= read -r js; do
-    node --check "$js" 2>&1 | head -5 | grep . && fail "$js"
-done < <(find packaging -path '*/files/*' -name '*.js')
+    cp "$js" "$js_tmp/check.mjs"
+    node --check "$js_tmp/check.mjs" 2>&1 | head -5 | grep . && fail "$js"
+done < <(find packaging scripts/smoke \( -path 'packaging/*/files/*' -o -path 'scripts/smoke/*' \) -name '*.js')
+rm -rf "$js_tmp"
 
 echo "== no macOS-comparison narratives =="
 # Ticket #102: ADDED lines in packaging/**, docs/** and README.md must not

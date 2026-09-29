@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,14 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2.1.0-23
+- Adaptive bar tint: promisify Gio.File read_async/load_contents_async
+  explicitly. The tint awaited them, but GJS only allows that after the
+  method has been promisified, and nothing here did it -- it worked in a
+  full session only because some other code had. In a shell with just the
+  ParchaOS extensions it logged "At least 3 arguments required" and the bar
+  never tinted. The new smoke check ("menu bar tint follows the wallpaper")
+  fails without this change and passes with it.
 * Mon Sep 28 2026 ParchaOS packaging - 2.1.0-22
 - Help menu: "ParchaOS Help" opens the support page (ticket #136), which
   is the channel the README, LEGAL and SOURCES docs already point at.
