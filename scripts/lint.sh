@@ -62,6 +62,31 @@ for t in packaging/*/tests/test_*.py; do
     python3 "$t" || fail "$t"
 done
 
+echo "== Parcher natural-language search (C unit test) =="
+if command -v gcc >/dev/null 2>&1 && pkg-config --exists glib-2.0; then
+    nl=$(mktemp -d)
+    # The test builds the parser exactly as the patch ships it.
+    python3 - "$nl" <<'PY' || fail "could not read the parser out of the Parcher patch"
+import re, sys
+out = sys.argv[1]
+patch = open('packaging/parcher/0005-natural-language-search.patch', encoding='utf-8').read()
+for block in re.split(r'(?m)^(?=diff --git )', patch):
+    m = re.match(r'diff --git a/src/(parcher-natural-search\.[ch]) ', block)
+    if not m or 'new file mode' not in block:
+        continue
+    body = block.split('\n@@', 1)[1].split('\n', 1)[1]
+    lines = [l[1:] for l in body.split('\n') if l.startswith('+')]
+    open(f'{out}/{m.group(1)}', 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+PY
+    if gcc -Wall -Wextra -Werror -I"$nl" -o "$nl/t" packaging/parcher/tests/natural-search-test.c \
+        $(pkg-config --cflags --libs glib-2.0) && TZ=America/Chicago "$nl/t"; then :; else
+        fail "packaging/parcher/tests/natural-search-test.c"
+    fi
+    rm -rf "$nl"
+else
+    echo "skipped (needs gcc and glib2-devel)"
+fi
+
 echo "== file-type icon mapping =="
 python3 -B packaging/parchaos-icon-theme/parchaos-icons/mime-map.py --self-test || fail mime-map
 
