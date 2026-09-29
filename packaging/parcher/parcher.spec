@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -73,6 +73,9 @@ Patch1:         0002-sidebar-sections.patch
 Patch2:         0003-toolbar-window-layout.patch
 # App identity.
 Patch3:         0004-app-identity.patch
+# Natural-language search (ticket #120): "pdf from last week" in the search
+# entry becomes a date range and file-type filter.
+Patch4:         0005-natural-language-search.patch
 
 BuildArch:      x86_64
 
@@ -289,6 +292,13 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 48.7-18
+- Ticket #120: natural-language search. In the search entry, text that
+  names a time range ("pdf from last week", "photos yesterday", "invoice
+  this month") sets the date range and file-type filters and searches the
+  remaining words in file names, with tags showing what was understood.
+  Ordinary searches are unchanged. The phrase reader is parcher-natural-
+  search.c, tested by tests/natural-search-test.c.
 * Mon Sep 28 2026 ParchaOS packaging - 48.7-17
 - Remove third-party vendor references from embedded CSS/UI
   comments (ticket #109, naming policy).

@@ -1,0 +1,651 @@
+diff --git a/src/meson.build b/src/meson.build
+index f5e2272..b45c8bd 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -123,6 +123,7 @@ libnautilus_sources = [
+   'nautilus-properties-window.c',
+   'nautilus-properties-window.h',
+   'nautilus-query-editor.c',
++  'parcher-natural-search.c',
+   'nautilus-query-editor.h',
+   'nautilus-scheme.c',
+   'nautilus-scheme.h',
+diff --git a/src/nautilus-query-editor.c b/src/nautilus-query-editor.c
+index 5748ed3..52094e2 100644
+--- a/src/nautilus-query-editor.c
++++ b/src/nautilus-query-editor.c
+@@ -32,6 +32,8 @@
+ #include "nautilus-file.h"
+ #include "nautilus-file-utilities.h"
+ #include "nautilus-global-preferences.h"
++#include "nautilus-mime-actions.h"
++#include "parcher-natural-search.h"
+ #include "nautilus-scheme.h"
+ #include "nautilus-search-directory.h"
+ #include "nautilus-search-popover.h"
+@@ -56,6 +58,16 @@ struct _NautilusQueryEditor
+     GtkWidget *mime_types_tag;
+     GtkWidget *date_range_tag;
+ 
++    /* Natural-language search (ParchaOS ticket #120): filters read from the
++     * typed text, their tags, the words left over, and the filters the user
++     * picked in the popover, put back when the phrase goes away. */
++    gboolean natural_active;
++    GtkWidget *natural_mime_tag;
++    GtkWidget *natural_date_tag;
++    gchar *natural_remaining;
++    GPtrArray *popover_mime_types;
++    GPtrArray *popover_date_range;
++
+     GCancellable *cancellable;
+ 
+     guint search_changed_idle_id;
+@@ -260,6 +272,9 @@ nautilus_query_editor_dispose (GObject *object)
+ 
+     g_clear_object (&editor->location);
+     g_clear_object (&editor->query);
++    g_clear_pointer (&editor->natural_remaining, g_free);
++    g_clear_pointer (&editor->popover_mime_types, g_ptr_array_unref);
++    g_clear_pointer (&editor->popover_date_range, g_ptr_array_unref);
+ 
+     g_signal_handlers_disconnect_by_func (nautilus_preferences,
+                                           recursive_search_preferences_changed,
+@@ -480,6 +495,121 @@ entry_activate_cb (GtkWidget           *entry,
+     g_signal_emit (editor, signals[ACTIVATED], 0);
+ }
+ 
++static GtkWidget *create_tag (NautilusQueryEditor *self,
++                              const gchar         *text,
++                              GCallback            reset_callback);
++
++static void
++natural_tag_reset (NautilusSearchPopover *popover)
++{
++    NautilusQueryEditor *editor;
++
++    editor = NAUTILUS_QUERY_EDITOR (gtk_widget_get_ancestor (GTK_WIDGET (popover),
++                                                             NAUTILUS_TYPE_QUERY_EDITOR));
++    if (editor != NULL)
++    {
++        /* Dropping the phrase from the entry drops its filters too. */
++        gtk_editable_set_text (GTK_EDITABLE (editor->text),
++                               editor->natural_remaining != NULL ? editor->natural_remaining : "");
++    }
++}
++
++static void
++clear_natural_tags (NautilusQueryEditor *editor)
++{
++    if (editor->natural_mime_tag != NULL)
++    {
++        gtk_box_remove (GTK_BOX (editor->tags_box), editor->natural_mime_tag);
++        editor->natural_mime_tag = NULL;
++    }
++    if (editor->natural_date_tag != NULL)
++    {
++        gtk_box_remove (GTK_BOX (editor->tags_box), editor->natural_date_tag);
++        editor->natural_date_tag = NULL;
++    }
++    gtk_widget_set_visible (editor->tags_box,
++                            (gtk_widget_get_first_child (editor->tags_box) != NULL));
++}
++
++/* Search text such as "pdf from last week": the time range and file types
++ * named in it become filters on the query, the rest is searched for in file
++ * names. Text without a time range is searched as before. */
++static void
++apply_natural_search (NautilusQueryEditor *editor,
++                      const gchar         *text)
++{
++    g_autofree gchar *remaining = NULL;
++    g_autoptr (GArray) groups = NULL;
++    g_autoptr (GDateTime) from = NULL;
++    g_autoptr (GDateTime) to = NULL;
++    g_autoptr (GDateTime) now = g_date_time_new_now_local ();
++
++    if (!parcher_natural_search_parse (text, now, &remaining, &groups, &from, &to))
++    {
++        nautilus_query_set_text (editor->query, text);
++        if (editor->natural_active)
++        {
++            g_autoptr (GPtrArray) none = g_ptr_array_new_full (0, g_free);
++
++            editor->natural_active = FALSE;
++            clear_natural_tags (editor);
++            nautilus_query_set_mime_types (editor->query,
++                                           editor->popover_mime_types != NULL ? editor->popover_mime_types : none);
++            nautilus_query_set_date_range (editor->query, editor->popover_date_range);
++        }
++        return;
++    }
++
++    {
++        g_autoptr (GPtrArray) date_range = g_ptr_array_new_full (2, (GDestroyNotify) g_date_time_unref);
++        g_autofree gchar *date_text = NULL;
++
++        g_ptr_array_add (date_range, g_date_time_ref (from));
++        g_ptr_array_add (date_range, g_date_time_ref (to));
++        nautilus_query_set_text (editor->query, remaining);
++        nautilus_query_set_date_range (editor->query, date_range);
++
++        g_free (editor->natural_remaining);
++        editor->natural_remaining = g_strdup (remaining);
++        editor->natural_active = TRUE;
++        clear_natural_tags (editor);
++
++        date_text = get_text_for_date_range (date_range, TRUE);
++        editor->natural_date_tag = create_tag (editor, date_text, G_CALLBACK (natural_tag_reset));
++        gtk_box_append (GTK_BOX (editor->tags_box), editor->natural_date_tag);
++    }
++
++    if (groups->len > 0)
++    {
++        g_autoptr (GPtrArray) mimetypes = g_ptr_array_new_full (16, g_free);
++        g_autoptr (GString) names = g_string_new (NULL);
++
++        for (guint i = 0; i < groups->len; i++)
++        {
++            guint group = g_array_index (groups, guint, i);
++            g_autoptr (GPtrArray) group_types = nautilus_mime_types_group_get_mimetypes (group);
++
++            for (guint j = 0; group_types != NULL && j < group_types->len; j++)
++            {
++                g_ptr_array_add (mimetypes, g_strdup (g_ptr_array_index (group_types, j)));
++            }
++            g_string_append_printf (names, "%s%s", i > 0 ? ", " : "",
++                                    nautilus_mime_types_group_get_name (group));
++        }
++        nautilus_query_set_mime_types (editor->query, mimetypes);
++        editor->natural_mime_tag = create_tag (editor, names->str, G_CALLBACK (natural_tag_reset));
++        gtk_box_append (GTK_BOX (editor->tags_box), editor->natural_mime_tag);
++    }
++    else
++    {
++        g_autoptr (GPtrArray) none = g_ptr_array_new_full (0, g_free);
++
++        nautilus_query_set_mime_types (editor->query,
++                                       editor->popover_mime_types != NULL ? editor->popover_mime_types : none);
++    }
++    gtk_widget_set_visible (editor->tags_box, TRUE);
++}
++
+ static gboolean
+ entry_changed_internal (NautilusQueryEditor *editor)
+ {
+@@ -491,10 +621,7 @@ entry_changed_internal (NautilusQueryEditor *editor)
+     {
+         create_query (editor);
+     }
+-    else
+-    {
+-        nautilus_query_set_text (editor->query, text);
+-    }
++    apply_natural_search (editor, text);
+ 
+     nautilus_query_editor_changed (editor);
+ 
+@@ -583,6 +710,8 @@ search_popover_date_range_changed_cb (NautilusSearchPopover *popover,
+     }
+ 
+     nautilus_query_set_date_range (editor->query, date_range);
++    g_clear_pointer (&editor->popover_date_range, g_ptr_array_unref);
++    editor->popover_date_range = date_range != NULL ? g_ptr_array_ref (date_range) : NULL;
+ 
+     nautilus_query_editor_changed (editor);
+     gtk_widget_set_visible (editor->tags_box,
+@@ -638,6 +767,8 @@ search_popover_mime_type_changed_cb (NautilusSearchPopover *popover,
+         gtk_box_append (GTK_BOX (editor->tags_box), editor->mime_types_tag);
+     }
+     nautilus_query_set_mime_types (editor->query, mimetypes);
++    g_clear_pointer (&editor->popover_mime_types, g_ptr_array_unref);
++    editor->popover_mime_types = mimetypes != NULL ? g_ptr_array_ref (mimetypes) : NULL;
+ 
+     nautilus_query_editor_changed (editor);
+     gtk_widget_set_visible (editor->tags_box,
+diff --git a/src/parcher-natural-search.c b/src/parcher-natural-search.c
+new file mode 100644
+index 0000000..e3352ef
+--- /dev/null
++++ b/src/parcher-natural-search.c
+@@ -0,0 +1,402 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * See parcher-natural-search.h.
++ */
++#include "parcher-natural-search.h"
++
++#include <stdlib.h>
++#include <string.h>
++
++/* Indexes into Files' mime type groups (nautilus-mime-actions.c). */
++enum
++{
++    GROUP_DOCUMENTS = 3,
++    GROUP_MUSIC = 5,
++    GROUP_PDF = 6,
++    GROUP_PICTURE = 7,
++    GROUP_PRESENTATION = 8,
++    GROUP_SPREADSHEET = 9,
++    GROUP_VIDEO = 11,
++};
++
++typedef struct
++{
++    const char *word;
++    guint groups[2];
++} KindWord;
++
++static const KindWord kind_words[] = {
++    {"pdf", {GROUP_PDF, 0}}, {"pdfs", {GROUP_PDF, 0}},
++    {"image", {GROUP_PICTURE, 0}}, {"images", {GROUP_PICTURE, 0}},
++    {"photo", {GROUP_PICTURE, 0}}, {"photos", {GROUP_PICTURE, 0}},
++    {"picture", {GROUP_PICTURE, 0}}, {"pictures", {GROUP_PICTURE, 0}},
++    {"screenshot", {GROUP_PICTURE, 0}}, {"screenshots", {GROUP_PICTURE, 0}},
++    {"pic", {GROUP_PICTURE, 0}}, {"pics", {GROUP_PICTURE, 0}},
++    {"document", {GROUP_DOCUMENTS, GROUP_PDF}}, {"documents", {GROUP_DOCUMENTS, GROUP_PDF}},
++    {"doc", {GROUP_DOCUMENTS, GROUP_PDF}}, {"docs", {GROUP_DOCUMENTS, GROUP_PDF}},
++    {"spreadsheet", {GROUP_SPREADSHEET, 0}}, {"spreadsheets", {GROUP_SPREADSHEET, 0}},
++    {"sheet", {GROUP_SPREADSHEET, 0}}, {"sheets", {GROUP_SPREADSHEET, 0}},
++    {"presentation", {GROUP_PRESENTATION, 0}}, {"presentations", {GROUP_PRESENTATION, 0}},
++    {"slide", {GROUP_PRESENTATION, 0}}, {"slides", {GROUP_PRESENTATION, 0}},
++    {"video", {GROUP_VIDEO, 0}}, {"videos", {GROUP_VIDEO, 0}},
++    {"movie", {GROUP_VIDEO, 0}}, {"movies", {GROUP_VIDEO, 0}},
++    {"clip", {GROUP_VIDEO, 0}}, {"clips", {GROUP_VIDEO, 0}},
++    {"audio", {GROUP_MUSIC, 0}}, {"music", {GROUP_MUSIC, 0}},
++    {"song", {GROUP_MUSIC, 0}}, {"songs", {GROUP_MUSIC, 0}},
++    {"recording", {GROUP_MUSIC, 0}}, {"recordings", {GROUP_MUSIC, 0}},
++};
++
++/* Words that only make the sentence read naturally. */
++static const char *const filler_words[] = {
++    "that", "the", "a", "an", "my", "me", "i", "from", "in", "during", "of", "file", "files",
++    "find", "show", "edited", "modified", "changed", "made", "saved", "opened", "downloaded",
++    "created", "last", "and", "all", "some", "any", "for", "to", "were", "was", "have", "had",
++    "get", NULL
++};
++
++typedef enum
++{
++    PHRASE_LAST_N,
++    PHRASE_PAST_UNIT,
++    PHRASE_TODAY,
++    PHRASE_YESTERDAY,
++    PHRASE_THIS_WEEK,
++    PHRASE_LAST_WEEK,
++    PHRASE_THIS_MONTH,
++    PHRASE_LAST_MONTH,
++    PHRASE_THIS_YEAR,
++    PHRASE_LAST_YEAR,
++    PHRASE_N_AGO,
++    N_PHRASES
++} Phrase;
++
++/* Longer phrases first: "last 7 days" must win over "last". */
++static const char *const phrase_patterns[N_PHRASES] = {
++    "\\b(?:in |from |during )?(?:the )?(?:last|past|previous) (\\d+) (day|week|month|year)s?\\b",
++    "\\b(?:the )?past (day|week|month|year)\\b",
++    "\\btoday\\b",
++    "\\byesterday\\b",
++    "\\bthis week\\b",
++    "\\blast week\\b",
++    "\\bthis month\\b",
++    "\\blast month\\b",
++    "\\bthis year\\b",
++    "\\blast year\\b",
++    "\\b(\\d+) (day|week|month|year)s? ago\\b",
++};
++
++static GRegex *phrase_regexes[N_PHRASES];
++
++static void
++ensure_regexes (void)
++{
++    static gsize initialized = 0;
++
++    if (g_once_init_enter (&initialized))
++    {
++        for (int i = 0; i < N_PHRASES; i++)
++        {
++            phrase_regexes[i] = g_regex_new (phrase_patterns[i], G_REGEX_OPTIMIZE, 0, NULL);
++        }
++        g_once_init_leave (&initialized, 1);
++    }
++}
++
++static GDateTime *
++day_start (GDateTime *d)
++{
++    return g_date_time_new_local (g_date_time_get_year (d), g_date_time_get_month (d),
++                                  g_date_time_get_day_of_month (d), 0, 0, 0);
++}
++
++static GDateTime *
++minus_units (GDateTime *day, int n, const char *unit)
++{
++    if (g_str_equal (unit, "day"))
++    {
++        return g_date_time_add_days (day, -n);
++    }
++    if (g_str_equal (unit, "week"))
++    {
++        return g_date_time_add_days (day, -7 * n);
++    }
++    if (g_str_equal (unit, "month"))
++    {
++        return g_date_time_add_months (day, -n);
++    }
++    return g_date_time_add_years (day, -n);
++}
++
++static gboolean
++is_filler (const char *word)
++{
++    for (int i = 0; filler_words[i] != NULL; i++)
++    {
++        if (g_str_equal (word, filler_words[i]))
++        {
++            return TRUE;
++        }
++    }
++    return FALSE;
++}
++
++static const KindWord *
++find_kind (const char *word)
++{
++    for (gsize i = 0; i < G_N_ELEMENTS (kind_words); i++)
++    {
++        if (g_str_equal (word, kind_words[i].word))
++        {
++            return &kind_words[i];
++        }
++    }
++    return NULL;
++}
++
++/* Trim non-alphanumeric characters from both ends; keep the word only when
++ * what is left is made of letters, digits and . _ - (safe to search for). */
++static char *
++clean_word (const char *raw)
++{
++    const char *start = raw;
++    const char *end = raw + strlen (raw);
++
++    while (start < end && !g_unichar_isalnum (g_utf8_get_char (start)))
++    {
++        start = g_utf8_next_char (start);
++    }
++    while (end > start)
++    {
++        const char *prev = g_utf8_prev_char (end);
++        if (g_unichar_isalnum (g_utf8_get_char (prev)))
++        {
++            break;
++        }
++        end = prev;
++    }
++    if (end <= start)
++    {
++        return NULL;
++    }
++    for (const char *p = start; p < end; p = g_utf8_next_char (p))
++    {
++        gunichar c = g_utf8_get_char (p);
++        if (!g_unichar_isalnum (c) && c != '.' && c != '_' && c != '-')
++        {
++            return NULL;
++        }
++    }
++    return g_strndup (start, end - start);
++}
++
++/* Lower case, with runs of white space collapsed to one space. */
++static char *
++normalize_text (const char *text)
++{
++    g_autofree char *down = g_utf8_strdown (text, -1);
++    g_auto (GStrv) parts = g_strsplit_set (down, " \t\r\n", -1);
++    g_autoptr (GPtrArray) kept = g_ptr_array_new ();
++
++    for (int i = 0; parts[i] != NULL; i++)
++    {
++        if (*parts[i] != '\0')
++        {
++            g_ptr_array_add (kept, parts[i]);
++        }
++    }
++    g_ptr_array_add (kept, NULL);
++    return g_strjoinv (" ", (char **) kept->pdata);
++}
++
++gboolean
++parcher_natural_search_parse (const char  *text,
++                              GDateTime   *now,
++                              char       **remaining_text,
++                              GArray     **groups,
++                              GDateTime  **from,
++                              GDateTime  **to)
++{
++    g_autofree char *lower = NULL;
++    g_autofree char *rest = NULL;
++    g_autoptr (GDateTime) today = NULL;
++    GDateTime *range_from = NULL;
++    GDateTime *range_to = NULL;
++    g_auto (GStrv) tokens = NULL;
++    g_autoptr (GPtrArray) words = NULL;
++    g_autoptr (GArray) found_groups = NULL;
++
++    g_return_val_if_fail (text != NULL && now != NULL, FALSE);
++
++    lower = normalize_text (text);
++    if (g_utf8_strlen (lower, -1) < 3)
++    {
++        return FALSE;
++    }
++
++    ensure_regexes ();
++    today = day_start (now);
++
++    rest = g_strdup (lower);
++    for (int i = 0; i < N_PHRASES && range_from == NULL; i++)
++    {
++        g_autoptr (GMatchInfo) info = NULL;
++        g_autofree char *num = NULL;
++        g_autofree char *unit = NULL;
++        int start;
++        int end;
++
++        if (phrase_regexes[i] == NULL || !g_regex_match (phrase_regexes[i], rest, 0, &info))
++        {
++            continue;
++        }
++
++        switch ((Phrase) i)
++        {
++            case PHRASE_LAST_N:
++                num = g_match_info_fetch (info, 1);
++                unit = g_match_info_fetch (info, 2);
++                range_from = minus_units (today, atoi (num), unit);
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_PAST_UNIT:
++                unit = g_match_info_fetch (info, 1);
++                range_from = minus_units (today, 1, unit);
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_TODAY:
++                range_from = g_date_time_ref (today);
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_YESTERDAY:
++                range_from = g_date_time_add_days (today, -1);
++                range_to = g_date_time_ref (range_from);
++                break;
++
++            case PHRASE_THIS_WEEK:
++                range_from = g_date_time_add_days (today, -(g_date_time_get_day_of_week (today) - 1));
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_LAST_WEEK:
++            {
++                g_autoptr (GDateTime) monday = g_date_time_add_days (today, -(g_date_time_get_day_of_week (today) - 1));
++                range_from = g_date_time_add_days (monday, -7);
++                range_to = g_date_time_add_days (monday, -1);
++                break;
++            }
++
++            case PHRASE_THIS_MONTH:
++                range_from = g_date_time_new_local (g_date_time_get_year (today), g_date_time_get_month (today), 1, 0, 0, 0);
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_LAST_MONTH:
++            {
++                g_autoptr (GDateTime) first = g_date_time_new_local (g_date_time_get_year (today), g_date_time_get_month (today), 1, 0, 0, 0);
++                range_from = g_date_time_add_months (first, -1);
++                range_to = g_date_time_add_days (first, -1);
++                break;
++            }
++
++            case PHRASE_THIS_YEAR:
++                range_from = g_date_time_new_local (g_date_time_get_year (today), 1, 1, 0, 0, 0);
++                range_to = g_date_time_ref (today);
++                break;
++
++            case PHRASE_LAST_YEAR:
++            {
++                g_autoptr (GDateTime) jan1 = g_date_time_new_local (g_date_time_get_year (today), 1, 1, 0, 0, 0);
++                range_from = g_date_time_add_years (jan1, -1);
++                range_to = g_date_time_add_days (jan1, -1);
++                break;
++            }
++
++            case PHRASE_N_AGO:
++                num = g_match_info_fetch (info, 1);
++                unit = g_match_info_fetch (info, 2);
++                range_from = minus_units (today, atoi (num), unit);
++                range_to = g_date_time_ref (range_from);
++                break;
++
++            default:
++                break;
++        }
++
++        if (range_from != NULL && g_match_info_fetch_pos (info, 0, &start, &end))
++        {
++            g_autofree char *before = g_strndup (rest, start);
++            g_autofree char *after = g_strdup (rest + end);
++            g_free (rest);
++            rest = g_strconcat (before, " ", after, NULL);
++        }
++    }
++
++    if (range_from == NULL)
++    {
++        return FALSE;
++    }
++
++    words = g_ptr_array_new_with_free_func (g_free);
++    found_groups = g_array_new (FALSE, FALSE, sizeof (guint));
++    tokens = g_strsplit (rest, " ", -1);
++    for (int i = 0; tokens[i] != NULL; i++)
++    {
++        g_autofree char *word = clean_word (tokens[i]);
++        const KindWord *kind;
++
++        if (word == NULL || is_filler (word))
++        {
++            continue;
++        }
++        kind = find_kind (word);
++        if (kind != NULL)
++        {
++            for (int g = 0; g < 2 && kind->groups[g] != 0; g++)
++            {
++                gboolean known = FALSE;
++                for (guint k = 0; k < found_groups->len; k++)
++                {
++                    known |= g_array_index (found_groups, guint, k) == kind->groups[g];
++                }
++                if (!known)
++                {
++                    g_array_append_val (found_groups, kind->groups[g]);
++                }
++            }
++        }
++        else
++        {
++            g_ptr_array_add (words, g_steal_pointer (&word));
++        }
++    }
++    g_ptr_array_add (words, NULL);
++
++    if (remaining_text != NULL)
++    {
++        *remaining_text = g_strjoinv (" ", (char **) words->pdata);
++    }
++    if (groups != NULL)
++    {
++        *groups = g_steal_pointer (&found_groups);
++    }
++    if (from != NULL)
++    {
++        *from = range_from;
++    }
++    else
++    {
++        g_date_time_unref (range_from);
++    }
++    if (to != NULL)
++    {
++        *to = range_to;
++    }
++    else
++    {
++        g_date_time_unref (range_to);
++    }
++    return TRUE;
++}
+diff --git a/src/parcher-natural-search.h b/src/parcher-natural-search.h
+new file mode 100644
+index 0000000..d933aee
+--- /dev/null
++++ b/src/parcher-natural-search.h
+@@ -0,0 +1,33 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * Natural-language file search for Parcher (ParchaOS ticket #120).
++ *
++ * Reads search text such as "pdf from last week" or "invoice photos
++ * yesterday" and turns it into a date range, file-type groups and the
++ * remaining name words. It has no dependency on the rest of Files, so the
++ * tests in packaging/parcher/tests/ build it on its own.
++ */
++#pragma once
++
++#include <glib.h>
++
++/**
++ * parcher_natural_search_parse:
++ * @text: the text typed in the search entry
++ * @now: the current time (tests pass a fixed one)
++ * @remaining_text: (out): the words left after the phrases are removed
++ * @groups: (out): a GArray of guint, the file-type group indexes named
++ *   (indexes of Files' mime type groups; empty when no type was named)
++ * @from: (out): first day of the range (local midnight)
++ * @to: (out): last day of the range, inclusive (local midnight)
++ *
++ * Returns TRUE only when the text names a time range ("last week",
++ * "yesterday", "3 days ago", "past 2 months", ...). Ordinary searches
++ * return FALSE and are left untouched.
++ */
++gboolean parcher_natural_search_parse (const char  *text,
++                                       GDateTime   *now,
++                                       char       **remaining_text,
++                                       GArray     **groups,
++                                       GDateTime  **from,
++                                       GDateTime  **to);
