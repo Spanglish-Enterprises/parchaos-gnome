@@ -97,10 +97,21 @@ echo "== GNOME Shell extension JavaScript syntax =="
 # named .mjs to get the same rules the Shell applies. The smoke-test extension
 # is included: a syntax error there (`const interface = ...`) meant the whole
 # smoke test silently never ran, and this check used to skip scripts/.
+# Without node, gjs (part of GNOME) parses the same code as an ES module.
 js_tmp=$(mktemp -d)
-while IFS= read -r js; do
-    cp "$js" "$js_tmp/check.mjs"
-    node --check "$js_tmp/check.mjs" 2>&1 | head -5 | grep . && fail "$js"
+cat > "$js_tmp/parse.js" <<'JS'
+const text = new TextDecoder().decode(imports.gi.GLib.file_get_contents(ARGV[0])[1]);
+try { Reflect.parse(text, {target: 'module'}); } catch (e) { print(`${ARGV[0]}: ${e.message}`); }
+JS
+have_js=1
+command -v node >/dev/null 2>&1 || command -v gjs >/dev/null 2>&1 || { echo "skipped (needs node or gjs)"; have_js=0; }
+while [ "$have_js" = 1 ] && IFS= read -r js; do
+    if command -v node >/dev/null 2>&1; then
+        cp "$js" "$js_tmp/check.mjs"
+        node --check "$js_tmp/check.mjs" 2>&1 | head -5 | grep . && fail "$js"
+    else
+        gjs "$js_tmp/parse.js" "$js" 2>&1 | head -5 | grep . && fail "$js"
+    fi
 done < <(find packaging scripts/smoke \( -path 'packaging/*/files/*' -o -path 'scripts/smoke/*' \) -name '*.js')
 rm -rf "$js_tmp"
 
