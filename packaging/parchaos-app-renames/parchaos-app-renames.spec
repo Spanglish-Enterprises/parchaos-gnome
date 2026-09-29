@@ -30,7 +30,7 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail, Parcha Backup)
 
 License:        GPL-3.0-or-later
@@ -42,6 +42,8 @@ Requires(post): loupe
 Requires(post): gnome-clocks
 Requires(post): geary
 Requires(post): deja-dup
+# Deja Dup uses restic by default, and Fedora's package does not require it.
+Requires:       restic
 Requires(post): sed
 
 %description
@@ -112,6 +114,10 @@ update-desktop-database %{_datadir}/applications &>/dev/null || true
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-9
+- Ticket #116: depend on restic. Deja Dup uses it by default since 47 but
+  Fedora's package only requires duplicity, so backups had no engine on a
+  plain install.
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-8
 - Ticket #116: Deja Dup (GNOME's Backups app, which uses restic) is shown
   as "Parcha Backup", with its translated names dropped like the other
