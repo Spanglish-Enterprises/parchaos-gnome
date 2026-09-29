@@ -112,22 +112,23 @@ class Window(Adw.ApplicationWindow):
         for row in (self._focus_start_row, self._focus_end_row):
             switch.bind_property('active', row, 'sensitive', GObject.BindingFlags.SYNC_CREATE)
             group.add(row)
+        self._focus_settings = settings
         self._update_focus_hint()
         return group
 
     def _update_focus_hint(self):
         try:
-            start = self._focus_start_row.get_subtitle()
-            end = self._focus_end_row.get_subtitle()
+            start = self._focus_settings.get_string('focus-start')
+            end = self._focus_settings.get_string('focus-end')
         except AttributeError:
             return
         if start and end and start == end:
-            self._focus_start_row.set_subtitle(f'{start} (same as end — schedule disabled)')
+            self._focus_start_row.set_subtitle('Schedule disabled — start time equals end time')
         else:
-            self._focus_start_row.set_subtitle('From')
+            self._focus_start_row.set_subtitle('')
 
     def _time_row(self, settings, key, title):
-        row = Adw.ActionRow(title=title, subtitle=title)
+        row = Adw.ActionRow(title=title)
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
         hours = Gtk.SpinButton.new_with_range(0, 23, 1)
         minutes = Gtk.SpinButton.new_with_range(0, 59, 1)

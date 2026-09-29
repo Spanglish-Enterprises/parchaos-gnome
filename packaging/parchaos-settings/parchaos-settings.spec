@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 1.0.0-13
+- Focus times: fix _update_focus_hint to read stored time strings rather
+  than row subtitles (ticket #70).
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-12
 - Focus times: minute step is 1 (was 5), no write-back on load, and a
   hint appears when start equals end (which disables the schedule).
