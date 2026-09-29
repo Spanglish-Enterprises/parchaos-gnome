@@ -22,3 +22,14 @@ Instead of building a standalone application, this feature will be integrated di
 ## 3. UI Design Principles
 - **Simple View**: A clean list of installed/running apps with a simple ON/OFF toggle switch for "Network Access".
 - **Advanced View**: A collapsible section for power users exposing the underlying `firewalld` zones, specific ports, and protocols if they wish to audit the raw rules.
+
+## 4. As built (parchaos-settings 1.0.0-15): the design changed
+
+The first draft (section 2) used `firewalld` for apps that are not Flatpaks. That cannot work: `firewalld` filters by zone, port and service and has no way to tell which app a connection came from. It is also not installed on the ISO. What shipped instead:
+
+- **Where:** a Privacy page in ParchaOS Settings (not Parcha Controls; a list of dozens of apps with switches suits a window better than the top-bar panel). Each app has a switch, "Network access", and a search box filters the list.
+- **Flatpak apps:** Flatpak's own permission. Blocking adds `!network` to the app's user override (`~/.local/share/flatpak/overrides/<app-id>`), which Flatpak reads the next time the app starts. Other overrides in that file are kept.
+- **Other apps:** a per-user copy of the app's launcher that starts it with bubblewrap in a network namespace with no interfaces (`bwrap --dev-bind / / --unshare-net`), so it can reach nothing, not even the local network. The copy turns off D-Bus activation (otherwise GNOME ignores `Exec`) and carries `X-ParchaOS-NetworkBlocked=true`. Allowing removes the copy; a launcher the user made themselves is never replaced or removed.
+- **Timing:** a change applies the next time the app starts. An app that is already running keeps its network, and an app that hands off to an already-running copy of itself stays as that copy was. The page says so.
+- **Helper:** `/usr/libexec/parchaos-app-network` (`list`, `set ID allow|block`, `refresh`), tested by `packaging/parchaos-settings/tests/test_app_network.py`, which includes a check that a blocked command sees only the loopback interface. A user service runs `refresh` at login so blocked launchers follow app updates.
+- **Not covered:** apps started some other way than their launcher (a terminal, a script, autostart entries that do not use the launcher); blocking only some destinations or ports; the Advanced view of raw firewalld rules from section 3 (firewalld is not part of the image).

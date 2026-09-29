@@ -4,6 +4,8 @@
 # Settings app has no place for. Original code for ParchaOS,
 # GPL-3.0-or-later.
 
+import json
+import os
 import subprocess
 import sys
 
@@ -15,6 +17,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
 
 APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
+APP_NETWORK = '/usr/libexec/parchaos-app-network'
 
 
 def keyboard_style():
@@ -43,6 +46,7 @@ class Window(Adw.ApplicationWindow):
 
         self.add(self._general_page())
         self.add(self._appearance_page())
+        self.add(self._privacy_page())
 
         page = Adw.PreferencesPage(title='Keyboard',
                                    icon_name='input-keyboard-symbolic')
@@ -244,6 +248,95 @@ class Window(Adw.ApplicationWindow):
         self._desktop.connect('changed::folder-colour', load)
         group.add(row)
         return group
+
+    # Which apps may use the network (ticket #126). The list comes from
+    # parchaos-app-network; a change applies the next time the app starts.
+    def _privacy_page(self):
+        page = Adw.PreferencesPage(title='Privacy',
+                                   icon_name='preferences-system-privacy-symbolic')
+        self._net_group = Adw.PreferencesGroup(
+            title='Network access',
+            description='Turn a switch off to keep that app off the network. '
+                        'It takes effect the next time the app starts. '
+                        'A blocked app cannot reach the internet or your local network.')
+        search = Gtk.SearchEntry(placeholder_text='Find an app', width_chars=18,
+                                 valign=Gtk.Align.START)
+        self._net_group.set_header_suffix(search)
+        page.add(self._net_group)
+        self._net_rows = []
+        self._net_placeholder = Adw.ActionRow(title='Loading apps...')
+        self._net_group.add(self._net_placeholder)
+        search.connect('search-changed', self._on_net_search)
+        if not os.access(APP_NETWORK, os.X_OK):
+            self._net_placeholder.set_title('Not available')
+            self._net_placeholder.set_subtitle('The network access helper is not installed.')
+            return page
+        try:
+            proc = Gio.Subprocess.new([APP_NETWORK, 'list'],
+                                      Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE)
+            proc.communicate_utf8_async(None, None, self._on_net_list)
+        except GLib.Error as err:
+            self._net_placeholder.set_title('Could not list apps')
+            self._net_placeholder.set_subtitle(err.message)
+        return page
+
+    def _on_net_list(self, proc, result):
+        try:
+            _ok, out, _err = proc.communicate_utf8_finish(result)
+            apps = json.loads(out or '[]')
+        except (GLib.Error, ValueError) as err:
+            self._net_placeholder.set_title('Could not list apps')
+            self._net_placeholder.set_subtitle(str(err))
+            return
+        self._net_group.remove(self._net_placeholder)
+        for app in apps:
+            row = Adw.SwitchRow(title=GLib.markup_escape_text(app['name']),
+                                subtitle='Flatpak app' if app['kind'] == 'flatpak' else 'App',
+                                active=not app['blocked'])
+            row.app = app
+            row.connect('notify::active', self._on_net_toggled)
+            self._net_group.add(row)
+            self._net_rows.append(row)
+
+    def _on_net_search(self, entry):
+        needle = entry.get_text().strip().lower()
+        for row in self._net_rows:
+            row.set_visible(needle in row.app['name'].lower())
+
+    def _on_net_toggled(self, row, _pspec):
+        app = row.app
+        action = 'allow' if row.get_active() else 'block'
+        try:
+            proc = Gio.Subprocess.new([APP_NETWORK, 'set', app['id'], action],
+                                      Gio.SubprocessFlags.STDERR_PIPE)
+            proc.communicate_utf8_async(None, None, self._on_net_set, (row, action))
+        except GLib.Error as err:
+            self._net_failed(row, action, err.message)
+
+    def _on_net_set(self, proc, result, data):
+        row, action = data
+        try:
+            _ok, _out, err = proc.communicate_utf8_finish(result)
+        except GLib.Error as e:
+            self._net_failed(row, action, e.message)
+            return
+        if proc.get_exit_status() != 0:
+            self._net_failed(row, action, (err or '').strip() or 'The change was not saved.')
+            return
+        name = row.app['name']
+        if action == 'block':
+            self.add_toast(Adw.Toast(title=f'{name} is blocked from the network. '
+                                           'Restart it for this to apply.'))
+        else:
+            self.add_toast(Adw.Toast(title=f'{name} can use the network again. '
+                                           'Restart it for this to apply.'))
+
+    def _net_failed(self, row, action, message):
+        # Put the switch back to what is really saved.
+        row.handler_block_by_func(self._on_net_toggled)
+        row.set_active(action != 'allow')
+        row.handler_unblock_by_func(self._on_net_toggled)
+        self.add_toast(Adw.Toast(title=message))
 
     def _sync_style(self):
         current = self._desktop.get_string('style')

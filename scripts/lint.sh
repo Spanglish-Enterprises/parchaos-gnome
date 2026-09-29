@@ -56,6 +56,12 @@ for path in sys.argv[1:]:
 sys.exit(bad)
 PY
 
+echo "== Python unit tests =="
+for t in packaging/*/tests/test_*.py; do
+    [ -e "$t" ] || continue
+    python3 "$t" || fail "$t"
+done
+
 echo "== file-type icon mapping =="
 python3 -B packaging/parchaos-icon-theme/parchaos-icons/mime-map.py --self-test || fail mime-map
 

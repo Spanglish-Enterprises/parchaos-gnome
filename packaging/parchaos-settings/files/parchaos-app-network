@@ -1,0 +1,245 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-app-network: turn an app's network access off and on for the
+# current user (ticket #126).
+#
+#   parchaos-app-network list            JSON list of apps and their state
+#   parchaos-app-network set ID allow    let the app use the network (default)
+#   parchaos-app-network set ID block    keep the app off the network
+#   parchaos-app-network refresh         rebuild the launchers of blocked apps
+#                                        after their package was updated
+#
+# How each kind of app is blocked:
+#   * Flatpak apps: Flatpak's own permission. "block" adds !network to the
+#     app's user override, which Flatpak reads the next time the app starts.
+#   * Other apps: a per-user copy of the app's launcher that starts it in a
+#     network namespace with no interfaces (bubblewrap --unshare-net), so it
+#     can reach nothing, not even the local network. The copy is marked with
+#     X-ParchaOS-NetworkBlocked=true and removed again on "allow".
+#
+# Either way the change applies the next time the app starts; an app that is
+# already running keeps the network it has. firewalld cannot do this: it
+# filters by zone and port and cannot tell which app a connection came from.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import configparser
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+MARKER = 'X-ParchaOS-NetworkBlocked'
+BWRAP = 'bwrap --dev-bind / / --unshare-net --die-with-parent'
+
+
+def applications_dir():
+    base = os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share')
+    return os.path.join(base, 'applications')
+
+
+def flatpak_overrides_dir():
+    base = os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share')
+    return os.path.join(base, 'flatpak', 'overrides')
+
+
+def blocked_launcher(text):
+    """Return a launcher (desktop entry text) that starts the app with no network.
+
+    Every Exec= line, the main one and each action's, gets the bubblewrap
+    prefix. DBusActivatable is forced off: with it on, GNOME starts the app
+    through D-Bus and ignores Exec, so the block would silently do nothing.
+    """
+    out = []
+    section = None
+    marked = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('[') and stripped.endswith(']'):
+            if section == 'Desktop Entry' and not marked:
+                out.append(f'{MARKER}=true')
+                marked = True
+            section = stripped[1:-1]
+            out.append(line)
+            continue
+        if section is not None and (section == 'Desktop Entry' or section.startswith('Desktop Action')):
+            if stripped.startswith('Exec=') and not stripped.startswith(f'Exec={BWRAP} '):
+                out.append(f'Exec={BWRAP} ' + stripped[len('Exec='):])
+                continue
+            if stripped.startswith('DBusActivatable='):
+                continue
+            if stripped.startswith(f'{MARKER}='):
+                continue
+        out.append(line)
+    if section == 'Desktop Entry' and not marked:
+        out.append(f'{MARKER}=true')
+    if not any(l.startswith('DBusActivatable=') for l in out):
+        # Add the key inside [Desktop Entry] (the first section).
+        for i, l in enumerate(out):
+            if l.strip() == '[Desktop Entry]':
+                out.insert(i + 1, 'DBusActivatable=false')
+                break
+    return '\n'.join(out) + '\n'
+
+
+def is_blocked_launcher(path):
+    try:
+        with open(path, encoding='utf-8') as f:
+            return any(l.strip() == f'{MARKER}=true' for l in f)
+    except OSError:
+        return False
+
+
+def system_launcher(desktop_id):
+    """Path of the app's launcher outside the user's own applications dir."""
+    user_dir = os.path.realpath(applications_dir())
+    dirs = [d for d in (os.environ.get('XDG_DATA_DIRS') or '/usr/local/share:/usr/share').split(':') if d]
+    for d in dirs:
+        path = os.path.join(d, 'applications', desktop_id)
+        if os.path.isfile(path) and not os.path.realpath(path).startswith(user_dir):
+            return path
+    return None
+
+
+def set_native(desktop_id, block):
+    if '/' in desktop_id or not desktop_id.endswith('.desktop'):
+        raise ValueError(f'not a launcher id: {desktop_id}')
+    target = os.path.join(applications_dir(), desktop_id)
+    if not block:
+        # Only remove a launcher this tool made; a user's own is never touched.
+        if is_blocked_launcher(target):
+            os.remove(target)
+        return
+    if shutil.which('bwrap') is None:
+        raise RuntimeError('bubblewrap is not installed')
+    source = system_launcher(desktop_id)
+    if source is None:
+        raise RuntimeError(f'no launcher found for {desktop_id}')
+    if os.path.exists(target) and not is_blocked_launcher(target):
+        raise RuntimeError(f'{desktop_id} already has a launcher of your own; not replacing it')
+    with open(source, encoding='utf-8') as f:
+        text = f.read()
+    os.makedirs(applications_dir(), exist_ok=True)
+    tmp = target + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        f.write(blocked_launcher(text))
+    os.replace(tmp, target)
+
+
+def _read_overrides(app_id):
+    path = os.path.join(flatpak_overrides_dir(), app_id)
+    parser = configparser.RawConfigParser(delimiters=('=',), interpolation=None)
+    parser.optionxform = str
+    parser.read(path, encoding='utf-8')
+    return path, parser
+
+
+def flatpak_blocked(app_id):
+    _path, parser = _read_overrides(app_id)
+    shared = parser.get('Context', 'shared', fallback='')
+    return '!network' in [s for s in shared.split(';') if s]
+
+
+def set_flatpak(app_id, block):
+    if '/' in app_id or '..' in app_id:
+        raise ValueError(f'not an app id: {app_id}')
+    path, parser = _read_overrides(app_id)
+    shared = [s for s in parser.get('Context', 'shared', fallback='').split(';') if s]
+    shared = [s for s in shared if s not in ('network', '!network')]
+    if block:
+        shared.append('!network')
+    if shared:
+        if not parser.has_section('Context'):
+            parser.add_section('Context')
+        parser.set('Context', 'shared', ';'.join(shared) + ';')
+    elif parser.has_section('Context'):
+        parser.remove_option('Context', 'shared')
+        if not parser.options('Context'):
+            parser.remove_section('Context')
+    if not parser.sections():
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        parser.write(f, space_around_delimiters=False)
+
+
+def flatpak_apps():
+    try:
+        out = subprocess.run(['flatpak', 'list', '--app', '--columns=application,name'],
+                             capture_output=True, text=True, timeout=20).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    apps = []
+    for line in out.splitlines():
+        app_id, _sep, name = line.partition('\t')
+        if app_id:
+            apps.append({'id': app_id, 'name': name or app_id, 'kind': 'flatpak',
+                         'blocked': flatpak_blocked(app_id)})
+    return apps
+
+
+def native_apps():
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    apps = []
+    for info in Gio.AppInfo.get_all():
+        if not info.should_show() or not info.get_id():
+            continue
+        filename = getattr(info, 'get_filename', lambda: None)() or ''
+        if '/flatpak/exports/' in filename:
+            continue
+        desktop_id = info.get_id()
+        apps.append({'id': desktop_id, 'name': info.get_display_name(), 'kind': 'native',
+                     'blocked': is_blocked_launcher(os.path.join(applications_dir(), desktop_id))})
+    return apps
+
+
+def refresh():
+    """Rebuild each blocked launcher from the app's current launcher."""
+    directory = applications_dir()
+    if not os.path.isdir(directory):
+        return
+    for name in sorted(os.listdir(directory)):
+        path = os.path.join(directory, name)
+        if name.endswith('.desktop') and is_blocked_launcher(path):
+            source = system_launcher(name)
+            if source is None:
+                continue  # the app was removed; leave the copy for the user to see
+            with open(source, encoding='utf-8') as f:
+                text = f.read()
+            with open(path + '.tmp', 'w', encoding='utf-8') as f:
+                f.write(blocked_launcher(text))
+            os.replace(path + '.tmp', path)
+
+
+def main(argv):
+    if len(argv) >= 2 and argv[1] == 'list':
+        apps = flatpak_apps() + native_apps()
+        apps.sort(key=lambda a: a['name'].lower())
+        json.dump(apps, sys.stdout)
+        return 0
+    if len(argv) == 4 and argv[1] == 'set' and argv[3] in ('allow', 'block'):
+        block = argv[3] == 'block'
+        app_id = argv[2]
+        try:
+            if app_id.endswith('.desktop'):
+                set_native(app_id, block)
+            else:
+                set_flatpak(app_id, block)
+        except (ValueError, RuntimeError, OSError) as err:
+            print(f'parchaos-app-network: {err}', file=sys.stderr)
+            return 1
+        return 0
+    if len(argv) == 2 and argv[1] == 'refresh':
+        refresh()
+        return 0
+    print(__doc__ if False else 'usage: parchaos-app-network list | set ID allow|block | refresh', file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
