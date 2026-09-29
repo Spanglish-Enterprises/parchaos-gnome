@@ -16,6 +16,7 @@
 # Original code for ParchaOS, GPL-3.0-or-later.
 
 import os
+import re
 import subprocess
 import sys
 
@@ -41,6 +42,24 @@ def settings(schema_id):
 
 def wanted_theme(dark, classic):
     return f'ParchaOS-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
+
+
+ICON_VARIANT = re.compile(r'^ParchaOS-(dark|light)-[A-Z][a-z]+$')
+
+
+def wanted_icon_theme(dark, colour, current):
+    """The icon theme that matches the light/dark scheme and folder colour.
+
+    Returns None when nothing should change: an account that uses another
+    icon theme is left alone, and the default colour changes nothing unless
+    a colour variant is being switched off (ticket #79).
+    """
+    base = 'ParchaOS-dark' if dark else 'ParchaOS-light'
+    if colour == 'passion':
+        return base if ICON_VARIANT.match(current) else None
+    if not current.startswith('ParchaOS'):
+        return None
+    return f'{base}-{colour.capitalize()}'
 
 
 def available(name, roots):
@@ -81,6 +100,17 @@ class ThemeSync:
         self.interface.connect('changed::color-scheme', lambda *_: self.apply())
         if self.desktop is not None:
             self.desktop.connect('changed::style', lambda *_: self.apply())
+            if 'folder-colour' in self.desktop.props.settings_schema.list_keys():
+                self.desktop.connect('changed::folder-colour', lambda *_: self.apply())
+
+    def _sync_icon_theme(self, dark):
+        if self.desktop is None or 'folder-colour' not in self.desktop.props.settings_schema.list_keys():
+            return
+        current = self.interface.get_string('icon-theme')
+        wanted = wanted_icon_theme(dark, self.desktop.get_string('folder-colour'), current)
+        if wanted and wanted != current and available(wanted, [ICONS_DIR]):
+            self.interface.set_string('icon-theme', wanted)
+            Gio.Settings.sync()
 
     def apply(self):
         # #100 migration first, so it runs even when the wanted theme is
@@ -101,6 +131,7 @@ class ThemeSync:
             Gio.Settings.sync()
 
         dark = self.interface.get_string('color-scheme') == 'prefer-dark'
+        self._sync_icon_theme(dark)
         classic = self.desktop is not None and self.desktop.get_string('style') == 'classic'
         theme = wanted_theme(dark, classic)
         if not os.path.isdir(os.path.join(THEMES_DIR, theme)):

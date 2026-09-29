@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-14
+- Ticket #79: Appearance page gains a Folder colour choice (shown when the
+  desktop schema has the folder-colour key).
 * Mon Sep 28 2026 ParchaOS packaging - 1.0.0-13
 - Focus times: fix _update_focus_hint to read stored time strings rather
   than row subtitles (ticket #70).

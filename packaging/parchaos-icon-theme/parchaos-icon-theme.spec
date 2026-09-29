@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        19%{?dist}
+Release:        20%{?dist}
 Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
@@ -104,6 +104,9 @@ Source59:       parchaos-mime-database.svg
 # symbolic.svg is a plain 3x3 dot grid, byte-identical to Adwaita's own
 # (not an Apple copy, just not distinctly ParchaOS).
 Source60:       parchaos-launcher-symbolic.svg
+# Folder colour variants (ticket #79): the generator recolours the folders and
+# the trash in the build, so the variants are never committed as art.
+Source72:       generate.py
 
 BuildArch:      noarch
 BuildRequires:  python3
@@ -282,10 +285,61 @@ grep -q '^Inherits=Adwaita,hicolor' %{buildroot}%{_datadir}/icons/ParchaOS/index
 # desktop's cursor designs, so they aren't shipped.
 rm -rf %{buildroot}%{_datadir}/icons/ParchaOS*/cursors
 
+# Folder colour variants (ticket #79). Each is a small theme that holds only
+# recoloured folders and trash and inherits everything else from the dark or
+# light base, so switching colour never changes the rest of the icons.
+python3 %{SOURCE72} --variants variants
+folder_names="folder folder-open folder-documents folder-download folder-music folder-images folder-videos user-desktop user-home folder-templates folder-public folder-html user-trash user-trash-full"
+for pair in folder:parchaos-folder folder-open:parchaos-folder-open folder-documents:parchaos-folder-documents \
+            folder-download:parchaos-folder-download folder-music:parchaos-folder-music folder-images:parchaos-folder-images \
+            folder-videos:parchaos-folder-videos user-desktop:parchaos-folder-desktop user-home:parchaos-folder-home \
+            folder-templates:parchaos-folder-templates folder-public:parchaos-folder-public folder-html:parchaos-folder-remote \
+            user-trash:parchaos-trash user-trash-full:parchaos-trash-full; do
+    echo "${pair%%%%:*} ${pair#*:}"
+done > variants/names.txt
+for base in dark light; do
+    for pal in berry sunny leaf ocean graphite; do
+        Pal=$(echo "${pal:0:1}" | tr a-z A-Z)${pal:1}
+        theme=ParchaOS-$base-$Pal
+        root=%{buildroot}%{_datadir}/icons/$theme
+        d=$root/places/scalable
+        mkdir -p "$d"
+        while read -r icon file; do
+            install -m 0644 "variants/$pal/$file.svg" "$d/$icon.svg"
+        done < variants/names.txt
+        # Names that are links to one of the folders in the base theme
+        # (default-folder, inode-directory, ...) follow the new colour.
+        basedir=%{buildroot}%{_datadir}/icons/ParchaOS-$base/places/scalable
+        for l in "$basedir"/*.svg; do
+            [ -L "$l" ] || continue
+            t=$(basename "$(readlink -f "$l")"); n=$(basename "$l")
+            case " $folder_names " in
+                *" ${t%%%%.svg} "*) [ -e "$d/$n" ] || ln -s "$t" "$d/$n" ;;
+            esac
+        done
+        printf '%%s\n' \
+            '[Icon Theme]' \
+            "Name=$theme" \
+            "Comment=ParchaOS $base icons with $Pal folders" \
+            "Inherits=ParchaOS-$base" \
+            'Directories=places/scalable' \
+            '' \
+            '[places/scalable]' \
+            'Context=Places' \
+            'Size=64' \
+            'MinSize=8' \
+            'MaxSize=512' \
+            'Type=Scalable' > "$root/index.theme"
+    done
+done
+
 # install.sh built icon-theme.cache before the edits above; rebuild it so
 # it matches what we actually ship.
 for theme in ParchaOS ParchaOS-dark ParchaOS-light; do
     gtk-update-icon-cache -f -q %{buildroot}%{_datadir}/icons/$theme
+done
+for theme in %{buildroot}%{_datadir}/icons/ParchaOS-*-*; do
+    gtk-update-icon-cache -f -q "$theme"
 done
 
 %files
@@ -294,6 +348,12 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-20
+- Ticket #79: folder colours. Ten small themes, ParchaOS-dark-<Colour> and
+  ParchaOS-light-<Colour> for Berry, Sunny, Leaf, Ocean and Graphite, hold
+  recoloured folders and trash and inherit the rest from the dark or light
+  base. Generated at build time from generate.py --variants; the default
+  (passion) art is unchanged.
 * Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-19
 - Rename installed icon theme directories from MacTahoe/MacTahoe-dark/
   MacTahoe-light to ParchaOS/ParchaOS-dark/ParchaOS-light (ticket #100).

@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        48%{?dist}
+Release:        49%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -103,7 +103,7 @@ Requires:       parcher
 Requires:       parchaos-dock
 Requires:       parchaos-global-menu
 Requires:       parchaos-gtk-theme
-Requires:       parchaos-icon-theme
+Requires:       parchaos-icon-theme >= 2026.09.23-20
 Requires:       parchaos-gnome-plymouth-theme
 Requires:       parchaos-gnome-wallpaper
 Requires:       parchaos-keyboard-remap
@@ -256,6 +256,11 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-49
+- Ticket #79: folder colours. New org.parchaos.desktop key folder-colour
+  (passion by default) and parchaos-theme-sync switches the icon theme to
+  the matching dark or light colour variant. The default colour changes
+  nothing for existing accounts.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-48
 - Ticket #124: clipboard history. Requires parchaos-clipboard and turns its
   extension on by default (existing accounts get it at next login through

@@ -248,6 +248,39 @@ FOLDER_GLYPHS = {
 }
 
 
+# Folder colour choices (ticket #79). "passion" is the shipped look; the
+# others recolour the same artwork. Values: gradient top, gradient bottom
+# (also the glyph accent), the darker back panel, the tab, and the trash lid.
+PASSION = {'top': '#a98cf6', 'bottom': '#7654dc', 'back': '#5b3fb0', 'tab': '#f2b632', 'lid': '#7a55d6'}
+PALETTES = {
+    'passion': PASSION,
+    'berry': {'top': '#f58aa0', 'bottom': '#d13a58', 'back': '#9c2340', 'tab': '#f2b632', 'lid': '#d13a58'},
+    'sunny': {'top': '#ffd966', 'bottom': '#e0a300', 'back': '#a87800', 'tab': '#7654dc', 'lid': '#b98600'},
+    'leaf': {'top': '#6fdcb0', 'bottom': '#2fbf8a', 'back': '#1f8a63', 'tab': '#f2b632', 'lid': '#1f8a63'},
+    'ocean': {'top': '#7ec4ff', 'bottom': '#3b82e0', 'back': '#2456a8', 'tab': '#f2b632', 'lid': '#2c6fd0'},
+    'graphite': {'top': '#b9bcc6', 'bottom': '#7c8190', 'back': '#565b69', 'tab': '#f2b632', 'lid': '#5d6272'},
+}
+TAB_PATH = '<path d="M76 108 h120 a20 20 0 0 1 16 8 l22 30 H48 V136 a28 28 0 0 1 28-28z" fill="#f2b632"/>'
+
+
+def recolor(svg, palette):
+    """Return the passion-coloured folder/trash SVG in another palette.
+
+    Only the folder's own colours change: the sun in the pictures glyph and
+    the white glyph shapes keep theirs.
+    """
+    p = PALETTES[palette]
+    if p is PASSION:
+        return svg
+    # Park the tab under a placeholder first: a palette's tab colour can
+    # equal another palette colour that the loop below rewrites.
+    svg = svg.replace(TAB_PATH, '@TAB@')
+    for old, new in ((PASSION['top'], p['top']), (PASSION['bottom'], p['bottom']),
+                     (PASSION['back'], p['back']), (PASSION['lid'], p['lid'])):
+        svg = svg.replace(old, new)
+    return svg.replace('@TAB@', TAB_PATH.replace('#f2b632', p['tab']))
+
+
 def folder(glyph, open_=False):
     back = ('<path d="M76 108 h120 a20 20 0 0 1 16 8 l22 30 h204 a28 28 0 0 1 28 28 v214 H48 V136 a28 28 0 0 1 28-28z" fill="#5b3fb0"/>'
             '<path d="M76 108 h120 a20 20 0 0 1 16 8 l22 30 H48 V136 a28 28 0 0 1 28-28z" fill="#f2b632"/>')
@@ -455,7 +488,26 @@ PLACES = {
     'parchaos-trash-full': (lambda: trash(True), ['user-trash-full']),
 }
 
+def write_variants(outdir):
+    """Write every folder and the trash in each non-default palette to
+    <outdir>/<palette>/<name>.svg (used by the icon-theme package build)."""
+    count = 0
+    for palette in PALETTES:
+        if palette == 'passion':
+            continue
+        os.makedirs(os.path.join(outdir, palette), exist_ok=True)
+        for name, (gen, _targets) in PLACES.items():
+            with open(os.path.join(outdir, palette, f'{name}.svg'), 'w') as f:
+                f.write(recolor(gen(), palette))
+            count += 1
+    print(f'wrote {count} colour variants')
+
+
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv) == 3 and sys.argv[1] == '--variants':
+        write_variants(sys.argv[2])
+        sys.exit(0)
     for name, (gen, _targets) in {**ICONS, **PLACES}.items():
         with open(os.path.join(HERE, f'{name}.svg'), 'w') as f:
             f.write(gen())

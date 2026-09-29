@@ -206,7 +206,44 @@ class Window(Adw.ApplicationWindow):
             check.connect('toggled', self._on_style_toggled, value)
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        if 'folder-colour' in schema.list_keys():
+            page.add(self._folder_colour_group())
         return page
+
+    FOLDER_COLOURS = [
+        ('passion', 'Passion'),
+        ('berry', 'Berry'),
+        ('sunny', 'Sunny'),
+        ('leaf', 'Leaf'),
+        ('ocean', 'Ocean'),
+        ('graphite', 'Graphite'),
+    ]
+
+    def _folder_colour_group(self):
+        group = Adw.PreferencesGroup(
+            title='Folder colour',
+            description='The colour of folders and the trash. Other icons stay as they are.')
+        row = Adw.ComboRow(title='Colour')
+        row.set_model(Gtk.StringList.new([name for _value, name in self.FOLDER_COLOURS]))
+        values = [value for value, _name in self.FOLDER_COLOURS]
+
+        def load(*_):
+            current = self._desktop.get_string('folder-colour')
+            if current in values and row.get_selected() != values.index(current):
+                row.set_selected(values.index(current))
+
+        def store(*_):
+            value = values[row.get_selected()]
+            if self._desktop.get_string('folder-colour') != value:
+                # parchaos-theme-sync (parchaos-desktop) switches the icon
+                # theme to the matching dark or light variant.
+                self._desktop.set_string('folder-colour', value)
+
+        load()
+        row.connect('notify::selected', store)
+        self._desktop.connect('changed::folder-colour', load)
+        group.add(row)
+        return group
 
     def _sync_style(self):
         current = self._desktop.get_string('style')

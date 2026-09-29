@@ -15,6 +15,22 @@
         "classic": calmer frosted surfaces, more opaque, with tighter corners.
       </description>
     </key>
+    <key name="folder-colour" type="s">
+      <choices>
+        <choice value="passion"/>
+        <choice value="berry"/>
+        <choice value="sunny"/>
+        <choice value="leaf"/>
+        <choice value="ocean"/>
+        <choice value="graphite"/>
+      </choices>
+      <default>'passion'</default>
+      <summary>Folder colour</summary>
+      <description>
+        Colour of folders and the trash in the ParchaOS icon theme.
+        parchaos-theme-sync picks the matching dark or light icon theme.
+      </description>
+    </key>
     <key name="restore-session" type="b">
       <default>true</default>
       <summary>Reopen apps when logging back in</summary>
