@@ -78,7 +78,7 @@ Icons NG (ding@rastersoft.com), a real, actively-maintained GNOME
 Shell extension (GPL-3.0), enabled by default on ParchaOS.
 
 %prep
-%autosetup -n desktop-icons-ng-%{commit}
+%autosetup -n desktop-icons-ng-%{commit} -p1
 
 %build
 %meson -Dextension_uuid=ding@rastersoft.com -Dextension_name="Desktop Icons NG (DING)"
