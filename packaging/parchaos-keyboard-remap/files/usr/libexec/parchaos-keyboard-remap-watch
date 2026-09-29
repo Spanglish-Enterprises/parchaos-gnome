@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-keyboard-remap-watch: keep every logged-in user's xremap socket
+# directory in place (ticket #132).
+#
+# The directory /run/xremap/<uid> is made by parchaos-keyboard-remap-socket-dir
+# as root. It used to run only from a user@.service ExecStartPre hook, which
+# fires when user@<uid>.service starts. That does not happen on every login:
+# if anything keeps user@<uid>.service alive (a background process, linger, a
+# package upgrade while the user is logged in), a new login finds no directory
+# and Terminal/Parcher remaps silently stop matching.
+#
+# This daemon asks systemd-logind who is logged in when it starts, and again
+# whenever logind reports a new user or session, and (re)creates the directory
+# for each of them. It is deliberately not a PAM module: nothing here can block
+# or slow a login, and it needs no change to the authentication stack. The
+# helper is idempotent, so running it twice for one login is harmless.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+import os
+import subprocess
+import sys
+
+import gi
+
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib  # noqa: E402
+
+HELPER = os.environ.get('PARCHAOS_REMAP_HELPER', '/usr/libexec/parchaos-keyboard-remap-socket-dir')
+LOGIN1 = ('org.freedesktop.login1', '/org/freedesktop/login1', 'org.freedesktop.login1.Manager')
+
+
+def ensure(uid):
+    try:
+        subprocess.run([HELPER, str(uid)], check=False, timeout=20)
+    except (OSError, subprocess.SubprocessError) as err:
+        print(f'parchaos-keyboard-remap-watch: uid {uid}: {err}', file=sys.stderr)
+
+
+def sync(bus):
+    """Ensure the directory for everyone logind currently lists."""
+    try:
+        reply = bus.call_sync(LOGIN1[0], LOGIN1[1], LOGIN1[2], 'ListUsers', None,
+                              GLib.VariantType('(a(uso))'), Gio.DBusCallFlags.NONE, 5000, None)
+    except GLib.Error as err:
+        print(f'parchaos-keyboard-remap-watch: ListUsers: {err.message}', file=sys.stderr)
+        return
+    for uid, _name, _path in reply.unpack()[0]:
+        ensure(uid)
+
+
+def main():
+    bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+    sync(bus)
+
+    def on_signal(_bus, _sender, _path, _iface, signal, params):
+        if signal == 'UserNew':
+            ensure(params.unpack()[0])
+        elif signal == 'SessionNew':
+            # SessionNew carries the session id, not the uid; a full sync is
+            # cheap (a handful of users at most) and always right.
+            sync(bus)
+
+    for name in ('UserNew', 'SessionNew'):
+        bus.signal_subscribe(LOGIN1[0], LOGIN1[2], name, LOGIN1[1], None,
+                             Gio.DBusSignalFlags.NONE, on_signal)
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

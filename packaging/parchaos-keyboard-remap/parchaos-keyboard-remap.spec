@@ -86,7 +86,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
@@ -105,6 +105,8 @@ ExclusiveArch:  x86_64
 BuildRequires:  unzip
 
 Requires:       systemd
+Requires:       python3-gobject-base
+Requires:       acl
 Requires:       gnome-shell >= 45
 Requires:       acl
 Requires(post): systemd-udev
@@ -154,6 +156,12 @@ install -Dm0644 etc/xremap/config.yml %{buildroot}%{_sysconfdir}/xremap/config.y
 install -Dm0644 usr/lib/systemd/system/parchaos-keyboard-remap.service %{buildroot}%{_prefix}/lib/systemd/system/parchaos-keyboard-remap.service
 install -Dm0644 "usr/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf" "%{buildroot}%{_prefix}/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf"
 install -Dm0755 usr/libexec/parchaos-keyboard-remap-socket-dir %{buildroot}%{_prefix}/libexec/parchaos-keyboard-remap-socket-dir
+install -Dm0755 usr/libexec/parchaos-keyboard-remap-watch %{buildroot}%{_prefix}/libexec/parchaos-keyboard-remap-watch
+install -Dm0644 usr/lib/systemd/system/parchaos-keyboard-remap-dirs.service %{buildroot}%{_prefix}/lib/systemd/system/parchaos-keyboard-remap-dirs.service
+# Enabled by a packaged link: %%systemd_post does not enable a unit that is
+# new on an upgrade.
+install -d %{buildroot}%{_prefix}/lib/systemd/system/multi-user.target.wants
+ln -s ../parchaos-keyboard-remap-dirs.service %{buildroot}%{_prefix}/lib/systemd/system/multi-user.target.wants/parchaos-keyboard-remap-dirs.service
 install -Dm0644 usr/share/polkit-1/rules.d/49-parchaos-keyboard-remap.rules %{buildroot}%{_datadir}/polkit-1/rules.d/49-parchaos-keyboard-remap.rules
 install -Dm0644 usr/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules %{buildroot}%{_prefix}/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules
 install -Dm0644 usr/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf %{buildroot}%{_prefix}/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf
@@ -182,6 +190,8 @@ dconf update >/dev/null 2>&1 || :
 # Enable and start it unconditionally instead.
 systemctl daemon-reload >/dev/null 2>&1 || :
 systemctl enable --now parchaos-keyboard-remap.service >/dev/null 2>&1 || :
+# Ticket #132: (re)creates each logged-in user's socket directory on login.
+systemctl restart parchaos-keyboard-remap-dirs.service >/dev/null 2>&1 || :
 # Security fix (ticket #22): on an upgrade from a version that ran as a
 # --user unit, stop that now-orphaned per-user process (removing its unit
 # file doesn't stop an already-running instance) and take real users out
@@ -210,11 +220,11 @@ if [ "$1" -gt 1 ] 2>/dev/null; then
 fi
 
 %preun
-%systemd_preun parchaos-keyboard-remap.service
+%systemd_preun parchaos-keyboard-remap.service parchaos-keyboard-remap-dirs.service
 
 %postun
 dconf update >/dev/null 2>&1 || :
-%systemd_postun_with_restart parchaos-keyboard-remap.service
+%systemd_postun_with_restart parchaos-keyboard-remap.service parchaos-keyboard-remap-dirs.service
 
 %files
 %license LICENSE
@@ -225,16 +235,26 @@ dconf update >/dev/null 2>&1 || :
 %{_bindir}/xremap
 %{_bindir}/parchaos-keyboard-style
 %{_prefix}/libexec/parchaos-keyboard-remap-socket-dir
+%{_prefix}/libexec/parchaos-keyboard-remap-watch
 %{_datadir}/gnome-shell/extensions/xremap@k0kubun.com/
 %{_datadir}/polkit-1/rules.d/49-parchaos-keyboard-remap.rules
 %{_sysconfdir}/xremap/config.yml
 %{_prefix}/lib/systemd/system/parchaos-keyboard-remap.service
+%{_prefix}/lib/systemd/system/parchaos-keyboard-remap-dirs.service
+%{_prefix}/lib/systemd/system/multi-user.target.wants/parchaos-keyboard-remap-dirs.service
 %{_prefix}/lib/systemd/system/user@.service.d/90-parchaos-keyboard-remap.conf
 %{_prefix}/lib/udev/rules.d/90-parchaos-keyboard-remap-uinput.rules
 %{_prefix}/lib/modules-load.d/parchaos-keyboard-remap-uinput.conf
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - %{xremap_version}-15
+- Ticket #132: per-app remaps no longer depend on user@.service restarting.
+  New parchaos-keyboard-remap-dirs.service (root) watches systemd-logind and
+  creates each logged-in user's /run/xremap/<uid> on every login and at
+  start. Chosen over the PAM/authselect hook the ticket sketched: it needs no
+  change to the authentication stack, so it cannot block or slow a login.
+  The user@.service.d hook stays as a second path (the helper is idempotent).
 * Sun Sep 27 2026 ParchaOS packaging - %{xremap_version}-14
 - Real bug found logging out and back in to test -13 on real hardware:
   the journal showed "This variant of xremap doesn't support 'Socket'.

@@ -1,0 +1,21 @@
+[Unit]
+Description=ParchaOS keyboard remap: per-user socket directories for logged-in users
+Documentation=https://github.com/Spanglish-Enterprises/parchaos-gnome/issues
+After=dbus.service systemd-logind.service
+Wants=systemd-logind.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/parchaos-keyboard-remap-watch
+Restart=on-failure
+RestartSec=5
+# Runs as root: it creates directories owned by the xremap account and adds an
+# ACL. Everything else is locked down.
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
