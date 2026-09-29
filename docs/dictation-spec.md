@@ -6,7 +6,7 @@ This document defines the architecture and behavior for ParchaOS's system-wide v
 
 ## 1. Core Behavior
 Provide users with an on-demand voice-to-text dictation tool that works in *any* text field across the entire OS (Wayland and XWayland).
-- **Global Hotkey**: Triggered by a specific keyboard shortcut (e.g., `Super + D` or a double-tap of `Ctrl`), similar to macOS dictation.
+- **Global Hotkey**: Triggered by a specific keyboard shortcut (e.g., `Super + D` or a double-tap of `Ctrl`), matching the reference desktop behavior.
 - **Privacy-First**: Operates 100% locally. After the initial acoustic model is downloaded, no network connection is required. Audio data never leaves the machine.
 - **Output**: Transcribed text is automatically inserted at the current cursor position.
 

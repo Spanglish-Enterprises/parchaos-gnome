@@ -3,7 +3,7 @@ Version:        1.0.0
 Release:        1%{?dist}
 Summary:        First-class developer tooling integration for ParchaOS
 
-License:        MIT
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-dev-tools-files.tar.gz
 Source90:       LICENSE

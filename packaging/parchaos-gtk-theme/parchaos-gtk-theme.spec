@@ -337,8 +337,8 @@ done
   version that actually builds.
 * Fri Sep 25 2026 ParchaOS packaging - 2026.09.23-9
 - Fixed a real bug found via log-based live testing: traffic-light
-  window buttons showed as monochrome icons, not macOS-style colored
-  circles, in every libadwaita (GTK4) app. Root cause: this theme's
+  window buttons showed as monochrome icons, not colored circles,
+  in every libadwaita (GTK4) app. Root cause: this theme's
   colored button assets only reach libadwaita apps via a separate
   `-l`/`--libadwaita` install step that overwrites $HOME/.config/gtk-4.0
   directly -- never run by this spec. Added a skel-targeted invocation

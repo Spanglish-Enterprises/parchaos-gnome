@@ -3,7 +3,7 @@ Version:        1.0.0
 Release:        1%{?dist}
 Summary:        ParchaOS App Store integrations and helpers
 
-License:        MIT
+License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-app-store-files.tar.gz
 Source90:       LICENSE

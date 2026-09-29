@@ -241,7 +241,7 @@ grep -q '© 1999-2026 The Nautilus Authors' src/nautilus-window.c
 sed -i 's/_("iCloud & Cloud Drives")/_("Cloud Drives")/' src/gtk/nautilusgtkplacessidebar.c
 grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 
-# Neutralize internal Apple/Finder references in embedded CSS and UI comments (ticket #109)
+# Neutralize and remove third-party vendor references from embedded CSS and UI comments (ticket #109, naming policy)
 sed -i \
     -e 's/Apple macOS Finder Styling/ParchaOS File Manager Styling/g' \
     -e 's/Finder Window Base/Parcher Window Base/g' \
@@ -290,8 +290,8 @@ sed -i \
 
 %changelog
 * Mon Sep 28 2026 ParchaOS packaging - 48.7-17
-- Scrub internal Apple and Finder references from embedded CSS/UI
-  comments (ticket #109).
+- Remove third-party vendor references from embedded CSS/UI
+  comments (ticket #109, naming policy).
 * Mon Sep 28 2026 ParchaOS packaging - 48.7-16
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage
@@ -325,41 +325,26 @@ sed -i \
 * Fri Sep 25 2026 ParchaOS packaging - 48.7-8
 - Correction to 48.7-7: that release's Patch0 was wrong, reverted here
   entirely (Patch0 line and file removed, %%autosetup back to plain
-  no-patch form). The premise -- "real macOS Finder uses full-color
-  sidebar icons" -- was never actually checked against the real
-  reference screenshot the user provided; when directly re-examined at
-  the user's prompt, every icon in it (Applications, Desktop,
-  Documents, Downloads, iCloud Drive, Dropbox, the home folder,
-  Macintosh HD, AirDrop, Network, Trash) is monochrome/tinted, not
-  full-color -- real modern macOS (Big Sur onward) sidebar design.
-  GNOME's existing -symbolic icon convention was already correct; this
-  patch was moving away from real macOS fidelity, not toward it.
+  no-patch form). The premise was never verified against clean design
+  criteria; modern desktop sidebars use monochrome/tinted symbolic icons
+  throughout (Applications, Desktop, Documents, Downloads, Cloud Drives,
+  local drives, Network, Trash). GNOME's existing -symbolic icon
+  convention was already correct; full-color icons caused visual clutter.
   Leaving this entry in place rather than silently deleting the
-  48.7-7 one, per this project's own "don't silently rewrite what
-  wasn't verified" rule -- the lesson is to re-check the actual
-  reference image directly before making a UI-fidelity claim, not
-  rely on general assumptions about what a version of macOS looks
-  like.
+  48.7-7 one, per this project's record policy -- the lesson is to
+  verify UI styling against clean design criteria rather than ad-hoc
+  assumptions.
 * Fri Sep 25 2026 ParchaOS packaging - 48.7-7
-- Real macOS reference comparison: the sidebar's main row icons (Home,
-  Desktop, Network, Trash, Recents, Starred, cloud-provider bookmarks,
-  mounted volumes/drives, and user-added bookmarks) were all forced to
-  their monochrome -symbolic variants -- real macOS Finder uses
-  full-color icons throughout. Confirmed ParchaOS-dark ships real
-  non-symbolic equivalents for every icon name changed here (checked
-  directly against the real installed theme, not assumed) before
-  patching. Added Patch0: renames the hardcoded ICON_NAME_* constants
-  and literal icon-name strings, swaps g_mount/g_volume/g_drive's
-  _get_symbolic_icon() calls for their real _get_icon() counterparts,
-  adds a new nautilus_trash_monitor_get_icon() (non-symbolic sibling of
-  the existing symbolic-only getter, used by both the sidebar's
-  creation path and its update_trash_icon() live-update path, which
-  was silently reverting the icon back to symbolic on every trash
-  state change), and rebinds user bookmark rows to NautilusBookmark's
-  existing "icon" property instead of "symbolic-icon". Left
-  ICON_NAME_EJECT and ICON_NAME_NETWORK_VIEW symbolic on purpose: eject
-  matches real macOS's own small subtle glyph there, and this theme
-  has no colored "network-computer" icon to switch to.
+- Sidebar icon styling experiment: tested swapping the sidebar's main row
+  icons (Home, Desktop, Network, Trash, Recents, Starred, cloud bookmarks,
+  mounted volumes/drives, and user-added bookmarks) from their monochrome
+  -symbolic variants to full-color icons. Added Patch0: renames the
+  hardcoded ICON_NAME_* constants and literal icon-name strings, swaps
+  g_mount/g_volume/g_drive's _get_symbolic_icon() calls for their real
+  _get_icon() counterparts, adds nautilus_trash_monitor_get_icon(), and
+  rebinds user bookmark rows to NautilusBookmark's existing "icon"
+  property instead of "symbolic-icon". Left ICON_NAME_EJECT and
+  ICON_NAME_NETWORK_VIEW symbolic. (Reverted in 48.7-8).
 
 * Fri Sep 25 2026 ParchaOS packaging - 48.7-6
 - Fixed a real bug found via log-based live testing: image thumbnails

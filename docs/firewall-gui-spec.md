@@ -5,7 +5,7 @@ This document outlines the behavior and architecture for a friendly, per-app net
 **Legal Note**: This is a pure original GUI built over the official, Red Hat-maintained `firewalld` D-Bus API (`org.fedoraproject.FirewallD1`). It has zero exposure to Inled's stack.
 
 ## 1. Core Behavior
-Provide users with an intuitive, macOS-like (e.g., Little Snitch) or Windows-like network permission toggle system without exposing raw port/protocol jargon.
+Provide users with an intuitive per-app network permission toggle system without exposing raw port/protocol jargon.
 - **Per-App Control**: Users can toggle network access ON or OFF for specific applications.
 - **Target Audience**: Everyday users prioritizing privacy (e.g., blocking an offline game from calling home) rather than sysadmins writing complex routing rules.
 
