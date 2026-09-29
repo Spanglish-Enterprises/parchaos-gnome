@@ -1,15 +1,17 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# parchaos-os-release: write /etc/os-release as ParchaOS.
+# parchaos-os-release: write /etc/os-release and /etc/system-release as ParchaOS.
 #
-# fedora-release-common owns /etc/os-release (a symlink to
-# /usr/lib/os-release) and puts Fedora's back on every update, so this
-# runs at install and again from a trigger whenever that package changes.
-# Everything version-related (VERSION_ID, CPE_NAME, SUPPORT_END, ...)
-# comes from Fedora's file unchanged, so dnf and other tools keep working.
+# generic-release-common (or fedora-release-common) owns /etc/os-release
+# (a symlink to /usr/lib/os-release) and puts stock release files back on
+# every update, so this runs at install and again from a trigger whenever
+# that package changes.
 #
 # ID stays "parchaos" (ID_LIKE=fedora): with ID=fedora, the app store
 # would offer new Fedora releases before ParchaOS supports them.
+# CPE_NAME is updated to reflect ParchaOS, avoiding Fedora trademark issues.
+# /etc/system-release is updated to "ParchaOS release <version_id>" to
+# ensure login banners and system utilities show the correct distribution.
 
 set -eu
 
@@ -23,12 +25,13 @@ version_id=$(. "$SRC" && echo "${VERSION_ID:-}")
 
 tmp=$(mktemp /etc/.os-release.XXXXXX)
 {
-    grep -vE '^(NAME|VERSION|PRETTY_NAME|ID|ID_LIKE|ANSI_COLOR|LOGO|DEFAULT_HOSTNAME|HOME_URL|DOCUMENTATION_URL|SUPPORT_URL|BUG_REPORT_URL|REDHAT_[A-Z_]*)=' "$SRC"
+    grep -vE '^(NAME|VERSION|PRETTY_NAME|ID|ID_LIKE|ANSI_COLOR|LOGO|DEFAULT_HOSTNAME|HOME_URL|DOCUMENTATION_URL|SUPPORT_URL|BUG_REPORT_URL|CPE_NAME|REDHAT_[A-Z_]*)=' "$SRC"
     echo 'NAME="ParchaOS"'
     echo "VERSION=\"${version_id}\""
     echo "PRETTY_NAME=\"ParchaOS ${version_id}\""
     echo 'ID=parchaos'
     echo 'ID_LIKE=fedora'
+    echo "CPE_NAME=\"cpe:/o:parchaos:parchaos:${version_id}\""
     echo 'ANSI_COLOR="0;38;2;93;0;147"'
     echo 'LOGO=parchaos-logo'
     echo 'DEFAULT_HOSTNAME="parchaos"'
@@ -38,5 +41,10 @@ tmp=$(mktemp /etc/.os-release.XXXXXX)
     echo "BUG_REPORT_URL=\"$SITE/support\""
 } >"$tmp"
 chmod 0644 "$tmp"
-# Replaces Fedora's symlink (or an older copy) in one step.
+# Replaces stock symlink (or an older copy) in one step.
 mv -f "$tmp" "$DEST"
+
+# Update /etc/system-release to match ParchaOS release strings
+if [ -n "$version_id" ]; then
+    echo "ParchaOS release ${version_id}" > /etc/system-release
+fi

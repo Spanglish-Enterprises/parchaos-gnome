@@ -1,6 +1,6 @@
 Name:           parchaos-release
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS name, logo and links in os-release
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -45,9 +45,10 @@ install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/p
 %{_libexecdir}/parchaos-os-release || :
 
 %postun
-# On removal, give /etc/os-release back to Fedora.
+# On removal, give /etc/os-release and /etc/system-release back.
 if [ "$1" -eq 0 ]; then
     ln -sf ../usr/lib/os-release /etc/os-release || :
+    ln -sf ../usr/lib/system-release /etc/system-release || :
 fi
 
 %files
@@ -61,6 +62,9 @@ fi
 %{_datadir}/icons/hicolor/symbolic/apps/parchaos-logo-symbolic.svg
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 1.0.0-7
+- Ticket #106: Set CPE_NAME to ParchaOS and write /etc/system-release
+  to match distribution branding; hook into generic-release-common.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.

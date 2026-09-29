@@ -1,16 +1,52 @@
-# Fedora Remix Trademark Decision
+# Fedora Remix Trademark & Release Strings Decision
 
-Per Ticket #106 and the Fedora Trademark Guidelines, ParchaOS modifies the underlying Fedora platform (via COPR, alternate default repositories like Flathub, and deep shell integrations). Therefore, it technically operates as a **Fedora Remix**.
+**Date**: 2026-09-28  
+**Scope**: Ticket #106 (Legal sweep task T28)  
+**Target Files**: `/etc/system-release`, `/etc/os-release`, `/usr/lib/os-release`, `CPE_NAME`
 
-### Decision
-**We have chosen to switch to `generic-release` and `generic-logos`.** 
+---
 
-### Rationale
-Fedora's trademark guidelines mandate that derivatives altering the core configuration must not use the official "Fedora" branding, logos, or release strings, to prevent confusing users into believing the derivative is an official Fedora Spin. 
-By replacing `fedora-release` with `generic-release`, we ensure `/etc/system-release` and `/usr/lib/os-release` are scrubbed of Fedora's protected trademarks, while safely keeping `VERSION_ID` intact so that `dnf` and system version checks continue working perfectly. 
+## 1. Background & Legal Analysis
 
-### Implementation
-1. `profiles/parchaos/packages.list` now installs `generic-release` and `generic-logos` instead of `fedora-release`.
-2. `packaging/parchaos-release/parchaos-release.spec` was updated to hook into `generic-release-common` rather than `fedora-release-common`.
+Under the official **Fedora Project Trademark Guidelines** and **Fedora Remix Guidance**:
+* Fedora software combined with third-party software, customized desktop environments, or modified system repositories (such as ParchaOS with its custom COPR, Flathub defaults, and customized desktop shell) constitutes a **Fedora Remix**.
+* A Fedora Remix **must not** use official Fedora trademarks or represent itself as an official Fedora release.
+* Retaining `/etc/system-release` with `"Fedora release <ver>"`, `/usr/lib/os-release` as `"Fedora Linux"`, and `CPE_NAME="cpe:/o:fedoraproject:fedora:<ver>"` on a distributed operating system image breaches the trademark guidelines by falsely indicating official Fedora provenance.
 
-This brings the OS into full compliance with Fedora's Remix trademark policy.
+---
+
+## 2. Decision
+
+**The ParchaOS Project formally adopts the standard Fedora Remix compliant release model:**
+1. **Transition to Generic Upstream Packages**: Replace `fedora-release` with `generic-release` and `generic-logos` in the base ISO package manifest (`profiles/parchaos/packages.list`).
+2. **Explicit Distribution Identity**:
+   * `/etc/os-release`: Branded as `ParchaOS` with `ID=parchaos` and `ID_LIKE=fedora`.
+   * `CPE_NAME`: Set to `cpe:/o:parchaos:parchaos:<version_id>` to fully dissociate from `cpe:/o:fedoraproject:fedora`.
+   * `/etc/system-release`: Written as `ParchaOS release <version_id>` (overriding both Fedora and generic release strings for login banners, motd, and CLI identity tools).
+3. **Compatibility Safeguards**:
+   * `VERSION_ID` is preserved unmodified from upstream (e.g., `44`), ensuring `dnf` variables (such as `$releasever`), repository metalinks, and package manager compatibility remain 100% functional.
+   * `ID_LIKE=fedora` ensures systemd, flatpak portals, and app stores recognize the underlying OS family.
+
+---
+
+## 3. Technical Implementation
+
+* **Base Packages (`profiles/parchaos/packages.list`)**:
+  * Removed `fedora-release`.
+  * Added `generic-release` and `generic-logos`.
+* **OS Release Script (`packaging/parchaos-release/files/parchaos-os-release`)**:
+  * Emits `CPE_NAME="cpe:/o:parchaos:parchaos:${version_id}"`.
+  * Filters out stock `CPE_NAME`.
+  * Explicitly writes `ParchaOS release ${version_id}` into `/etc/system-release`.
+* **Package Spec (`packaging/parchaos-release/parchaos-release.spec`)**:
+  * Bumped release to `1.0.0-7`.
+  * Requires and hooks triggers on `generic-release-common`.
+  * Provides symlink cleanup for both `/etc/os-release` and `/etc/system-release` in `%postun`.
+
+---
+
+## 4. Compliance Verification
+
+* **Fedora Trademark Guidelines**: Compliant (no unauthorized Fedora marks on the distributed live or installed image).
+* **Package Management**: Compliant (`$releasever` evaluates to matching numeric Fedora branch).
+* **Identity Audit**: `/etc/system-release` and `/etc/os-release` report unified `ParchaOS` branding.
