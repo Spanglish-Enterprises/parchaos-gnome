@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        47%{?dist}
+Release:        48%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -117,6 +117,7 @@ Requires:       parchaos-app-renames
 Requires:       parchaos-notification-position
 Requires:       parchaos-magic-lamp-effect
 Requires:       parchaos-wiggle
+Requires:       parchaos-clipboard
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
 Requires:       parchaos-hblock
@@ -196,7 +197,7 @@ ln -s ../parchaos-theme-sync.service \
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -255,6 +256,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-48
+- Ticket #124: clipboard history. Requires parchaos-clipboard and turns its
+  extension on by default (existing accounts get it at next login through
+  parchaos-extensions-migrate).
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-47
 - parchaos-extensions-migrate clears GNOME Shell's crash guard
   (disable-user-extensions) at login unless booted in safe mode. A shell

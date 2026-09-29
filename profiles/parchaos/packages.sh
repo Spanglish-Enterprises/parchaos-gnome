@@ -185,6 +185,9 @@ PROFILE_REPO_PACKAGES=(
     parchaos-wiggle
     parchaos-ui-tune
 
+    # Clipboard history in the top bar (packaging/parchaos-clipboard/).
+    parchaos-clipboard
+
     # ParchaOS's real logo on the GDM login screen, replacing Fedora's
     # default (packaging/parchaos-gdm-logo/) -- real user feedback
     # (the login screen still showed the Fedora logo).
