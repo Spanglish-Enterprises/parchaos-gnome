@@ -5,7 +5,8 @@ Summary:        ParchaOS App Store integrations and helpers
 
 License:        MIT
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
-Source0:        %{name}-%{version}.tar.gz
+Source0:        parchaos-app-store-files.tar.gz
+Source90:       LICENSE
 
 BuildArch:      noarch
 Requires:       bash
@@ -18,19 +19,20 @@ including a clean, dependency-tracked app uninstall helper that removes
 orphaned Flatpak and RPM configuration directories.
 
 %prep
-%setup -q -c -T
+%setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %build
-# Nothing to build
+# Nothing to compile
 
 %install
 mkdir -p %{buildroot}
-cp -a %{_sourcedir}/files/* %{buildroot}/
-chmod +x %{buildroot}/usr/libexec/parchaos-app-store-uninstall-helper
+cp -a usr %{buildroot}/
+chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-store-uninstall-helper
 
 %files
-%license %{_sourcedir}/LICENSE
-/usr/libexec/parchaos-app-store-uninstall-helper
+%license LICENSE
+%{_libexecdir}/parchaos-app-store-uninstall-helper
 
 %changelog
 * Mon Sep 28 2026 ParchaOS Project <hello@parchaos.com> - 1.0.0-1

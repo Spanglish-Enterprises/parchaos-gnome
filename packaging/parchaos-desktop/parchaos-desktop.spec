@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        42%{?dist}
+Release:        43%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -107,6 +107,8 @@ Requires:       parchaos-gnome-plymouth-theme
 Requires:       parchaos-gnome-wallpaper
 Requires:       parchaos-keyboard-remap
 Requires:       parchaos-cloud
+Requires:       parchaos-dev-tools
+Requires:       parchaos-app-store
 Requires:       parchaos-focus-schedule
 Requires:       parchaos-yin-yang
 Requires:       parchaos-browser
@@ -245,6 +247,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Mon Sep 28 2026 ParchaOS packaging - 2026.09.23-43
+- Require parchaos-dev-tools and parchaos-app-store in meta-package
+  to align with profiles/parchaos/packages.sh (tickets #121, #125).
 * Sun Sep 27 2026 ParchaOS packaging - 2026.09.23-42
 - theme-sync: migrate stored MacTahoe* theme values to ParchaOS* (ticket
   #100). Existing accounts kept the pre-rename name in their own dconf,

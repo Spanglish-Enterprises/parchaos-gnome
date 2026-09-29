@@ -5,7 +5,8 @@ Summary:        First-class developer tooling integration for ParchaOS
 
 License:        MIT
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
-Source0:        %{name}-%{version}.tar.gz
+Source0:        parchaos-dev-tools-files.tar.gz
+Source90:       LICENSE
 
 BuildArch:      noarch
 Requires:       bash
@@ -17,20 +18,21 @@ Provides first-class developer tooling for ParchaOS, including
 a one-click installer for Anthropic's Claude Code CLI.
 
 %prep
-%setup -q -c -T
+%setup -q -c -n %{name}-%{version}
+cp -p %{SOURCE90} .
 
 %build
-# Nothing to build
+# Nothing to compile
 
 %install
 mkdir -p %{buildroot}
-cp -a %{_sourcedir}/files/* %{buildroot}/
-chmod +x %{buildroot}/usr/bin/parchaos-install-claude-code
+cp -a usr %{buildroot}/
+chmod 0755 %{buildroot}%{_bindir}/parchaos-install-claude-code
 
 %files
-%license %{_sourcedir}/LICENSE
-/usr/bin/parchaos-install-claude-code
-/usr/share/applications/parchaos-install-claude-code.desktop
+%license LICENSE
+%{_bindir}/parchaos-install-claude-code
+%{_datadir}/applications/parchaos-install-claude-code.desktop
 
 %changelog
 * Mon Sep 28 2026 ParchaOS Project <hello@parchaos.com> - 1.0.0-1
