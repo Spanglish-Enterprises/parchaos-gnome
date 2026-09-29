@@ -1,6 +1,6 @@
 Name:           parchaos-release
 Version:        1.0.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS name, logo and links in os-release
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -15,7 +15,10 @@ Source5:        LICENSE
 Source6:        SOURCES.md
 BuildArch:      noarch
 
-Requires:       generic-release-common
+# No hard Requires on a base release package: the ISO ships
+# generic-release-common, but an installed system upgrading from COPR still
+# has fedora-release-common, and the two conflict -- a Requires on either
+# one stops `dnf upgrade` from installing this package on the other.
 Requires(post): coreutils, grep
 
 %description
@@ -41,6 +44,11 @@ install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/p
 %post
 %{_libexecdir}/parchaos-os-release || :
 
+# Whichever base release package this system has re-lays its stock
+# release files on every update; write ours again afterwards.
+%triggerin -- fedora-release-common
+%{_libexecdir}/parchaos-os-release || :
+
 %triggerin -- generic-release-common
 %{_libexecdir}/parchaos-os-release || :
 
@@ -62,6 +70,16 @@ fi
 %{_datadir}/icons/hicolor/symbolic/apps/parchaos-logo-symbolic.svg
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-8
+- Real bug found running `dnf upgrade` on an installed system: -7's hard
+  Requires: generic-release-common conflicts with the fedora-release-
+  common every existing install has, so dnf skipped this package
+  entirely ("broken dependencies") and the #106 branding never reached
+  anyone who wasn't building a fresh ISO. Dropped the Requires and
+  trigger on both possible base packages instead. Trigger-on-generic-only
+  would also have reopened ticket #24's bug on installed systems: a
+  fedora-release-common update would revert os-release with nothing to
+  re-apply ours.
 * Mon Sep 28 2026 ParchaOS packaging - 1.0.0-7
 - Ticket #106: Set CPE_NAME to ParchaOS and write /etc/system-release
   to match distribution branding; hook into generic-release-common.

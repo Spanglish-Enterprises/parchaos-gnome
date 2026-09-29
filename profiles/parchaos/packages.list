@@ -19,7 +19,6 @@
 
 # --- Core system ---
 generic-release
-generic-logos
 dnf
 systemd
 systemd-udev

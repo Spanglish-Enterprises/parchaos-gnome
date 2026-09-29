@@ -37,7 +37,13 @@ profile_customize() {
     #   The fedora-cisco-openh264 repo stays enabled, so installed systems
     #   can fetch the real library from Cisco (dnf swap noopenh264 openh264).
     echo "--- Swapping in parchaos-logos and noopenh264 ---"
-    run_in_target dnf -y swap fedora-logos parchaos-logos
+    # packages.list installs generic-release (not fedora-release), so
+    # fedora-logos is normally absent and parchaos-logos (packages.sh)
+    # is already in place; only swap when an older base still has it --
+    # `dnf swap` fails outright on a package that isn't installed.
+    if run_in_target rpm -q fedora-logos >/dev/null 2>&1; then
+        run_in_target dnf -y swap fedora-logos parchaos-logos
+    fi
     # Cisco's openh264 Obsoletes noopenh264, and dnf honors that even for
     # the installed copy, so `dnf swap` just reinstalls openh264. Remove it
     # at the rpm level (noopenh264 provides the same library right after),
