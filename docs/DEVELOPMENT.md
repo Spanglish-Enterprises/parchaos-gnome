@@ -137,6 +137,24 @@ package too, so the profile removes `openh264` with `rpm -e --nodeps`
 and then installs `noopenh264` with the Cisco repo disabled, in a single
 container call.
 
+## Release size limit
+
+GitHub rejects release assets of 2 GiB (2,147,483,648 bytes) or more, and
+the ISO is published as one asset. The 2026.09.29 ISO is 1,983,823,872
+bytes (1.85 GiB), about 160 MiB under the limit. Before building the ISO
+for a release:
+
+- Compare the size with the previous release's (`ls -l build/*.iso`) and
+  find out what grew if it is more than about 50 MiB larger.
+- `engine/build-iso.sh` prints a NOTE from 1.9 GiB (1946 MiB) and a
+  WARNING at 2 GiB. Treat either as a stop: do not tag the release.
+- Ways to get back under it: drop a package from `profiles/parchaos/
+  packages.list`, keep a language pack or a large Flatpak runtime out of
+  the image, or lower the squashfs cost by removing files the live session
+  doesn't need. Do not split the ISO.
+- The GPL source tarballs are already split under 1.9 GiB each
+  (`scripts/collect-sources.py`).
+
 ## Release source code (GPL)
 
 Every release publishes the complete corresponding source of its ISO as

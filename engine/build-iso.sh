@@ -750,6 +750,10 @@ sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
 iso_size=$(stat -c %s "$BUILD_DIR/$ISO_NAME")
 if [ "$iso_size" -ge $((2 * 1024 * 1024 * 1024)) ]; then
     echo "WARNING: $ISO_NAME is $((iso_size / 1048576)) MiB, over the 2 GiB GitHub release asset limit" >&2
+elif [ "$iso_size" -ge $((1946 * 1024 * 1024)) ]; then
+    # 1.9 GiB: under the limit, but the next few packages would cross it.
+    echo "NOTE: $ISO_NAME is $((iso_size / 1048576)) MiB, within 100 MiB of the 2 GiB GitHub release asset limit." >&2
+    echo "      Check what was added before the next release (docs/DEVELOPMENT.md, 'Release size limit')." >&2
 fi
 
 echo "=== Done: $BUILD_DIR/$ISO_NAME ==="
