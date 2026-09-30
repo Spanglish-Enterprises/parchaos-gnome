@@ -30,24 +30,47 @@ def keyboard_style():
 
 
 class Window(Adw.ApplicationWindow):
-    # A header bar with a page switcher over a stack of preference pages
-    # (what Adw.PreferencesWindow drew, which libadwaita deprecated).
+    # A sidebar of sections beside the page of the chosen section, the layout
+    # GNOME's own Settings uses. It folds to a single column in a narrow window.
     def __init__(self, app):
         super().__init__(application=app, title='ParchaOS Settings')
-        self.set_default_size(620, 560)
+        self.set_default_size(860, 640)
 
-        self._stack = Adw.ViewStack()
-        header = Adw.HeaderBar(title_widget=Adw.ViewSwitcher(
-            stack=self._stack, policy=Adw.ViewSwitcherPolicy.WIDE))
-        view = Adw.ToolbarView(content=self._stack)
-        view.add_top_bar(header)
-        self._toasts = Adw.ToastOverlay(child=view)
+        self._pages = []
+        self._stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self._list.add_css_class('navigation-sidebar')
+        self._list.connect('row-selected', self._on_section_selected)
+
+        side_bar = Adw.HeaderBar(show_title=False)
+        side = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self._list, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        side.add_top_bar(side_bar)
+        self._side_page = Adw.NavigationPage(child=side, title='ParchaOS Settings', tag='sections')
+
+        self._content_title = Adw.WindowTitle(title='')
+        content_bar = Adw.HeaderBar(title_widget=self._content_title)
+        content = Adw.ToolbarView(content=self._stack)
+        content.add_top_bar(content_bar)
+        self._content_page = Adw.NavigationPage(child=content, title='', tag='content')
+
+        self._split = Adw.NavigationSplitView(sidebar=self._side_page, content=self._content_page,
+                                              min_sidebar_width=210, max_sidebar_width=260)
+        self._toasts = Adw.ToastOverlay(child=self._split)
         self.set_content(self._toasts)
 
-        self.add(self._general_page())
-        self.add(self._appearance_page())
-        self.add(self._privacy_page())
+        # Fold to one column in a narrow window.
+        breakpoint_ = Adw.Breakpoint.new(Adw.BreakpointCondition.parse('max-width: 600sp'))
+        breakpoint_.add_setter(self._split, 'collapsed', True)
+        self.add_breakpoint(breakpoint_)
 
+        self.add(self._appearance_page())
+        self.add(self._desktop_page())
+        self.add(self._privacy_page())
+        self.add(self._backups_page())
+        self.add(self._keyboard_page())
+        self._list.select_row(self._list.get_row_at_index(0))
+
+    def _keyboard_page(self):
         page = Adw.PreferencesPage(title='Keyboard',
                                    icon_name='input-keyboard-symbolic')
         group = Adw.PreferencesGroup(
@@ -68,11 +91,29 @@ class Window(Adw.ApplicationWindow):
             self._super_row.set_active(style not in ('standard', 'windows'))
         self._super_row.connect('notify::active', self._on_super_toggled)
         group.add(self._super_row)
-        self.add(page)
+        return page
 
     def add(self, page):
-        self._stack.add_titled_with_icon(page, page.get_title(), page.get_title(),
-                                         page.get_icon_name())
+        name = page.get_title()
+        self._stack.add_titled(page, name, name)
+        icon = Gtk.Image(icon_name=page.get_icon_name(), margin_start=4, margin_end=4,
+                         valign=Gtk.Align.CENTER)
+        label = Gtk.Label(label=name, xalign=0, hexpand=True, valign=Gtk.Align.CENTER)
+        box = Gtk.Box(spacing=12, margin_top=10, margin_bottom=10, margin_start=6, margin_end=6)
+        box.append(icon)
+        box.append(label)
+        row = Gtk.ListBoxRow(child=box)
+        row.section = name
+        self._list.append(row)
+        self._pages.append(page)
+
+    def _on_section_selected(self, _list, row):
+        if row is None:
+            return
+        self._stack.set_visible_child_name(row.section)
+        self._content_title.set_title(row.section)
+        self._content_page.set_title(row.section)
+        self._split.set_show_content(True)
 
     def add_toast(self, toast):
         self._toasts.add_toast(toast)
@@ -82,9 +123,10 @@ class Window(Adw.ApplicationWindow):
         schema = source.lookup('org.parchaos.desktop', True) if source else None
         return Gio.Settings(settings_schema=schema) if schema else None
 
-    def _general_page(self):
-        page = Adw.PreferencesPage(title='General',
-                                   icon_name='preferences-system-symbolic')
+    def _desktop_page(self):
+        page = Adw.PreferencesPage(title='Desktop',
+                                   icon_name='preferences-desktop-symbolic')
+        page.add(self._icons_group())
         group = Adw.PreferencesGroup(title='Sessions')
         page.add(group)
         row = Adw.SwitchRow(
@@ -102,6 +144,53 @@ class Window(Adw.ApplicationWindow):
         if settings is not None:
             page.add(self._focus_group(settings))
         return page
+
+    # Desktop icons (Desktop Icons NG keeps these keys).
+    ICON_SIZES = [('tiny', 'Tiny'), ('small', 'Small'), ('standard', 'Standard'), ('large', 'Large')]
+
+    def _icons_group(self):
+        group = Adw.PreferencesGroup(
+            title='Icons on the desktop',
+            description='Files, folders and the Trash that sit on the desktop.')
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup('org.gnome.shell.extensions.ding', True) if source else None
+        if schema is None:
+            group.add(Adw.ActionRow(title='Not available',
+                                    subtitle='The desktop icons package is not installed.'))
+            return group
+        self._ding = Gio.Settings(settings_schema=schema)
+        keys = schema.list_keys()
+        if 'snap-to-grid' in keys:
+            row = Adw.SwitchRow(
+                title='Snap icons to the grid',
+                subtitle='Off: an icon stays exactly where you drop it.')
+            self._ding.bind('snap-to-grid', row, 'active', Gio.SettingsBindFlags.DEFAULT)
+            group.add(row)
+        for key, title in (('show-home', 'Show Home'), ('show-trash', 'Show Trash')):
+            if key in keys:
+                row = Adw.SwitchRow(title=title)
+                self._ding.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT)
+                group.add(row)
+        if 'icon-size' in keys:
+            row = Adw.ComboRow(title='Icon size')
+            row.set_model(Gtk.StringList.new([name for _v, name in self.ICON_SIZES]))
+            values = [v for v, _n in self.ICON_SIZES]
+
+            def load(*_):
+                cur = self._ding.get_string('icon-size')
+                if cur in values and row.get_selected() != values.index(cur):
+                    row.set_selected(values.index(cur))
+
+            def store(*_):
+                value = values[row.get_selected()]
+                if self._ding.get_string('icon-size') != value:
+                    self._ding.set_string('icon-size', value)
+
+            load()
+            row.connect('notify::selected', store)
+            self._ding.connect('changed::icon-size', load)
+            group.add(row)
+        return group
 
     # Scheduled Do Not Disturb (parchaos-focus-schedule reads these keys).
     def _focus_group(self, settings):
@@ -248,6 +337,43 @@ class Window(Adw.ApplicationWindow):
         self._desktop.connect('changed::folder-colour', load)
         group.add(row)
         return group
+
+    # History (snapper snapshots) and backups (Parcha Backup), ticket #116.
+    def _backups_page(self):
+        page = Adw.PreferencesPage(title='Backups',
+                                   icon_name='document-open-recent-symbolic')
+        history = Adw.PreferencesGroup(
+            title='History on this disk',
+            description='Snapshots let you look back at your files and put them back. '
+                        'They live on the same disk, so they are history, not a backup.')
+        page.add(history)
+        on = os.path.exists('/etc/snapper/configs/root') or os.path.exists('/etc/snapper/configs/home')
+        row = Adw.ActionRow(
+            title='Snapshots are on' if on else 'Snapshots are not set up',
+            subtitle='Taken every hour, and before and after each update. '
+                     'Open the snapshot menu in the top bar to browse them.'
+                     if on else 'They need a Btrfs disk, which this computer does not use.')
+        row.add_prefix(Gtk.Image(icon_name='emblem-ok-symbolic' if on else 'dialog-information-symbolic',
+                                valign=Gtk.Align.CENTER))
+        history.add(row)
+
+        backups = Adw.PreferencesGroup(
+            title='Backups',
+            description='Copy your files to an external drive or a network share, on a schedule.')
+        page.add(backups)
+        info = Gio.DesktopAppInfo.new('org.gnome.DejaDup.desktop')
+        brow = Adw.ActionRow(title='Parcha Backup',
+                             subtitle='Choose what to back up, where to, and how often.')
+        button = Gtk.Button(label='Open', valign=Gtk.Align.CENTER)
+        button.add_css_class('suggested-action')
+        if info is None:
+            button.set_sensitive(False)
+            brow.set_subtitle('Parcha Backup is not installed.')
+        else:
+            button.connect('clicked', lambda *_: info.launch([], None))
+        brow.add_suffix(button)
+        backups.add(brow)
+        return page
 
     # Which apps may use the network (ticket #126). The list comes from
     # parchaos-app-network; a change applies the next time the app starts.

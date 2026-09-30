@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -64,6 +64,13 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
+- Ticket #20: redesigned as a sidebar of sections beside the chosen page,
+  like GNOME's own Settings, folding to one column in a narrow window.
+  Sections: Appearance (style, folder colour), Desktop (icons: snap to grid,
+  Home, Trash, icon size; sessions; focus schedule), Privacy (network access
+  per app), Backups (snapshot status and Parcha Backup) and Keyboard.
+
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-15
 - Ticket #126: a Privacy page lists your apps with a network switch each.
   Off keeps the app off the network from its next start: Flatpak apps use
