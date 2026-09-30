@@ -210,7 +210,10 @@ const ControlsPanel = GObject.registerClass({
                 this.add_style_class_name('parchaos-light');
         };
         const schemeId = this._interface.connect('changed::color-scheme', syncScheme);
-        this.connect('destroy', () => this._interface.disconnect(schemeId));
+        this.connect('destroy', () => {
+            this._interface.disconnect(schemeId);
+            this._endDrag();
+        });
         syncScheme();
         this._qs = qs;
         this.add_effect(new Shell.BlurEffect({
@@ -308,26 +311,136 @@ const ControlsPanel = GObject.registerClass({
         this._layout();
     }
 
+    // Edit mode (like rearranging apps on a phone): each tile gets a round
+    // badge on its corner, - to hide it or + to bring a hidden one back, and
+    // tiles are dragged to a new place.
     _addEditButtons(item) {
-        const bar = new St.BoxLayout({
-            style_class: 'parchaos-controls-edit-bar',
-            x_align: Clutter.ActorAlign.END,
+        const badge = new St.Button({
+            style_class: 'parchaos-controls-edit-badge',
+            label: '\u2212',
+            x_align: Clutter.ActorAlign.START,
             y_align: Clutter.ActorAlign.START,
             x_expand: true,
             y_expand: true,
+            can_focus: true,
             visible: false,
         });
-        const button = (label, callback) => {
-            const b = new St.Button({style_class: 'parchaos-controls-edit-step', label, can_focus: true});
-            b.connect('clicked', callback);
-            bar.add_child(b);
-            return b;
+        badge.set_translation(-7, -7, 0);
+        badge.connect('clicked', () => this._toggleHidden(item));
+        item.badge = badge;
+        item.widget.add_child(badge);
+        item.widget.set_pivot_point(0.5, 0.5);
+        this._attachDrag(item);
+    }
+
+    // The tile under a point, for dragging and dropping.
+    _itemAt(x, y) {
+        return this._items.find(item => {
+            if (!item.widget.mapped)
+                return false;
+            const [ex, ey] = item.widget.get_transformed_position();
+            const [w, h] = item.widget.get_transformed_size();
+            return x >= ex && x < ex + w && y >= ey && y < ey + h;
+        });
+    }
+
+    // While editing, a clear layer over each tile takes the pointer, so a
+    // tile's own button does not fire and the tile can be dragged. The badge
+    // sits above it and keeps its own click.
+    _attachDrag(item) {
+        const overlay = new St.Widget({
+            reactive: false,
+            visible: false,
+            x_expand: true,
+            y_expand: true,
+        });
+        item.overlay = overlay;
+        item.widget.insert_child_below(overlay, item.badge);
+        overlay.connect('button-press-event', (_o, event) => {
+            if (event.get_button() !== 1)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            this._drag = {item, x, y, moved: false, target: null, grab: global.stage.grab(overlay)};
+            return Clutter.EVENT_STOP;
+        });
+        overlay.connect('motion-event', (_o, event) => {
+            const drag = this._drag;
+            if (!drag || drag.item !== item)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            if (!drag.moved && Math.hypot(x - drag.x, y - drag.y) < 8)
+                return Clutter.EVENT_STOP;
+            if (!drag.moved) {
+                drag.moved = true;
+                item.widget.get_parent()?.set_child_above_sibling(item.widget, null);
+                item.widget.remove_all_transitions();
+                item.widget.rotation_angle_z = 0;
+                item.widget.add_style_pseudo_class('drag');
+            }
+            item.widget.set_translation(x - drag.x, y - drag.y, 0);
+            const over = this._itemAt(x, y);
+            const target = over && over !== item ? over : null;
+            if (target !== drag.target) {
+                drag.target?.widget.remove_style_pseudo_class('drop');
+                target?.widget.add_style_pseudo_class('drop');
+                drag.target = target;
+            }
+            return Clutter.EVENT_STOP;
+        });
+        overlay.connect('button-release-event', () => {
+            const drag = this._drag;
+            if (!drag || drag.item !== item)
+                return Clutter.EVENT_PROPAGATE;
+            this._endDrag();
+            return Clutter.EVENT_STOP;
+        });
+    }
+
+    _endDrag() {
+        const drag = this._drag;
+        this._drag = null;
+        if (!drag)
+            return;
+        drag.grab?.dismiss();
+        drag.item.widget.remove_style_pseudo_class('drag');
+        drag.target?.widget.remove_style_pseudo_class('drop');
+        drag.item.widget.set_translation(0, 0, 0);
+        if (drag.moved && drag.target)
+            this._moveTo(drag.item, drag.target);
+        else
+            this._wiggle(drag.item);
+    }
+
+    // Put `item` where `target` is, the others shifting along. A hidden tile
+    // dropped among the shown ones is shown again; dropped on a hidden one it
+    // stays hidden.
+    _moveTo(item, target) {
+        const ordered = this._ordered();
+        ordered.splice(ordered.indexOf(item), 1);
+        ordered.splice(ordered.indexOf(target), 0, item);
+        item.hidden = target.hidden;
+        this._save(ordered);
+        this._layout();
+    }
+
+    // A slight, endless tilt on every tile while editing.
+    _wiggle(item) {
+        const widget = item.widget;
+        widget.remove_all_transitions();
+        widget.rotation_angle_z = 0;
+        if (!this._editing || item.hidden)
+            return;
+        const swing = (angle) => {
+            if (!this._editing || widget.is_finalized?.())
+                return;
+            widget.ease({
+                rotation_angle_z: angle,
+                duration: 110 + Math.floor(Math.random() * 40),
+                mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
+                onComplete: () => swing(-angle),
+            });
         };
-        button('‹', () => this._move(item, -1));
-        button('›', () => this._move(item, 1));
-        item.hideButton = button('−', () => this._toggleHidden(item));
-        item.bar = bar;
-        item.widget.add_child(bar);
+        swing(Math.random() < 0.5 ? 0.9 : -0.9);
     }
 
     // Items in the saved order; ones the saved order does not know keep their
@@ -363,7 +476,10 @@ const ControlsPanel = GObject.registerClass({
             }
             return true;
         };
-        for (const item of this._ordered()) {
+        const ordered = this._ordered();
+        // Hidden tiles wait at the end while editing, dimmed, with a +.
+        const sequence = [...ordered.filter(i => !i.hidden), ...ordered.filter(i => i.hidden)];
+        for (const item of sequence) {
             if (item.hidden && !this._editing)
                 continue;
             let placed = false;
@@ -380,14 +496,19 @@ const ControlsPanel = GObject.registerClass({
                     placed = true;
                 }
             }
-            item.bar.visible = this._editing;
-            item.hideButton.label = item.hidden ? '+' : '−';
+            item.badge.visible = this._editing;
+            item.overlay.visible = this._editing;
+            item.overlay.reactive = this._editing;
+            item.badge.label = item.hidden ? '+' : '\u2212';
             item.widget.opacity = item.hidden ? 110 : 255;
+            item.widget.set_translation(0, 0, 0);
+            this._wiggle(item);
         }
     }
 
     _setEditing(editing) {
         this._editing = editing;
+        this._endDrag();
         this._editButton.label = editing ? 'Done' : 'Edit Controls';
         this._layout();
     }
@@ -395,17 +516,6 @@ const ControlsPanel = GObject.registerClass({
     _save(ordered) {
         this._desktop.set_strv('controls-order', ordered.map(i => i.id));
         this._desktop.set_strv('controls-hidden', ordered.filter(i => i.hidden).map(i => i.id));
-    }
-
-    _move(item, step) {
-        const ordered = this._ordered();
-        const i = ordered.indexOf(item);
-        const j = i + step;
-        if (j < 0 || j >= ordered.length)
-            return;
-        [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
-        this._save(ordered);
-        this._layout();
     }
 
     _toggleHidden(item) {

@@ -386,24 +386,30 @@
   background-color: rgba(255, 255, 255, 0.24);
 }
 
-.parchaos-controls-edit-bar {
-  spacing: 3px;
-  padding: 3px;
-}
-
-.parchaos-controls-edit-step {
-  min-width: 18px;
-  min-height: 18px;
+.parchaos-controls-edit-badge {
+  min-width: 22px;
+  min-height: 22px;
   padding: 0;
   border-radius: 999px;
-  background-color: rgba(0, 0, 0, 0.55);
+  background-color: rgba(60, 60, 64, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
-.parchaos-controls-edit-step:hover {
-  background-color: rgba(0, 0, 0, 0.75);
+.parchaos-controls-edit-badge:hover {
+  background-color: rgba(90, 90, 96, 0.98);
+}
+
+.parchaos-controls-tile:drag,
+StWidget:drag {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+StWidget:drop {
+  background-color: rgba(255, 255, 255, 0.22);
 }
 
 .parchaos-light .parchaos-controls-edit {
