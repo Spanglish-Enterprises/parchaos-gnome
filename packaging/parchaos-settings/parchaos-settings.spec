@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -17,6 +17,7 @@ URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-settings
 Source1:        org.parchaos.Settings.desktop
 Source2:        parchaos-app-network
+Source9:        parchaos-app-permissions
 Source3:        parchaos-app-network-refresh.service
 Source5:        es.po
 Source90:       LICENSE
@@ -48,6 +49,7 @@ cp -p %{SOURCE90} .
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-settings
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Settings.desktop
 install -Dm0755 %{SOURCE2} %{buildroot}%{_libexecdir}/parchaos-app-network
+install -Dm0755 %{SOURCE9} %{buildroot}%{_libexecdir}/parchaos-app-permissions
 install -Dm0644 %{SOURCE3} %{buildroot}%{_userunitdir}/parchaos-app-network-refresh.service
 # Spanish (es_PR falls back to es). Add a language: Source line + one more
 # msgfmt line here.
@@ -67,10 +69,16 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_bindir}/parchaos-settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 %{_libexecdir}/parchaos-app-network
+%{_libexecdir}/parchaos-app-permissions
 %{_userunitdir}/parchaos-app-network-refresh.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-23
+- Ticket #160: Privacy gains an App permissions list. Each Flatpak app shows switches
+  for the network, files and devices it asks for; a switch is Flatpak's own override,
+  so turning it back on undoes the change.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-22
 - Changelog header fixed (the last releases were built with it garbled).
 

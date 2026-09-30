@@ -1,0 +1,143 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-app-permissions: show and change what each Flatpak app may use
+# (ticket #160).
+#
+#   parchaos-app-permissions list                      JSON: apps and the
+#                                                      permissions each asks for
+#   parchaos-app-permissions set ID PERM allow|block   PERM: network | files | devices
+#
+# "block" writes Flatpak's own negation into the app's user override
+# (~/.local/share/flatpak/overrides/ID), which Flatpak reads the next time
+# the app starts; "allow" removes that negation again, so turning a switch
+# back on undoes the change exactly. Nothing else in the override is touched.
+#
+#   network  [Context] shared   network        -> !network
+#   files    [Context] filesystems home, host  -> !home, !host
+#   devices  [Context] devices  all, dri, kvm  -> !all (every device but the GPU)
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import configparser
+import json
+import os
+import subprocess
+import sys
+
+# permission -> (override key, what the app asks for, what blocks it)
+PERMS = {
+    'network': ('shared', ('network',), ('!network',)),
+    'files': ('filesystems', ('home', 'host', 'host-os', 'host-etc'), ('!home', '!host')),
+    'devices': ('devices', ('all',), ('!all',)),
+}
+
+
+def overrides_dir():
+    base = os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share')
+    return os.path.join(base, 'flatpak', 'overrides')
+
+
+def _read(app_id):
+    path = os.path.join(overrides_dir(), app_id)
+    parser = configparser.RawConfigParser(delimiters=('=',), interpolation=None)
+    parser.optionxform = str
+    parser.read(path, encoding='utf-8')
+    return path, parser
+
+
+def _values(parser, key):
+    return [v for v in parser.get('Context', key, fallback='').split(';') if v]
+
+
+def blocked(app_id, perm):
+    key, _asks, negations = PERMS[perm]
+    _path, parser = _read(app_id)
+    return any(n in _values(parser, key) for n in negations)
+
+
+def set_permission(app_id, perm, block):
+    if '/' in app_id or '..' in app_id or perm not in PERMS:
+        raise ValueError(f'not an app or permission: {app_id} {perm}')
+    key, _asks, negations = PERMS[perm]
+    path, parser = _read(app_id)
+    values = [v for v in _values(parser, key) if v not in negations]
+    if block:
+        values += list(negations)
+    if values:
+        if not parser.has_section('Context'):
+            parser.add_section('Context')
+        parser.set('Context', key, ';'.join(values) + ';')
+    elif parser.has_section('Context'):
+        parser.remove_option('Context', key)
+        if not parser.options('Context'):
+            parser.remove_section('Context')
+    if not parser.sections():
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        parser.write(f, space_around_delimiters=False)
+    os.replace(tmp, path)
+
+
+def asked(app_id):
+    """The permissions the app itself asks for, from its installed metadata."""
+    try:
+        out = subprocess.run(['flatpak', 'info', '--show-permissions', app_id],
+                             capture_output=True, text=True, timeout=20).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set(PERMS)
+    parser = configparser.RawConfigParser(delimiters=('=',), interpolation=None)
+    parser.optionxform = str
+    try:
+        parser.read_string(out)
+    except configparser.Error:
+        return set(PERMS)
+    found = set()
+    for perm, (key, asks, _neg) in PERMS.items():
+        have = [v for v in parser.get('Context', key, fallback='').split(';') if v]
+        if any(a in have for a in asks):
+            found.add(perm)
+    return found
+
+
+def list_apps():
+    try:
+        out = subprocess.run(['flatpak', 'list', '--app', '--columns=application,name'],
+                             capture_output=True, text=True, timeout=20).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    apps = []
+    for line in out.splitlines():
+        app_id, _sep, name = line.partition('\t')
+        if not app_id:
+            continue
+        wanted = asked(app_id)
+        # An app keeps a switch that is already off, so it can be turned back on.
+        perms = {p: {'asked': p in wanted, 'blocked': blocked(app_id, p)} for p in PERMS}
+        perms = {p: v for p, v in perms.items() if v['asked'] or v['blocked']}
+        apps.append({'id': app_id, 'name': name or app_id, 'permissions': perms})
+    apps.sort(key=lambda a: a['name'].lower())
+    return apps
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == 'list':
+        json.dump(list_apps(), sys.stdout)
+        return 0
+    if len(argv) == 5 and argv[1] == 'set' and argv[4] in ('allow', 'block'):
+        try:
+            set_permission(argv[2], argv[3], argv[4] == 'block')
+        except (ValueError, OSError) as err:
+            print(f'parchaos-app-permissions: {err}', file=sys.stderr)
+            return 1
+        return 0
+    print('usage: parchaos-app-permissions list | set ID network|files|devices allow|block',
+          file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

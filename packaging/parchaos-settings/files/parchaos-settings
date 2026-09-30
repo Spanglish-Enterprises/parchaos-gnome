@@ -19,6 +19,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
 APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
 APP_NETWORK = '/usr/libexec/parchaos-app-network'
+APP_PERMISSIONS = '/usr/libexec/parchaos-app-permissions'
 
 # Translations (ticket #53): the catalogs are installed as
 # <localedir>/<lang>/LC_MESSAGES/parchaos-settings.mo. Strings shown to the
@@ -511,6 +512,7 @@ class Window(Adw.ApplicationWindow):
         self._net_placeholder = Adw.ActionRow(title=_('Loading apps...'))
         self._net_group.add(self._net_placeholder)
         search.connect('search-changed', self._on_net_search)
+        self._add_permissions_group(page)
         if not os.access(APP_NETWORK, os.X_OK):
             self._net_placeholder.set_title(_('Not available'))
             self._net_placeholder.set_subtitle(_('The network access helper is not installed.'))
@@ -523,6 +525,86 @@ class Window(Adw.ApplicationWindow):
             self._net_placeholder.set_title(_('Could not list apps'))
             self._net_placeholder.set_subtitle(err.message)
         return page
+
+    # What each Flatpak app may use (ticket #160): its files, devices and
+    # network. Each switch is Flatpak's own override, so turning it back on
+    # undoes the change.
+
+    def _add_permissions_group(self, page):
+        self._perm_group = Adw.PreferencesGroup(
+            title=_('App permissions'),
+            description=_('What each Flatpak app is allowed to use. A switch appears only for '
+                          'things the app asks for. Changes apply the next time the app starts.'))
+        page.add(self._perm_group)
+        self._perm_placeholder = Adw.ActionRow(title=_('Loading apps...'))
+        self._perm_group.add(self._perm_placeholder)
+        if not os.access(APP_PERMISSIONS, os.X_OK):
+            self._perm_placeholder.set_title(_('Not available'))
+            return
+        try:
+            proc = Gio.Subprocess.new([APP_PERMISSIONS, 'list'],
+                                      Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE)
+            proc.communicate_utf8_async(None, None, self._on_perm_list)
+        except GLib.Error as err:
+            self._perm_placeholder.set_title(_('Could not list apps'))
+            self._perm_placeholder.set_subtitle(err.message)
+
+    def _on_perm_list(self, proc, result):
+        try:
+            _ok, out, _err = proc.communicate_utf8_finish(result)
+            apps = json.loads(out or '[]')
+        except (GLib.Error, ValueError) as err:
+            self._perm_placeholder.set_title(_('Could not list apps'))
+            self._perm_placeholder.set_subtitle(str(err))
+            return
+        apps = [a for a in apps if a['permissions']]
+        if not apps:
+            self._perm_placeholder.set_title(_('No Flatpak apps with permissions to change'))
+            return
+        self._perm_group.remove(self._perm_placeholder)
+        labels = {
+            'network': (_('Network'), _('Internet and local network')),
+            'files': (_('Files'), _('Your home folder and other drives')),
+            'devices': (_('Devices'), _('Cameras, game controllers and other hardware')),
+        }
+        for app in apps:
+            expander = Adw.ExpanderRow(title=GLib.markup_escape_text(app['name']))
+            for perm, (title, sub) in labels.items():
+                state = app['permissions'].get(perm)
+                if state is None:
+                    continue
+                row = Adw.SwitchRow(title=title, subtitle=sub, active=not state['blocked'])
+                row.app_id, row.app_name, row.perm = app['id'], app['name'], perm
+                row.connect('notify::active', self._on_perm_toggled)
+                expander.add_row(row)
+            self._perm_group.add(expander)
+
+    def _on_perm_toggled(self, row, _pspec):
+        action = 'allow' if row.get_active() else 'block'
+        try:
+            proc = Gio.Subprocess.new([APP_PERMISSIONS, 'set', row.app_id, row.perm, action],
+                                      Gio.SubprocessFlags.STDERR_PIPE)
+            proc.communicate_utf8_async(None, None, self._on_perm_set, (row, action))
+        except GLib.Error as err:
+            self._perm_failed(row, action, err.message)
+
+    def _on_perm_set(self, proc, result, data):
+        row, action = data
+        try:
+            _ok, _out, err = proc.communicate_utf8_finish(result)
+        except GLib.Error as e:
+            self._perm_failed(row, action, e.message)
+            return
+        if proc.get_exit_status() != 0:
+            self._perm_failed(row, action, (err or '').strip() or _('The change was not saved.'))
+            return
+        self.add_toast(Adw.Toast(title=_('Saved. Restart %s for this to apply.') % row.app_name))
+
+    def _perm_failed(self, row, action, message):
+        row.handler_block_by_func(self._on_perm_toggled)
+        row.set_active(action != 'allow')
+        row.handler_unblock_by_func(self._on_perm_toggled)
+        self.add_toast(Adw.Toast(title=message))
 
     def _on_net_list(self, proc, result):
         try:
