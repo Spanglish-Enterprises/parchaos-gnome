@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
@@ -348,6 +348,10 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-21
+- Ticket #141: a new, more three-dimensional trash can (empty and full):
+  a tapered ribbed bin shaded like a cylinder, seen slightly from above,
+  with a rim in the folder colour and paper sticking out when full.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-20
 - Ticket #79: folder colours. Ten small themes, ParchaOS-dark-<Colour> and
   ParchaOS-light-<Colour> for Berry, Sunny, Leaf, Ocean and Graphite, hold

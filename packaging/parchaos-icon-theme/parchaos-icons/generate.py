@@ -294,18 +294,36 @@ def folder(glyph, open_=False):
 
 
 def trash(full):
-    papers = ('<path d="M168 132 l40 -30 l56 34 l-24 42z" fill="#fff"/>'
-              '<path d="M250 118 l58 -18 l30 50 l-50 24z" fill="#f6e4b8"/>'
-              '<path d="M312 138 l44 10 l-10 46 l-40 -6z" fill="#fff"/>') if full else ''
+    """A round wire-style bin seen slightly from above: tapered ribbed body
+    shaded like a cylinder, a lid-coloured rim, and (when full) paper
+    sticking out of the opening."""
+    papers = ('<path d="M168 132 l40 -38 l58 30 l-22 40z" fill="#fff"/>'
+              '<path d="M244 122 l60 -30 l34 46 l-52 28z" fill="#f6e4b8"/>'
+              '<path d="M304 132 l46 -6 l4 46 l-44 8z" fill="#fff"/>'
+              '<path d="M186 120 l26 -8 l8 30 l-28 6z" fill="#dfe6f5"/>') if full else ''
+    top_l, top_r, bot_l, bot_r = 126, 386, 158, 354
+    ribs = ''
+    for i in range(1, 7):
+        xt = top_l + (top_r - top_l) * i / 7
+        xb = bot_l + (bot_r - bot_l) * i / 7
+        ribs += f'<path d="M{xt:.1f} 170 L{xb:.1f} 452" stroke="#1d2233" stroke-opacity="0.16" stroke-width="7" stroke-linecap="round"/>'
+        ribs += f'<path d="M{xt + 5:.1f} 170 L{xb + 4:.1f} 452" stroke="#fff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>'
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>'
-            '<linearGradient id="bin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9cfdc"/><stop offset="1" stop-color="#8e97ab"/></linearGradient>'
-            '<filter id="tsh" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.22"/></filter></defs>'
+            '<linearGradient id="bin" x1="0" y1="0" x2="1" y2="0">'
+            '<stop offset="0" stop-color="#7d869c"/><stop offset="0.28" stop-color="#eef1f8"/>'
+            '<stop offset="0.55" stop-color="#b6bdcf"/><stop offset="1" stop-color="#6a7288"/></linearGradient>'
+            '<linearGradient id="binfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/>'
+            '<stop offset="1" stop-color="#1d2233" stop-opacity="0.3"/></linearGradient>'
+            '<clipPath id="binclip"><path d="M126 150 A130 30 0 0 0 386 150 L354 430 Q256 476 158 430z"/></clipPath>'
+            '<filter id="tsh" x="-15%" y="-15%" width="130%" height="135%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000" flood-opacity="0.28"/></filter></defs>'
+            '<ellipse cx="256" cy="150" rx="130" ry="30" fill="#3d4358"/>'
+            '<path d="M126 150 A130 30 0 0 1 386 150" fill="none" stroke="#7a55d6" stroke-width="12" stroke-linecap="round"/>'
             + papers +
-            '<path d="M132 176 H380 L356 430 a24 24 0 0 1 -24 22 H180 a24 24 0 0 1 -24 -22z" fill="url(#bin)" filter="url(#tsh)"/>'
-            '<rect x="112" y="150" width="288" height="44" rx="22" fill="#7a55d6"/>'
-            '<rect x="112" y="150" width="288" height="14" rx="7" fill="#fff" fill-opacity="0.3"/>'
-            '<g fill="#fff" fill-opacity="0.35"><rect x="162" y="250" width="188" height="12" rx="6"/>'
-            '<rect x="170" y="310" width="172" height="12" rx="6"/><rect x="178" y="370" width="156" height="12" rx="6"/></g>'
+            '<g filter="url(#tsh)"><path d="M126 150 A130 30 0 0 0 386 150 L354 430 Q256 476 158 430z" fill="url(#bin)"/></g>'
+            '<g clip-path="url(#binclip)">' + ribs +
+            '<rect x="100" y="150" width="320" height="330" fill="url(#binfade)"/></g>'
+            '<path d="M126 150 A130 30 0 0 0 386 150" fill="none" stroke="#7a55d6" stroke-width="14" stroke-linecap="round"/>'
+            '<path d="M138 152 A118 24 0 0 0 374 152" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>'
             '</svg>\n')
 
 
