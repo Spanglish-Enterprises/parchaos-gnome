@@ -1,0 +1,18 @@
+diff -ruN a/src/nautilus-previewer.c b/src/nautilus-previewer.c
+--- a/src/nautilus-previewer.c
++++ b/src/nautilus-previewer.c
+@@ -311,8 +311,12 @@
+
+     g_dbus_proxy_call (previewer_proxy,
+                        "ShowFile",
+-                       g_variant_new ("(ssb)",
+-                                      uri, window_handle, close_if_already_visible),
++                       g_variant_new ("(ssbs)",
++                                      uri, window_handle, close_if_already_visible,
++                                      /* Sushi 50 added an activation token to
++                                       * ShowFile; a call without it is rejected
++                                       * and no preview appears. */
++                                      ""),
+                        G_DBUS_CALL_FLAGS_NONE,
+                        -1,
+                        cancellable,

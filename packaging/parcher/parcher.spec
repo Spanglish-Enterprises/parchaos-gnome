@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        28%{?dist}
+Release:        29%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -90,6 +90,9 @@ Patch7:         0008-status-bar.patch
 Patch8:         0009-round-search-and-more-menu.patch
 # Sidebar: sentence-case section headings, rounded rows.
 Patch9:         0010-sidebar-polish.patch
+# Quick Preview (spacebar): Sushi 50's ShowFile takes a fourth argument, the
+# activation token, and rejects Nautilus 48's three-argument call.
+Patch10:        0011-previewer-activation-token.patch
 
 BuildArch:      x86_64
 
@@ -306,6 +309,11 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-29
+- Quick Preview (ticket #153): pressing the spacebar did nothing. Sushi 50's
+  ShowFile takes a fourth argument (an activation token) and refused
+  Nautilus 48's three-argument call without a word. The call now sends it.
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-28
 - Sidebar polish (ticket #145, stage 4): section headings in sentence case,
   rows with rounded corners and a little space between them.
