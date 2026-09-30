@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2.1.0-27
+- Ticket #135: Menu shortcut and badge text use the kit's 13 px medium weight and the row's own dimmed colour.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2.1.0-26
 - Finished the menu bar menus (ticket #135 reference). Logo menu: About, System Settings with an update count, Parcha Store, Recent Items, Force Quit, Sleep, Restart, Shut Down, Lock Screen, Log Out <name>. App menu: About, Settings, Hide, Hide Others, Show All, Quit, with shortcuts shown right-aligned (symbols with the Super-as-Ctrl keyboard style, key names otherwise). File, Edit, View, Go and Window menus are filled in for the file manager (New Folder, Get Info, Quick Look, Move to Trash, Go to Folder, tiling, open windows list ...). Items the focused app cannot do stay greyed.
 

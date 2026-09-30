@@ -192,16 +192,27 @@ export default class ParchaSessionExtension extends Extension {
     // smoked, blurred pane with rounded corners and a hairline edge, like the
     // reference; Classic keeps the plain theme menus.
     _dressMenu(pointer) {
-        // With the refractive glass extension on, it draws the menus itself.
+        // With the refractive glass extension on, it draws the menu material
+        // itself; the row sizing below still applies.
         const refracted = this._settings?.get_boolean('glass-effects') ?? false;
-        const glass = this._settings?.get_string('style') !== 'classic' && !refracted;
+        const glass = this._settings?.get_string('style') !== 'classic';
         const dark = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'})
             .get_string('color-scheme') === 'prefer-dark';
-        pointer.remove_style_class_name('parchaos-glass-menu');
-        pointer.remove_style_class_name('parchaos-glass-menu-light');
+        for (const name of ['parchaos-glass-menu', 'parchaos-glass-menu-light', 'parchaos-menu-metrics',
+            'parchaos-menu-dark', 'parchaos-menu-light'])
+            pointer.remove_style_class_name(name);
         const content = this._menuContent(pointer);
         const effect = pointer._parchaosBlur;
         if (!glass || !content) {
+            if (effect) {
+                pointer._parchaosBlurHost?.remove_effect(effect);
+                pointer._parchaosBlur = null;
+            }
+            return;
+        }
+        pointer.add_style_class_name('parchaos-menu-metrics');
+        pointer.add_style_class_name(dark ? 'parchaos-menu-dark' : 'parchaos-menu-light');
+        if (refracted) {
             if (effect) {
                 pointer._parchaosBlurHost?.remove_effect(effect);
                 pointer._parchaosBlur = null;

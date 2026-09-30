@@ -1,56 +1,107 @@
-/* Glass menus (ticket #135): menu bar dropdowns, popovers and app menus.
-   Smoked, blurred panes with rounded corners and a hairline edge. The
-   session extension adds .parchaos-glass-menu on the Glass style and the
-   -light variant for a light appearance. Classic keeps the theme's menus. */
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-content {
-  background-color: rgba(24, 24, 24, 0.52);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
-  padding: 6px;
+/* Glass menus (ticket #135), sized and coloured from the UI kit's Menu
+   component (large size): 12 px corners, 5 px vertical and 12 px side
+   padding, 24 px rows, 13 px medium text, 8 px hover pills, 11 px
+   separators, shortcuts in the tertiary colour.
+
+   The session extension adds, on the Glass style only:
+     .parchaos-menu-metrics   row sizing (always)
+     .parchaos-menu-dark / .parchaos-menu-light   text colours (always)
+     .parchaos-glass-menu     the smoked blurred pane (only when the
+                              refractive extension is off; with it on, that
+                              extension draws the pane)
+   Classic keeps the theme's plain menus. */
+
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-menu-content {
+  padding: 5px;
+  border-radius: 12px;
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item {
-  border-radius: 10px !important;
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-menu-item {
+  min-height: 24px;
+  height: 24px;
+  padding: 0 7px;
+  margin: 0;
+  spacing: 8px;
+  border-radius: 8px !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-menu-item StLabel {
+  font-size: 13px;
+}
+
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-separator-menu-item {
+  margin: 0;
+  padding: 0;
+  height: 11px;
+  min-height: 11px;
+  spacing: 0;
+}
+
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-separator-menu-item .popup-separator-menu-item-separator {
+  margin: 0 7px;
+  height: 1px;
+  min-height: 1px;
+}
+
+.popup-menu-boxpointer.parchaos-menu-metrics .popup-sub-menu {
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+/* Dark appearance: white text, dim shortcuts, grey hover pill. */
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item {
   color: rgba(255, 255, 255, 0.96);
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:focus,
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:hover,
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:selected {
-  background-color: rgba(255, 255, 255, 0.18) !important;
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item:focus,
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item:hover,
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item:selected,
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item:active {
+  background-color: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:insensitive {
-  color: rgba(255, 255, 255, 0.45);
+.popup-menu-boxpointer.parchaos-menu-dark .popup-menu-item:insensitive {
+  color: rgba(255, 255, 255, 0.38);
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu .popup-separator-menu-item .popup-separator-menu-item-separator {
+.popup-menu-boxpointer.parchaos-menu-dark .popup-separator-menu-item .popup-separator-menu-item-separator {
   background-color: rgba(255, 255, 255, 0.16);
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-content {
-  background-color: rgba(246, 246, 248, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.16);
+/* Light appearance. */
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item {
+  color: rgba(0, 0, 0, 0.88);
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item {
-  color: rgba(0, 0, 0, 0.86);
-}
-
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:focus,
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:hover,
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:selected {
-  background-color: rgba(0, 0, 0, 0.09) !important;
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item:focus,
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item:hover,
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item:selected,
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item:active {
+  background-color: rgba(0, 0, 0, 0.1) !important;
   color: #000000 !important;
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:insensitive {
-  color: rgba(0, 0, 0, 0.4);
+.popup-menu-boxpointer.parchaos-menu-light .popup-menu-item:insensitive {
+  color: rgba(0, 0, 0, 0.35);
 }
 
-.popup-menu-boxpointer.parchaos-glass-menu-light .popup-separator-menu-item .popup-separator-menu-item-separator {
-  background-color: rgba(0, 0, 0, 0.12);
+.popup-menu-boxpointer.parchaos-menu-light .popup-separator-menu-item .popup-separator-menu-item-separator {
+  background-color: rgba(0, 0, 0, 0.14);
+}
+
+/* The pane, when the refractive extension is not drawing it. */
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-content {
+  background-color: rgba(58, 58, 60, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.25);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-content {
+  background-color: rgba(236, 236, 238, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.18);
 }

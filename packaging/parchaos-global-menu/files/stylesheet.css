@@ -225,19 +225,19 @@
     background-color: transparent !important;
 }
 
-/* Menu rows: the keyboard shortcut (or a badge) sits dimmed at the right. It
-   takes the row's own text colour, so it stays readable on dark and light
-   menus and when the glass extension picks a text colour. */
+/* Menu rows: the keyboard shortcut (or a badge) sits at the right in the
+   UI kit's tertiary colour: the row's text colour, dimmed. */
 .parchaos-menu-hint {
-    opacity: 140;
-    margin-left: 32px;
+    opacity: 120;
+    margin-left: 24px;
     font-size: 13px;
+    font-weight: 500;
 }
 
 .parchaos-menu-badge {
     background-color: rgba(128, 128, 128, 0.3);
     border-radius: 999px;
-    padding: 1px 9px;
+    padding: 0 9px;
     margin-left: 18px;
     font-size: 12px;
     font-weight: 600;
