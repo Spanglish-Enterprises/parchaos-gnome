@@ -53,6 +53,10 @@ OLD_BASE = {
 }
 GREY_BELOW = 0.12  # saturation under which a palette entry is a grey, left as is
 NAME = re.compile(r"^titlebutton-(close|minimize|maximize|restore)(-[a-z-]+)?(@2)?\.png$")
+# The window-manager (metacity) copies of the same buttons are SVGs. Chromium
+# draws its own title bar from these (ticket #142), so they get the palette too.
+SVG_NAME = re.compile(r"^titlebutton-(close|minimize|maximize|unmaximize)(-[a-z-]+)?\.svg$")
+HEX = re.compile(r"#([0-9a-fA-F]{6})\b")
 PNG_SIG = b"\x89PNG\r\n\x1a\n"
 MARK = b"ParchaOS-recolored"  # tEXt keyword: stops a second pass recoloring twice
 
@@ -113,6 +117,19 @@ def rewrite(data, family, dark, palette):
     return b"".join(out), moved
 
 
+def rewrite_svg(text, family, palette):
+    """Recolor every saturated hex colour of an SVG button; greys stay."""
+    old = hsv(OLD_BASE[(family, True)])
+    new = hsv(PALETTES[palette][family])
+
+    def swap(m):
+        rgb = tuple(int(m.group(1)[i:i + 2], 16) for i in (0, 2, 4))
+        out = transform(rgb, old, new)
+        return "#%02x%02x%02x" % out
+
+    return HEX.sub(swap, text)
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("dirs", nargs="+")
@@ -124,6 +141,23 @@ def main(argv):
     for top in args.dirs:
         for root, _dirs, names in os.walk(top):
             for name in sorted(names):
+                sm = SVG_NAME.match(name)
+                if sm:
+                    path = os.path.join(root, name)
+                    if os.path.islink(path):
+                        continue
+                    family = "maximize" if sm.group(1) == "unmaximize" else sm.group(1)
+                    text = open(path, encoding="utf-8").read()
+                    new_text = rewrite_svg(text, family, args.palette)
+                    files += 1
+                    if new_text == text:
+                        done += 1
+                        continue
+                    changed += 1
+                    if not args.check:
+                        with open(path, "w", encoding="utf-8") as f:
+                            f.write(new_text)
+                    continue
                 m = NAME.match(name)
                 if not m:
                     continue

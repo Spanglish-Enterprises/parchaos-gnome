@@ -1,0 +1,17 @@
+--- a/src/resources/style.css
++++ b/src/resources/style.css
+@@ -593,0 +594,8 @@
++
++/* The sidebar's header bar carries only the window buttons and the menu: the
++ * app name next to them was cut to "Parc..." and the folder name lives in the
++ * toolbar. */
++headerbar.parcher-sidebar-bar windowtitle {
++  opacity: 0;
++  min-width: 0;
++}
+--- a/src/resources/ui/nautilus-window.ui
++++ b/src/resources/ui/nautilus-window.ui
+@@ -113,0 +114,3 @@
++                        <style>
++                          <class name="parcher-sidebar-bar"/>
++                        </style>
