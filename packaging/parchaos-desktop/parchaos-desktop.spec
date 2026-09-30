@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        55%{?dist}
+Release:        56%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -260,7 +260,10 @@ fi
 %{_unitdir}/multi-user.target.wants/parchaos-safe-mode.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
-%%%changelog
+%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-56
+- Changelog header fixed (the last releases were built with it garbled).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-55
 - Ticket #148: new keys controls-order and controls-hidden (Edit Controls).
 

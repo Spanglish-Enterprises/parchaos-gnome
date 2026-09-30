@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -64,7 +64,10 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/applications/org.parchaos.Screenshot.desktop
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
-%%changelog
+%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-15
+- Changelog header fixed (the last releases were built with it garbled).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-14
 - Ticket #148: Edit Controls. A button at the bottom of the panel lets you hide
   tiles, bring hidden ones back, and move each tile earlier or later; the

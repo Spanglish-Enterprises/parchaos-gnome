@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -70,7 +70,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/parchaos-app-network-refresh.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
-%%changelog
+%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-22
+- Changelog header fixed (the last releases were built with it garbled).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-21
 - A "Your computer" group on the Desktop page shows the detected model and opens
   the website hardware form with the model, CPU and graphics filled in (nothing

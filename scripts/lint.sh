@@ -164,6 +164,12 @@ if [ -n "$narrative_lines" ]; then
     [ -z "$bad" ] || { echo "$bad"; fail macos-narrative; }
 fi
 
+echo "== spec changelog headers =="
+if grep -n '^%%*changelog' packaging/*/*.spec | grep -v ':%changelog$'; then
+    echo "a spec has a garbled %changelog header (must be exactly %changelog)"
+    fail=1
+fi
+
 echo "== packages.sh vs parchaos-desktop Requires =="
 # Every non-comment, non-conditional package in packages.sh should appear
 # in the meta-package's Requires list.
