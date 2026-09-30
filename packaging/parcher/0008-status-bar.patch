@@ -1,0 +1,547 @@
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -138,6 +138,8 @@
+   'nautilus-view.h',
+   'nautilus-view-cell.c',
+   'nautilus-view-cell.h',
++  'nautilus-status-bar.c',
++  'nautilus-status-bar.h',
+   'nautilus-view-controls.c',
+   'nautilus-view-controls.h',
+   'nautilus-view-info.h',
+--- a/src/nautilus-files-view.c
++++ b/src/nautilus-files-view.c
+@@ -2825,6 +2825,43 @@
+                                  zoom_level != view_info.zoom_level_standard);
+ }
+ 
++GListModel *
++nautilus_files_view_get_item_model (NautilusFilesView *self)
++{
++    NautilusFilesViewPrivate *priv = nautilus_files_view_get_instance_private (self);
++
++    return G_LIST_MODEL (priv->model);
++}
++
++void
++nautilus_files_view_get_zoom_range (NautilusFilesView *self,
++                                    int               *level,
++                                    int               *min,
++                                    int               *max)
++{
++    NautilusFilesViewPrivate *priv = nautilus_files_view_get_instance_private (self);
++    NautilusViewInfo view_info = nautilus_list_base_get_view_info (priv->list_base);
++
++    *level = nautilus_list_base_get_zoom_level (priv->list_base);
++    *min = view_info.zoom_level_min;
++    *max = view_info.zoom_level_max;
++}
++
++void
++nautilus_files_view_set_zoom_level (NautilusFilesView *self,
++                                    int                level)
++{
++    NautilusFilesViewPrivate *priv = nautilus_files_view_get_instance_private (self);
++    NautilusViewInfo view_info = nautilus_list_base_get_view_info (priv->list_base);
++
++    level = CLAMP (level, view_info.zoom_level_min, view_info.zoom_level_max);
++    if (level != nautilus_list_base_get_zoom_level (priv->list_base))
++    {
++        nautilus_list_base_set_zoom_level (priv->list_base, level);
++        update_zoom_actions_state (self);
++    }
++}
++
+ static void
+ action_zoom_in (GSimpleAction *action,
+                 GVariant      *state,
+--- a/src/nautilus-files-view.h
++++ b/src/nautilus-files-view.h
+@@ -120,6 +120,13 @@
+  * that observers might want to connect with.
+  */
+ gboolean            nautilus_files_view_get_loading                      (NautilusFilesView *view);
++GListModel *        nautilus_files_view_get_item_model                   (NautilusFilesView *view);
++void                nautilus_files_view_get_zoom_range                   (NautilusFilesView *view,
++                                                                          int               *level,
++                                                                          int               *min,
++                                                                          int               *max);
++void                nautilus_files_view_set_zoom_level                   (NautilusFilesView *view,
++                                                                          int                level);
+ GActionGroup *      nautilus_files_view_get_action_group                 (NautilusFilesView *view);
+ 
+ /* Hooks for subclasses to call. These are normally called only by
+--- a/src/nautilus-status-bar.c
++++ b/src/nautilus-status-bar.c
+@@ -0,0 +1,414 @@
++/*
++ * Copyright (C) 2026 ParchaOS
++ *
++ * SPDX-License-Identifier: GPL-2.0-or-later
++ */
++
++/* The line under the files: how many items the folder holds (or how many
++ * are selected), the free space on that disk, and an icon-size slider. */
++
++#include "nautilus-status-bar.h"
++
++#include <glib/gi18n.h>
++
++#include "nautilus-files-view.h"
++#include "nautilus-application.h"
++#include "nautilus-file.h"
++#include "nautilus-pathbar.h"
++
++struct _NautilusStatusBar
++{
++    GtkBox parent_instance;
++
++    GtkWidget *pathbar;
++    GtkWidget *label;
++    GtkWidget *scale;
++    GtkAdjustment *adjustment;
++
++    NautilusWindowSlot *window_slot;
++    NautilusFilesView *view;
++    GListModel *model;
++    GCancellable *space_cancellable;
++    char *free_space;
++    gboolean updating_scale;
++};
++
++G_DEFINE_FINAL_TYPE (NautilusStatusBar, nautilus_status_bar, GTK_TYPE_BOX);
++
++enum
++{
++    PROP_0,
++    PROP_WINDOW_SLOT,
++    N_PROPS
++};
++
++static GParamSpec *properties[N_PROPS];
++
++static void
++update_label (NautilusStatusBar *self)
++{
++    g_autofree char *text = NULL;
++    guint total = 0;
++    guint selected = 0;
++
++    if (self->model != NULL)
++    {
++        total = g_list_model_get_n_items (self->model);
++    }
++    if (self->window_slot != NULL)
++    {
++        GList *selection = nautilus_window_slot_get_selection (self->window_slot);
++
++        selected = g_list_length (selection);
++    }
++
++    if (selected > 0)
++    {
++        /* Translators: %u is how many items are selected, %u how many the folder holds. */
++        text = g_strdup_printf (_("%u of %u selected"), selected, total);
++    }
++    else
++    {
++        /* Translators: %u is how many items the folder holds. */
++        text = g_strdup_printf (ngettext ("%u item", "%u items", total), total);
++    }
++
++    if (self->free_space != NULL)
++    {
++        g_autofree char *with_space = NULL;
++
++        /* Translators: the first %s is the item count, the second the free disk space, like "12 GB". */
++        with_space = g_strdup_printf (_("%s, %s available"), text, self->free_space);
++        gtk_label_set_label (GTK_LABEL (self->label), with_space);
++    }
++    else
++    {
++        gtk_label_set_label (GTK_LABEL (self->label), text);
++    }
++}
++
++static void
++on_space_ready (GObject      *source,
++                GAsyncResult *result,
++                gpointer      user_data)
++{
++    NautilusStatusBar *self;
++    g_autoptr (GFileInfo) info = NULL;
++
++    info = g_file_query_filesystem_info_finish (G_FILE (source), result, NULL);
++    if (info == NULL)
++    {
++        return;         /* cancelled, or a place without a size */
++    }
++
++    self = NAUTILUS_STATUS_BAR (user_data);
++    g_clear_pointer (&self->free_space, g_free);
++    if (g_file_info_has_attribute (info, G_FILE_ATTRIBUTE_FILESYSTEM_FREE))
++    {
++        self->free_space = g_format_size (g_file_info_get_attribute_uint64 (info, G_FILE_ATTRIBUTE_FILESYSTEM_FREE));
++    }
++    update_label (self);
++}
++
++static void
++update_free_space (NautilusStatusBar *self)
++{
++    GFile *location = NULL;
++
++    g_cancellable_cancel (self->space_cancellable);
++    g_clear_object (&self->space_cancellable);
++    g_clear_pointer (&self->free_space, g_free);
++
++    if (self->window_slot != NULL)
++    {
++        location = nautilus_window_slot_get_location (self->window_slot);
++    }
++    if (location != NULL && g_file_is_native (location))
++    {
++        self->space_cancellable = g_cancellable_new ();
++        g_file_query_filesystem_info_async (location, G_FILE_ATTRIBUTE_FILESYSTEM_FREE,
++                                            G_PRIORITY_LOW, self->space_cancellable,
++                                            on_space_ready, self);
++    }
++    update_label (self);
++}
++
++static void
++update_scale (NautilusStatusBar *self)
++{
++    int level = 0;
++    int min = 0;
++    int max = 0;
++
++    if (self->view == NULL)
++    {
++        gtk_widget_set_sensitive (self->scale, FALSE);
++        return;
++    }
++
++    nautilus_files_view_get_zoom_range (self->view, &level, &min, &max);
++    self->updating_scale = TRUE;
++    gtk_adjustment_configure (self->adjustment, level, min, max, 1, 1, 0);
++    self->updating_scale = FALSE;
++    gtk_widget_set_sensitive (self->scale, max > min);
++}
++
++static void
++on_zoom_changed (NautilusStatusBar *self)
++{
++    if (self->updating_scale || self->view == NULL)
++    {
++        return;
++    }
++    nautilus_files_view_set_zoom_level (self->view, (int) gtk_adjustment_get_value (self->adjustment));
++}
++
++static void
++on_items_changed (NautilusStatusBar *self)
++{
++    update_label (self);
++}
++
++static void
++disconnect_view (NautilusStatusBar *self)
++{
++    if (self->model != NULL)
++    {
++        g_signal_handlers_disconnect_by_func (self->model, on_items_changed, self);
++    }
++    g_clear_weak_pointer (&self->model);
++    g_clear_weak_pointer (&self->view);
++}
++
++static void
++on_view_changed (NautilusStatusBar *self)
++{
++    NautilusView *view = NULL;
++
++    disconnect_view (self);
++    if (self->window_slot != NULL)
++    {
++        view = nautilus_window_slot_get_current_view (self->window_slot);
++    }
++    if (view != NULL && NAUTILUS_IS_FILES_VIEW (view))
++    {
++        self->view = NAUTILUS_FILES_VIEW (view);
++        g_object_add_weak_pointer (G_OBJECT (self->view), (gpointer *) &self->view);
++        self->model = nautilus_files_view_get_item_model (self->view);
++        if (self->model != NULL)
++        {
++            g_object_add_weak_pointer (G_OBJECT (self->model), (gpointer *) &self->model);
++            g_signal_connect_swapped (self->model, "items-changed", G_CALLBACK (on_items_changed), self);
++        }
++    }
++    update_scale (self);
++    update_label (self);
++}
++
++static void
++on_location_changed (NautilusStatusBar *self)
++{
++    GFile *location = NULL;
++
++    if (self->window_slot != NULL)
++    {
++        location = nautilus_window_slot_get_location (self->window_slot);
++    }
++    if (location != NULL)
++    {
++        nautilus_path_bar_set_path (NAUTILUS_PATH_BAR (self->pathbar), location);
++    }
++    update_free_space (self);
++}
++
++static void
++on_menus_changed (NautilusStatusBar *self)
++{
++    if (self->window_slot == NULL)
++    {
++        return;
++    }
++    nautilus_path_bar_set_extensions_background_menu (NAUTILUS_PATH_BAR (self->pathbar),
++                                                      nautilus_window_slot_get_extensions_background_menu (self->window_slot));
++    nautilus_path_bar_set_templates_menu (NAUTILUS_PATH_BAR (self->pathbar),
++                                          nautilus_window_slot_get_templates_menu (self->window_slot));
++}
++
++static void
++on_path_bar_open_location (NautilusPathBar   *path_bar,
++                           GFile             *location,
++                           NautilusOpenFlags  open_flags,
++                           gpointer           user_data)
++{
++    NautilusStatusBar *self = NAUTILUS_STATUS_BAR (user_data);
++
++    if (self->window_slot == NULL)
++    {
++        return;
++    }
++    if (open_flags & (NAUTILUS_OPEN_FLAG_NEW_WINDOW | NAUTILUS_OPEN_FLAG_NEW_TAB))
++    {
++        nautilus_application_open_location_full (NAUTILUS_APPLICATION (g_application_get_default ()),
++                                                 location, open_flags, NULL, NULL, NULL, NULL);
++    }
++    else
++    {
++        nautilus_window_slot_open_location_full (self->window_slot, location, open_flags, NULL);
++    }
++}
++
++static void
++on_selection_changed (NautilusStatusBar *self)
++{
++    update_label (self);
++}
++
++static void
++set_window_slot (NautilusStatusBar *self,
++                 NautilusWindowSlot *slot)
++{
++    if (self->window_slot == slot)
++    {
++        return;
++    }
++    if (self->window_slot != NULL)
++    {
++        g_signal_handlers_disconnect_by_data (self->window_slot, self);
++    }
++    self->window_slot = slot;
++    if (slot != NULL)
++    {
++        g_signal_connect_swapped (slot, "notify::toolbar-menu-sections", G_CALLBACK (on_view_changed), self);
++        g_signal_connect_swapped (slot, "notify::location", G_CALLBACK (on_location_changed), self);
++        g_signal_connect_swapped (slot, "notify::selection", G_CALLBACK (on_selection_changed), self);
++        g_signal_connect_swapped (slot, "notify::extensions-background-menu", G_CALLBACK (on_menus_changed), self);
++        g_signal_connect_swapped (slot, "notify::templates-menu", G_CALLBACK (on_menus_changed), self);
++    }
++    g_object_set (self->pathbar, "window-slot", slot, NULL);
++    on_menus_changed (self);
++    on_location_changed (self);
++    on_view_changed (self);
++    g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_WINDOW_SLOT]);
++}
++
++static void
++nautilus_status_bar_get_property (GObject    *object,
++                                  guint       prop_id,
++                                  GValue     *value,
++                                  GParamSpec *pspec)
++{
++    NautilusStatusBar *self = NAUTILUS_STATUS_BAR (object);
++
++    switch (prop_id)
++    {
++        case PROP_WINDOW_SLOT:
++        {
++            g_value_set_object (value, self->window_slot);
++        }
++        break;
++
++        default:
++        {
++            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
++        }
++    }
++}
++
++static void
++nautilus_status_bar_set_property (GObject      *object,
++                                  guint         prop_id,
++                                  const GValue *value,
++                                  GParamSpec   *pspec)
++{
++    NautilusStatusBar *self = NAUTILUS_STATUS_BAR (object);
++
++    switch (prop_id)
++    {
++        case PROP_WINDOW_SLOT:
++        {
++            set_window_slot (self, g_value_get_object (value));
++        }
++        break;
++
++        default:
++        {
++            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
++        }
++    }
++}
++
++static void
++nautilus_status_bar_dispose (GObject *object)
++{
++    NautilusStatusBar *self = NAUTILUS_STATUS_BAR (object);
++
++    g_cancellable_cancel (self->space_cancellable);
++    g_clear_object (&self->space_cancellable);
++    g_clear_pointer (&self->free_space, g_free);
++    disconnect_view (self);
++    if (self->window_slot != NULL)
++    {
++        g_signal_handlers_disconnect_by_data (self->window_slot, self);
++        self->window_slot = NULL;
++    }
++    G_OBJECT_CLASS (nautilus_status_bar_parent_class)->dispose (object);
++}
++
++static void
++nautilus_status_bar_class_init (NautilusStatusBarClass *klass)
++{
++    GObjectClass *object_class = G_OBJECT_CLASS (klass);
++
++    object_class->dispose = nautilus_status_bar_dispose;
++    object_class->get_property = nautilus_status_bar_get_property;
++    object_class->set_property = nautilus_status_bar_set_property;
++
++    properties[PROP_WINDOW_SLOT] =
++        g_param_spec_object ("window-slot", NULL, NULL,
++                             NAUTILUS_TYPE_WINDOW_SLOT,
++                             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
++    g_object_class_install_properties (object_class, N_PROPS, properties);
++}
++
++static void
++nautilus_status_bar_init (NautilusStatusBar *self)
++{
++    GtkWidget *row;
++
++    gtk_orientable_set_orientation (GTK_ORIENTABLE (self), GTK_ORIENTATION_VERTICAL);
++    gtk_widget_add_css_class (GTK_WIDGET (self), "parcher-status-bar");
++
++    self->pathbar = g_object_new (NAUTILUS_TYPE_PATH_BAR, NULL);
++    gtk_widget_set_hexpand (self->pathbar, TRUE);
++    gtk_widget_set_margin_start (self->pathbar, 8);
++    gtk_widget_set_margin_end (self->pathbar, 8);
++    g_signal_connect (self->pathbar, "open-location", G_CALLBACK (on_path_bar_open_location), self);
++    gtk_box_append (GTK_BOX (self), self->pathbar);
++
++    row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
++    gtk_widget_set_margin_start (row, 12);
++    gtk_widget_set_margin_end (row, 12);
++    gtk_widget_set_margin_top (row, 2);
++    gtk_widget_set_margin_bottom (row, 6);
++    gtk_box_append (GTK_BOX (self), row);
++
++    self->label = gtk_label_new ("");
++    gtk_widget_set_hexpand (self->label, TRUE);
++    gtk_widget_set_halign (self->label, GTK_ALIGN_CENTER);
++    gtk_label_set_ellipsize (GTK_LABEL (self->label), PANGO_ELLIPSIZE_END);
++    gtk_widget_add_css_class (self->label, "dim-label");
++    gtk_widget_add_css_class (self->label, "caption");
++    gtk_box_append (GTK_BOX (row), self->label);
++
++    self->adjustment = gtk_adjustment_new (0, 0, 1, 1, 1, 0);
++    self->scale = gtk_scale_new (GTK_ORIENTATION_HORIZONTAL, self->adjustment);
++    gtk_scale_set_draw_value (GTK_SCALE (self->scale), FALSE);
++    gtk_widget_set_size_request (self->scale, 120, -1);
++    gtk_widget_set_valign (self->scale, GTK_ALIGN_CENTER);
++    gtk_widget_set_tooltip_text (self->scale, _("Icon size"));
++    gtk_accessible_update_property (GTK_ACCESSIBLE (self->scale),
++                                    GTK_ACCESSIBLE_PROPERTY_LABEL, _("Icon size"), -1);
++    gtk_widget_set_sensitive (self->scale, FALSE);
++    g_signal_connect_swapped (self->adjustment, "value-changed", G_CALLBACK (on_zoom_changed), self);
++    gtk_box_append (GTK_BOX (row), self->scale);
++}
+--- a/src/nautilus-status-bar.h
++++ b/src/nautilus-status-bar.h
+@@ -0,0 +1,20 @@
++/*
++ * Copyright (C) 2026 ParchaOS
++ *
++ * SPDX-License-Identifier: GPL-2.0-or-later
++ */
++
++#pragma once
++
++#include <adwaita.h>
++#include <gtk/gtk.h>
++
++#include "nautilus-window-slot.h"
++
++G_BEGIN_DECLS
++
++#define NAUTILUS_TYPE_STATUS_BAR (nautilus_status_bar_get_type ())
++
++G_DECLARE_FINAL_TYPE (NautilusStatusBar, nautilus_status_bar, NAUTILUS, STATUS_BAR, GtkBox)
++
++G_END_DECLS
+--- a/src/nautilus-window.c
++++ b/src/nautilus-window.c
+@@ -57,6 +57,8 @@
+ #include "nautilus-scheme.h"
+ #include "nautilus-shortcut-manager.h"
+ #include "nautilus-signaller.h"
++#include "nautilus-pathbar.h"
++#include "nautilus-status-bar.h"
+ #include "nautilus-toolbar.h"
+ #include "nautilus-trash-monitor.h"
+ #include "nautilus-ui-utilities.h"
+@@ -1561,6 +1563,8 @@
+ 
+     g_type_ensure (NAUTILUS_TYPE_NETWORK_ADDRESS_BAR);
+     g_type_ensure (NAUTILUS_TYPE_TOOLBAR);
++    g_type_ensure (NAUTILUS_TYPE_STATUS_BAR);
++    g_type_ensure (NAUTILUS_TYPE_PATH_BAR);
+     g_type_ensure (NAUTILUS_TYPE_GTK_PLACES_SIDEBAR);
+     g_type_ensure (NAUTILUS_TYPE_PROGRESS_INDICATOR);
+     g_type_ensure (NAUTILUS_TYPE_SHORTCUT_MANAGER);
+--- a/src/resources/ui/nautilus-window.ui
++++ b/src/resources/ui/nautilus-window.ui
+@@ -167,6 +167,11 @@
+                       </object>
+                     </property>
+                     <child type="bottom">
++                      <object class="NautilusStatusBar">
++                        <property name="window-slot" bind-source="NautilusWindow" bind-property="active-slot" bind-flags="sync-create"/>
++                      </object>
++                    </child>
++                    <child type="bottom">
+                       <object class="NautilusNetworkAddressBar" id="network_address_bar">
+                         <property name="visible">False</property>
+                       </object>

@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        22%{?dist}
+Release:        24%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -82,6 +82,9 @@ Patch5:         0006-sidebar-no-app-title.patch
 # The toolbar shows the folder's icon and name as its title; the path opens
 # from it (ticket "Parcher window layout").
 Patch6:         0007-folder-title.patch
+# A path bar and a status line under the files: item count (or selection),
+# free space on the disk, and an icon-size slider.
+Patch7:         0008-status-bar.patch
 
 BuildArch:      x86_64
 
@@ -298,6 +301,15 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-24
+- The path bar under the files is wired to the folder being shown (it only
+  showed an overflow button in 48.7-23).
+
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-23
+- A path bar and a status line now sit under the files: the folder's
+  item count (or how many are selected), the free space on its disk, and
+  an icon-size slider (ticket #145, stage 2).
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-22
 - The toolbar title shows a folder icon (it showed the view-mode icon in
   48.7-21) and stays centred at its natural width.
