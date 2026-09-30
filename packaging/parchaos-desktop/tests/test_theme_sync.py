@@ -64,6 +64,30 @@ def main():
         check(ts.migrated('MacTahoe-Light', root) == 'MacTahoe-Light', 'left alone when the twin is missing')
         check(ts.migrated('Adwaita', root) == 'Adwaita', 'other themes are untouched')
 
+    # libadwaita stylesheets follow the style and appearance (ticket #135).
+    with tempfile.TemporaryDirectory() as root:
+        themes = os.path.join(root, 'themes')
+        for name in ('ParchaOS-Dark', 'ParchaOS-Dark-solid', 'ParchaOS-Light'):
+            os.makedirs(os.path.join(themes, name, 'gtk-4.0'))
+            open(os.path.join(themes, name, 'gtk-4.0', 'gtk.css'), 'w').close()
+        cfg = os.path.join(root, 'gtk-4.0')
+        os.makedirs(cfg)
+        for link in ('gtk.css', 'gtk-dark.css'):
+            os.symlink('gtk-Dark.css', os.path.join(cfg, link))
+        solid = os.path.join(themes, 'ParchaOS-Dark-solid', 'gtk-4.0', 'gtk.css')
+        check(ts.gtk4_links(cfg, themes, 'ParchaOS-Dark-solid'), 'skel links move to the Classic theme')
+        check(os.readlink(os.path.join(cfg, 'gtk.css')) == solid and
+              os.readlink(os.path.join(cfg, 'gtk-dark.css')) == solid, 'both links point at the Classic theme')
+        check(not ts.gtk4_links(cfg, themes, 'ParchaOS-Dark-solid'), 'second run changes nothing')
+        check(ts.gtk4_links(cfg, themes, 'ParchaOS-Light'), 'and on to light')
+        check(not ts.gtk4_links(cfg, themes, 'ParchaOS-Light-solid'), 'a missing theme changes nothing')
+        os.remove(os.path.join(cfg, 'gtk.css'))
+        with open(os.path.join(cfg, 'gtk.css'), 'w') as f:
+            f.write('/* mine */')
+        ts.gtk4_links(cfg, themes, 'ParchaOS-Dark')
+        check(open(os.path.join(cfg, 'gtk.css')).read() == '/* mine */', "the user's own stylesheet is kept")
+        check(not ts.gtk4_links(os.path.join(root, 'none'), themes, 'ParchaOS-Dark'), 'no config dir, no change')
+
     print('theme-sync: all checks passed' if failures == 0 else f'theme-sync: {failures} check(s) failed')
     return 0 if failures == 0 else 1
 

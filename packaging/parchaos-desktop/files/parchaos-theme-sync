@@ -90,6 +90,43 @@ def migrated(value, system_root):
     return renamed if available(renamed, [system_root]) else value
 
 
+def gtk4_links(config_dir, themes_dir, theme):
+    """Point the account's GTK 4 stylesheets at `theme`.
+
+    libadwaita apps ignore the theme setting and read only ~/.config/gtk-4.0,
+    which a new account gets from /etc/skel as links to one frozen copy of
+    the dark glass stylesheet. So Classic and light mode never reached them
+    (ticket #135: Parcher's folder button kept its glass capsule). The links
+    are moved to the system theme that matches the style and appearance.
+    Only links that still point at the skel copies (or at a ParchaOS theme)
+    are touched; a stylesheet of the user's own is left alone. Returns True
+    if anything changed.
+    """
+    source = os.path.join(themes_dir, theme, 'gtk-4.0', 'gtk.css')
+    if not os.path.isfile(source) or not os.path.isdir(config_dir):
+        return False
+    changed = False
+    for name in ('gtk.css', 'gtk-dark.css'):
+        link = os.path.join(config_dir, name)
+        if os.path.lexists(link):
+            if not os.path.islink(link):
+                continue
+            current = os.readlink(link)
+            ours = current in ('gtk-Dark.css', 'gtk-Light.css') or \
+                os.path.join(themes_dir, 'ParchaOS-') in current
+            if not ours:
+                continue
+            if current == source:
+                continue
+        tmp = link + '.parchaos-tmp'
+        if os.path.lexists(tmp):
+            os.remove(tmp)
+        os.symlink(source, tmp)
+        os.replace(tmp, link)
+        changed = True
+    return changed
+
+
 class ThemeSync:
     def __init__(self):
         self.interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
@@ -136,6 +173,7 @@ class ThemeSync:
         theme = wanted_theme(dark, classic)
         if not os.path.isdir(os.path.join(THEMES_DIR, theme)):
             return
+        gtk4_links(os.path.expanduser('~/.config/gtk-4.0'), THEMES_DIR, theme)
         for target, key in self.targets:
             current = target.get_string(key)
             if current.startswith('ParchaOS') and current != theme:

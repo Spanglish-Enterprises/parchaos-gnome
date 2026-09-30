@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -56,6 +56,7 @@ Source2:        parchaos-launcher.svg
 # Window-button colours (ticket #111): rewrites the palette of MacTahoe's
 # titlebutton PNGs to the ParchaOS palette. Fails the build if it finds none.
 Source3:        recolor-titlebuttons.py
+Source4:        parchaos-classic.css
 Source91:       LICENSE-ARTWORK
 
 BuildArch:      noarch
@@ -178,6 +179,14 @@ mkdir -p %{buildroot}%{_datadir}/themes
 # needs them, so "cleaning up" the extra variants would silently break
 # Classic.
 ./install.sh -c light -d %{buildroot}%{_datadir}/themes --silent-mode
+
+# The Classic style (the -solid themes) is flat: append the Classic rules to
+# their GTK 4 stylesheets so libadwaita apps lose the glass highlights and
+# shadows on header bar buttons (ticket #135).
+for css in %{buildroot}%{_datadir}/themes/ParchaOS-*-solid/gtk-4.0/gtk.css \
+           %{buildroot}%{_datadir}/themes/ParchaOS-*-solid/gtk-4.0/gtk-dark.css; do
+    [ -f "$css" ] && cat %{SOURCE4} >> "$css"
+done
 
 # Real bug found via log-based live testing 2026-09-25 (real user
 # report: the window buttons showed only their icons, without the
@@ -304,6 +313,10 @@ install -Dm 0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-recolor-titlebut
 %{_libexecdir}/parchaos-recolor-titlebuttons
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-24
+- Ticket #135: the Classic (-solid) themes now drop the glass highlights and
+  shadows from header bar buttons, so Classic looks flat in libadwaita apps.
+
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-23
 - Window buttons in ParchaOS colours (ticket #111): rose Close, gold
   Minimize, violet Maximize instead of the reference desktop's

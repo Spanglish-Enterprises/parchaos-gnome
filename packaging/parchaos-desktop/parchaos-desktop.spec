@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        58%{?dist}
+Release:        59%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -272,6 +272,12 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-59
+- Ticket #135: parchaos-theme-sync now points an account's ~/.config/gtk-4.0
+  stylesheets at the ParchaOS theme that matches the style and light/dark
+  setting. They were frozen copies of the dark glass theme, so libadwaita apps
+  ignored Classic and light mode. A stylesheet of the user's own is left alone.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-58
 - After an update that replaces shell extensions or themes, leave a marker
   the session extension turns into a "log out and back in" notice. A running

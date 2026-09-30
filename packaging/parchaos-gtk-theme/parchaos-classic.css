@@ -1,0 +1,25 @@
+
+/* ParchaOS Classic style (ticket #135): flat header bar controls. The glass
+ * theme gives every header bar button a soft gradient, inset highlights and a
+ * drop shadow; Classic drops all three and keeps plain rounded rectangles. */
+headerbar menubutton.flat > button:not(.flat), headerbar button,
+headerbar menubutton.flat > button:hover:not(.flat), headerbar button:hover,
+headerbar menubutton.flat > button:active:not(.flat), headerbar button:active,
+headerbar menubutton.flat > button:checked:not(.flat), headerbar button:checked,
+headerbar menubutton.flat > button:backdrop:not(.flat), headerbar button:backdrop {
+  background-image: none;
+  box-shadow: none;
+}
+
+headerbar menubutton.flat > button:hover:not(.flat), headerbar button:hover {
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+headerbar menubutton.flat > button:active:not(.flat), headerbar button:active,
+headerbar menubutton.flat > button:checked:not(.flat), headerbar button:checked {
+  background-color: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+headerbar menubutton.folder-title > button {
+  border-radius: 8px;
+}
