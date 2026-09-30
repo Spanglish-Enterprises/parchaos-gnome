@@ -157,7 +157,7 @@ function hintText(notation) {
             parts.push('\u21E7');
         if (mods.includes('c'))
             parts.push('\u2318');
-        return parts.join('') + key;
+        return parts.join('\u200A') + '\u200A' + key;
     }
     if (mods.includes('c'))
         parts.push('Ctrl');
@@ -662,6 +662,10 @@ const MenuEntry = GObject.registerClass({
             y_align: Clutter.ActorAlign.CENTER,
             visible: hint !== '',
         });
+        if (!badge)
+            this.hint.opacity = 140;
+        if (badge)
+            this.hint.set_style('background-color: rgba(128, 128, 128, 0.38); border-radius: 999px;');
         this.add_child(this.hint);
         this.accessible_name = text;
     }

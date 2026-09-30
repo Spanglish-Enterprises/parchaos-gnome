@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2.1.0-28
+- Ticket #135: Shortcut hints dimmed and the update badge drawn as a pill; glyphs spaced like the kit.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2.1.0-27
 - Ticket #135: Menu shortcut and badge text use the kit's 13 px medium weight and the row's own dimmed colour.
 

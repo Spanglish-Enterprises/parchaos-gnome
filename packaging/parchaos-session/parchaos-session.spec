@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -48,6 +48,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-15
+- Ticket #135: Menu text weight, tertiary shortcut colours and a darker, less colourful refraction tint, checked side by side with the kit's Menu component.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-14
 - Ticket #135: Menus follow the UI kit's Menu component: 12 px corners, 24 px rows, 11 px separators, 12 px side padding, 13 px medium white text (dark) or black (light), shortcuts dimmed, grey hover pills. The sizing applies with or without the refractive extension; the pane is drawn by whichever is active.
 

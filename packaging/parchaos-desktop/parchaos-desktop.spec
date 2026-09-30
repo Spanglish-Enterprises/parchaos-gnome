@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        60%{?dist}
+Release:        61%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -273,6 +273,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-61
+- Ticket #135: Refractive glass menu tint 0.6 and saturation 1.0 (neutral dark pane like the kit).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-60
 - Ticket #135: Refractive glass preset for menus follows the UI kit: 12 px corners, white text whatever the wallpaper (the extension's automatic dark/light text is off for menus), darker tint, more blur.
 

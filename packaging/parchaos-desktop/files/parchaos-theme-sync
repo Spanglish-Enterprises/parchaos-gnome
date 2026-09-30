@@ -236,8 +236,8 @@ GLASS_PRESET = {
     'panel-menu-corner-radius': 12.0,
     'menu-tint-color': '#1a1a1a',
     'panel-menu-tint-color': '#1a1a1a',
-    'menu-tint-strength': 0.45,
-    'panel-menu-tint-strength': 0.45,
+    'menu-tint-strength': 0.6,
+    'panel-menu-tint-strength': 0.6,
     'menu-blur-radius': 18,
     'panel-menu-blur-radius': 18,
     # White text on the smoked pane whatever the wallpaper is, like the
@@ -245,8 +245,8 @@ GLASS_PRESET = {
     # over a bright sky.
     'menu-enable-adaptive-text-color': False,
     'panel-menu-enable-adaptive-text-color': False,
-    'menu-saturation': 1.2,
-    'panel-menu-saturation': 1.2,
+    'menu-saturation': 1.0,
+    'panel-menu-saturation': 1.0,
 }
 
 
