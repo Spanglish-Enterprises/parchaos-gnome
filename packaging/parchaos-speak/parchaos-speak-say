@@ -1,0 +1,82 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-speak-say: read text aloud with espeak-ng, on this computer
+# (ticket #162).
+#
+#   parchaos-speak-say [--speed WPM] [--voice NAME] < text
+#   parchaos-speak-say --voice-for < text       print the voice that would be used
+#
+# The voice follows the text, not the desktop language: Spanish text is read
+# with the Latin American Spanish voice (es-419), everything else with US
+# English, so a Spanish sentence on an English desktop still sounds right.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import re
+import shutil
+import subprocess
+import sys
+
+MAX_CHARS = 20000  # about an hour of speech; stops a whole-book selection
+
+SPANISH_WORDS = {
+    'el', 'la', 'los', 'las', 'un', 'una', 'y', 'de', 'del', 'que', 'en', 'es', 'por', 'con',
+    'para', 'no', 'se', 'su', 'al', 'lo', 'como', 'más', 'pero', 'sus', 'le', 'ya', 'o', 'este',
+    'sí', 'porque', 'esta', 'entre', 'cuando', 'muy', 'sin', 'sobre', 'también', 'me', 'hasta',
+    'hay', 'donde', 'quien', 'desde', 'todo', 'nos', 'durante', 'están', 'estoy', 'tengo',
+}
+ENGLISH_WORDS = {
+    'the', 'and', 'of', 'to', 'in', 'is', 'it', 'that', 'for', 'was', 'on', 'are', 'with', 'as',
+    'his', 'they', 'be', 'at', 'one', 'have', 'this', 'from', 'or', 'had', 'by', 'not', 'but',
+    'what', 'all', 'were', 'when', 'we', 'there', 'can', 'an', 'your', 'which', 'their', 'said',
+}
+
+
+def voice_for(text):
+    """es-419 when the text looks Spanish, en-us otherwise."""
+    words = re.findall(r"[a-záéíóúüñ]+", text.lower())
+    if not words:
+        return 'en-us'
+    score = sum(w in SPANISH_WORDS for w in words) - sum(w in ENGLISH_WORDS for w in words)
+    score += 3 * len(re.findall(r'[¿¡ñ]', text)) + len(re.findall(r'[áéíóú]', text.lower()))
+    return 'es-419' if score > 0 else 'en-us'
+
+
+def clean(text):
+    text = re.sub(r'https?://\S+', ' link ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text[:MAX_CHARS]
+
+
+def main(argv):
+    speed, voice = 165, None
+    args = argv[1:]
+    only_voice = False
+    while args:
+        flag = args.pop(0)
+        if flag == '--speed' and args:
+            speed = max(90, min(300, int(args.pop(0))))
+        elif flag == '--voice' and args:
+            voice = args.pop(0)
+        elif flag == '--voice-for':
+            only_voice = True
+        else:
+            print('usage: parchaos-speak-say [--speed WPM] [--voice NAME] < text', file=sys.stderr)
+            return 2
+    text = clean(sys.stdin.read())
+    if not text:
+        return 0
+    voice = voice or voice_for(text)
+    if only_voice:
+        print(voice)
+        return 0
+    engine = shutil.which('espeak-ng')
+    if engine is None:
+        print('parchaos-speak-say: espeak-ng is not installed', file=sys.stderr)
+        return 1
+    return subprocess.run([engine, '-v', voice, '-s', str(speed), '--stdin'],
+                          input=text.encode('utf-8')).returncode
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

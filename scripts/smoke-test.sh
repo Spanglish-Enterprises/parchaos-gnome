@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.." || exit 1
 WORK=$(mktemp -d)
 [ -n "${SMOKE_KEEP:-}" ] && echo "work dir: $WORK" || trap 'rm -rf "$WORK"' EXIT
 
-EXTS=(parchaos-controls parchaos-global-menu parchaos-launcher parchaos-session parchaos-live-icons parchaos-dictation)
+EXTS=(parchaos-controls parchaos-global-menu parchaos-launcher parchaos-session parchaos-live-icons parchaos-dictation parchaos-speak)
 export HOME=$WORK/home XDG_CONFIG_HOME=$WORK/home/.config XDG_DATA_HOME=$WORK/home/.local/share
 export XDG_CACHE_HOME=$WORK/home/.cache XDG_STATE_HOME=$WORK/home/.local/state
 export XDG_RUNTIME_DIR=$WORK/run SMOKE_OUT=$WORK/out

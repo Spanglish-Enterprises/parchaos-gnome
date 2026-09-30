@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
+- Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-15
 - Changelog header fixed (the last releases were built with it garbled).
 

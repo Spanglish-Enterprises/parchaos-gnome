@@ -192,6 +192,9 @@ PROFILE_REPO_PACKAGES=(
     # small part is here; the speech engine downloads on first use.
     parchaos-dictation
 
+    # Read the selected text aloud, Ctrl+Alt+S (packaging/parchaos-speak/).
+    parchaos-speak
+
     # Optional refractive glass effects, off until switched on in Settings
     # (packaging/parchaos-glass-effects/).
     parchaos-glass-effects

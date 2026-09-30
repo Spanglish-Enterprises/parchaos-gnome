@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.speak" path="/org/parchaos/speak/">
+    <key name="toggle-shortcut" type="as">
+      <default><![CDATA[['<Control><Alt>s']]]></default>
+      <summary>Read the selected text aloud, or stop reading</summary>
+    </key>
+    <key name="speed" type="i">
+      <default>165</default>
+      <range min="90" max="300"/>
+      <summary>Speaking speed, in words per minute</summary>
+    </key>
+  </schema>
+</schemalist>

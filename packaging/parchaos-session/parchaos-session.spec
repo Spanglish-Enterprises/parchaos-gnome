@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,9 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-8
+- Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-7
 - Ticket #76: the save on shutdown never ran. It listened for a property
   change on the system bus, but logind announces PrepareForShutdown as a

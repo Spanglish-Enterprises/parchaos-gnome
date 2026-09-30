@@ -7,7 +7,7 @@
 
 Name:           parchaos-live-icons
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Live Clock and Calendar app icons for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -43,6 +43,9 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-live-icons@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-4
+- Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
+
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-3
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-2

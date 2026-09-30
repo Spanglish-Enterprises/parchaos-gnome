@@ -1,0 +1,8 @@
+{
+  "uuid": "parchaos-speak@parchaos.org",
+  "name": "Parcha Speak",
+  "description": "Select text in any app and press Ctrl+Alt+S: it is read aloud on this computer. Press it again to stop.",
+  "shell-version": ["48", "49", "50", "51"],
+  "settings-schema": "org.parchaos.speak",
+  "url": "https://parchaos.org"
+}
