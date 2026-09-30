@@ -1,0 +1,9 @@
+[Unit]
+Description=Update the photo search index
+ConditionPathExists=%h/.local/share/parchaos-image-search/model/vision_model_quantized.onnx
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/bin/parchaos-image-search index --quiet --budget 1200

@@ -196,6 +196,9 @@ PROFILE_REPO_PACKAGES=(
     # (packaging/parchaos-glass-effects/).
     parchaos-glass-effects
 
+    # Photo search, off until switched on in Settings (packaging/parchaos-image-search/).
+    parchaos-image-search
+
     # Snapshots of the system and home folders, with a top-bar menu
     # (packaging/parchaos-snapshots/).
     parchaos-snapshots

@@ -1,0 +1,82 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Shows picture search results in GNOME's search (the Overview): type a few
+# words and pictures that match what they show appear as results.
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+import sys
+
+import gi
+
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib  # noqa: E402
+
+sys.path.insert(0, os.environ.get('PARCHAOS_IMAGE_SEARCH_LIB', '/usr/libexec/parchaos-image-search'))
+import clipsearch  # noqa: E402
+
+BUS_NAME = 'org.parchaos.ImageSearch.SearchProvider'
+OBJECT_PATH = '/org/parchaos/ImageSearch/SearchProvider'
+XML = '''<node><interface name="org.gnome.Shell.SearchProvider2">
+<method name="GetInitialResultSet"><arg type="as" direction="in"/><arg type="as" direction="out"/></method>
+<method name="GetSubsearchResultSet"><arg type="as" direction="in"/><arg type="as" direction="in"/><arg type="as" direction="out"/></method>
+<method name="GetResultMetas"><arg type="as" direction="in"/><arg type="aa{sv}" direction="out"/></method>
+<method name="ActivateResult"><arg type="s" direction="in"/><arg type="as" direction="in"/><arg type="u" direction="in"/></method>
+<method name="LaunchSearch"><arg type="as" direction="in"/><arg type="u" direction="in"/></method>
+</interface></node>'''
+MIN_LENGTH = 3
+LIMIT = 8
+
+
+class Provider:
+    def __init__(self):
+        self.engine = None
+        self.db = None
+
+    def _find(self, terms):
+        phrase = ' '.join(terms).strip()
+        if len(phrase) < MIN_LENGTH or not clipsearch.model_ready():
+            return []
+        if self.engine is None:
+            self.engine = clipsearch.Model()
+            self.db = clipsearch.open_db()
+        return [path for _score, path in clipsearch.search(self.engine, self.db, phrase, limit=LIMIT)]
+
+    def call(self, connection, sender, path, iface, method, params, invocation):
+        args = params.unpack()
+        if method == 'GetInitialResultSet':
+            invocation.return_value(GLib.Variant('(as)', (self._find(args[0]),)))
+        elif method == 'GetSubsearchResultSet':
+            invocation.return_value(GLib.Variant('(as)', (self._find(args[1]),)))
+        elif method == 'GetResultMetas':
+            metas = []
+            for result in args[0]:
+                icon = Gio.FileIcon.new(Gio.File.new_for_path(result))
+                metas.append({'id': GLib.Variant('s', result),
+                              'name': GLib.Variant('s', os.path.basename(result)),
+                              'description': GLib.Variant('s', os.path.dirname(result)),
+                              'gicon': GLib.Variant('s', Gio.Icon.to_string(icon))})
+            invocation.return_value(GLib.Variant('(aa{sv})', (metas,)))
+        elif method == 'ActivateResult':
+            try:
+                Gio.AppInfo.launch_default_for_uri(Gio.File.new_for_path(args[0]).get_uri(), None)
+            except GLib.Error:
+                pass
+            invocation.return_value(None)
+        else:
+            invocation.return_value(None)
+
+
+def main():
+    provider = Provider()
+    node = Gio.DBusNodeInfo.new_for_xml(XML)
+
+    def on_bus(connection, name):
+        connection.register_object(OBJECT_PATH, node.interfaces[0], provider.call, None, None)
+
+    Gio.bus_own_name(Gio.BusType.SESSION, BUS_NAME, Gio.BusNameOwnerFlags.NONE, on_bus, None, None)
+    GLib.MainLoop().run()
+
+
+if __name__ == '__main__':
+    main()

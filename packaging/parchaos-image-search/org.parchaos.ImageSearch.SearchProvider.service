@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.parchaos.ImageSearch.SearchProvider
+Exec=/usr/libexec/parchaos-image-search/parchaos-image-search-provider

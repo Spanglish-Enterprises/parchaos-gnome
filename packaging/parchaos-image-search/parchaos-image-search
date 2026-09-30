@@ -1,0 +1,173 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-image-search: find your pictures by what is in them.
+#
+#   parchaos-image-search model download   fetch the image model once (checked)
+#   parchaos-image-search model status     "ready" or "missing"
+#   parchaos-image-search index            add new and changed pictures to the index
+#   parchaos-image-search search WORDS...  best matching pictures for a phrase
+#   parchaos-image-search folders          the folders that are searched
+#   parchaos-image-search enable           set everything up (engine, model, first index)
+#   parchaos-image-search disable          switch it off and delete the model and index
+#
+# The folders searched are in ~/.config/parchaos-image-search/folders, one per
+# line (default ~/Pictures). Original code for ParchaOS, GPL-3.0-or-later.
+
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import urllib.request
+
+sys.path.insert(0, os.environ.get('PARCHAOS_IMAGE_SEARCH_LIB', '/usr/libexec/parchaos-image-search'))
+import clipsearch  # noqa: E402
+
+BASE = 'https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/'
+# name: (path in the repository, size in bytes, SHA-256)
+MODEL_FILES = {
+    'vision_model_quantized.onnx': ('onnx/vision_model_quantized.onnx', 89117001,
+                                    '583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299'),
+    'text_model_quantized.onnx': ('onnx/text_model_quantized.onnx', 64504507,
+                                  '73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a'),
+    'vocab.json': ('vocab.json', 862328,
+                   '5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363'),
+    'merges.txt': ('merges.txt', 524619,
+                   '9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a'),
+}
+CONFIG = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.expanduser('~/.config'),
+                      'parchaos-image-search', 'folders')
+
+
+def folders():
+    try:
+        with open(CONFIG, encoding='utf-8') as f:
+            listed = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+    except OSError:
+        listed = []
+    return listed or ['~/Pictures']
+
+
+def sha256_of(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def download_model(directory=None, base=BASE):
+    directory = directory or clipsearch.MODEL_DIR
+    os.makedirs(directory, exist_ok=True)
+    for name, (remote, size, want) in MODEL_FILES.items():
+        dest = os.path.join(directory, name)
+        if os.path.isfile(dest) and sha256_of(dest) == want:
+            continue
+        tmp = dest + '.part'
+        with urllib.request.urlopen(base + remote, timeout=60) as response, open(tmp, 'wb') as out:
+            while True:
+                block = response.read(1 << 20)
+                if not block:
+                    break
+                out.write(block)
+        if os.path.getsize(tmp) != size or sha256_of(tmp) != want:
+            os.remove(tmp)
+            raise RuntimeError(f'{name} failed its check and was discarded')
+        os.replace(tmp, dest)
+
+
+INSTALL_ENGINE = '/usr/libexec/parchaos-image-search/parchaos-image-search-install-engine'
+
+
+def engine_present():
+    return subprocess.run([sys.executable, '-c', 'import onnxruntime, numpy, PIL'],
+                          capture_output=True).returncode == 0
+
+
+def enable():
+    """Engine (one password prompt), model, timer and a first pass over the pictures."""
+    if not engine_present():
+        if subprocess.run(['pkexec', INSTALL_ENGINE]).returncode != 0:
+            print('parchaos-image-search: the engine could not be installed', file=sys.stderr)
+            return 1
+    try:
+        download_model()
+    except (OSError, RuntimeError) as err:
+        print(f'parchaos-image-search: {err}', file=sys.stderr)
+        return 1
+    subprocess.run(['systemctl', '--user', 'enable', '--now', 'parchaos-image-search-index.timer'],
+                   capture_output=True)
+    subprocess.Popen(['systemctl', '--user', 'start', '--no-block', 'parchaos-image-search-index.service'],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+def disable():
+    subprocess.run(['systemctl', '--user', 'disable', '--now', 'parchaos-image-search-index.timer'],
+                   capture_output=True)
+    shutil.rmtree(clipsearch.DATA_DIR, ignore_errors=True)
+    return 0
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(prog='parchaos-image-search')
+    sub = parser.add_subparsers(dest='cmd', required=True)
+    model = sub.add_parser('model')
+    model.add_argument('action', choices=['download', 'status'])
+    idx = sub.add_parser('index')
+    idx.add_argument('--folder', action='append')
+    idx.add_argument('--budget', type=float, default=None, help='stop after this many seconds')
+    idx.add_argument('--quiet', action='store_true')
+    find = sub.add_parser('search')
+    find.add_argument('words', nargs='+')
+    find.add_argument('-n', type=int, default=10)
+    find.add_argument('--json', action='store_true')
+    sub.add_parser('folders')
+    sub.add_parser('enable')
+    sub.add_parser('disable')
+    args = parser.parse_args(argv[1:])
+
+    if args.cmd == 'model':
+        if args.action == 'status':
+            ready = clipsearch.model_ready()
+            print('ready' if ready else 'missing')
+            return 0 if ready else 1
+        try:
+            download_model()
+        except (OSError, RuntimeError) as err:
+            print(f'parchaos-image-search: {err}', file=sys.stderr)
+            return 1
+        return 0
+    if args.cmd == 'enable':
+        return enable()
+    if args.cmd == 'disable':
+        return disable()
+    if args.cmd == 'folders':
+        print('\n'.join(folders()))
+        return 0
+    if not clipsearch.model_ready():
+        print('parchaos-image-search: the image model is not downloaded (run: parchaos-image-search model download)',
+              file=sys.stderr)
+        return 3
+    engine = clipsearch.Model()
+    db = clipsearch.open_db()
+    if args.cmd == 'index':
+        added, removed, failed = clipsearch.index_pictures(
+            engine, db, args.folder or folders(), budget=args.budget,
+            log=None if args.quiet else lambda m: print(m, file=sys.stderr))
+        if not args.quiet:
+            print(f'{added} added, {removed} removed, {failed} unreadable')
+        return 0
+    results = clipsearch.search(engine, db, ' '.join(args.words), limit=args.n)
+    if args.json:
+        print(json.dumps([{'score': s, 'path': p} for s, p in results]))
+    else:
+        for score, path in results:
+            print(f'{score:.3f}  {path}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

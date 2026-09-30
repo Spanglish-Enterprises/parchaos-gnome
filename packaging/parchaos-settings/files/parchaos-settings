@@ -149,6 +149,9 @@ class Window(Adw.ApplicationWindow):
             self._general_settings = settings
         group.add(row)
 
+        if os.path.exists('/usr/bin/parchaos-image-search'):
+            page.add(self._photo_search_group())
+
         if settings is not None:
             page.add(self._focus_group(settings))
         return page
@@ -268,6 +271,44 @@ class Window(Adw.ApplicationWindow):
     def _two_digits(spin):
         spin.set_text(f'{int(spin.get_value()):02d}')
         return True
+
+    def _photo_search_group(self):
+        group = Adw.PreferencesGroup(
+            title=_('Photo search'),
+            description=_('Find pictures by what is in them, with a small model that runs on this computer. Nothing leaves it.'))
+        model = os.path.join(GLib.get_user_data_dir(), 'parchaos-image-search', 'model',
+                             'vision_model_quantized.onnx')
+        row = Adw.SwitchRow(
+            title=_('Search photos by what is in them'),
+            subtitle=_('Type "sunset over water" in the search. The first time it downloads about 150 MB and asks for your password once.'))
+        row.set_active(os.path.exists(model))
+        busy = {'on': False}
+
+        def run(action, done):
+            proc = Gio.Subprocess.new(['parchaos-image-search', action], Gio.SubprocessFlags.STDERR_SILENCE)
+            proc.wait_async(None, lambda p, res: done(p.wait_finish(res) and p.get_successful()))
+
+        def toggled(*_args):
+            if busy['on']:
+                return
+            wanted = row.get_active()
+            busy['on'] = True
+            row.set_sensitive(False)
+            row.set_subtitle(_('Setting up...') if wanted else _('Turning off...'))
+
+            def done(ok):
+                busy['on'] = False
+                row.set_sensitive(True)
+                row.set_subtitle(_('Type "sunset over water" in the search. The first time it downloads about 150 MB and asks for your password once.'))
+                if not ok:
+                    row.set_active(not wanted)
+                    row.set_subtitle(_('It could not be set up. Check your connection and try again.'))
+
+            run('enable' if wanted else 'disable', done)
+
+        row.connect('notify::active', toggled)
+        group.add(row)
+        return group
 
     def _appearance_page(self):
         page = Adw.PreferencesPage(title=_('Appearance'),

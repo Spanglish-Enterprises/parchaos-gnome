@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        52%{?dist}
+Release:        53%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -120,6 +120,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-glass-effects
+Requires:       parchaos-image-search
 Requires:       parchaos-snapshots
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
@@ -258,7 +259,11 @@ fi
 %{_unitdir}/multi-user.target.wants/parchaos-safe-mode.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
-%changelog
+%%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-53
+- Ticket #123: Requires parchaos-image-search (photo search, off until turned on in
+  ParchaOS Settings).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-52
 - Ticket #135: new org.parchaos.desktop key glass-effects (off by default).
   parchaos-theme-sync turns the optional glass-effects extension on and

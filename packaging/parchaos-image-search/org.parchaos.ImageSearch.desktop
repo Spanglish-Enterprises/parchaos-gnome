@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Photo Search
+Comment=Find pictures by what is in them
+Exec=parchaos-image-search folders
+Icon=image-x-generic
+NoDisplay=true
+Categories=Utility;

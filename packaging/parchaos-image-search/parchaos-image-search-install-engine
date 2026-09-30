@@ -1,0 +1,6 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Installs the runtime photo search needs. Run as root through polkit
+# (org.parchaos.imagesearch.install-engine); it installs exactly these packages,
+# with their own dependencies.
+exec dnf5 install -y python3-onnxruntime python3-numpy python3-pillow
