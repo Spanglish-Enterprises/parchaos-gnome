@@ -30,7 +30,7 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail, Parcha Backup)
 
 License:        GPL-3.0-or-later
@@ -44,6 +44,9 @@ Requires(post): geary
 Requires(post): deja-dup
 # Deja Dup uses restic by default, and Fedora's package does not require it.
 Requires:       restic
+# Backups to a network share (SMB/Windows share, NAS) go through GVFS.
+Requires:       gvfs-smb
+Requires:       gvfs-nfs
 Requires(post): sed
 
 %description
@@ -114,6 +117,10 @@ update-desktop-database %{_datadir}/applications &>/dev/null || true
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-10
+- Ticket #116: depend on gvfs-smb and gvfs-nfs so Parcha Backup can back up
+  to a network share ("install a gvfs backend that can connect to smb").
+
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-9
 - Ticket #116: depend on restic. Deja Dup uses it by default since 47 but
   Fedora's package only requires duplicity, so backups had no engine on a

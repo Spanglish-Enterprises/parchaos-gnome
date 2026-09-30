@@ -411,6 +411,8 @@ gnome-clocks
 deja-dup
 # The backup engine Backups uses by default (Fedora's deja-dup does not require it).
 restic
+gvfs-smb
+gvfs-nfs
 
 # Real desktop-polish extensions, matching Pulsar OS's own real config
 # (see customize.sh's 00-parchaos-extensions comment for the full
