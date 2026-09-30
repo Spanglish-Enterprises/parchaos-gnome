@@ -77,7 +77,8 @@ function unmaximize(win) {
 const FADE_IN = 120;
 const FADE_OUT = 200;
 
-const UPDATE_MARKER = '/var/lib/parchaos/session-updated';
+// Tests point this at a scratch file.
+const UPDATE_MARKER = GLib.getenv('PARCHAOS_UPDATE_MARKER') ?? '/var/lib/parchaos/session-updated';
 const SHELL_STARTED_US = GLib.get_real_time();
 let noticeShownFor = 0;
 
@@ -330,6 +331,31 @@ export default class ParchaSessionExtension extends Extension {
             });
     }
 
+    _backgroundState() {
+        const lm = Main.layoutManager;
+        const managers = lm._bgManagers ?? [];
+        return JSON.stringify({
+            managers: managers.length,
+            group: lm._backgroundGroup?.get_n_children?.(),
+            actors: managers.map(m => ({
+                visible: m.backgroundActor?.visible,
+                opacity: m.backgroundActor?.opacity,
+                size: m.backgroundActor ? [m.backgroundActor.width, m.backgroundActor.height] : null,
+            })),
+            uri: new Gio.Settings({schema_id: 'org.gnome.desktop.background'}).get_string('picture-uri'),
+        });
+    }
+
+    _refreshAfterUpdate() {
+        try {
+            log(`parchaos-session: after update, wallpaper state ${this._backgroundState()}`);
+            Main.layoutManager._updateBackgrounds();
+            log(`parchaos-session: wallpaper rebuilt ${this._backgroundState()}`);
+        } catch (e) {
+            logError(e, 'parchaos-session: could not rebuild the wallpaper');
+        }
+    }
+
     _hookUpdateNotice() {
         const marker = Gio.File.new_for_path(UPDATE_MARKER);
         const check = () => {
@@ -341,6 +367,11 @@ export default class ParchaSessionExtension extends Extension {
                 if (modified <= SHELL_STARTED_US || modified === noticeShownFor)
                     return;
                 noticeShownFor = modified;
+                // Twice in a row an upgrade left the wallpaper gone (plain
+                // blue) in the running session. Rebuild the wallpaper layer
+                // a moment after the update settles, and log what it looked
+                // like so the cause can be found.
+                this._later(3000, () => this._refreshAfterUpdate());
                 Main.notify('ParchaOS was updated',
                     'Log out and back in to finish the update. Until then the menu bar, dock or wallpaper may look wrong.');
             } catch (e) {

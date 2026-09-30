@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -48,6 +48,12 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-13
+- After an update that replaced shell extensions or themes, the wallpaper layer
+  is rebuilt a few seconds later (twice an upgrade left the running session
+  with a plain blue background), and the state of the wallpaper before and after
+  is written to the journal (look for "parchaos-session: after update").
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-12
 - Ticket #135: with the refractive glass extension on, it draws the menus
   itself, so the session extension's own menu glass steps aside.
