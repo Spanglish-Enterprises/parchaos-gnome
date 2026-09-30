@@ -380,3 +380,27 @@ one boot: the next normal start removes it again
 (`/usr/libexec/parchaos-safe-mode`, run by `parchaos-safe-mode.service` before
 the display manager on every boot). Check it took effect with
 `journalctl -t parchaos-safe-mode -b`.
+
+## Checking the next Fedora release without root
+
+A GNOME Shell of the next Fedora release can be run headless from a plain
+directory, so the smoke test (`scripts/smoke-test.sh`) can be tried against it
+before the release is out. Nothing here touches the real desktop: the tree has
+its own session bus and settings, and `bwrap` keeps it away from the host.
+
+1. Download the packages with `dnf5 --releasever=NN download --alldeps
+   --resolve gnome-shell mutter gjs dbus-daemon dconf python3 ...` (see the
+   list in the ticket), plus the ParchaOS packages from the COPR repo for that
+   release (`--repofrompath` with the `fedora-NN-x86_64` results URL).
+2. Unpack every x86_64 and noarch RPM into one directory with
+   `rpm2cpio | cpio -idmu`, making directories writable between packages
+   (`find . -type d ! -perm -u+w -exec chmod u+w {} +`).
+3. Run things with `bwrap --bind TREE / --dev /dev --proc /proc --tmpfs /tmp
+   --tmpfs /run ...`, with a small `/etc/passwd` and `/etc/group` bound in, a
+   second private D-Bus daemon on `/run/dbus/system_bus_socket` (exported as
+   `DBUS_SYSTEM_BUS_ADDRESS`), and `glib-compile-schemas` run once inside.
+4. Two things fail there for reasons of the sandbox, not ParchaOS: image
+   loading (the release's loaders run in a sandbox of their own, which cannot
+   start inside `bwrap`) and the document portal (no FUSE).
+
+Findings for Fedora 45 (GNOME Shell 51) are in ticket #37.
