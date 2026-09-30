@@ -170,6 +170,7 @@ cp -p %{SOURCE90} .
 
 %build
 %install
+install -d %{buildroot}%{_sharedstatedir}/parchaos
 install -Dm0644 %{SOURCE0} %{buildroot}%{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 mkdir -p %{buildroot}%{_sysconfdir}/dconf/db/local.d
 install -m0644 %{SOURCE1} %{SOURCE2} %{buildroot}%{_sysconfdir}/dconf/db/local.d/
@@ -234,8 +235,8 @@ dconf update >/dev/null 2>&1 || :
 # tells a shell that started earlier to log out and back in.
 %transfiletriggerin -- /usr/share/gnome-shell/extensions /usr/share/themes
 cat >/dev/null
-mkdir -p /var/lib/parchaos
-touch /var/lib/parchaos/session-updated || :
+mkdir -p %{_sharedstatedir}/parchaos
+touch %{_sharedstatedir}/parchaos/session-updated || :
 
 # touchegg (installed by older ISOs) autostarts a client that retries
 # its disabled daemon every 5 seconds all session; GNOME on Wayland
@@ -252,8 +253,8 @@ fi
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 
 %files
-%dir /var/lib/parchaos
-%ghost /var/lib/parchaos/session-updated
+%dir %{_sharedstatedir}/parchaos
+%ghost %{_sharedstatedir}/parchaos/session-updated
 %license LICENSE
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
@@ -273,6 +274,9 @@ fi
 
 %changelog
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-59
+- Builds again (-58 failed: the marker directory was not created in the
+  buildroot). The refractive glass preset also tightens menus and popovers
+  (22 px corners, dark tint, no springing) instead of the 60 px bubble.
 - Ticket #135: parchaos-theme-sync now points an account's ~/.config/gtk-4.0
   stylesheets at the ParchaOS theme that matches the style and light/dark
   setting. They were frozen copies of the dark glass theme, so libadwaita apps

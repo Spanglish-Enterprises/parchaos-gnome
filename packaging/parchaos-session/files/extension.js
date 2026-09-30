@@ -191,7 +191,9 @@ export default class ParchaSessionExtension extends Extension {
     // smoked, blurred pane with rounded corners and a hairline edge, like the
     // reference; Classic keeps the plain theme menus.
     _dressMenu(pointer) {
-        const glass = this._settings?.get_string('style') !== 'classic';
+        // With the refractive glass extension on, it draws the menus itself.
+        const refracted = this._settings?.get_boolean('glass-effects') ?? false;
+        const glass = this._settings?.get_string('style') !== 'classic' && !refracted;
         const dark = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'})
             .get_string('color-scheme') === 'prefer-dark';
         pointer.remove_style_class_name('parchaos-glass-menu');

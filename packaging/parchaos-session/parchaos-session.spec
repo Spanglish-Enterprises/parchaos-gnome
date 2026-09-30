@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -48,6 +48,10 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-12
+- Ticket #135: with the refractive glass extension on, it draws the menus
+  itself, so the session extension's own menu glass steps aside.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-11
 - Ticket #135: in the Glass style every menu and popover is a smoked, blurred
   pane with rounded corners, a hairline edge and soft hover highlights (light
