@@ -16,7 +16,7 @@
 
 Name:           parchaos-clipboard
 Version:        1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Clipboard history in the top bar
 
 License:        MIT
@@ -41,6 +41,9 @@ extension (MIT).
 
 %prep
 %autosetup -n gnome-shell-extension-clipboard-indicator-%{commit}
+
+# GNOME Shell 51 removed Clutter.get_default_backend().
+grep -rl 'Clutter.get_default_backend()' *.js | xargs -r sed -i 's/Clutter\.get_default_backend()/(global.stage.context?.get_backend?.() ?? Clutter.get_default_backend())/'
 
 %build
 # Upstream ships compiled catalogs; rebuild them from the .po files so the
@@ -67,6 +70,9 @@ done
 %{_datadir}/gnome-shell/extensions/clipboard-indicator@tudmotu.com/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1-2
+- Fedora 45 prep (ticket #37): loads on GNOME Shell 51.
+
 * Tue Sep 29 2026 ParchaOS packaging - 1-1
 - Initial package (ticket #124): Clipboard Indicator at commit c880c7f,
   enabled by default through parchaos-desktop. Checked in a headless GNOME

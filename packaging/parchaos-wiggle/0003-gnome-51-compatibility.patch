@@ -1,0 +1,55 @@
+--- a/cursor.js
++++ b/cursor.js
+@@ -17,7 +17,7 @@
+     }
+ 
+     show() {
+-        const seat = Clutter.get_default_backend().get_default_seat();
++        const seat = (global.stage.context?.get_backend?.() ?? Clutter.get_default_backend()).get_default_seat();
+ 
+         if (seat.is_unfocus_inhibited()) {
+             seat.uninhibit_unfocus();
+@@ -36,7 +36,7 @@
+     }
+ 
+     hide() {
+-        const seat = Clutter.get_default_backend().get_default_seat();
++        const seat = (global.stage.context?.get_backend?.() ?? Clutter.get_default_backend()).get_default_seat();
+ 
+         if (!seat.is_unfocus_inhibited()) {
+             seat.inhibit_unfocus();
+--- a/extension.js
++++ b/extension.js
+@@ -2,12 +2,31 @@
+ 
+ import GLib from 'gi://GLib';
+ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+-import { getPointerWatcher } from 'resource:///org/gnome/shell/ui/pointerWatcher.js';
+ 
+ import { Field } from './const.js';
+ import Effect from './effect.js';
+ import History from './history.js';
+ 
++// GNOME Shell 51 removed the shell's pointer watcher. It only polled the
++// pointer on a timer, which is what this does.
++const getPointerWatcher = () => ({
++    addWatch(interval, callback) {
++        let last = [-1, -1];
++        const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
++            const [x, y] = global.get_pointer();
++            if (x !== last[0] || y !== last[1]) {
++                last = [x, y];
++                callback(x, y);
++            }
++            return GLib.SOURCE_CONTINUE;
++        });
++        return {id};
++    },
++    _removeWatch(watch) {
++        GLib.source_remove(watch.id);
++    },
++});
++
+ const initSettings = (settings, entries) => {
+     const getValue = (name, type) => ({
+         'b': () => settings.get_boolean(name),

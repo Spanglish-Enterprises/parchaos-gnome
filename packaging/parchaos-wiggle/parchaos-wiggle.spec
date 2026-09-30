@@ -25,7 +25,7 @@
 
 Name:           parchaos-wiggle
 Version:        5
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Cursor-magnification-on-shake GNOME Shell extension ("shake to locate cursor")
 
 License:        GPL-2.0-only
@@ -47,6 +47,10 @@ Patch0:         0001-fix-stuck-magnified-cursor-on-gnome-50.patch
 # light/dark switch). ParchaOS uses the Adwaita cursors, whose arrow
 # matches Wiggle's generic one, so no themed arrow ships.
 Patch1:         0002-match-enlarged-cursor-to-cursor-theme.patch
+# GNOME Shell 51 removed the shell's pointer watcher and
+# Clutter.get_default_backend(); Patch2 replaces them (the watcher only polled
+# the pointer on a timer).
+Patch2:         0003-gnome-51-compatibility.patch
 
 BuildArch:      noarch
 BuildRequires:  glib2
@@ -79,6 +83,8 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/wiggle@mechtifs/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 5-7
+- Fedora 45 prep (ticket #37): loads on GNOME Shell 51.
 * Mon Sep 28 2026 ParchaOS packaging - 5-6
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage
