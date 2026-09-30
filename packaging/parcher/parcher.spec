@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        24%{?dist}
+Release:        27%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -85,6 +85,9 @@ Patch6:         0007-folder-title.patch
 # A path bar and a status line under the files: item count (or selection),
 # free space on the disk, and an icon-size slider.
 Patch7:         0008-status-bar.patch
+# Round search button, and a "more" menu (new folder, paste, select all, show
+# hidden files, properties) in place of the hidden new-folder button.
+Patch8:         0009-round-search-and-more-menu.patch
 
 BuildArch:      x86_64
 
@@ -301,6 +304,18 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-27
+- The more button gets the same round look as the search button.
+
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-26
+- The round search and more buttons now override the header bar styling, so
+  they really are round and larger.
+
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-25
+- The search button is round and larger, and the toolbar has a "more" menu
+  (New Folder, Paste, Select All, Show Hidden Files, Properties) that is
+  always there (ticket #145, stage 3).
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-24
 - The path bar under the files is wired to the folder being shown (it only
   showed an overflow button in 48.7-23).
