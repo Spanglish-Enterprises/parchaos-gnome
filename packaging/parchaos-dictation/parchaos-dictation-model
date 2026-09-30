@@ -10,6 +10,7 @@
 # Original code for ParchaOS, GPL-3.0-or-later.
 
 import hashlib
+import importlib.util
 import os
 import sys
 import urllib.request
@@ -59,8 +60,12 @@ def main(argv):
         print('usage: parchaos-dictation-model status|download [base.en|base|tiny.en]', file=sys.stderr)
         return 2
     if argv[1] == 'status':
+        # ready | no-engine (speech library not installed) | no-model
+        if importlib.util.find_spec('pywhispercpp') is None and not os.environ.get('PARCHAOS_DICTATION_ASSUME_ENGINE'):
+            print('no-engine')
+            return 1
         ok = os.path.isfile(path_for(name))
-        print('ready' if ok else 'missing')
+        print('ready' if ok else 'no-model')
         return 0 if ok else 1
     if argv[1] == 'download':
         try:

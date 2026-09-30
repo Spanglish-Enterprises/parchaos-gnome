@@ -67,6 +67,10 @@ class Model(unittest.TestCase):
         self.assertEqual(os.listdir(self.dir.name), [])
 
     def test_status(self):
+        with unittest.mock.patch.object(self.m.importlib.util, 'find_spec', return_value=None):
+            self.assertEqual(self.m.main(['x', 'status']), 1)
+        os.environ['PARCHAOS_DICTATION_ASSUME_ENGINE'] = '1'
+        self.addCleanup(os.environ.pop, 'PARCHAOS_DICTATION_ASSUME_ENGINE')
         self.assertEqual(self.m.main(['x', 'status']), 1)
         open(self.m.path_for('base.en'), 'w').close()
         self.assertEqual(self.m.main(['x', 'status']), 0)

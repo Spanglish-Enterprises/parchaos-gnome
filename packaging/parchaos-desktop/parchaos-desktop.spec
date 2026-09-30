@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        50%{?dist}
+Release:        51%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -118,6 +118,7 @@ Requires:       parchaos-notification-position
 Requires:       parchaos-magic-lamp-effect
 Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
+Requires:       parchaos-dictation
 Requires:       parchaos-snapshots
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
@@ -198,7 +199,7 @@ ln -s ../parchaos-theme-sync.service \
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -257,6 +258,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-51
+- Ticket #119: voice dictation (Ctrl+Alt+D). Requires parchaos-dictation
+  and enables its extension by default; the speech engine and model
+  download on first use.
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-50
 - Ticket #116: snapshots. Requires parchaos-snapshots and turns its top-bar
   menu on by default (existing accounts get it at next login).

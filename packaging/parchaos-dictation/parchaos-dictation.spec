@@ -10,7 +10,7 @@
 
 Name:           parchaos-dictation
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Local voice dictation for the ParchaOS desktop
 
 License:        GPL-3.0-or-later
@@ -20,6 +20,8 @@ Source1:        metadata.json
 Source2:        org.parchaos.dictation.gschema.xml
 Source3:        parchaos-dictation-transcribe
 Source4:        parchaos-dictation-model
+Source5:        parchaos-dictation-install-engine
+Source6:        org.parchaos.dictation.policy
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -28,8 +30,9 @@ BuildRequires:  python3
 
 Requires:       gnome-shell >= 48
 Requires:       pipewire-utils
-Requires:       python3-pywhispercpp
 Requires:       python3
+Requires:       polkit
+Requires:       dnf5
 
 %description
 Press Ctrl+Alt+D, speak, and press it again: what you said is typed where
@@ -51,13 +54,22 @@ install -m 0644 %{SOURCE2} "$DEST/schemas/"
 glib-compile-schemas "$DEST/schemas"
 install -Dm0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-dictation/parchaos-dictation-transcribe
 install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-dictation/parchaos-dictation-model
+install -Dm0755 %{SOURCE5} %{buildroot}%{_libexecdir}/parchaos-dictation/parchaos-dictation-install-engine
+install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/polkit-1/actions/org.parchaos.dictation.policy
 
 %files
 %license LICENSE
 %{_libexecdir}/parchaos-dictation/
+%{_datadir}/polkit-1/actions/org.parchaos.dictation.policy
 %{_datadir}/gnome-shell/extensions/parchaos-dictation@parchaos.org/
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-2
+- Ships with the OS. The small part (shortcut, recorder, typing) is in
+  the ISO; the speech engine (python3-pywhispercpp, which drags in
+  ROCm/OpenVINO libraries) and the model are fetched the first time the
+  shortcut is used, after a password prompt (polkit action
+  org.parchaos.dictation.install-engine, installs that one package only).
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #119). Ctrl+Alt+D starts and stops listening;
   the words are typed as key presses (works in terminals, leaves the

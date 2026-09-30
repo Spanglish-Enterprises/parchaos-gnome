@@ -188,6 +188,10 @@ PROFILE_REPO_PACKAGES=(
     # Clipboard history in the top bar (packaging/parchaos-clipboard/).
     parchaos-clipboard
 
+    # Voice dictation, Ctrl+Alt+D (packaging/parchaos-dictation/). Only the
+    # small part is here; the speech engine downloads on first use.
+    parchaos-dictation
+
     # Snapshots of the system and home folders, with a top-bar menu
     # (packaging/parchaos-snapshots/).
     parchaos-snapshots

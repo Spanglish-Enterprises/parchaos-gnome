@@ -18,6 +18,7 @@ const LIBEXEC = '/usr/libexec/parchaos-dictation';
 // Tests point these at stand-ins so no microphone or model is needed.
 const RECORDER = GLib.getenv('PARCHAOS_DICTATION_RECORDER');
 const TRANSCRIBER = GLib.getenv('PARCHAOS_DICTATION_TRANSCRIBER') ?? `${LIBEXEC}/parchaos-dictation-transcribe`;
+const INSTALL = GLib.getenv('PARCHAOS_DICTATION_INSTALL_TOOL') ?? `${LIBEXEC}/parchaos-dictation-install-engine`;
 const MODELS = GLib.getenv('PARCHAOS_DICTATION_MODEL_TOOL') ?? `${LIBEXEC}/parchaos-dictation-model`;
 
 function run(argv) {
@@ -85,12 +86,19 @@ export default class DictationExtension extends Extension {
     }
 
     async _start() {
-        if (!(await run([MODELS, 'status'])).ok) {
+        const status = await run([MODELS, 'status']);
+        if (!status.ok) {
+            // First use: fetch what is missing (engine, then model), then stop
+            // so the user starts speaking only when ready.
             this._show('working', 'folder-download-symbolic');
-            Main.notify('Dictation', 'Getting the speech model (148 MB) once. Press the shortcut again when this message says it is ready.');
-            const got = await run([MODELS, 'download']);
+            Main.notify('Dictation', 'Setting up dictation once (about 200 MB). Press the shortcut again when it says it is ready.');
+            let ok = true;
+            if (status.out === 'no-engine')
+                ok = (await run(['pkexec', INSTALL])).ok;
+            if (ok)
+                ok = (await run([MODELS, 'download'])).ok;
             this._hide();
-            Main.notify('Dictation', got.ok ? 'Ready. Press the shortcut and speak.' : 'The download failed. Check your connection and try again.');
+            Main.notify('Dictation', ok ? 'Ready. Press the shortcut and speak.' : 'Setup did not finish. Check your connection and try again.');
             return;
         }
         this._wav = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'parchaos-dictation.wav']);

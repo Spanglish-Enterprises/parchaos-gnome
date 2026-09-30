@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Installs the speech engine dictation needs. Run as root through polkit
+# (org.parchaos.dictation.install-engine); it installs exactly one package.
+exec dnf5 install -y python3-pywhispercpp
