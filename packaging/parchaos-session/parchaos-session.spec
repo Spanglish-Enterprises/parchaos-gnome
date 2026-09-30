@@ -10,13 +10,14 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
+Source2:        stylesheet.css
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -31,7 +32,7 @@ editors, note apps) come back with them.
 
 %prep
 mkdir -p src
-cp %{SOURCE0} %{SOURCE1} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} src/
 cp -p %{SOURCE90} .
 
 %build
@@ -40,12 +41,19 @@ cp -p %{SOURCE90} .
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org
 install -Dm0644 src/extension.js "$DEST/extension.js"
 install -Dm0644 src/metadata.json "$DEST/metadata.json"
+install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 
 %files
 %license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-11
+- Ticket #135: in the Glass style every menu and popover is a smoked, blurred
+  pane with rounded corners, a hairline edge and soft hover highlights (light
+  variant for light appearance). Classic and the Quick Settings panel keep
+  their own look.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-10
 - Ticket #135: menus, popovers and windows fade in (120 ms) and out (200 ms)
   instead of sliding, zooming and growing out of the bottom edge. The Quick

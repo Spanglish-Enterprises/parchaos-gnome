@@ -1,0 +1,56 @@
+/* Glass menus (ticket #135): menu bar dropdowns, popovers and app menus.
+   Smoked, blurred panes with rounded corners and a hairline edge. The
+   session extension adds .parchaos-glass-menu on the Glass style and the
+   -light variant for a light appearance. Classic keeps the theme's menus. */
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-content {
+  background-color: rgba(24, 24, 24, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+  padding: 6px;
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item {
+  border-radius: 10px !important;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:focus,
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:hover,
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:selected {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu .popup-menu-item:insensitive {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu .popup-separator-menu-item .popup-separator-menu-item-separator {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-content {
+  background-color: rgba(246, 246, 248, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.16);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item {
+  color: rgba(0, 0, 0, 0.86);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:focus,
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:hover,
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:selected {
+  background-color: rgba(0, 0, 0, 0.09) !important;
+  color: #000000 !important;
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-menu-item:insensitive {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.popup-menu-boxpointer.parchaos-glass-menu-light .popup-separator-menu-item .popup-separator-menu-item-separator {
+  background-color: rgba(0, 0, 0, 0.12);
+}

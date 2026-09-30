@@ -21,6 +21,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
@@ -186,7 +187,51 @@ export default class ParchaSessionExtension extends Extension {
         }
     }
 
+    // Glass menus (ticket #135): in the Glass style every menu and popover is a
+    // smoked, blurred pane with rounded corners and a hairline edge, like the
+    // reference; Classic keeps the plain theme menus.
+    _dressMenu(pointer) {
+        const glass = this._settings?.get_string('style') !== 'classic';
+        const dark = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'})
+            .get_string('color-scheme') === 'prefer-dark';
+        pointer.remove_style_class_name('parchaos-glass-menu');
+        pointer.remove_style_class_name('parchaos-glass-menu-light');
+        const content = this._menuContent(pointer);
+        const effect = pointer._parchaosBlur;
+        if (!glass || !content) {
+            if (effect) {
+                pointer._parchaosBlurHost?.remove_effect(effect);
+                pointer._parchaosBlur = null;
+            }
+            return;
+        }
+        pointer.add_style_class_name('parchaos-glass-menu');
+        if (!dark)
+            pointer.add_style_class_name('parchaos-glass-menu-light');
+        if (!effect) {
+            pointer._parchaosBlur = new Shell.BlurEffect({
+                radius: 40,
+                brightness: dark ? 0.8 : 1.0,
+                mode: Shell.BlurMode.BACKGROUND,
+            });
+            pointer._parchaosBlurHost = content;
+            content.add_effect(pointer._parchaosBlur);
+        }
+    }
+
+    _menuContent(actor) {
+        if (actor.has_style_class_name?.('popup-menu-content'))
+            return actor;
+        for (const child of actor.get_children?.() ?? []) {
+            const found = this._menuContent(child);
+            if (found)
+                return found;
+        }
+        return null;
+    }
+
     _hookMotion() {
+        const self = this;
         this._motion = new InjectionManager();
         const fade = Clutter.AnimationMode.EASE_OUT_QUAD;
 
@@ -195,6 +240,8 @@ export default class ParchaSessionExtension extends Extension {
 
         this._motion.overrideMethod(BoxPointer.BoxPointer.prototype, 'open', original =>
             function (animate, onComplete) {
+                if (!keepsOwn(this))
+                    self._dressMenu(this);
                 if (!(animate & BoxPointer.PopupAnimation.FULL) || keepsOwn(this))
                     return original.call(this, animate, onComplete);
                 this.remove_all_transitions();
