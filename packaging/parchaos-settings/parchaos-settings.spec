@@ -46,7 +46,6 @@ cp -p %{SOURCE90} .
 
 %install
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-settings
-%{_datadir}/locale/es/LC_MESSAGES/parchaos-settings.mo
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Settings.desktop
 install -Dm0755 %{SOURCE2} %{buildroot}%{_libexecdir}/parchaos-app-network
 install -Dm0644 %{SOURCE3} %{buildroot}%{_userunitdir}/parchaos-app-network-refresh.service
@@ -64,6 +63,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 
 %files
 %license LICENSE
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-settings.mo
 %{_bindir}/parchaos-settings
 %{_datadir}/applications/org.parchaos.Settings.desktop
 %{_libexecdir}/parchaos-app-network
@@ -71,11 +71,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
-* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-18
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-18
 - Ticket #146: Spanish translation of ParchaOS Settings, written in
   Puerto Rican usage (computadora, tú). Installed as "es", which is what
   es_PR falls back to.
-* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-17
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-17
 - Ticket #53: ParchaOS Settings is translation-ready. Every string shown to
   the user goes through gettext (domain parchaos-settings, catalogs read from
   the system locale directory), po/parchaos-settings.pot lists the 70
