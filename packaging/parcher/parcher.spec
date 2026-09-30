@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,8 @@ Patch7:         0008-status-bar.patch
 # Round search button, and a "more" menu (new folder, paste, select all, show
 # hidden files, properties) in place of the hidden new-folder button.
 Patch8:         0009-round-search-and-more-menu.patch
+# Sidebar: sentence-case section headings, rounded rows.
+Patch9:         0010-sidebar-polish.patch
 
 BuildArch:      x86_64
 
@@ -304,6 +306,10 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-28
+- Sidebar polish (ticket #145, stage 4): section headings in sentence case,
+  rows with rounded corners and a little space between them.
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-27
 - The more button gets the same round look as the search button.
 
