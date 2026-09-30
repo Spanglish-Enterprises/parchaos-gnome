@@ -14,7 +14,7 @@
 
 Name:           parchaos-glass-effects
 Version:        0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Optional refractive glass effects for the shell
 
 License:        MIT
@@ -55,6 +55,10 @@ new = "            if (actor instanceof St.Widget && !actor.has_style_class_name
 assert old in s
 open(p, 'w').write(s.replace(old, new, 1))
 PY
+# GNOME Shell 51 removed Clutter.get_default_backend().
+sed -i 's/Clutter\.get_default_backend()/(global.stage.context?.get_backend?.() ?? Clutter.get_default_backend())/' \
+    liquid-glass@thinkingcoding1231.gmail.com/dist/actors/textureBlit.js \
+    liquid-glass@thinkingcoding1231.gmail.com/dist/liquidEffect.js
 cat %{SOURCE1} >> liquid-glass@thinkingcoding1231.gmail.com/stylesheet.css
 
 %build
@@ -74,6 +78,9 @@ rm -f "$DEST/schemas/"*.xml.orig
 %{_datadir}/gnome-shell/extensions/liquid-glass@thinkingcoding1231.gmail.com/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 0-3
+- Fedora 45 prep (ticket #37): works on GNOME Shell 51 (backend lookup).
+
 * Wed Sep 30 2026 ParchaOS packaging - 0-2
 - Toggle badges keep their round white background; text on a switched-on
   toggle is dark; the top buttons are true circles; the dock's own

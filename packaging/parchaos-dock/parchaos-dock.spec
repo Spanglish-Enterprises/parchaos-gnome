@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -95,6 +95,10 @@ Patch3:         0004-skip-badges-until-remote-model-exists.patch
 # Follow the ParchaOS style setting (glass or classic) from
 # org.parchaos.desktop, like the launcher, Controls and menu bar.
 Patch4:         0005-follow-parchaos-style.patch
+# GNOME Shell 51 removed the shell's PointerWatcher and the vertical property of
+# St.BoxLayout; the dock did not load there. First part is upstream's own
+# fix (Meta.CursorTracker), the second follows upstream's orientation change.
+Patch5:         0006-gnome-51-compatibility.patch
 
 BuildArch:      noarch
 
@@ -186,6 +190,11 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 106-16
+- Fedora 45 prep (ticket #37): loads on GNOME Shell 51 (pointer tracking
+  through Meta.CursorTracker, box orientation). Checked in a headless
+  GNOME Shell 51 that the dock loads without errors.
+
 * Mon Sep 28 2026 ParchaOS packaging - 106-15
 - Rewrote %description to be user-facing and neutral (ticket
   #105): dropped internal build-diligence notes and lineage

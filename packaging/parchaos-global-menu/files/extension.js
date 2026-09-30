@@ -41,6 +41,12 @@ import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 Gio._promisify(Gio.File.prototype, 'read_async', 'read_finish');
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
 
+// Clutter.get_default_backend() is gone from GNOME 51; the stage's context
+// has the backend on both 50 and 51.
+function backendOf() {
+    return global.stage.context?.get_backend?.() ?? Clutter.get_default_backend();
+}
+
 const DEFAULT_APP_NAME = 'Parcher';
 const DEFAULT_APP_ID = 'org.gnome.Nautilus.desktop';
 
@@ -65,7 +71,7 @@ let _keyboard = null;
 
 function sendKeyCombo(modifierKeyvals, keyval) {
     if (!_keyboard) {
-        const seat = Clutter.get_default_backend().get_default_seat();
+        const seat = backendOf().get_default_seat();
         _keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
     }
     const keyboard = _keyboard;

@@ -14,6 +14,12 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
+// Clutter.get_default_backend() is gone from GNOME 51; the stage's context
+// has the backend on both 50 and 51.
+function backendOf() {
+    return global.stage.context?.get_backend?.() ?? Clutter.get_default_backend();
+}
+
 const LIBEXEC = '/usr/libexec/parchaos-dictation';
 // Tests point these at stand-ins so no microphone or model is needed.
 const RECORDER = GLib.getenv('PARCHAOS_DICTATION_RECORDER');
@@ -130,7 +136,7 @@ export default class DictationExtension extends Extension {
     // Typed as key presses, so it works in terminals and never touches the clipboard.
     _type(text) {
         if (!this._keyboard) {
-            const seat = Clutter.get_default_backend().get_default_seat();
+            const seat = backendOf().get_default_seat();
             this._keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
         }
         for (const ch of text) {

@@ -10,7 +10,7 @@
 
 Name:           parchaos-dictation
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Local voice dictation for the ParchaOS desktop
 
 License:        GPL-3.0-or-later
@@ -64,6 +64,11 @@ install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/polkit-1/actions/org.parchaos
 %{_datadir}/gnome-shell/extensions/parchaos-dictation@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-3
+- Fedora 45 prep (ticket #37): synthetic keyboard input finds its backend the
+  way GNOME Shell 51 expects (Clutter.get_default_backend() is gone), still
+  working on 50.
+
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-2
 - Ships with the OS. The small part (shortcut, recorder, typing) is in
   the ISO; the speech engine (python3-pywhispercpp, which drags in

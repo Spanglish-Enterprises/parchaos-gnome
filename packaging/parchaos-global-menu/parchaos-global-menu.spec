@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -102,6 +102,11 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2.1.0-24
+- Fedora 45 prep (ticket #37): synthetic keyboard input finds its backend the
+  way GNOME Shell 51 expects (Clutter.get_default_backend() is gone), still
+  working on 50.
+
 * Tue Sep 29 2026 ParchaOS packaging - 2.1.0-23
 - Adaptive bar tint: promisify Gio.File read_async/load_contents_async
   explicitly. The tint awaited them, but GJS only allows that after the
