@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-13
+- Glass values now follow the reference UI kit: a smoked #1a1a1a pane, 34 px
+  corners, hairline outline, bright rims top and bottom, 17% grey capsules.
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-12
 - Ticket #135: the Glass style now looks like liquid glass. A clear, more
   strongly tinted pane over the blurred background, controls as glass
