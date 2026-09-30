@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.." || exit 1
 WORK=$(mktemp -d)
 [ -n "${SMOKE_KEEP:-}" ] && echo "work dir: $WORK" || trap 'rm -rf "$WORK"' EXIT
 
-EXTS=(parchaos-controls parchaos-global-menu parchaos-launcher parchaos-session parchaos-live-icons)
+EXTS=(parchaos-controls parchaos-global-menu parchaos-launcher parchaos-session parchaos-live-icons parchaos-dictation)
 export HOME=$WORK/home XDG_CONFIG_HOME=$WORK/home/.config XDG_DATA_HOME=$WORK/home/.local/share
 export XDG_CACHE_HOME=$WORK/home/.cache XDG_STATE_HOME=$WORK/home/.local/state
 export XDG_RUNTIME_DIR=$WORK/run SMOKE_OUT=$WORK/out
@@ -25,10 +25,23 @@ unset WAYLAND_DISPLAY DISPLAY DBUS_SESSION_BUS_ADDRESS
 dest=$XDG_DATA_HOME/gnome-shell/extensions
 uuids=()
 for pkg in "${EXTS[@]}"; do
+    # Most packages keep the extension in files/; parchaos-dictation keeps it
+    # next to its spec, with its settings schema beside it.
+    src=packaging/$pkg/files
+    [ -f "$src/metadata.json" ] || src=packaging/$pkg
     uuid=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' \
-        "packaging/$pkg/files/metadata.json")
+        "$src/metadata.json")
     mkdir -p "$dest/$uuid"
-    cp -r "packaging/$pkg/files/." "$dest/$uuid/"
+    if [ "$src" = "packaging/$pkg" ]; then
+        cp "$src/extension.js" "$src/metadata.json" "$dest/$uuid/"
+        if ls "$src"/*.gschema.xml >/dev/null 2>&1; then
+            mkdir -p "$dest/$uuid/schemas"
+            cp "$src"/*.gschema.xml "$dest/$uuid/schemas/"
+            glib-compile-schemas "$dest/$uuid/schemas"
+        fi
+    else
+        cp -r "$src/." "$dest/$uuid/"
+    fi
     uuids+=("$uuid")
 done
 cp -r scripts/smoke/smoke@parchaos.test "$dest/"
