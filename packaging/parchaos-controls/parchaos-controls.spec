@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,12 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-12
+- Ticket #135: the Glass style now looks like liquid glass. A clear, more
+  strongly tinted pane over the blurred background, controls as glass
+  capsules with a bright rim and inner glow, switched-on circles solid white
+  (blue in the light appearance), and thicker white-filled slider pills.
+  Classic is unchanged.
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-11
 - Ticket #130: a working Screenshot app. The extension answers an
   org.parchaos.Shell.OpenScreenshotUI call on the session bus by opening
