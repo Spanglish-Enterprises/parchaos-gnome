@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,11 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-10
+- Ticket #135: menus, popovers and windows fade in (120 ms) and out (200 ms)
+  instead of sliding, zooming and growing out of the bottom edge. The Quick
+  Settings panel and the minimize effect keep their own animation.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-9
 - Shows a "log out and back in" notice after an update replaced the shell
   extensions or themes under the running shell (marker from parchaos-desktop).

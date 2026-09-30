@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -61,6 +61,10 @@ install -m 0755 src/parchaos-launcher-apps "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
+- Ticket #135: the launcher and its folders fade in (120 ms) and out (200 ms)
+  instead of zooming.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-15
 - Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
 

@@ -16,12 +16,14 @@
 //
 // Original code for ParchaOS, GPL-3.0-or-later.
 
+import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -68,6 +70,12 @@ function unmaximize(win) {
 // shell, which keeps the old code and can leave the menu bar or wallpaper
 // half-drawn until the next login. parchaos-desktop touches this file when
 // the extensions or themes change; once it is newer than this shell, say so.
+// Motion (ticket #135): menus, popovers and windows come in with a short fade
+// and leave with a slightly longer one, with no sliding or zooming. The
+// Quick Settings panel (Control Center) keeps its own animation.
+const FADE_IN = 120;
+const FADE_OUT = 200;
+
 const UPDATE_MARKER = '/var/lib/parchaos/session-updated';
 const SHELL_STARTED_US = GLib.get_real_time();
 let noticeShownFor = 0;
@@ -83,6 +91,7 @@ export default class ParchaSessionExtension extends Extension {
         this._hookEndSession();
         this._hookLogind();
         this._hookUpdateNotice();
+        this._hookMotion();
 
         if (!restoredThisLogin) {
             restoredThisLogin = true;
@@ -113,6 +122,8 @@ export default class ParchaSessionExtension extends Extension {
         for (const [win, handlerId] of this._windowHandlers)
             win.disconnect(handlerId);
         this._windowHandlers.clear();
+        this._motion?.clear();
+        this._motion = null;
         this._updateMonitor?.cancel();
         this._updateMonitor = null;
         if (this._logindId)
@@ -173,6 +184,101 @@ export default class ParchaSessionExtension extends Extension {
         } catch (e) {
             logError(e, 'parchaos-session: could not watch logind');
         }
+    }
+
+    _hookMotion() {
+        this._motion = new InjectionManager();
+        const fade = Clutter.AnimationMode.EASE_OUT_QUAD;
+
+        const keepsOwn = pointer =>
+            pointer === Main.panel.statusArea?.quickSettings?.menu?._boxPointer;
+
+        this._motion.overrideMethod(BoxPointer.BoxPointer.prototype, 'open', original =>
+            function (animate, onComplete) {
+                if (!(animate & BoxPointer.PopupAnimation.FULL) || keepsOwn(this))
+                    return original.call(this, animate, onComplete);
+                this.remove_all_transitions();
+                this.scale_x = this.scale_y = 1;
+                this.translation_x = this.translation_y = 0;
+                this.opacity = 0;
+                this._muteKeys = false;
+                this.show();
+                this.ease({
+                    opacity: 255,
+                    duration: FADE_IN,
+                    mode: fade,
+                    onComplete: () => {
+                        this._muteInput = false;
+                        onComplete?.();
+                    },
+                });
+                return undefined;
+            });
+
+        this._motion.overrideMethod(BoxPointer.BoxPointer.prototype, 'close', original =>
+            function (animate, onComplete) {
+                if (!(animate & BoxPointer.PopupAnimation.FULL) || keepsOwn(this))
+                    return original.call(this, animate, onComplete);
+                if (!this.visible)
+                    return undefined;
+                this._muteInput = true;
+                this._muteKeys = true;
+                this.remove_all_transitions();
+                this.ease({
+                    opacity: 0,
+                    duration: FADE_OUT,
+                    mode: fade,
+                    onComplete: () => {
+                        this.hide();
+                        this.opacity = 0;
+                        this.translation_x = 0;
+                        this.translation_y = 0;
+                        this.scale_x = this.scale_y = 1;
+                        onComplete?.();
+                    },
+                });
+                return undefined;
+            });
+
+        // Windows: the stock animation grows a window out of its bottom edge
+        // (opening) and shrinks it (closing). Both become plain fades by
+        // rewriting the one ease() call each makes; minimizing is left to
+        // the genie effect.
+        const wmProto = Object.getPrototypeOf(Main.wm);
+        const fadeOnly = (actor, duration, opacity) => {
+            actor.ease = props => {
+                delete actor.ease;
+                return actor.ease({
+                    opacity,
+                    duration,
+                    mode: fade,
+                    onStopped: props.onStopped,
+                    onComplete: props.onComplete,
+                });
+            };
+        };
+        this._motion.overrideMethod(wmProto, '_mapWindow', original =>
+            function (shellwm, actor) {
+                fadeOnly(actor, FADE_IN, 255);
+                const result = original.call(this, shellwm, actor);
+                // The stock code has already shrunk the actor to a sliver.
+                actor.scale_x = actor.scale_y = 1;
+                const cleanup = () => { delete actor.ease; };
+                if (result?.finally)
+                    result.finally(cleanup);
+                else
+                    cleanup();
+                return result;
+            });
+        this._motion.overrideMethod(wmProto, '_destroyWindow', original =>
+            function (shellwm, actor) {
+                fadeOnly(actor, FADE_OUT, 0);
+                try {
+                    return original.call(this, shellwm, actor);
+                } finally {
+                    delete actor.ease;
+                }
+            });
     }
 
     _hookUpdateNotice() {

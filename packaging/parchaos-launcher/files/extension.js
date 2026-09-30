@@ -23,7 +23,9 @@ import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extension
 
 const COLUMNS = 7;
 const ROWS = 5;
-const ANIM_TIME = 220;
+// Opening is a short fade, closing a little slower (ticket #135: no zooming).
+const FADE_IN = 120;
+const FADE_OUT = 200;
 const PAGE_TIME = 320;
 const DOCK_UUID = 'parcha-dock@parchaos.org';
 
@@ -1326,12 +1328,9 @@ const Launcher = GObject.registerClass({
         view._panel = panel;
         view._folder = folder;
 
-        panel.set_pivot_point(0.5, 0.5);
-        panel.scale_x = panel.scale_y = 0.92;
-        panel.ease({scale_x: 1, scale_y: 1, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
-        view.ease({opacity: 255, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        view.ease({opacity: 255, duration: FADE_IN, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
         for (const actor of [this._clip, this._dots, this._entry])
-            actor.ease({opacity: 0, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            actor.ease({opacity: 0, duration: FADE_IN, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
     }
 
     _closeFolder() {
@@ -1343,7 +1342,7 @@ const Launcher = GObject.registerClass({
             this._entry.grab_key_focus();
         view.ease({
             opacity: 0,
-            duration: ANIM_TIME,
+            duration: FADE_OUT,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onStopped: () => view.destroy(),
         });
@@ -1351,7 +1350,7 @@ const Launcher = GObject.registerClass({
         if (view._changed && !this._drag)
             this._reload();
         for (const actor of [this._clip, this._dots, this._entry])
-            actor.ease({opacity: 255, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+            actor.ease({opacity: 255, duration: FADE_IN, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
     }
 
     open() {
@@ -1360,10 +1359,7 @@ const Launcher = GObject.registerClass({
         this._grab = Main.pushModal(this, {actionMode: Shell.ActionMode.POPUP});
         this._entry.grab_key_focus();
 
-        this._clip.set_pivot_point(0.5, 0.5);
-        this._clip.scale_x = this._clip.scale_y = 1.06;
-        this._clip.ease({scale_x: 1, scale_y: 1, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
-        this.ease({opacity: 255, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        this.ease({opacity: 255, duration: FADE_IN, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
         return true;
     }
 
@@ -1375,11 +1371,10 @@ const Launcher = GObject.registerClass({
             Main.popModal(this._grab);
             this._grab = null;
         }
-        this._clip.ease({scale_x: 1.06, scale_y: 1.06, duration: ANIM_TIME, mode: Clutter.AnimationMode.EASE_IN_QUAD});
         this.ease({
             opacity: 0,
-            duration: ANIM_TIME,
-            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            duration: FADE_OUT,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onStopped: () => {
                 this.emit('closed');
                 this.destroy();
