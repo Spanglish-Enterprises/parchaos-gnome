@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -47,6 +47,7 @@ Source0:        %{url}/-/archive/%{commit}/desktop-icons-ng-%{commit}.tar.gz
 # Off, an icon stays exactly where it is dropped; on, icons sit in grid cells
 # as upstream does. New files and "Arrange Icons" still use the grid.
 Patch0:         0001-snap-to-grid-setting.patch
+Patch1:         0002-drag-icon.patch
 
 BuildArch:      noarch
 BuildRequires:  meson
@@ -104,6 +105,10 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 50-5
+- Ticket #127: dragging an icon now drags a picture of the icon itself, held
+  at the spot it was grabbed, instead of GTK's generic document glyph.
+
 * Tue Sep 29 2026 ParchaOS packaging - 50-4
 - Ticket #127: free placement of desktop icons. New gsettings key
   snap-to-grid (default false) and a switch in the preferences window. With

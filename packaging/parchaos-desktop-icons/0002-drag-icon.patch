@@ -1,0 +1,20 @@
+--- a/app/desktopIconItem.js
++++ b/app/desktopIconItem.js
+@@ -428,8 +428,16 @@
+             const selection = this._desktopManager.getCurrentSelection(false);
+             return dndClipboardUtils.loadDragData({fileList: selection, specialFilesSelected: this._desktopManager.checkIfSpecialFilesAreSelected()});
+         });
+-        this.connectSignal(dragController, 'drag-begin', () => {
++        this.connectSignal(dragController, 'drag-begin', (_source, drag) => {
+             this._desktopManager.onDragBegin(this);
++            // Drag a picture of the icon itself, held at the spot it was
++            // grabbed, instead of GTK's generic document glyph.
++            try {
++                const paintable = new Gtk.WidgetPaintable({widget: this.container});
++                Gtk.DragIcon.set_from_paintable(drag, paintable, Math.round(this._buttonPressInitialX ?? 0), Math.round(this._buttonPressInitialY ?? 0));
++            } catch (e) {
++                logError(e, 'DING: could not set the drag icon');
++            }
+         });
+         this.connectSignal(dragController, 'drag-end', () => {
+             this._desktopManager.onDragEnd();
