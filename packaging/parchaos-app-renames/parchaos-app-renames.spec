@@ -30,7 +30,7 @@
 
 Name:           parchaos-app-renames
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        ParchaOS display-name overrides for stock GNOME apps (Parcha Preview, Clock, Parcha Mail, Parcha Backup)
 
 License:        GPL-3.0-or-later
@@ -42,6 +42,7 @@ Requires(post): loupe
 Requires(post): gnome-clocks
 Requires(post): geary
 Requires(post): deja-dup
+Requires(post): seahorse
 # Deja Dup uses restic by default, and Fedora's package does not require it.
 Requires:       restic
 # Backups to a network share (SMB/Windows share, NAS) go through GVFS.
@@ -79,11 +80,12 @@ rename org.gnome.clocks.desktop 'Clock' 'Clock'
 rename org.gnome.Geary.desktop 'Parcha Mail' 'Mail Client'
 rename org.gnome.Software.desktop 'Parcha Store' 'Software Store'
 rename org.gnome.DejaDup.desktop 'Parcha Backup' 'Backup Tool'
+rename org.gnome.seahorse.Application.desktop 'Parcha Keys' 'Passwords and Keys'
 # The Parcha-prefixed names are brand names: drop the translated Name[xx]=
 # lines in the main section so every language shows them, not a translated
 # "Preview"/"Mail" (the same rule this package already applied to
 # "Parcha Store"). Plain words like "Clock" keep their translations.
-for brand in org.gnome.Loupe org.gnome.Geary org.gnome.Software org.gnome.DejaDup; do
+for brand in org.gnome.Loupe org.gnome.Geary org.gnome.Software org.gnome.DejaDup org.gnome.seahorse.Application; do
     [ -f "$apps/$brand.desktop" ] && \
         sed -i '0,/^\[Desktop Action/{/^Name\[[^]]*\]=/d}' "$apps/$brand.desktop"
 done
@@ -112,11 +114,15 @@ chmod 0755 %{buildroot}%{_libexecdir}/parchaos-app-renames
 %{_libexecdir}/parchaos-app-renames
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
-%triggerin -- loupe, gnome-clocks, geary, gnome-software, deja-dup
+%triggerin -- loupe, gnome-clocks, geary, gnome-software, deja-dup, seahorse
 %{_libexecdir}/parchaos-app-renames
 update-desktop-database %{_datadir}/applications &>/dev/null || true
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-11
+- Ticket #161: Seahorse (GNOME's Passwords and Keys app: the login keyring, saved
+  passwords, SSH and PGP keys) is shown as "Parcha Keys" and is on the ISO.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-10
 - Ticket #116: depend on gvfs-smb and gvfs-nfs so Parcha Backup can back up
   to a network share ("install a gvfs backend that can connect to smb").

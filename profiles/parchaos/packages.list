@@ -414,6 +414,8 @@ gnome-clocks
 deja-dup
 # The backup engine Backups uses by default (Fedora's deja-dup does not require it).
 restic
+# Passwords and Keys (ticket #161); shown as "Parcha Keys" by parchaos-app-renames.
+seahorse
 gvfs-smb
 gvfs-nfs
 
