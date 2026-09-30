@@ -137,6 +137,28 @@ package too, so the profile removes `openh264` with `rpm -e --nodeps`
 and then installs `noopenh264` with the Cisco repo disabled, in a single
 container call.
 
+## Test rigs must never touch the real desktop's settings
+
+A headless-shell test rig once wrote to a real desktop's settings (2026-09-29).
+It set `HOME` and `XDG_CONFIG_HOME` inside the script that `dbus-run-session`
+runs. The private bus daemon had already started with the real environment, so
+the settings service it activated (`dconf-service`) inherited that real
+environment and wrote to the real `~/.config/dconf/user`: `dconf reset -f /`,
+extension lists and test values all landed on the live desktop.
+
+Rules for any script that runs a shell or a settings tool in a private bus:
+- Set the environment before `dbus-run-session`, for example
+  `env -u DBUS_SESSION_BUS_ADDRESS HOME=... XDG_CONFIG_HOME=... XDG_RUNTIME_DIR=...
+  dbus-run-session -- bash rig.sh`. `scripts/smoke-test.sh` does this.
+- Before the first `dconf` or `gsettings` write, check that the private bus
+  daemon carries the sandbox `XDG_CONFIG_HOME` (read `/proc/<pid>/environ`) and
+  refuse to run if it does not.
+- Prove it once for every new rig: `dconf dump / | md5sum` on the real desktop
+  before and after a run must match.
+- A write to the real settings that silently does nothing means the running
+  `dconf-service` holds a stale copy of the file; restarting it (it restarts on
+  demand) fixes that.
+
 ## Release size limit
 
 GitHub rejects release assets of 2 GiB (2,147,483,648 bytes) or more, and
