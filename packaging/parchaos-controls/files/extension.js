@@ -219,66 +219,61 @@ const ControlsPanel = GObject.registerClass({
             mode: Shell.BlurMode.BACKGROUND,
         }));
 
-        const grid = new St.Widget({layout_manager: new Clutter.GridLayout({
+        this._desktop = styleSettings();
+        this._grid = new St.Widget({layout_manager: new Clutter.GridLayout({
             row_spacing: GAP,
             column_spacing: GAP,
         })});
-        this.add_child(grid);
-        const lm = grid.layout_manager;
+        this.add_child(this._grid);
 
-        lm.attach(this._connectivityTile(), 0, 0, 2, 2);
-        lm.attach(this._nowPlayingTile(), 2, 0, 2, 2);
+        // Every tile is an item with a stable id, so the order and the hidden
+        // ones can be saved (Edit Controls).
+        this._items = [];
+        const add = (id, name, cols, rows, widget) => {
+            if (widget)
+                this._items.push({id, name, cols, rows, widget, hidden: false});
+        };
+
+        add('connectivity', 'Network', 2, 2, this._connectivityTile());
+        add('media', 'Now playing', 2, 2, this._nowPlayingTile());
 
         const dnd = this._firstItem(qs._doNotDisturb);
-        let col = 0;
-        if (dnd) {
-            lm.attach(this._focusTile(dnd), 0, 2, 2, 1);
-            col = 2;
-        }
+        if (dnd)
+            add('focus', 'Focus', 2, 1, this._focusTile(dnd));
         // GNOME's own dark style toggle writes 'default' (no preference)
         // for light, which Electron/Chromium apps treat as "keep guessing"
         // and can stay dark or light. Write an explicit preference both
         // ways; the toggle still mirrors the state.
         const dark = this._firstItem(qs._darkMode);
         if (dark) {
-            lm.attach(smallToggle(dark, 'Dark Mode', () => {
+            add('dark-mode', 'Dark Mode', 1, 1, smallToggle(dark, 'Dark Mode', () => {
                 Main.layoutManager.screenTransition.run();
                 const iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
                 iface.set_string('color-scheme', dark.checked ? 'prefer-light' : 'prefer-dark');
-            }), col++, 2, 1, 1);
+            }));
         }
         const night = this._firstItem(qs._nightLight);
-        if (night && col < 4)
-            lm.attach(smallToggle(night, 'Night Light'), col++, 2, 1, 1);
+        if (night)
+            add('night-light', 'Night Light', 1, 1, smallToggle(night, 'Night Light'));
 
-        let row = 3;
-        const display = this._displayTile();
-        if (display)
-            lm.attach(display, 0, row++, 4, 1);
-        const sound = this._soundTile();
-        if (sound)
-            lm.attach(sound, 0, row++, 4, 1);
+        add('display', 'Display', 4, 1, this._displayTile());
+        add('sound', 'Sound', 4, 1, this._soundTile());
 
         // Toggles other extensions add to Quick Settings (e.g. GSConnect's
-        // Mobile Devices), two per row.
-        const external = this._externalItems();
-        external.forEach((item, i) => {
-            lm.attach(this._externalTile(item), (i % 2) * 2, row, 2, 1);
-            if (i % 2 === 1 || i === external.length - 1)
-                row++;
-        });
+        // Mobile Devices).
+        this._externalItems().forEach((item, i) =>
+            add(`external:${item.title ?? i}`, item.title ?? 'Extra', 2, 1, this._externalTile(item)));
 
-        // Small tiles, four per row: power mode (when the machine has
-        // profiles), then screenshot, settings and lock.
-        const small = [];
+        // Small tiles: power mode (when the machine has profiles), then
+        // screenshot, settings and lock.
         const power = this._firstItem(qs._powerProfiles);
         if (power?.visible) {
-            small.push(smallToggle(power, 'Power Mode', () => {
+            add('power', 'Power Mode', 1, 1, smallToggle(power, 'Power Mode', () => {
                 this.emit('request-close');
                 openSettings('power');
             }));
         }
-        small.push(smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
+        add('screenshot', 'Screenshot', 1, 1, smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
@@ -286,15 +281,138 @@ const ControlsPanel = GObject.registerClass({
                 return GLib.SOURCE_REMOVE;
             });
         }));
-        small.push(smallAction('emblem-system-symbolic', 'Settings', () => {
+        add('settings', 'Settings', 1, 1, smallAction('emblem-system-symbolic', 'Settings', () => {
             this.emit('request-close');
             openSettings();
         }));
-        small.push(smallAction('system-lock-screen-symbolic', 'Lock', () => {
+        add('lock', 'Lock', 1, 1, smallAction('system-lock-screen-symbolic', 'Lock', () => {
             this.emit('request-close');
             Main.screenShield?.lock(true);
         }));
-        small.forEach((t, i) => lm.attach(t, i % 4, row + Math.floor(i / 4), 1, 1));
+
+        // Edit Controls: hide tiles and put them in another order.
+        this._editing = false;
+        this._canEdit = !!this._desktop?.settings_schema.has_key('controls-order') &&
+            !!this._desktop?.settings_schema.has_key('controls-hidden');
+        for (const item of this._items)
+            this._addEditButtons(item);
+        this._editButton = new St.Button({
+            style_class: 'parchaos-controls-edit',
+            label: 'Edit Controls',
+            x_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            visible: this._canEdit,
+        });
+        this._editButton.connect('clicked', () => this._setEditing(!this._editing));
+        this.add_child(this._editButton);
+        this._layout();
+    }
+
+    _addEditButtons(item) {
+        const bar = new St.BoxLayout({
+            style_class: 'parchaos-controls-edit-bar',
+            x_align: Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START,
+            x_expand: true,
+            y_expand: true,
+            visible: false,
+        });
+        const button = (label, callback) => {
+            const b = new St.Button({style_class: 'parchaos-controls-edit-step', label, can_focus: true});
+            b.connect('clicked', callback);
+            bar.add_child(b);
+            return b;
+        };
+        button('‹', () => this._move(item, -1));
+        button('›', () => this._move(item, 1));
+        item.hideButton = button('−', () => this._toggleHidden(item));
+        item.bar = bar;
+        item.widget.add_child(bar);
+    }
+
+    // Items in the saved order; ones the saved order does not know keep their
+    // default place after it.
+    _ordered() {
+        const saved = this._canEdit ? this._desktop.get_strv('controls-order') : [];
+        const hidden = new Set(this._canEdit ? this._desktop.get_strv('controls-hidden') : []);
+        const byId = new Map(this._items.map(i => [i.id, i]));
+        const ordered = saved.filter(id => byId.has(id)).map(id => byId.get(id));
+        for (const item of this._items) {
+            if (!ordered.includes(item))
+                ordered.push(item);
+        }
+        for (const item of ordered)
+            item.hidden = hidden.has(item.id);
+        return ordered;
+    }
+
+    _layout() {
+        const grid = this._grid;
+        const lm = grid.layout_manager;
+        for (const child of grid.get_children())
+            grid.remove_child(child);
+        const taken = [];
+        const isFree = (c, r, w, h) => {
+            if (c + w > 4)
+                return false;
+            for (let y = r; y < r + h; y++) {
+                for (let x = c; x < c + w; x++) {
+                    if (taken[y]?.[x])
+                        return false;
+                }
+            }
+            return true;
+        };
+        for (const item of this._ordered()) {
+            if (item.hidden && !this._editing)
+                continue;
+            let placed = false;
+            for (let r = 0; !placed; r++) {
+                for (let c = 0; c < 4 && !placed; c++) {
+                    if (!isFree(c, r, item.cols, item.rows))
+                        continue;
+                    for (let y = r; y < r + item.rows; y++) {
+                        taken[y] ??= [];
+                        for (let x = c; x < c + item.cols; x++)
+                            taken[y][x] = true;
+                    }
+                    lm.attach(item.widget, c, r, item.cols, item.rows);
+                    placed = true;
+                }
+            }
+            item.bar.visible = this._editing;
+            item.hideButton.label = item.hidden ? '+' : '−';
+            item.widget.opacity = item.hidden ? 110 : 255;
+        }
+    }
+
+    _setEditing(editing) {
+        this._editing = editing;
+        this._editButton.label = editing ? 'Done' : 'Edit Controls';
+        this._layout();
+    }
+
+    _save(ordered) {
+        this._desktop.set_strv('controls-order', ordered.map(i => i.id));
+        this._desktop.set_strv('controls-hidden', ordered.filter(i => i.hidden).map(i => i.id));
+    }
+
+    _move(item, step) {
+        const ordered = this._ordered();
+        const i = ordered.indexOf(item);
+        const j = i + step;
+        if (j < 0 || j >= ordered.length)
+            return;
+        [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+        this._save(ordered);
+        this._layout();
+    }
+
+    _toggleHidden(item) {
+        const ordered = this._ordered();
+        item.hidden = !item.hidden;
+        this._save(ordered);
+        this._layout();
     }
 
     // Quick Settings keeps no list of extension-added items; they're the

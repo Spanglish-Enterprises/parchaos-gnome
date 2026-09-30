@@ -369,3 +369,49 @@
   -barlevel-background-color: rgba(0, 0, 0, 0.1);
   -barlevel-active-background-color: #0a84ff;
 }
+
+/* Edit Controls */
+.parchaos-controls-edit {
+  margin-top: 10px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.parchaos-controls-edit:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+.parchaos-controls-edit-bar {
+  spacing: 3px;
+  padding: 3px;
+}
+
+.parchaos-controls-edit-step {
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.parchaos-controls-edit-step:hover {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.parchaos-light .parchaos-controls-edit {
+  background-color: rgba(0, 0, 0, 0.07);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.parchaos-light .parchaos-controls-edit:hover {
+  background-color: rgba(0, 0, 0, 0.13);
+}

@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        54%{?dist}
+Release:        55%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -260,7 +260,10 @@ fi
 %{_unitdir}/multi-user.target.wants/parchaos-safe-mode.service
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
-%%changelog
+%%%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-55
+- Ticket #148: new keys controls-order and controls-hidden (Edit Controls).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-54
 - Quick Preview (ticket): Requires sushi, the file previewer Parcher calls when Space
   is pressed on a file.
