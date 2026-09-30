@@ -175,6 +175,32 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        // The Screenshot launcher (ticket #130) reaches GNOME Shell's capture
+        // tool through a D-Bus method that Parcha Controls exports.
+        if (ext('parchaos-controls@parchaos.org')) {
+            await this._check('screenshot launcher opens the capture tool', async () => {
+                if (Main.screenshotUI.visible)
+                    throw new Error('the capture tool was already open');
+                await new Promise((resolve, reject) => Gio.DBus.session.call(
+                    'org.parchaos.Shell', '/org/parchaos/Shell', 'org.parchaos.Shell',
+                    'OpenScreenshotUI', null, null, Gio.DBusCallFlags.NONE, 5000, null,
+                    (conn, res) => {
+                        try {
+                            conn.call_finish(res);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }));
+                await sleep(1200);
+                const opened = Main.screenshotUI.visible;
+                Main.screenshotUI.close();
+                await sleep(300);
+                if (!opened)
+                    throw new Error('the call succeeded but the capture tool did not open');
+            });
+        }
+
         const menu = ext('parchaos-global-menu@parchaos.org')?.stateObj;
         if (menu) {
             await this._check('about card', async () => {
