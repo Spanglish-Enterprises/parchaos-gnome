@@ -58,7 +58,7 @@ Name:           parchaos-yin-yang
 # versioning inconsistency, not a typo on this end), confirmed by
 # checking pyproject.toml's content at the v4.0.1 ref directly.
 Version:        4.0.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Automatic light/dark theme switching with real sunrise/sunset support
 
 License:        MIT
@@ -195,6 +195,9 @@ install -m 0644 usr/share/parchaos-yin-yang/resources/yin_yang.timer \
 %{_datadir}/parchaos-yin-yang/resources/yin_yang.timer
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 4.0.1-5
+- Fedora 45 prep (ticket #37): accept systemd-python 236 (upstream pins
+  exactly 235) and Python 3.15 in the relaxed pins.
 * Fri Sep 25 2026 ParchaOS packaging - 4.0.1-4
 - Reworded comments and changelog to describe user-reported issues
   instead of quoting them.
