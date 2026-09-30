@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,10 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-9
+- Shows a "log out and back in" notice after an update replaced the shell
+  extensions or themes under the running shell (marker from parchaos-desktop).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-8
 - Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
 

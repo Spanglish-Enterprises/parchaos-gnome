@@ -64,6 +64,14 @@ function unmaximize(win) {
     }
 }
 
+// A package update replaces the shell extensions and theme under a running
+// shell, which keeps the old code and can leave the menu bar or wallpaper
+// half-drawn until the next login. parchaos-desktop touches this file when
+// the extensions or themes change; once it is newer than this shell, say so.
+const UPDATE_MARKER = '/var/lib/parchaos/session-updated';
+const SHELL_STARTED_US = GLib.get_real_time();
+let noticeShownFor = 0;
+
 export default class ParchaSessionExtension extends Extension {
     enable() {
         this._settings = desktopSettings();
@@ -74,6 +82,7 @@ export default class ParchaSessionExtension extends Extension {
         this._ending = false;
         this._hookEndSession();
         this._hookLogind();
+        this._hookUpdateNotice();
 
         if (!restoredThisLogin) {
             restoredThisLogin = true;
@@ -104,6 +113,8 @@ export default class ParchaSessionExtension extends Extension {
         for (const [win, handlerId] of this._windowHandlers)
             win.disconnect(handlerId);
         this._windowHandlers.clear();
+        this._updateMonitor?.cancel();
+        this._updateMonitor = null;
         if (this._logindId)
             Gio.DBus.system.signal_unsubscribe(this._logindId);
         this._logindId = 0;
@@ -162,6 +173,36 @@ export default class ParchaSessionExtension extends Extension {
         } catch (e) {
             logError(e, 'parchaos-session: could not watch logind');
         }
+    }
+
+    _hookUpdateNotice() {
+        const marker = Gio.File.new_for_path(UPDATE_MARKER);
+        const check = () => {
+            try {
+                const info = marker.query_info('time::modified,time::modified-usec',
+                    Gio.FileQueryInfoFlags.NONE, null);
+                const modified = info.get_attribute_uint64('time::modified') * 1000000 +
+                    info.get_attribute_uint32('time::modified-usec');
+                if (modified <= SHELL_STARTED_US || modified === noticeShownFor)
+                    return;
+                noticeShownFor = modified;
+                Main.notify('ParchaOS was updated',
+                    'Log out and back in to finish the update. Until then the menu bar, dock or wallpaper may look wrong.');
+            } catch (e) {
+                // No marker yet: nothing has been updated since install.
+            }
+        };
+        try {
+            this._updateMonitor = marker.get_parent().monitor_directory(
+                Gio.FileMonitorFlags.NONE, null);
+            this._updateMonitor.connect('changed', (_m, file) => {
+                if (file.get_path() === UPDATE_MARKER)
+                    check();
+            });
+        } catch (e) {
+            logError(e, 'parchaos-session: could not watch for updates');
+        }
+        check();
     }
 
     _whenStarted(callback) {

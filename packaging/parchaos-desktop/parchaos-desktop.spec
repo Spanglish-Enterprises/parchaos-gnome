@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        57%{?dist}
+Release:        58%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -229,6 +229,14 @@ dconf update >/dev/null 2>&1 || :
 %postun
 dconf update >/dev/null 2>&1 || :
 
+# A running shell keeps the old extension code when these files are replaced
+# (ticket #169). Leave a marker once per transaction; the session extension
+# tells a shell that started earlier to log out and back in.
+%transfiletriggerin -- /usr/share/gnome-shell/extensions /usr/share/themes
+cat >/dev/null
+mkdir -p /var/lib/parchaos
+touch /var/lib/parchaos/session-updated || :
+
 # touchegg (installed by older ISOs) autostarts a client that retries
 # its disabled daemon every 5 seconds all session; GNOME on Wayland
 # has its own touchpad gestures. Hide the autostart entry, again after
@@ -244,6 +252,8 @@ fi
 %{_datadir}/glib-2.0/schemas/org.parchaos.desktop.gschema.xml
 
 %files
+%dir /var/lib/parchaos
+%ghost /var/lib/parchaos/session-updated
 %license LICENSE
 %{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions
 %{_sysconfdir}/dconf/db/local.d/01-parchaos-theme
@@ -262,6 +272,12 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-58
+- After an update that replaces shell extensions or themes, leave a marker
+  the session extension turns into a "log out and back in" notice. A running
+  shell keeps the old code, and owners saw the wallpaper and menu bar vanish
+  mid-upgrade.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-57
 - Ticket #162: read the selected text aloud (Ctrl+Alt+S). Requires parchaos-speak
   and enables its extension by default.
