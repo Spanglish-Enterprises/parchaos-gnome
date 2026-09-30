@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -71,6 +71,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-21
+- A "Your computer" group on the Desktop page shows the detected model and opens
+  the website hardware form with the model, CPU and graphics filled in (nothing
+  is sent until the user submits the form there).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-20
 - Ticket #123: a "Photo search" switch on the Desktop page (off by default) sets up
   parchaos-image-search: it installs the engine after one password prompt,

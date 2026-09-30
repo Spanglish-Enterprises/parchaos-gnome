@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: parchaos-settings\n"
 "Report-Msgid-Bugs-To: https://github.com/Spanglish-Enterprises/parchaos-"
 "gnome/issues\n"
-"POT-Creation-Date: 2026-09-30 03:13-0500\n"
+"POT-Creation-Date: 2026-09-30 11:06-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -64,300 +64,322 @@ msgid ""
 msgstr ""
 
 #. Desktop icons (Desktop Icons NG keeps these keys).
-#: files/parchaos-settings:160
+#: files/parchaos-settings:162
 msgid "Tiny"
 msgstr ""
 
-#: files/parchaos-settings:160
+#: files/parchaos-settings:162
 msgid "Small"
 msgstr ""
 
-#: files/parchaos-settings:160
+#: files/parchaos-settings:162
 msgid "Standard"
 msgstr ""
 
-#: files/parchaos-settings:160
+#: files/parchaos-settings:162
 msgid "Large"
 msgstr ""
 
-#: files/parchaos-settings:164
+#: files/parchaos-settings:166
 msgid "Icons on the desktop"
 msgstr ""
 
-#: files/parchaos-settings:165
+#: files/parchaos-settings:167
 msgid "Files, folders and the Trash that sit on the desktop."
 msgstr ""
 
-#: files/parchaos-settings:169 files/parchaos-settings:460
+#: files/parchaos-settings:171 files/parchaos-settings:515
 msgid "Not available"
 msgstr ""
 
-#: files/parchaos-settings:170
+#: files/parchaos-settings:172
 msgid "The desktop icons package is not installed."
 msgstr ""
 
-#: files/parchaos-settings:176
+#: files/parchaos-settings:178
 msgid "Snap icons to the grid"
 msgstr ""
 
-#: files/parchaos-settings:177
+#: files/parchaos-settings:179
 msgid "Off: an icon stays exactly where you drop it."
 msgstr ""
 
-#: files/parchaos-settings:180
+#: files/parchaos-settings:182
 msgid "Show Home"
 msgstr ""
 
-#: files/parchaos-settings:180
+#: files/parchaos-settings:182
 msgid "Show Trash"
 msgstr ""
 
-#: files/parchaos-settings:186
+#: files/parchaos-settings:188
 msgid "Icon size"
 msgstr ""
 
-#: files/parchaos-settings:209
+#: files/parchaos-settings:211
 msgid "Focus"
 msgstr ""
 
-#: files/parchaos-settings:210
+#: files/parchaos-settings:212
 msgid "Silence notification popups at the same time every day."
 msgstr ""
 
-#: files/parchaos-settings:211
+#: files/parchaos-settings:213
 msgid "Scheduled Do Not Disturb"
 msgstr ""
 
-#: files/parchaos-settings:230
+#: files/parchaos-settings:232
 msgid "Schedule disabled — start time equals end time"
 msgstr ""
 
-#: files/parchaos-settings:277
+#: files/parchaos-settings:313
+msgid "Your computer"
+msgstr ""
+
+#: files/parchaos-settings:314
+msgid ""
+"Tell others whether ParchaOS works on this computer. Nothing is sent until "
+"you press Send on the website."
+msgstr ""
+
+#: files/parchaos-settings:315
+msgid "Report how ParchaOS works here"
+msgstr ""
+
+#: files/parchaos-settings:316
+msgid "Computer model not found"
+msgstr ""
+
+#: files/parchaos-settings:317
+msgid "Open form"
+msgstr ""
+
+#: files/parchaos-settings:332
 msgid "Photo search"
 msgstr ""
 
-#: files/parchaos-settings:278
+#: files/parchaos-settings:333
 msgid ""
 "Find pictures by what is in them, with a small model that runs on this "
 "computer. Nothing leaves it."
 msgstr ""
 
-#: files/parchaos-settings:282
+#: files/parchaos-settings:337
 msgid "Search photos by what is in them"
 msgstr ""
 
-#: files/parchaos-settings:283 files/parchaos-settings:302
+#: files/parchaos-settings:338 files/parchaos-settings:357
 msgid ""
 "Type \"sunset over water\" in the search. The first time it downloads about "
 "150 MB and asks for your password once."
 msgstr ""
 
-#: files/parchaos-settings:297
+#: files/parchaos-settings:352
 msgid "Setting up..."
 msgstr ""
 
-#: files/parchaos-settings:297
+#: files/parchaos-settings:352
 msgid "Turning off..."
 msgstr ""
 
-#: files/parchaos-settings:305
+#: files/parchaos-settings:360
 msgid "It could not be set up. Check your connection and try again."
 msgstr ""
 
-#: files/parchaos-settings:314
+#: files/parchaos-settings:369
 msgid "Appearance"
 msgstr ""
 
-#: files/parchaos-settings:317
+#: files/parchaos-settings:372
 msgid "Style"
 msgstr ""
 
-#: files/parchaos-settings:318
+#: files/parchaos-settings:373
 msgid "How the menu bar, launcher and Parcha Controls look."
 msgstr ""
 
-#: files/parchaos-settings:324
+#: files/parchaos-settings:379
 msgid "Styles are not available"
 msgstr ""
 
-#: files/parchaos-settings:325
+#: files/parchaos-settings:380
 msgid "The ParchaOS desktop package is not installed."
 msgstr ""
 
-#: files/parchaos-settings:331
+#: files/parchaos-settings:386
 msgid "Glass"
 msgstr ""
 
-#: files/parchaos-settings:332
+#: files/parchaos-settings:387
 msgid "Translucent, softly blurred surfaces with rounded shapes."
 msgstr ""
 
-#: files/parchaos-settings:333
+#: files/parchaos-settings:388
 msgid "Classic"
 msgstr ""
 
-#: files/parchaos-settings:334
+#: files/parchaos-settings:389
 msgid "Calmer frosted surfaces, more opaque, with tighter corners."
 msgstr ""
 
-#: files/parchaos-settings:360
+#: files/parchaos-settings:415
 msgid "Glass effects"
 msgstr ""
 
-#: files/parchaos-settings:361
+#: files/parchaos-settings:416
 msgid ""
 "Menus, Quick Settings, notifications and the dock drawn as glass that bends "
 "what is behind it."
 msgstr ""
 
-#: files/parchaos-settings:363
+#: files/parchaos-settings:418
 msgid "Refractive glass"
 msgstr ""
 
-#: files/parchaos-settings:364
+#: files/parchaos-settings:419
 msgid ""
 "Experimental. Needs more graphics power, and shows the standard Quick "
 "Settings panel instead of Parcha Controls."
 msgstr ""
 
-#: files/parchaos-settings:370
+#: files/parchaos-settings:425
 msgid "Passion"
 msgstr ""
 
-#: files/parchaos-settings:371
+#: files/parchaos-settings:426
 msgid "Berry"
 msgstr ""
 
-#: files/parchaos-settings:372
+#: files/parchaos-settings:427
 msgid "Sunny"
 msgstr ""
 
-#: files/parchaos-settings:373
+#: files/parchaos-settings:428
 msgid "Leaf"
 msgstr ""
 
-#: files/parchaos-settings:374
+#: files/parchaos-settings:429
 msgid "Ocean"
 msgstr ""
 
-#: files/parchaos-settings:375
+#: files/parchaos-settings:430
 msgid "Graphite"
 msgstr ""
 
-#: files/parchaos-settings:380
+#: files/parchaos-settings:435
 msgid "Folder colour"
 msgstr ""
 
-#: files/parchaos-settings:381
+#: files/parchaos-settings:436
 msgid "The colour of folders and the trash. Other icons stay as they are."
 msgstr ""
 
-#: files/parchaos-settings:382
+#: files/parchaos-settings:437
 msgid "Colour"
 msgstr ""
 
-#: files/parchaos-settings:406 files/parchaos-settings:424
+#: files/parchaos-settings:461 files/parchaos-settings:479
 msgid "Backups"
 msgstr ""
 
-#: files/parchaos-settings:409
+#: files/parchaos-settings:464
 msgid "History on this disk"
 msgstr ""
 
-#: files/parchaos-settings:410
+#: files/parchaos-settings:465
 msgid ""
 "Snapshots let you look back at your files and put them back. They live on "
 "the same disk, so they are history, not a backup."
 msgstr ""
 
-#: files/parchaos-settings:415
+#: files/parchaos-settings:470
 msgid "Snapshots are on"
 msgstr ""
 
-#: files/parchaos-settings:415
+#: files/parchaos-settings:470
 msgid "Snapshots are not set up"
 msgstr ""
 
-#: files/parchaos-settings:416
+#: files/parchaos-settings:471
 msgid ""
 "Taken every hour, and before and after each update. Open the snapshot menu "
 "in the top bar to browse them."
 msgstr ""
 
-#: files/parchaos-settings:418
+#: files/parchaos-settings:473
 msgid "They need a Btrfs disk, which this computer does not use."
 msgstr ""
 
-#: files/parchaos-settings:425
+#: files/parchaos-settings:480
 msgid "Copy your files to an external drive or a network share, on a schedule."
 msgstr ""
 
-#: files/parchaos-settings:428
+#: files/parchaos-settings:483
 msgid "Parcha Backup"
 msgstr ""
 
-#: files/parchaos-settings:429
+#: files/parchaos-settings:484
 msgid "Choose what to back up, where to, and how often."
 msgstr ""
 
-#: files/parchaos-settings:434
+#: files/parchaos-settings:489
 msgid "Parcha Backup is not installed."
 msgstr ""
 
-#: files/parchaos-settings:444
+#: files/parchaos-settings:499
 msgid "Privacy"
 msgstr ""
 
-#: files/parchaos-settings:447
+#: files/parchaos-settings:502
 msgid "Network access"
 msgstr ""
 
-#: files/parchaos-settings:448
+#: files/parchaos-settings:503
 msgid ""
 "Turn a switch off to keep that app off the network. It takes effect the next "
 "time the app starts. A blocked app cannot reach the internet or your local "
 "network."
 msgstr ""
 
-#: files/parchaos-settings:451
+#: files/parchaos-settings:506
 msgid "Find an app"
 msgstr ""
 
-#: files/parchaos-settings:456
+#: files/parchaos-settings:511
 msgid "Loading apps..."
 msgstr ""
 
-#: files/parchaos-settings:461
+#: files/parchaos-settings:516
 msgid "The network access helper is not installed."
 msgstr ""
 
-#: files/parchaos-settings:468 files/parchaos-settings:477
+#: files/parchaos-settings:523 files/parchaos-settings:532
 msgid "Could not list apps"
 msgstr ""
 
-#: files/parchaos-settings:483
+#: files/parchaos-settings:538
 msgid "Flatpak app"
 msgstr ""
 
-#: files/parchaos-settings:483
+#: files/parchaos-settings:538
 msgid "App"
 msgstr ""
 
-#: files/parchaos-settings:513
+#: files/parchaos-settings:568
 msgid "The change was not saved."
 msgstr ""
 
-#: files/parchaos-settings:517
+#: files/parchaos-settings:572
 #, python-format
 msgid "%s is blocked from the network. Restart it for this to apply."
 msgstr ""
 
-#: files/parchaos-settings:520
+#: files/parchaos-settings:575
 #, python-format
 msgid "%s can use the network again. Restart it for this to apply."
 msgstr ""
 
-#: files/parchaos-settings:550
+#: files/parchaos-settings:605
 #, python-format
 msgid "Could not change it: %s"
 msgstr ""

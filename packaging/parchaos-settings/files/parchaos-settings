@@ -152,6 +152,8 @@ class Window(Adw.ApplicationWindow):
         if os.path.exists('/usr/bin/parchaos-image-search'):
             page.add(self._photo_search_group())
 
+        page.add(self._computer_group())
+
         if settings is not None:
             page.add(self._focus_group(settings))
         return page
@@ -271,6 +273,59 @@ class Window(Adw.ApplicationWindow):
     def _two_digits(spin):
         spin.set_text(f'{int(spin.get_value()):02d}')
         return True
+
+    @staticmethod
+    def _read(path):
+        try:
+            with open(path, encoding='utf-8', errors='replace') as f:
+                return f.read().strip()
+        except OSError:
+            return ''
+
+    def _computer_details(self):
+        """(model, notes) for the hardware report: what the firmware and the system call this computer."""
+        vendor = self._read('/sys/class/dmi/id/sys_vendor')
+        product = self._read('/sys/class/dmi/id/product_name') or self._read('/sys/class/dmi/id/board_name')
+        junk = ('To Be Filled By O.E.M.', 'System Product Name', 'Default string', 'Not Specified')
+        model = ' '.join(x for x in (vendor, product) if x and x not in junk).strip()
+        cpu = ''
+        for line in self._read('/proc/cpuinfo').splitlines():
+            if line.startswith('model name'):
+                cpu = line.split(':', 1)[1].strip()
+                break
+        gpu = ''
+        try:
+            out = subprocess.run(['lspci', '-mm'], capture_output=True, text=True, timeout=5).stdout
+            for line in out.splitlines():
+                if 'VGA' in line or '3D controller' in line:
+                    parts = [p for p in line.split('"') if p.strip()]
+                    if len(parts) >= 4:
+                        gpu = parts[3]
+                        break
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        notes = '; '.join(x for x in (f'CPU: {cpu}' if cpu else '', f'Graphics: {gpu}' if gpu else '') if x)
+        return model, notes
+
+    def _computer_group(self):
+        model, notes = self._computer_details()
+        group = Adw.PreferencesGroup(
+            title=_('Your computer'),
+            description=_('Tell others whether ParchaOS works on this computer. Nothing is sent until you press Send on the website.'))
+        row = Adw.ActionRow(title=_('Report how ParchaOS works here'),
+                            subtitle=model or _('Computer model not found'))
+        button = Gtk.Button(label=_('Open form'), valign=Gtk.Align.CENTER)
+        button.add_css_class('suggested-action')
+
+        def opened(*_args):
+            from urllib.parse import quote
+            url = 'https://parchaos.org/hardware?machine=' + quote(model[:80]) + '&notes=' + quote(notes[:300])
+            Gio.AppInfo.launch_default_for_uri(url, None)
+
+        button.connect('clicked', opened)
+        row.add_suffix(button)
+        group.add(row)
+        return group
 
     def _photo_search_group(self):
         group = Adw.PreferencesGroup(
