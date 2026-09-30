@@ -1,0 +1,53 @@
+--- a/src/resources/ui/nautilus-toolbar.ui
++++ b/src/resources/ui/nautilus-toolbar.ui
+@@ -92 +92 @@
+-                      <object class="NautilusPathBar" id="path_bar">
++                      <object class="GtkMenuButton" id="folder_title_button">
+@@ -94,2 +94,45 @@
+-                        <property name="window-slot"
+-                                  bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
++                        <property name="always-show-arrow">true</property>
++                        <property name="tooltip-text" translatable="yes">Show the folder path</property>
++                        <style>
++                          <class name="flat"/>
++                          <class name="folder-title"/>
++                        </style>
++                        <property name="child">
++                          <object class="GtkBox">
++                            <property name="spacing">8</property>
++                            <child>
++                              <object class="GtkImage">
++                                <binding name="icon-name">
++                                  <lookup name="icon-name">
++                                    <lookup name="window-slot">NautilusToolbar</lookup>
++                                  </lookup>
++                                </binding>
++                              </object>
++                            </child>
++                            <child>
++                              <object class="GtkLabel">
++                                <property name="ellipsize">end</property>
++                                <property name="single-line-mode">true</property>
++                                <style>
++                                  <class name="title-3"/>
++                                </style>
++                                <binding name="label">
++                                  <lookup name="title">
++                                    <lookup name="window-slot">NautilusToolbar</lookup>
++                                  </lookup>
++                                </binding>
++                              </object>
++                            </child>
++                          </object>
++                        </property>
++                        <property name="popover">
++                          <object class="GtkPopover">
++                            <property name="child">
++                              <object class="NautilusPathBar" id="path_bar">
++                                <property name="width-request">320</property>
++                                <property name="window-slot"
++                                          bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
++                              </object>
++                            </property>
++                          </object>
++                        </property>

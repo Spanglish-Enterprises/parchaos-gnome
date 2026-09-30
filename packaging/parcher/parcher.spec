@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        20%{?dist}
+Release:        21%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -79,6 +79,9 @@ Patch4:         0005-natural-language-search.patch
 # The sidebar header bar hides the app title (ticket #143): it was cut to
 # "Parc..." beside the window buttons.
 Patch5:         0006-sidebar-no-app-title.patch
+# The toolbar shows the folder's icon and name as its title; the path opens
+# from it (ticket "Parcher window layout").
+Patch6:         0007-folder-title.patch
 
 BuildArch:      x86_64
 
@@ -295,6 +298,11 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-21
+- The toolbar now shows the current folder's icon and name as its title,
+  with an arrow; clicking it opens the folder path (the breadcrumb) in a
+  popover.
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-20
 - Ticket #143: the sidebar header bar now hides the app name, which
   was cut to "Parc..." next to the window buttons. The folder name stays in
