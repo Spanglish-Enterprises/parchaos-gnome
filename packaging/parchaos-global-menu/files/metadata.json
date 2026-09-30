@@ -11,5 +11,6 @@
     "50",
     "51"
   ],
-  "url": "https://parchaos.org"
+  "url": "https://parchaos.org",
+  "settings-schema": "org.parchaos.globalmenu"
 }

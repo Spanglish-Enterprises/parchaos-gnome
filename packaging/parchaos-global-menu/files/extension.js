@@ -151,6 +151,8 @@ function hintText(notation) {
     const symbols = keyboardStyle() === 'super-ctrl';
     const parts = [];
     if (symbols) {
+        if (mods.includes('k'))
+            parts.push('\u2303');
         if (mods.includes('a'))
             parts.push('\u2325');
         if (mods.includes('s'))
@@ -159,6 +161,8 @@ function hintText(notation) {
             parts.push('\u2318');
         return parts.join('\u200A') + '\u200A' + key;
     }
+    if (mods.includes('k'))
+        parts.push('Super');
     if (mods.includes('c'))
         parts.push('Ctrl');
     if (mods.includes('a'))
@@ -648,8 +652,16 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
 const MenuEntry = GObject.registerClass({
     GTypeName: 'ParchaOSMenuEntry',
 }, class MenuEntry extends PopupMenu.PopupBaseMenuItem {
-    _init(text, hint = '', badge = false) {
+    _init(text, hint = '', badge = false, icon = null) {
         super._init();
+        if (icon) {
+            this.add_child(new St.Icon({
+                icon_name: icon,
+                icon_size: 16,
+                y_align: Clutter.ActorAlign.CENTER,
+                style_class: 'parchaos-menu-row-icon',
+            }));
+        }
         this.label = new St.Label({
             text,
             x_expand: true,
@@ -687,30 +699,29 @@ class ForceQuitDialog extends ModalDialog.ModalDialog {
             text: 'Force Quit Applications',
             style_class: 'parchaos-about-title',
         }));
-        this.contentLayout.add_child(new St.Label({
+        const hint = new St.Label({
             text: 'If an app is not responding, choose it and press Force Quit.',
             style_class: 'parchaos-confirm-dialog-label',
-        }));
+        });
+        hint.clutter_text.line_wrap = true;
+        this.contentLayout.add_child(hint);
 
         this._selected = null;
         this._rows = [];
-        const list = new St.BoxLayout({ vertical: true, style_class: 'parchaos-forcequit-list' });
+        const list = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, style_class: 'parchaos-forcequit-list' });
         const apps = Shell.AppSystem.get_default().get_running()
-            .filter(app => app.get_pids().length > 0 && app.get_id() !== DEFAULT_APP_ID);
+            .filter(app => app.get_pids().length > 0);
         apps.sort((a, b) => a.get_name().localeCompare(b.get_name()));
         for (const app of apps) {
+            const inner = new St.BoxLayout({ style: 'spacing: 10px;', x_align: Clutter.ActorAlign.START });
+            inner.add_child(new St.Icon({ gicon: app.get_icon(), icon_size: 22 }));
+            inner.add_child(new St.Label({ text: app.get_name(), y_align: Clutter.ActorAlign.CENTER }));
             const row = new St.Button({
                 style_class: 'parchaos-forcequit-row',
                 x_expand: true,
                 can_focus: true,
                 toggle_mode: true,
-                child: new St.BoxLayout({
-                    spacing: 10,
-                    children: [
-                        new St.Icon({ gicon: app.get_icon(), icon_size: 22 }),
-                        new St.Label({ text: app.get_name(), y_align: Clutter.ActorAlign.CENTER }),
-                    ],
-                }),
+                child: inner,
             });
             row.connect('clicked', () => {
                 for (const other of this._rows)
@@ -959,6 +970,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._focusSignal = 0;
 
         this._buildSystemMenu();
+        this._bindKeys();
         this._buildAppNameMenu();
         for (const menu of MENU_TABLE)
             this._buildTableMenu(menu);
@@ -987,6 +999,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     }
 
     disable() {
+        this._unbindKeys();
         Main.panel.remove_style_class_name('parchaos-menubar');
         this._tint?.destroy();
         this._tint = null;
@@ -1019,6 +1032,30 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._trackedWindow = null;
     }
 
+    // Lock Screen, Log Out and Force Quit answer to the keys the menu shows.
+    _bindKeys() {
+        try {
+            this._keySettings = this.getSettings();
+        } catch (e) {
+            console.error('[ParchaOSGlobalMenu] no settings schema, shortcuts off:', e);
+            return;
+        }
+        const modes = Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW;
+        const bind = (name, handler) =>
+            Main.wm.addKeybinding(name, this._keySettings, Meta.KeyBindingFlags.NONE, modes, handler);
+        bind('lock-screen', () => Main.screenShield?.lock(true));
+        bind('log-out', () => this._logOut?.());
+        bind('force-quit', () => new ForceQuitDialog().open());
+    }
+
+    _unbindKeys() {
+        if (!this._keySettings)
+            return;
+        for (const name of ['lock-screen', 'log-out', 'force-quit'])
+            Main.wm.removeKeybinding(name);
+        this._keySettings = null;
+    }
+
     // --- System (logo) menu ---
 
     _buildSystemMenu() {
@@ -1043,15 +1080,17 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             (apps.lookup_app('org.gnome.Software.desktop') ?? apps.lookup_app('gnome-software.desktop'))?.activate();
         };
         const name = GLib.get_real_name();
+        this._logOut = powerAction('Log out now? Any unsaved work will be lost.',
+            'gnome-session-quit --logout --no-prompt');
         const systemEntries = [
-            { label: 'About ParchaOS', run: () => this._showAboutDialog() },
+            { label: 'About ParchaOS', icon: 'computer-symbolic', run: () => this._showAboutDialog() },
             SEPARATOR,
-            { label: 'System Settings\u2026', run: openSystemSettings, updates: true },
-            { label: 'Parcha Store', run: openStore },
+            { label: 'System Settings\u2026', icon: 'emblem-system-symbolic', run: openSystemSettings, updates: true },
+            { label: 'Parcha Store', icon: 'system-software-install-symbolic', run: openStore },
             SEPARATOR,
             { label: 'Recent Items', recent: true },
             SEPARATOR,
-            { label: 'Force Quit\u2026', run: () => new ForceQuitDialog().open() },
+            { label: 'Force Quit\u2026', hint: 'ac \u238B', run: () => new ForceQuitDialog().open() },
             SEPARATOR,
             { label: 'Sleep', run: () => GLib.spawn_command_line_async('systemctl suspend') },
             { label: 'Restart\u2026', run: powerAction('Restart now? Any unsaved work will be lost.',
@@ -1059,10 +1098,9 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             { label: 'Shut Down\u2026', run: powerAction('Shut down now? Any unsaved work will be lost.',
                 'gnome-session-quit --power-off --no-prompt') },
             SEPARATOR,
-            { label: 'Lock Screen', run: () => Main.screenShield?.lock(true) },
-            { label: name && name !== 'Unknown' ? `Log Out ${name}\u2026` : 'Log Out\u2026',
-                run: powerAction('Log out now? Any unsaved work will be lost.',
-                    'gnome-session-quit --logout --no-prompt') },
+            { label: 'Lock Screen', hint: 'kc Q', run: () => Main.screenShield?.lock(true) },
+            { label: name && name !== 'Unknown' ? `Log Out ${name}\u2026` : 'Log Out\u2026', hint: 'cs Q',
+                run: () => this._logOut() },
         ];
         this._fillMenu(logoBtn.menu, systemEntries);
         // Dynamic parts are refreshed each time the menu opens.
@@ -1484,7 +1522,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                 this._recentItem = new PopupMenu.PopupSubMenuMenuItem(entry.label);
                 menu.addMenuItem(this._recentItem);
             } else {
-                const item = new MenuEntry(entry.label, entry.hint ? hintText(entry.hint) : '', !!entry.updates);
+                const item = new MenuEntry(entry.label, entry.hint ? hintText(entry.hint) : '', !!entry.updates, entry.icon);
                 if (entry.updates)
                     this._updatesItem = item;
                 item.connect('activate', () => entry.run(this._trackedWindow));

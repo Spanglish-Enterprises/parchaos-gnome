@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        28%{?dist}
+Release:        29%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -42,9 +42,11 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-menu-icon-symbolic.svg
+Source4:        org.parchaos.globalmenu.gschema.xml
 Source90:       LICENSE
 Source91:       LICENSE-ARTWORK
 
+BuildRequires:  glib2
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 45
@@ -75,7 +77,7 @@ and how.
 %prep
 mkdir -p src
 cd src
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} .
 # %%prep works in src/; %%license reads from the build directory.
 cp -p %{SOURCE90} ..
 cp -p %{SOURCE91} ..
@@ -95,6 +97,9 @@ install -m 0644 src/extension.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
+mkdir -p "$DEST/schemas"
+install -m 0644 src/org.parchaos.globalmenu.gschema.xml "$DEST/schemas/"
+glib-compile-schemas "$DEST/schemas"
 
 %files
 %license LICENSE-ARTWORK
@@ -102,6 +107,9 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2.1.0-29
+- Ticket #135, checked against the reference menus: icons on About, System Settings and Parcha Store; Force Quit, Lock Screen and Log Out show their shortcuts and now answer to them (Ctrl+Alt+Esc, Ctrl+Super+Q, Ctrl+Shift+Q as the compositor sees them; a keyboard shortcut schema org.parchaos.globalmenu ships with the extension); the Force Quit dialog lists all running apps and wraps its text.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2.1.0-28
 - Ticket #135: Shortcut hints dimmed and the update badge drawn as a pill; glyphs spaced like the kit.
 

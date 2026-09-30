@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.globalmenu" path="/org/parchaos/globalmenu/">
+    <!-- Keys as the compositor sees them. With the Super-as-Ctrl keyboard
+         style the physical Command key arrives as Ctrl and the physical Ctrl
+         key as Super, so these are the keys the menu shows as Command+Shift+Q
+         and so on. -->
+    <key name="lock-screen" type="as">
+      <default><![CDATA[['<Super><Control>q']]]></default>
+      <summary>Lock the screen</summary>
+    </key>
+    <key name="log-out" type="as">
+      <default><![CDATA[['<Shift><Control>q']]]></default>
+      <summary>Log out (asks first)</summary>
+    </key>
+    <key name="force-quit" type="as">
+      <default><![CDATA[['<Alt><Control>Escape']]]></default>
+      <summary>Open Force Quit</summary>
+    </key>
+  </schema>
+</schemalist>
