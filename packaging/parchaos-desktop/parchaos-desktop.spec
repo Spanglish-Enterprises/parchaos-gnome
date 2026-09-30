@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        51%{?dist}
+Release:        52%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -119,6 +119,7 @@ Requires:       parchaos-magic-lamp-effect
 Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
+Requires:       parchaos-glass-effects
 Requires:       parchaos-snapshots
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
@@ -258,6 +259,12 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-52
+- Ticket #135: new org.parchaos.desktop key glass-effects (off by default).
+  parchaos-theme-sync turns the optional glass-effects extension on and
+  Parcha Controls off (and back) when it changes. Requires
+  parchaos-glass-effects.
+
 * Tue Sep 29 2026 ParchaOS packaging - 2026.09.23-51
 - Ticket #119: voice dictation (Ctrl+Alt+D). Requires parchaos-dictation
   and enables its extension by default; the speech engine and model

@@ -307,9 +307,23 @@ class Window(Adw.ApplicationWindow):
             check.connect('toggled', self._on_style_toggled, value)
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        if 'glass-effects' in schema.list_keys() and os.path.isdir(
+                '/usr/share/gnome-shell/extensions/liquid-glass@thinkingcoding1231.gmail.com'):
+            page.add(self._glass_effects_group())
         if 'folder-colour' in schema.list_keys():
             page.add(self._folder_colour_group())
         return page
+
+    def _glass_effects_group(self):
+        group = Adw.PreferencesGroup(
+            title=_('Glass effects'),
+            description=_('Menus, Quick Settings, notifications and the dock drawn as glass that bends what is behind it.'))
+        row = Adw.SwitchRow(
+            title=_('Refractive glass'),
+            subtitle=_('Experimental. Needs more graphics power, and shows the standard Quick Settings panel instead of Parcha Controls.'))
+        self._desktop.bind('glass-effects', row, 'active', Gio.SettingsBindFlags.DEFAULT)
+        group.add(row)
+        return group
 
     FOLDER_COLOURS = [
         ('passion', _('Passion')),

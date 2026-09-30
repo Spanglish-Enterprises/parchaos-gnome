@@ -192,6 +192,10 @@ PROFILE_REPO_PACKAGES=(
     # small part is here; the speech engine downloads on first use.
     parchaos-dictation
 
+    # Optional refractive glass effects, off until switched on in Settings
+    # (packaging/parchaos-glass-effects/).
+    parchaos-glass-effects
+
     # Snapshots of the system and home folders, with a top-bar menu
     # (packaging/parchaos-snapshots/).
     parchaos-snapshots

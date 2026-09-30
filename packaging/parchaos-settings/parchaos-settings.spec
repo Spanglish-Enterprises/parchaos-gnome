@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        18%{?dist}
+Release:        19%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -71,6 +71,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-19
+- Ticket #135: Appearance has an opt-in "Refractive glass" switch (off by
+  default) that turns on the optional glass-effects extension.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-18
 - Ticket #146: Spanish translation of ParchaOS Settings, written in
   Puerto Rican usage (computadora, tú). Installed as "es", which is what

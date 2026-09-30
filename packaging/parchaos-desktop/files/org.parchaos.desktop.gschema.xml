@@ -57,6 +57,16 @@
       <summary>Scheduled Do Not Disturb ends (HH:MM)</summary>
       <description>24-hour local time.</description>
     </key>
+    <key name="glass-effects" type="b">
+      <default>false</default>
+      <summary>Refractive glass effects</summary>
+      <description>
+        Turn on the optional glass-effects extension (panel menus, Quick
+        Settings, notifications and the dock drawn as refractive glass) and
+        show the standard Quick Settings panel in place of Parcha Controls.
+        Off by default; it needs more graphics power.
+      </description>
+    </key>
     <key name="launcher-order" type="as">
       <default>[]</default>
       <summary>Launcher arrangement</summary>
