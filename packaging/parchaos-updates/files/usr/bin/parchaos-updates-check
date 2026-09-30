@@ -50,10 +50,20 @@ fi
 body="$what ready. Install $it from Parcha Store, or run 'sudo dnf upgrade'. "
 body+="Updating from the Store restarts the computer a few times. That is normal, so let it finish."
 
-# Send the notification. Prefer notify-send, fall back to a GNOME Shell
-# notification via gdbus if available.
+# Send the notification. Prefer notify-send with a "See what's new" button
+# (libnotify 0.7.10 and later); fall back to a plain notification.
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send -u normal -a ParchaOS "Software Updates" "$body"
+    if notify-send --help 2>&1 | grep -q -- '--action'; then
+        # -w waits for the button or for the banner to be dismissed. Bounded,
+        # so the service never stays around for long.
+        action=$(timeout 300 notify-send -w -A "whatsnew=See what's new" -u normal -a ParchaOS \
+            "Software Updates" "$body" 2>/dev/null || true)
+        if [ "$action" = whatsnew ] && command -v parchaos-updates-whatsnew >/dev/null 2>&1; then
+            parchaos-updates-whatsnew || true
+        fi
+    else
+        notify-send -u normal -a ParchaOS "Software Updates" "$body"
+    fi
 else
     # Fallback: use the session bus to show a GNOME notification.
     gdbus call --session \

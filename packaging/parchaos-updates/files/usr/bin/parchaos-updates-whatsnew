@@ -1,0 +1,126 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-updates-whatsnew: what the pending ParchaOS updates change, in plain
+# words, taken from each package's own changelog.
+#
+#   parchaos-updates-whatsnew          open a window with the list
+#   parchaos-updates-whatsnew --text   print it instead
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import re
+import subprocess
+import sys
+
+CHANGELOG_URL = 'https://parchaos.org/changelog'
+OURS = re.compile(r'^(parchaos-|parcher)')
+
+
+def parse(output):
+    """[(package, sentence)] from `dnf5 repoquery --changelogs` output.
+
+    dnf lists every available build of a package, oldest first, each with its
+    changelog newest first. The last block of a package is its newest build;
+    its first entry's first bullet is used, joined into one line, without the
+    ticket number, cut at a sentence end.
+    """
+    latest = {}
+    package = None
+    entry = None
+    for raw in output.splitlines():
+        line = raw.rstrip()
+        m = re.match(r'^Changelogs for ([^,\s]+?)-[^-,\s]+-[^-,\s]+\.[^.,\s]+(?:,.*)?$', line)
+        if m:
+            if package is not None and isinstance(entry, list):
+                latest[package] = summarise(entry)
+            package, entry = m.group(1), None
+            if not OURS.match(package):
+                package = None
+            continue
+        if package is None:
+            continue
+        if line.startswith('* '):
+            if entry is None:
+                entry = []      # the newest entry of this build starts here
+            elif isinstance(entry, list):
+                latest[package] = summarise(entry)
+                entry = False   # the rest is older history
+            continue
+        if isinstance(entry, list):
+            entry.append(line)
+    if package is not None and isinstance(entry, list):
+        latest[package] = summarise(entry)
+    return sorted((p, s) for p, s in latest.items() if s)
+
+
+def summarise(lines):
+    text = []
+    for line in lines:
+        if line.startswith('- ') and text:
+            break
+        if line.startswith('- '):
+            text.append(line[2:].strip())
+        elif line.strip() and text:
+            text.append(line.strip())
+    sentence = ' '.join(text)
+    sentence = re.sub(r'^(Ticket #\d+|Fedora \d+ prep \(ticket #\d+\)):\s*', '', sentence)
+    sentence = re.sub(r'\s*\(ticket #\d+[^)]*\)', '', sentence)
+    cut = re.search(r'(?<=[.!?])\s', sentence)
+    if cut and cut.start() > 20:
+        sentence = sentence[:cut.start()]
+    return sentence[:240]
+
+
+def pending():
+    out = subprocess.run(['dnf5', 'repoquery', '--upgrades', '--changelogs', '--quiet'],
+                         capture_output=True, text=True, timeout=300).stdout
+    return parse(out)
+
+
+def show(items):
+    import gi
+    gi.require_version('Adw', '1')
+    gi.require_version('Gtk', '4.0')
+    from gi.repository import Adw, Gio, Gtk
+
+    def activate(app):
+        window = Adw.ApplicationWindow(application=app, default_width=560, default_height=520,
+                                       title="What's new")
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(Adw.HeaderBar())
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(title="What's new in this update")
+        if not items:
+            group.add(Adw.ActionRow(title='Nothing from ParchaOS is waiting; only Fedora updates.'))
+        for package, sentence in items:
+            row = Adw.ActionRow(title=package, subtitle=sentence)
+            row.set_subtitle_lines(0)
+            group.add(row)
+        page.add(group)
+        more = Adw.PreferencesGroup()
+        link = Adw.ActionRow(title='Full changelog', subtitle=CHANGELOG_URL, activatable=True)
+        link.connect('activated', lambda *_: Gio.AppInfo.launch_default_for_uri(CHANGELOG_URL, None))
+        more.add(link)
+        page.add(more)
+        scroller = Gtk.ScrolledWindow(vexpand=True)
+        scroller.set_child(page)
+        box.append(scroller)
+        window.set_content(box)
+        window.present()
+
+    app = Adw.Application(application_id='org.parchaos.WhatsNew')
+    app.connect('activate', activate)
+    return app.run([])
+
+
+def main(argv):
+    items = pending()
+    if '--text' in argv:
+        for package, sentence in items:
+            print(f'{package}: {sentence}')
+        return 0
+    return show(items)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

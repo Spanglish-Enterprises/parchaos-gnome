@@ -69,7 +69,7 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 - Glass values now follow the reference UI kit: a smoked #1a1a1a pane, 34 px
   corners, hairline outline, bright rims top and bottom, 17% grey capsules.
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-12
-- Ticket #135: the Glass style now looks like liquid glass. A clear, more
+- Ticket #135: the Glass style now looks like real glass. A clear, more
   strongly tinted pane over the blurred background, controls as glass
   capsules with a bright rim and inner glow, switched-on circles solid white
   (blue in the light appearance), and thicker white-filled slider pills.

@@ -12,7 +12,7 @@
 
 Name:           parchaos-updates
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Check for ParchaOS updates and notify
 
 License:        GPL-3.0-or-later
@@ -20,12 +20,16 @@ URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-updates-check
 Source1:        usr/lib/systemd/user/parchaos-updates.service
 Source2:        usr/lib/systemd/user/parchaos-updates.timer
+Source3:        usr/bin/parchaos-updates-whatsnew
 Source90:       LICENSE
 BuildArch:      noarch
 
 BuildRequires:  systemd-rpm-macros
 
 Requires:       dnf
+Requires:       python3-gobject
+Requires:       libadwaita
+Requires:       libnotify
 Requires(post): systemd
 
 %description
@@ -41,6 +45,7 @@ cp -p %{SOURCE90} .
 
 %install
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-updates-check
+install -Dm0755 %{SOURCE3} %{buildroot}%{_bindir}/parchaos-updates-whatsnew
 install -Dm0644 %{SOURCE1} %{buildroot}%{_userunitdir}/parchaos-updates.service
 install -Dm0644 %{SOURCE2} %{buildroot}%{_userunitdir}/parchaos-updates.timer
 # Enable the timer for every user with a packaged wants symlink, the way
@@ -66,11 +71,17 @@ ln -s ../parchaos-updates.timer \
 %files
 %license LICENSE
 %{_bindir}/parchaos-updates-check
+%{_bindir}/parchaos-updates-whatsnew
 %{_userunitdir}/parchaos-updates.service
 %{_userunitdir}/parchaos-updates.timer
 %{_userunitdir}/timers.target.wants/parchaos-updates.timer
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-5
+- The update notification has a "See what's new" button that lists what the
+  waiting ParchaOS updates change, in plain words from their changelogs, with a
+  link to the full changelog.
+
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-4
 - The notification now says that updating from Parcha Store restarts the
   computer a few times and that this is normal (ticket #134: an update that
