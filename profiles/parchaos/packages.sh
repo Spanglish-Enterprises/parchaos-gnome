@@ -199,6 +199,9 @@ PROFILE_REPO_PACKAGES=(
     # Photo search, off until switched on in Settings (packaging/parchaos-image-search/).
     parchaos-image-search
 
+    # Space on a file in Parcher previews it (Parcher calls this previewer).
+    sushi
+
     # Snapshots of the system and home folders, with a top-bar menu
     # (packaging/parchaos-snapshots/).
     parchaos-snapshots

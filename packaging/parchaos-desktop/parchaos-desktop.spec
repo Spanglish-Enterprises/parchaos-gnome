@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        53%{?dist}
+Release:        54%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -121,6 +121,7 @@ Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-glass-effects
 Requires:       parchaos-image-search
+Requires:       sushi
 Requires:       parchaos-snapshots
 Requires:       parchaos-ui-tune
 Requires:       parchaos-gdm-logo
@@ -260,6 +261,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %%changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-54
+- Quick Preview (ticket): Requires sushi, the file previewer Parcher calls when Space
+  is pressed on a file.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-53
 - Ticket #123: Requires parchaos-image-search (photo search, off until turned on in
   ParchaOS Settings).
