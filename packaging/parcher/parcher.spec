@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -298,6 +298,10 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 48.7-22
+- The toolbar title shows a folder icon (it showed the view-mode icon in
+  48.7-21) and stays centred at its natural width.
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-21
 - The toolbar now shows the current folder's icon and name as its title,
   with an arrow; clicking it opens the folder path (the breadcrumb) in a

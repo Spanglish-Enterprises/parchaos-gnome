@@ -3,9 +3,11 @@
 @@ -92 +92 @@
 -                      <object class="NautilusPathBar" id="path_bar">
 +                      <object class="GtkMenuButton" id="folder_title_button">
-@@ -94,2 +94,45 @@
+@@ -94,2 +94,44 @@
 -                        <property name="window-slot"
 -                                  bind-source="NautilusToolbar" bind-property="window-slot" bind-flags="sync-create"/>
++                        <property name="halign">center</property>
++                        <property name="hexpand">false</property>
 +                        <property name="always-show-arrow">true</property>
 +                        <property name="tooltip-text" translatable="yes">Show the folder path</property>
 +                        <style>
@@ -17,11 +19,8 @@
 +                            <property name="spacing">8</property>
 +                            <child>
 +                              <object class="GtkImage">
-+                                <binding name="icon-name">
-+                                  <lookup name="icon-name">
-+                                    <lookup name="window-slot">NautilusToolbar</lookup>
-+                                  </lookup>
-+                                </binding>
++                                <property name="icon-name">folder</property>
++                                <property name="pixel-size">22</property>
 +                              </object>
 +                            </child>
 +                            <child>
