@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -64,6 +64,12 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-17
+- Ticket #53: ParchaOS Settings is translation-ready. Every string shown to
+  the user goes through gettext (domain parchaos-settings, catalogs read from
+  the system locale directory), po/parchaos-settings.pot lists the 70
+  messages, and tests check that nothing is left unmarked and that the
+  template is current. No translations ship yet.
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
 - Ticket #20: redesigned as a sidebar of sections beside the chosen page,
   like GNOME's own Settings, folding to one column in a narrow window.

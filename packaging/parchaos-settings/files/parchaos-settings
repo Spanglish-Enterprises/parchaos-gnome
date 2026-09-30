@@ -4,6 +4,7 @@
 # Settings app has no place for. Original code for ParchaOS,
 # GPL-3.0-or-later.
 
+import gettext
 import json
 import os
 import subprocess
@@ -19,6 +20,13 @@ APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
 APP_NETWORK = '/usr/libexec/parchaos-app-network'
 
+# Translations (ticket #53): the catalogs are installed as
+# <localedir>/<lang>/LC_MESSAGES/parchaos-settings.mo. Strings shown to the
+# user go through _(); the template is po/parchaos-settings.pot.
+gettext.bindtextdomain('parchaos-settings', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-settings')
+_ = gettext.gettext
+
 
 def keyboard_style():
     try:
@@ -33,7 +41,7 @@ class Window(Adw.ApplicationWindow):
     # A sidebar of sections beside the page of the chosen section, the layout
     # GNOME's own Settings uses. It folds to a single column in a narrow window.
     def __init__(self, app):
-        super().__init__(application=app, title='ParchaOS Settings')
+        super().__init__(application=app, title=_('ParchaOS Settings'))
         self.set_default_size(860, 640)
 
         self._pages = []
@@ -45,7 +53,7 @@ class Window(Adw.ApplicationWindow):
         side_bar = Adw.HeaderBar(show_title=False)
         side = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self._list, hscrollbar_policy=Gtk.PolicyType.NEVER))
         side.add_top_bar(side_bar)
-        self._side_page = Adw.NavigationPage(child=side, title='ParchaOS Settings', tag='sections')
+        self._side_page = Adw.NavigationPage(child=side, title=_('ParchaOS Settings'), tag='sections')
 
         self._content_title = Adw.WindowTitle(title='')
         content_bar = Adw.HeaderBar(title_widget=self._content_title)
@@ -71,22 +79,22 @@ class Window(Adw.ApplicationWindow):
         self._list.select_row(self._list.get_row_at_index(0))
 
     def _keyboard_page(self):
-        page = Adw.PreferencesPage(title='Keyboard',
+        page = Adw.PreferencesPage(title=_('Keyboard'),
                                    icon_name='input-keyboard-symbolic')
         group = Adw.PreferencesGroup(
-            title='Keyboard',
-            description='How the Super key works for your account.')
+            title=_('Keyboard'),
+            description=_('How the Super key works for your account.'))
         page.add(group)
 
         self._super_row = Adw.SwitchRow(
-            title='Super as Ctrl',
-            subtitle='Use the Super key for app shortcuts like copy, paste '
+            title=_('Super as Ctrl'),
+            subtitle=_('Use the Super key for app shortcuts like copy, paste '
                      'and quit (Super+C, Super+V, Super+Q). Turn off to keep '
-                     'Super for system shortcuts and Ctrl for app shortcuts.')
+                     'Super for system shortcuts and Ctrl for app shortcuts.'))
         style = keyboard_style()
         if style is None:
             self._super_row.set_sensitive(False)
-            self._super_row.set_subtitle('Keyboard remapping is not installed.')
+            self._super_row.set_subtitle(_('Keyboard remapping is not installed.'))
         else:
             self._super_row.set_active(style not in ('standard', 'windows'))
         self._super_row.connect('notify::active', self._on_super_toggled)
@@ -124,15 +132,15 @@ class Window(Adw.ApplicationWindow):
         return Gio.Settings(settings_schema=schema) if schema else None
 
     def _desktop_page(self):
-        page = Adw.PreferencesPage(title='Desktop',
+        page = Adw.PreferencesPage(title=_('Desktop'),
                                    icon_name='preferences-desktop-symbolic')
         page.add(self._icons_group())
-        group = Adw.PreferencesGroup(title='Sessions')
+        group = Adw.PreferencesGroup(title=_('Sessions'))
         page.add(group)
         row = Adw.SwitchRow(
-            title='Reopen apps when logging back in',
-            subtitle='Apps you had open come back where they were, and apps '
-                     'that remember their documents reopen them too.')
+            title=_('Reopen apps when logging back in'),
+            subtitle=_('Apps you had open come back where they were, and apps '
+                     'that remember their documents reopen them too.'))
         settings = self._desktop_settings()
         if settings is None:
             row.set_sensitive(False)
@@ -146,33 +154,33 @@ class Window(Adw.ApplicationWindow):
         return page
 
     # Desktop icons (Desktop Icons NG keeps these keys).
-    ICON_SIZES = [('tiny', 'Tiny'), ('small', 'Small'), ('standard', 'Standard'), ('large', 'Large')]
+    ICON_SIZES = [('tiny', _('Tiny')), ('small', _('Small')), ('standard', _('Standard')), ('large', _('Large'))]
 
     def _icons_group(self):
         group = Adw.PreferencesGroup(
-            title='Icons on the desktop',
-            description='Files, folders and the Trash that sit on the desktop.')
+            title=_('Icons on the desktop'),
+            description=_('Files, folders and the Trash that sit on the desktop.'))
         source = Gio.SettingsSchemaSource.get_default()
         schema = source.lookup('org.gnome.shell.extensions.ding', True) if source else None
         if schema is None:
-            group.add(Adw.ActionRow(title='Not available',
-                                    subtitle='The desktop icons package is not installed.'))
+            group.add(Adw.ActionRow(title=_('Not available'),
+                                    subtitle=_('The desktop icons package is not installed.')))
             return group
         self._ding = Gio.Settings(settings_schema=schema)
         keys = schema.list_keys()
         if 'snap-to-grid' in keys:
             row = Adw.SwitchRow(
-                title='Snap icons to the grid',
-                subtitle='Off: an icon stays exactly where you drop it.')
+                title=_('Snap icons to the grid'),
+                subtitle=_('Off: an icon stays exactly where you drop it.'))
             self._ding.bind('snap-to-grid', row, 'active', Gio.SettingsBindFlags.DEFAULT)
             group.add(row)
-        for key, title in (('show-home', 'Show Home'), ('show-trash', 'Show Trash')):
+        for key, title in (('show-home', _('Show Home')), ('show-trash', _('Show Trash'))):
             if key in keys:
                 row = Adw.SwitchRow(title=title)
                 self._ding.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT)
                 group.add(row)
         if 'icon-size' in keys:
-            row = Adw.ComboRow(title='Icon size')
+            row = Adw.ComboRow(title=_('Icon size'))
             row.set_model(Gtk.StringList.new([name for _v, name in self.ICON_SIZES]))
             values = [v for v, _n in self.ICON_SIZES]
 
@@ -195,9 +203,9 @@ class Window(Adw.ApplicationWindow):
     # Scheduled Do Not Disturb (parchaos-focus-schedule reads these keys).
     def _focus_group(self, settings):
         group = Adw.PreferencesGroup(
-            title='Focus',
-            description='Silence notification popups at the same time every day.')
-        switch = Adw.SwitchRow(title='Scheduled Do Not Disturb')
+            title=_('Focus'),
+            description=_('Silence notification popups at the same time every day.'))
+        switch = Adw.SwitchRow(title=_('Scheduled Do Not Disturb'))
         settings.bind('focus-schedule', switch, 'active', Gio.SettingsBindFlags.DEFAULT)
         group.add(switch)
         self._focus_start_row = self._time_row(settings, 'focus-start', 'From')
@@ -216,7 +224,7 @@ class Window(Adw.ApplicationWindow):
         except AttributeError:
             return
         if start and end and start == end:
-            self._focus_start_row.set_subtitle('Schedule disabled — start time equals end time')
+            self._focus_start_row.set_subtitle(_('Schedule disabled — start time equals end time'))
         else:
             self._focus_start_row.set_subtitle('')
 
@@ -262,27 +270,27 @@ class Window(Adw.ApplicationWindow):
         return True
 
     def _appearance_page(self):
-        page = Adw.PreferencesPage(title='Appearance',
+        page = Adw.PreferencesPage(title=_('Appearance'),
                                    icon_name='applications-graphics-symbolic')
         group = Adw.PreferencesGroup(
-            title='Style',
-            description='How the menu bar, launcher and Parcha Controls look.')
+            title=_('Style'),
+            description=_('How the menu bar, launcher and Parcha Controls look.'))
         page.add(group)
 
         source = Gio.SettingsSchemaSource.get_default()
         schema = source.lookup('org.parchaos.desktop', True) if source else None
         if schema is None:
-            row = Adw.ActionRow(title='Styles are not available',
-                                subtitle='The ParchaOS desktop package is not installed.')
+            row = Adw.ActionRow(title=_('Styles are not available'),
+                                subtitle=_('The ParchaOS desktop package is not installed.'))
             group.add(row)
             return page
         self._desktop = Gio.Settings(settings_schema=schema)
 
         choices = [
-            ('glass', 'Glass',
-             'Translucent, softly blurred surfaces with rounded shapes.'),
-            ('classic', 'Classic',
-             'Calmer frosted surfaces, more opaque, with tighter corners.'),
+            ('glass', _('Glass'),
+             _('Translucent, softly blurred surfaces with rounded shapes.')),
+            ('classic', _('Classic'),
+             _('Calmer frosted surfaces, more opaque, with tighter corners.')),
         ]
         first = None
         self._style_buttons = {}
@@ -304,19 +312,19 @@ class Window(Adw.ApplicationWindow):
         return page
 
     FOLDER_COLOURS = [
-        ('passion', 'Passion'),
-        ('berry', 'Berry'),
-        ('sunny', 'Sunny'),
-        ('leaf', 'Leaf'),
-        ('ocean', 'Ocean'),
-        ('graphite', 'Graphite'),
+        ('passion', _('Passion')),
+        ('berry', _('Berry')),
+        ('sunny', _('Sunny')),
+        ('leaf', _('Leaf')),
+        ('ocean', _('Ocean')),
+        ('graphite', _('Graphite')),
     ]
 
     def _folder_colour_group(self):
         group = Adw.PreferencesGroup(
-            title='Folder colour',
-            description='The colour of folders and the trash. Other icons stay as they are.')
-        row = Adw.ComboRow(title='Colour')
+            title=_('Folder colour'),
+            description=_('The colour of folders and the trash. Other icons stay as they are.'))
+        row = Adw.ComboRow(title=_('Colour'))
         row.set_model(Gtk.StringList.new([name for _value, name in self.FOLDER_COLOURS]))
         values = [value for value, _name in self.FOLDER_COLOURS]
 
@@ -340,35 +348,35 @@ class Window(Adw.ApplicationWindow):
 
     # History (snapper snapshots) and backups (Parcha Backup), ticket #116.
     def _backups_page(self):
-        page = Adw.PreferencesPage(title='Backups',
+        page = Adw.PreferencesPage(title=_('Backups'),
                                    icon_name='document-open-recent-symbolic')
         history = Adw.PreferencesGroup(
-            title='History on this disk',
-            description='Snapshots let you look back at your files and put them back. '
-                        'They live on the same disk, so they are history, not a backup.')
+            title=_('History on this disk'),
+            description=_('Snapshots let you look back at your files and put them back. '
+                        'They live on the same disk, so they are history, not a backup.'))
         page.add(history)
         on = os.path.exists('/etc/snapper/configs/root') or os.path.exists('/etc/snapper/configs/home')
         row = Adw.ActionRow(
-            title='Snapshots are on' if on else 'Snapshots are not set up',
-            subtitle='Taken every hour, and before and after each update. '
-                     'Open the snapshot menu in the top bar to browse them.'
-                     if on else 'They need a Btrfs disk, which this computer does not use.')
+            title=_('Snapshots are on') if on else _('Snapshots are not set up'),
+            subtitle=_('Taken every hour, and before and after each update. '
+                     'Open the snapshot menu in the top bar to browse them.')
+                     if on else _('They need a Btrfs disk, which this computer does not use.'))
         row.add_prefix(Gtk.Image(icon_name='emblem-ok-symbolic' if on else 'dialog-information-symbolic',
                                 valign=Gtk.Align.CENTER))
         history.add(row)
 
         backups = Adw.PreferencesGroup(
-            title='Backups',
-            description='Copy your files to an external drive or a network share, on a schedule.')
+            title=_('Backups'),
+            description=_('Copy your files to an external drive or a network share, on a schedule.'))
         page.add(backups)
         info = Gio.DesktopAppInfo.new('org.gnome.DejaDup.desktop')
-        brow = Adw.ActionRow(title='Parcha Backup',
-                             subtitle='Choose what to back up, where to, and how often.')
+        brow = Adw.ActionRow(title=_('Parcha Backup'),
+                             subtitle=_('Choose what to back up, where to, and how often.'))
         button = Gtk.Button(label='Open', valign=Gtk.Align.CENTER)
         button.add_css_class('suggested-action')
         if info is None:
             button.set_sensitive(False)
-            brow.set_subtitle('Parcha Backup is not installed.')
+            brow.set_subtitle(_('Parcha Backup is not installed.'))
         else:
             button.connect('clicked', lambda *_: info.launch([], None))
         brow.add_suffix(button)
@@ -378,31 +386,31 @@ class Window(Adw.ApplicationWindow):
     # Which apps may use the network (ticket #126). The list comes from
     # parchaos-app-network; a change applies the next time the app starts.
     def _privacy_page(self):
-        page = Adw.PreferencesPage(title='Privacy',
+        page = Adw.PreferencesPage(title=_('Privacy'),
                                    icon_name='preferences-system-privacy-symbolic')
         self._net_group = Adw.PreferencesGroup(
-            title='Network access',
-            description='Turn a switch off to keep that app off the network. '
+            title=_('Network access'),
+            description=_('Turn a switch off to keep that app off the network. '
                         'It takes effect the next time the app starts. '
-                        'A blocked app cannot reach the internet or your local network.')
-        search = Gtk.SearchEntry(placeholder_text='Find an app', width_chars=18,
+                        'A blocked app cannot reach the internet or your local network.'))
+        search = Gtk.SearchEntry(placeholder_text=_('Find an app'), width_chars=18,
                                  valign=Gtk.Align.START)
         self._net_group.set_header_suffix(search)
         page.add(self._net_group)
         self._net_rows = []
-        self._net_placeholder = Adw.ActionRow(title='Loading apps...')
+        self._net_placeholder = Adw.ActionRow(title=_('Loading apps...'))
         self._net_group.add(self._net_placeholder)
         search.connect('search-changed', self._on_net_search)
         if not os.access(APP_NETWORK, os.X_OK):
-            self._net_placeholder.set_title('Not available')
-            self._net_placeholder.set_subtitle('The network access helper is not installed.')
+            self._net_placeholder.set_title(_('Not available'))
+            self._net_placeholder.set_subtitle(_('The network access helper is not installed.'))
             return page
         try:
             proc = Gio.Subprocess.new([APP_NETWORK, 'list'],
                                       Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE)
             proc.communicate_utf8_async(None, None, self._on_net_list)
         except GLib.Error as err:
-            self._net_placeholder.set_title('Could not list apps')
+            self._net_placeholder.set_title(_('Could not list apps'))
             self._net_placeholder.set_subtitle(err.message)
         return page
 
@@ -411,13 +419,13 @@ class Window(Adw.ApplicationWindow):
             _ok, out, _err = proc.communicate_utf8_finish(result)
             apps = json.loads(out or '[]')
         except (GLib.Error, ValueError) as err:
-            self._net_placeholder.set_title('Could not list apps')
+            self._net_placeholder.set_title(_('Could not list apps'))
             self._net_placeholder.set_subtitle(str(err))
             return
         self._net_group.remove(self._net_placeholder)
         for app in apps:
             row = Adw.SwitchRow(title=GLib.markup_escape_text(app['name']),
-                                subtitle='Flatpak app' if app['kind'] == 'flatpak' else 'App',
+                                subtitle=_('Flatpak app') if app['kind'] == 'flatpak' else _('App'),
                                 active=not app['blocked'])
             row.app = app
             row.connect('notify::active', self._on_net_toggled)
@@ -447,15 +455,15 @@ class Window(Adw.ApplicationWindow):
             self._net_failed(row, action, e.message)
             return
         if proc.get_exit_status() != 0:
-            self._net_failed(row, action, (err or '').strip() or 'The change was not saved.')
+            self._net_failed(row, action, (err or '').strip() or _('The change was not saved.'))
             return
         name = row.app['name']
         if action == 'block':
-            self.add_toast(Adw.Toast(title=f'{name} is blocked from the network. '
-                                           'Restart it for this to apply.'))
+            self.add_toast(Adw.Toast(title=_('%s is blocked from the network. '
+                                             'Restart it for this to apply.') % name))
         else:
-            self.add_toast(Adw.Toast(title=f'{name} can use the network again. '
-                                           'Restart it for this to apply.'))
+            self.add_toast(Adw.Toast(title=_('%s can use the network again. '
+                                             'Restart it for this to apply.') % name))
 
     def _net_failed(self, row, action, message):
         # Put the switch back to what is really saved.
@@ -484,7 +492,7 @@ class Window(Adw.ApplicationWindow):
             try:
                 proc.wait_check_finish(res)
             except GLib.Error as e:
-                self.add_toast(Adw.Toast(title=f'Could not change it: {e.message}'))
+                self.add_toast(Adw.Toast(title=_('Could not change it: %s') % e.message))
             row.set_sensitive(True)
 
         proc = Gio.Subprocess.new([KEYBOARD_STYLE, style], Gio.SubprocessFlags.NONE)
