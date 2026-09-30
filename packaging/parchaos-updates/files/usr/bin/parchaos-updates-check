@@ -32,6 +32,10 @@ output=$(dnf check-update --refresh 2>/dev/null) || {
 # lines only: unindented, with a name.arch first column.
 count=$(printf '%s\n' "$output" | awk '/^[^ \t]/ && $1 ~ /\.(noarch|x86_64|aarch64|i686|src)$/ {n++} END {print n+0}')
 
+# The menu bar's logo menu shows the count next to System Settings.
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/parchaos"
+mkdir -p "$cache" 2>/dev/null && printf '%s\n' "$count" > "$cache/updates-count" 2>/dev/null
+
 if [ "$count" -eq 0 ]; then
     exit 0
 fi

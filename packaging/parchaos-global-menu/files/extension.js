@@ -92,8 +92,19 @@ function sendKeyCombo(modifierKeyvals, keyval) {
 const CTRL = [Clutter.KEY_Control_L];
 const CTRL_SHIFT = [Clutter.KEY_Control_L, Clutter.KEY_Shift_L];
 
+const NONE = [];
+const ALT = [Clutter.KEY_Alt_L];
+
 const SHORTCUTS = {
     'new-window': {default: [CTRL, Clutter.KEY_n], terminal: [CTRL_SHIFT, Clutter.KEY_N]},
+    'new-tab': {default: [CTRL, Clutter.KEY_t], terminal: [CTRL_SHIFT, Clutter.KEY_T]},
+    'new-folder': {default: null, files: [CTRL_SHIFT, Clutter.KEY_N]},
+    'open': {default: null, files: [NONE, Clutter.KEY_Return]},
+    'get-info': {default: null, files: [CTRL, Clutter.KEY_i]},
+    'rename': {default: null, files: [NONE, Clutter.KEY_F2]},
+    'quick-look': {default: null, files: [NONE, Clutter.KEY_space]},
+    'trash': {default: null, files: [NONE, Clutter.KEY_Delete]},
+    'print': {default: [CTRL, Clutter.KEY_p], terminal: null},
     'undo': {default: [CTRL, Clutter.KEY_z], terminal: null},
     // Ctrl+Shift+Z is the redo GTK, Chromium, Electron and LibreOffice
     // all accept; Ctrl+Y isn't bound in most GTK 4 apps.
@@ -101,11 +112,78 @@ const SHORTCUTS = {
     'cut': {default: [CTRL, Clutter.KEY_x], terminal: null},
     'copy': {default: [CTRL, Clutter.KEY_c], terminal: [CTRL_SHIFT, Clutter.KEY_C]},
     'paste': {default: [CTRL, Clutter.KEY_v], terminal: [CTRL_SHIFT, Clutter.KEY_V]},
+    'select-all': {default: [CTRL, Clutter.KEY_a], terminal: [CTRL_SHIFT, Clutter.KEY_A]},
+    'find': {default: [CTRL, Clutter.KEY_f], terminal: [CTRL_SHIFT, Clutter.KEY_F]},
+    'settings': {default: [CTRL, Clutter.KEY_comma], terminal: [CTRL_SHIFT, Clutter.KEY_comma]},
     'view-icons': {default: null, files: [CTRL, Clutter.KEY_1]},
     'view-list': {default: null, files: [CTRL, Clutter.KEY_2]},
     'hidden-files': {default: null, files: [CTRL, Clutter.KEY_h]},
-    'back': {default: [[Clutter.KEY_Alt_L], Clutter.KEY_Left], terminal: null},
+    'zoom-in': {default: [CTRL, Clutter.KEY_plus], terminal: [CTRL_SHIFT, Clutter.KEY_plus]},
+    'zoom-out': {default: [CTRL, Clutter.KEY_minus], terminal: [CTRL, Clutter.KEY_minus]},
+    'zoom-reset': {default: [CTRL, Clutter.KEY_0], terminal: [CTRL, Clutter.KEY_0]},
+    'reload': {default: [CTRL, Clutter.KEY_r], terminal: null},
+    'back': {default: [ALT, Clutter.KEY_Left], terminal: null},
+    'forward': {default: [ALT, Clutter.KEY_Right], terminal: null},
+    'enclosing': {default: null, files: [ALT, Clutter.KEY_Up]},
+    'go-to-folder': {default: null, files: [CTRL, Clutter.KEY_l]},
 };
+
+// What each shortcut is called in a menu, in the modifier-and-key notation
+// of the keyboard style in use.
+const HINTS = {
+    'new-window': 'c N', 'new-tab': 'c T', 'new-folder': 'cs N', 'open': 'c O', 'get-info': 'c I',
+    'rename': 'F2', 'quick-look': 'Space', 'trash': 'c \u232B', 'print': 'c P', 'undo': 'c Z', 'redo': 'cs Z',
+    'cut': 'c X', 'copy': 'c C', 'paste': 'c V', 'select-all': 'c A', 'find': 'c F', 'settings': 'c ,',
+    'view-icons': 'c 1', 'view-list': 'c 2', 'hidden-files': 'cs .', 'zoom-in': 'c +', 'zoom-out': 'c \u2212',
+    'zoom-reset': 'c 0', 'reload': 'c R', 'back': 'c [', 'forward': 'c ]', 'enclosing': 'c \u2191',
+    'go-to-folder': 'cs G',
+};
+
+// "c N" -> the text shown next to a menu item. With the Super-as-Ctrl
+// keyboard style the command key is what people press, so symbols; with the
+// standard style the keys are named.
+function hintText(notation) {
+    if (!notation)
+        return '';
+    const [mods, key] = notation.includes(' ') ? notation.split(' ') : ['', notation];
+    if (!mods)
+        return key;
+    const symbols = keyboardStyle() === 'super-ctrl';
+    const parts = [];
+    if (symbols) {
+        if (mods.includes('a'))
+            parts.push('\u2325');
+        if (mods.includes('s'))
+            parts.push('\u21E7');
+        if (mods.includes('c'))
+            parts.push('\u2318');
+        return parts.join('') + key;
+    }
+    if (mods.includes('c'))
+        parts.push('Ctrl');
+    if (mods.includes('a'))
+        parts.push('Alt');
+    if (mods.includes('s'))
+        parts.push('Shift');
+    return [...parts, key].join('+');
+}
+
+let _keyboardStyle = {value: 'super-ctrl', read: 0};
+function keyboardStyle() {
+    const now = GLib.get_monotonic_time();
+    if (now - _keyboardStyle.read > 5_000_000) {
+        _keyboardStyle.read = now;
+        try {
+            const path = GLib.build_filenamev([GLib.get_user_config_dir(), 'parchaos', 'keyboard-style']);
+            const [ok, bytes] = GLib.file_get_contents(path);
+            if (ok)
+                _keyboardStyle.value = new TextDecoder().decode(bytes).trim() || 'super-ctrl';
+        } catch (e) {
+            // No state file yet: the default style.
+        }
+    }
+    return _keyboardStyle.value === 'standard' ? 'standard' : 'super-ctrl';
+}
 
 const TERMINAL_IDS = /^(org\.gnome\.(terminal|ptyxis|console)|kgx|com\.mitchellh\.ghostty|org\.wezfurlong\.wezterm|kitty|alacritty|foot|xterm|org\.kde\.konsole|konsole|com\.gexperts\.tilix|com\.raggesilver\.blackbox)/i;
 const FILES_IDS = /^org\.gnome\.nautilus/i;
@@ -564,6 +642,112 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
 });
 
 // ---------------------------------------------------------------------
+// A menu row with the command on the left and its keyboard shortcut (or a
+// small badge) on the right, dimmed.
+// ---------------------------------------------------------------------
+const MenuEntry = GObject.registerClass({
+    GTypeName: 'ParchaOSMenuEntry',
+}, class MenuEntry extends PopupMenu.PopupBaseMenuItem {
+    _init(text, hint = '', badge = false) {
+        super._init();
+        this.label = new St.Label({
+            text,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.add_child(this.label);
+        this.hint = new St.Label({
+            text: hint,
+            style_class: badge ? 'parchaos-menu-badge' : 'parchaos-menu-hint',
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: hint !== '',
+        });
+        this.add_child(this.hint);
+        this.accessible_name = text;
+    }
+
+    setHint(text) {
+        this.hint.text = text;
+        this.hint.visible = text !== '';
+    }
+});
+
+// ---------------------------------------------------------------------
+// Force Quit: a list of the running apps; the chosen one is killed.
+// ---------------------------------------------------------------------
+const ForceQuitDialog = GObject.registerClass(
+class ForceQuitDialog extends ModalDialog.ModalDialog {
+    _init() {
+        super._init({ styleClass: 'parchaos-confirm-dialog' });
+        this.contentLayout.add_child(new St.Label({
+            text: 'Force Quit Applications',
+            style_class: 'parchaos-about-title',
+        }));
+        this.contentLayout.add_child(new St.Label({
+            text: 'If an app is not responding, choose it and press Force Quit.',
+            style_class: 'parchaos-confirm-dialog-label',
+        }));
+
+        this._selected = null;
+        this._rows = [];
+        const list = new St.BoxLayout({ vertical: true, style_class: 'parchaos-forcequit-list' });
+        const apps = Shell.AppSystem.get_default().get_running()
+            .filter(app => app.get_pids().length > 0 && app.get_id() !== DEFAULT_APP_ID);
+        apps.sort((a, b) => a.get_name().localeCompare(b.get_name()));
+        for (const app of apps) {
+            const row = new St.Button({
+                style_class: 'parchaos-forcequit-row',
+                x_expand: true,
+                can_focus: true,
+                toggle_mode: true,
+                child: new St.BoxLayout({
+                    spacing: 10,
+                    children: [
+                        new St.Icon({ gicon: app.get_icon(), icon_size: 22 }),
+                        new St.Label({ text: app.get_name(), y_align: Clutter.ActorAlign.CENTER }),
+                    ],
+                }),
+            });
+            row.connect('clicked', () => {
+                for (const other of this._rows)
+                    other.checked = other === row;
+                this._selected = app;
+                this._quit.reactive = true;
+                this._quit.can_focus = true;
+                this._quit.opacity = 255;
+            });
+            this._rows.push(row);
+            list.add_child(row);
+        }
+        if (apps.length === 0) {
+            list.add_child(new St.Label({
+                text: 'No apps are open.',
+                style_class: 'parchaos-confirm-dialog-label',
+            }));
+        }
+        this.contentLayout.add_child(new St.ScrollView({
+            style_class: 'parchaos-forcequit-scroll',
+            child: list,
+            overlay_scrollbars: true,
+        }));
+
+        this.addButton({ label: 'Cancel', action: () => this.close(), key: Clutter.KEY_Escape });
+        this._quit = this.addButton({
+            label: 'Force Quit',
+            action: () => {
+                const app = this._selected;
+                this.close();
+                for (const pid of app?.get_pids() ?? [])
+                    GLib.spawn_command_line_async(`kill -9 ${pid}`);
+            },
+            default: true,
+        });
+        this._quit.opacity = 120;
+        this._quit.reactive = false;
+    }
+});
+
+// ---------------------------------------------------------------------
 // The menus after the app name. An entry either sends the focused app one
 // of SHORTCUTS' actions, runs a function (given the tracked window), or is
 // a separator.
@@ -593,13 +777,87 @@ function toggleMaximized(window) {
         window.maximize(Meta.MaximizeFlags.BOTH);
 }
 
+function openUri(uri) {
+    try {
+        Gio.AppInfo.launch_default_for_uri(uri, null);
+    } catch (e) {
+        console.error('[ParchaOSGlobalMenu] Failed to open', uri, e);
+    }
+}
+
+function tileWindow(window, side) {
+    if (!window)
+        return;
+    const area = window.get_work_area_current_monitor();
+    if (window.get_maximized())
+        window.unmaximize(Meta.MaximizeFlags.BOTH);
+    const width = Math.floor(area.width / 2);
+    window.move_resize_frame(false, side === 'left' ? area.x : area.x + width, area.y, width, area.height);
+}
+
+function centerWindow(window) {
+    if (!window)
+        return;
+    const area = window.get_work_area_current_monitor();
+    const rect = window.get_frame_rect();
+    window.move_frame(false, area.x + Math.floor((area.width - rect.width) / 2),
+        area.y + Math.floor((area.height - rect.height) / 2));
+}
+
+function bringAllToFront(window) {
+    const app = window ? Shell.WindowTracker.get_default().get_window_app(window) : null;
+    for (const w of app?.get_windows() ?? [])
+        w.raise();
+}
+
+// The last few documents and folders opened, newest first.
+function recentItems(limit = 10) {
+    try {
+        const file = GLib.build_filenamev([GLib.get_user_data_dir(), 'recently-used.xbel']);
+        const marks = new GLib.BookmarkFile();
+        marks.load_from_file(file);
+        const items = marks.get_uris().map(uri => ({
+            uri,
+            title: marks.get_title(uri) || GLib.path_get_basename(GLib.filename_from_uri(uri)[0]),
+            when: marks.get_modified(uri),
+        }));
+        items.sort((a, b) => b.when - a.when);
+        return items.slice(0, limit);
+    } catch (e) {
+        return [];
+    }
+}
+
+// How many updates are waiting, written by parchaos-updates-check.
+function pendingUpdates() {
+    try {
+        const path = GLib.build_filenamev([GLib.get_user_cache_dir(), 'parchaos', 'updates-count']);
+        const [ok, bytes] = GLib.file_get_contents(path);
+        return ok ? parseInt(new TextDecoder().decode(bytes).trim(), 10) || 0 : 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+// hint: shown next to the item when the item is not a SHORTCUTS action.
 const MENU_TABLE = [
     {
         role: 'file', title: 'File', items: [
             { label: 'New Window', shortcut: 'new-window' },
+            { label: 'New Tab', shortcut: 'new-tab' },
+            { label: 'New Folder', shortcut: 'new-folder' },
+            SEPARATOR,
+            { label: 'Open', shortcut: 'open' },
+            { label: 'Get Info', shortcut: 'get-info' },
+            { label: 'Rename', shortcut: 'rename' },
+            { label: 'Quick Look', shortcut: 'quick-look' },
+            SEPARATOR,
+            { label: 'Move to Trash', shortcut: 'trash' },
+            SEPARATOR,
+            { label: 'Print\u2026', shortcut: 'print' },
             // Closed directly: Ctrl+W closes a tab in browsers and does
             // nothing in a terminal.
-            { label: 'Close Window', run: w => w?.delete(global.get_current_time()) },
+            { label: 'Close Window', hint: 'c W', run: w => w?.delete(global.get_current_time()) },
         ],
     },
     {
@@ -610,6 +868,9 @@ const MENU_TABLE = [
             { label: 'Cut', shortcut: 'cut' },
             { label: 'Copy', shortcut: 'copy' },
             { label: 'Paste', shortcut: 'paste' },
+            { label: 'Select All', shortcut: 'select-all' },
+            SEPARATOR,
+            { label: 'Find\u2026', shortcut: 'find' },
         ],
     },
     {
@@ -618,22 +879,49 @@ const MENU_TABLE = [
             { label: 'as List', shortcut: 'view-list' },
             SEPARATOR,
             { label: 'Show Hidden Files', shortcut: 'hidden-files' },
+            SEPARATOR,
+            { label: 'Zoom In', shortcut: 'zoom-in' },
+            { label: 'Zoom Out', shortcut: 'zoom-out' },
+            { label: 'Actual Size', shortcut: 'zoom-reset' },
+            SEPARATOR,
+            { label: 'Reload', shortcut: 'reload' },
+            { label: 'Enter Full Screen', run: w => w && (w.is_fullscreen() ? w.unmake_fullscreen() : w.make_fullscreen()) },
         ],
     },
     {
         role: 'go', title: 'Go', items: [
             { label: 'Back', shortcut: 'back' },
+            { label: 'Forward', shortcut: 'forward' },
+            { label: 'Enclosing Folder', shortcut: 'enclosing' },
             SEPARATOR,
+            { label: 'Recents', run: () => openUri('recent:///') },
             { label: 'Home', run: () => openHome() },
+            { label: 'Desktop', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DESKTOP) },
             { label: 'Documents', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) },
             { label: 'Downloads', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) },
             { label: 'Pictures', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_PICTURES) },
+            { label: 'Music', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_MUSIC) },
+            { label: 'Videos', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_VIDEOS) },
+            SEPARATOR,
+            { label: 'Computer', run: () => openUri('other-locations:///') },
+            { label: 'Network', run: () => openUri('network:///') },
+            { label: 'Trash', run: () => openUri('trash:///') },
+            SEPARATOR,
+            { label: 'Go to Folder\u2026', shortcut: 'go-to-folder' },
         ],
     },
     {
         role: 'window', title: 'Window', items: [
             { label: 'Minimize', run: w => w?.minimize() },
             { label: 'Zoom', run: w => toggleMaximized(w) },
+            SEPARATOR,
+            { label: 'Move Window to Left Half', run: w => tileWindow(w, 'left') },
+            { label: 'Move Window to Right Half', run: w => tileWindow(w, 'right') },
+            { label: 'Center Window', run: w => centerWindow(w) },
+            SEPARATOR,
+            { label: 'Bring All to Front', run: w => bringAllToFront(w) },
+            // The app's open windows are listed here when the menu opens.
+            { windows: true },
         ],
     },
     {
@@ -646,7 +934,10 @@ const MENU_TABLE = [
             { label: 'ParchaOS Help', run: () => openSiteLink('/support') },
             { label: 'Questions & Answers (FAQ)', run: () => openSiteLink('/#faq') },
             SEPARATOR,
-            { label: 'Report a Bug or Feature Request…', run: () => openSiteLink('/support') },
+            { label: 'Keyboard Shortcuts', run: () => openSiteLink('/#faq') },
+            { label: 'What\u2019s New', run: () => openSiteLink('/changelog') },
+            SEPARATOR,
+            { label: 'Report a Bug or Feature Request\u2026', run: () => openSiteLink('/support') },
         ],
     },
 ];
@@ -710,6 +1001,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             button.destroy();
         this._menuBarButtons = [];
         this._shortcutItems = [];
+        this._windowList = null;
+        this._recentItem = null;
+        this._updatesItem = null;
+        this._logoMenu = null;
         _keyboard = null;
 
         if (this._weatherIndicator) {
@@ -739,20 +1034,39 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
         const powerAction = (question, argv) => () =>
             this._confirm(question, () => GLib.spawn_command_line_async(argv));
+        const openStore = () => {
+            const apps = Shell.AppSystem.get_default();
+            (apps.lookup_app('org.gnome.Software.desktop') ?? apps.lookup_app('gnome-software.desktop'))?.activate();
+        };
+        const name = GLib.get_real_name();
         const systemEntries = [
             { label: 'About ParchaOS', run: () => this._showAboutDialog() },
             SEPARATOR,
-            { label: 'System Settings…', run: openSystemSettings },
+            { label: 'System Settings\u2026', run: openSystemSettings, updates: true },
+            { label: 'Parcha Store', run: openStore },
+            SEPARATOR,
+            { label: 'Recent Items', recent: true },
+            SEPARATOR,
+            { label: 'Force Quit\u2026', run: () => new ForceQuitDialog().open() },
+            SEPARATOR,
+            { label: 'Sleep', run: () => GLib.spawn_command_line_async('systemctl suspend') },
+            { label: 'Restart\u2026', run: powerAction('Restart now? Any unsaved work will be lost.',
+                'gnome-session-quit --reboot --no-prompt') },
+            { label: 'Shut Down\u2026', run: powerAction('Shut down now? Any unsaved work will be lost.',
+                'gnome-session-quit --power-off --no-prompt') },
             SEPARATOR,
             { label: 'Lock Screen', run: () => Main.screenShield?.lock(true) },
-            { label: 'Log Out…', run: powerAction('Log out now? Any unsaved work will be lost.',
-                'gnome-session-quit --logout --no-prompt') },
-            { label: 'Restart…', run: powerAction('Restart now? Any unsaved work will be lost.',
-                'gnome-session-quit --reboot --no-prompt') },
-            { label: 'Shut Down…', run: powerAction('Shut down now? Any unsaved work will be lost.',
-                'gnome-session-quit --power-off --no-prompt') },
+            { label: name && name !== 'Unknown' ? `Log Out ${name}\u2026` : 'Log Out\u2026',
+                run: powerAction('Log out now? Any unsaved work will be lost.',
+                    'gnome-session-quit --logout --no-prompt') },
         ];
         this._fillMenu(logoBtn.menu, systemEntries);
+        // Dynamic parts are refreshed each time the menu opens.
+        logoBtn.menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                this._refreshSystemMenu();
+        });
+        this._logoMenu = logoBtn.menu;
 
         this._menuBarButtons.push(logoBtn);
     }
@@ -990,12 +1304,17 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     _buildAppNameMenu() {
         const appBtn = new MenuBarButton(DEFAULT_APP_NAME, { bold: true });
         appBtn.roleId = 'app';
+        const menu = appBtn.menu;
 
-        this._aboutAppItem = new PopupMenu.PopupMenuItem(`About ${DEFAULT_APP_NAME}`);
+        this._aboutAppItem = new MenuEntry(`About ${DEFAULT_APP_NAME}`);
         this._aboutAppItem.connect('activate', () => this._showAppAbout());
-        appBtn.menu.addMenuItem(this._aboutAppItem);
+        menu.addMenuItem(this._aboutAppItem);
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._hideAppItem = new PopupMenu.PopupMenuItem(`Hide ${DEFAULT_APP_NAME}`);
+        this._settingsAppItem = this._shortcutItem(menu, 'Settings\u2026', 'settings');
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        this._hideAppItem = new MenuEntry(`Hide ${DEFAULT_APP_NAME}`, hintText('c H'));
         this._hideAppItem.connect('activate', () => {
             const app = this._activeApp();
             if (app)
@@ -1003,9 +1322,32 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             else
                 this._trackedWindow?.minimize();
         });
-        appBtn.menu.addMenuItem(this._hideAppItem);
+        menu.addMenuItem(this._hideAppItem);
 
-        this._quitAppItem = new PopupMenu.PopupMenuItem(`Quit ${DEFAULT_APP_NAME}`);
+        this._hideOthersItem = new MenuEntry('Hide Others', hintText('ac H'));
+        this._hideOthersItem.connect('activate', () => {
+            const mine = this._activeApp();
+            for (const actor of global.get_window_actors()) {
+                const w = actor.meta_window;
+                if (w.get_window_type() !== Meta.WindowType.NORMAL)
+                    continue;
+                if (Shell.WindowTracker.get_default().get_window_app(w) !== mine)
+                    w.minimize();
+            }
+        });
+        menu.addMenuItem(this._hideOthersItem);
+
+        this._showAllItem = new MenuEntry('Show All');
+        this._showAllItem.connect('activate', () => {
+            for (const actor of global.get_window_actors()) {
+                if (actor.meta_window.minimized)
+                    actor.meta_window.unminimize();
+            }
+        });
+        menu.addMenuItem(this._showAllItem);
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        this._quitAppItem = new MenuEntry(`Quit ${DEFAULT_APP_NAME}`, hintText('c Q'));
         this._quitAppItem.connect('activate', () => {
             const app = this._activeApp();
             if (app)
@@ -1013,7 +1355,16 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             else
                 this._trackedWindow?.delete(global.get_current_time());
         });
-        appBtn.menu.addMenuItem(this._quitAppItem);
+        menu.addMenuItem(this._quitAppItem);
+
+        // Hints follow the keyboard style, which can change while running.
+        menu.connect('open-state-changed', (_m, open) => {
+            if (!open)
+                return;
+            this._hideAppItem.setHint(hintText('c H'));
+            this._hideOthersItem.setHint(hintText('ac H'));
+            this._quitAppItem.setHint(hintText('c Q'));
+        });
 
         this._appNameButton = appBtn;
         this._menuBarButtons.push(appBtn);
@@ -1037,6 +1388,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
         const isIdleState = appName === DEFAULT_APP_NAME && !this._trackedWindow;
         this._hideAppItem.setSensitive(!isIdleState);
+        this._hideOthersItem.setSensitive(!isIdleState);
         this._quitAppItem.setSensitive(!isIdleState);
         this._updateShortcutItems();
     }
@@ -1048,7 +1400,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
     // A menu item that sends the focused app one of SHORTCUTS' actions.
     _shortcutItem(menu, label, action) {
-        const item = new PopupMenu.PopupMenuItem(label);
+        const item = new MenuEntry(label, hintText(HINTS[action]));
         item.connect('activate', () => {
             // With no app focused the menu bar belongs to the file
             // manager, so New Window opens one.
@@ -1068,6 +1420,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
     _updateShortcutItems() {
         const kind = appKind(this._trackedWindow);
         for (const [item, action] of this._shortcutItems) {
+            item.setHint(hintText(HINTS[action]));
             item.setSensitive(shortcutFor(action, kind) !== null ||
                 (action === 'new-window' && !kind));
         }
@@ -1117,11 +1470,72 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                 menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             } else if (entry.shortcut) {
                 this._shortcutItem(menu, entry.label, entry.shortcut);
+            } else if (entry.windows) {
+                this._windowList = {menu, items: []};
+                menu.connect('open-state-changed', (_m, open) => {
+                    if (open)
+                        this._refreshWindowList();
+                });
+            } else if (entry.recent) {
+                this._recentItem = new PopupMenu.PopupSubMenuMenuItem(entry.label);
+                menu.addMenuItem(this._recentItem);
             } else {
-                const item = new PopupMenu.PopupMenuItem(entry.label);
+                const item = new MenuEntry(entry.label, entry.hint ? hintText(entry.hint) : '', !!entry.updates);
+                if (entry.updates)
+                    this._updatesItem = item;
                 item.connect('activate', () => entry.run(this._trackedWindow));
                 menu.addMenuItem(item);
             }
+        }
+    }
+
+    // The Recent Items submenu and the updates badge are read when the
+    // logo menu opens.
+    _refreshSystemMenu() {
+        const updates = pendingUpdates();
+        this._updatesItem?.setHint(updates > 0 ? (updates === 1 ? '1 update' : `${updates} updates`) : '');
+
+        const sub = this._recentItem?.menu;
+        if (!sub)
+            return;
+        sub.removeAll();
+        const items = recentItems();
+        if (items.length === 0) {
+            const none = new PopupMenu.PopupMenuItem('No recent items');
+            none.setSensitive(false);
+            sub.addMenuItem(none);
+            return;
+        }
+        for (const {uri, title} of items) {
+            const item = new PopupMenu.PopupMenuItem(title);
+            item.connect('activate', () => openUri(uri));
+            sub.addMenuItem(item);
+        }
+    }
+
+    // The Window menu ends with the app's open windows, the current one
+    // ticked.
+    _refreshWindowList() {
+        const list = this._windowList;
+        if (!list)
+            return;
+        for (const item of list.items)
+            item.destroy();
+        list.items = [];
+        const app = this._activeApp();
+        const windows = (app?.get_windows() ?? []).filter(w => w.get_window_type() === Meta.WindowType.NORMAL);
+        if (windows.length === 0)
+            return;
+        const sep = new PopupMenu.PopupSeparatorMenuItem();
+        list.menu.addMenuItem(sep);
+        list.items.push(sep);
+        for (const w of windows) {
+            const item = new PopupMenu.PopupMenuItem(w.get_title() || this._displayNameFor(w));
+            if (w === this._trackedWindow)
+                item.setOrnament(PopupMenu.Ornament.CHECK);
+            item.connect('activate', () => Main.activateWindow(w));
+            list.menu.addMenuItem(item);
+            list.items.push(item);
         }
     }
 }

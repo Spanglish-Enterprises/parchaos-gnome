@@ -12,7 +12,7 @@
 
 Name:           parchaos-updates
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Check for ParchaOS updates and notify
 
 License:        GPL-3.0-or-later
@@ -77,6 +77,9 @@ ln -s ../parchaos-updates.timer \
 %{_userunitdir}/timers.target.wants/parchaos-updates.timer
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-6
+- Writes the number of waiting updates to ~/.cache/parchaos/updates-count so the menu bar's logo menu can show it next to System Settings.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-5
 - The update notification has a "See what's new" button that lists what the
   waiting ParchaOS updates change, in plain words from their changelogs, with a
