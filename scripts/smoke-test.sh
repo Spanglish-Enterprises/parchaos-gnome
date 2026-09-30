@@ -41,6 +41,12 @@ for pkg in "${EXTS[@]}"; do
         fi
     else
         cp -r "$src/." "$dest/$uuid/"
+        # A schema shipped beside the extension goes where GNOME Shell looks.
+        if ls "$dest/$uuid"/*.gschema.xml >/dev/null 2>&1; then
+            mkdir -p "$dest/$uuid/schemas"
+            mv "$dest/$uuid"/*.gschema.xml "$dest/$uuid/schemas/"
+            glib-compile-schemas "$dest/$uuid/schemas"
+        fi
     fi
     uuids+=("$uuid")
 done
