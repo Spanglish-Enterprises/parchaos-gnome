@@ -43,7 +43,7 @@ for name in "$@"; do
 
     # Local sources: files next to the spec, and generated artwork.
     find "$dir" -maxdepth 1 -type f ! -name '*.spec' -exec cp {} "$top/SOURCES/" \;
-    [ -d "$dir/po" ] && find "$dir/po" -name "*.po" -exec cp {} "$top/SOURCES/" ;
+    [ -d "$dir/po" ] && find "$dir/po" -name '*.po' -exec cp {} "$top/SOURCES/" \;
     [ -d "$dir/files" ] && find "$dir/files" -type f -exec cp {} "$top/SOURCES/" \;
     [ -d "$dir/parchaos-icons" ] && cp "$dir"/parchaos-icons/*.svg "$dir"/parchaos-icons/*.py "$dir"/parchaos-icons/*.txt "$top/SOURCES/" 2>/dev/null
     # Specs with a tarball of their files/ tree among the sources (always
