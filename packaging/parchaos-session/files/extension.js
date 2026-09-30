@@ -105,7 +105,7 @@ export default class ParchaSessionExtension extends Extension {
             win.disconnect(handlerId);
         this._windowHandlers.clear();
         if (this._logindId)
-            Gio.bus_unown_name(this._logindId);
+            Gio.DBus.system.signal_unsubscribe(this._logindId);
         this._logindId = 0;
         if (this._startupId)
             Main.layoutManager.disconnect(this._startupId);
@@ -148,25 +148,17 @@ export default class ParchaSessionExtension extends Extension {
     // signals PrepareForShutdown.
     _hookLogind() {
         try {
-            this._logindId = Gio.bus_own_name(
-                Gio.BusType.SYSTEM, LOGIND,
-                Gio.BusNameOwnerFlags.NONE,
-                (bus, name) => {
-                    bus.signal_subscribe(
-                        LOGIND, 'org.freedesktop.DBus.Properties',
-                        'PropertiesChanged', '/org/freedesktop/login1',
-                        null, Gio.DBusSignalFlags.NONE,
-                        (_conn, _sender, _path, _iface, signal, params) => {
-                            if (signal !== 'PropertiesChanged')
-                                return;
-                            const [iface, changed] = params.deep_unpack();
-                            if (iface === LOGIND && 'PrepareForShutdown' in changed) {
-                                if (changed['PrepareForShutdown'].deep_unpack())
-                                    this._save();
-                            }
-                        });
-                },
-                null, null);
+            // PrepareForShutdown is a signal of the login1 Manager (not a
+            // property change), sent on the system bus before the session's
+            // apps are told to quit.
+            this._logindId = Gio.DBus.system.signal_subscribe(
+                LOGIND, `${LOGIND}.Manager`, 'PrepareForShutdown', '/org/freedesktop/login1',
+                null, Gio.DBusSignalFlags.NONE,
+                (_conn, _sender, _path, _iface, _signal, params) => {
+                    const [starting] = params.deep_unpack();
+                    if (starting)
+                        this._save();
+                });
         } catch (e) {
             logError(e, 'parchaos-session: could not watch logind');
         }

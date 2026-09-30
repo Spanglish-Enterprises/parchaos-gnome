@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -46,6 +46,11 @@ install -Dm0644 src/metadata.json "$DEST/metadata.json"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-7
+- Ticket #76: the save on shutdown never ran. It listened for a property
+  change on the system bus, but logind announces PrepareForShutdown as a
+  signal of its Manager interface. Now subscribed to that signal, and
+  unsubscribed on disable.
 * Sat Sep 27 2026 ParchaOS packaging - 1.0.0-6
 - Track per-window 'shown' handlers so they're disconnected on disable
   (previously leaked if the extension was disabled before the window was
