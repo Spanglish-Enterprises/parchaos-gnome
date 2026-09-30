@@ -1,0 +1,310 @@
+# Spanish (Puerto Rico) translation for ParchaOS Settings.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-settings package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-settings\n"
+"Report-Msgid-Bugs-To: https://github.com/Spanglish-Enterprises/parchaos-"
+"gnome/issues\n"
+"POT-Creation-Date: 2026-09-29 21:34-0500\n"
+"PO-Revision-Date: 2026-09-29 22:00-0400\n"
+"Last-Translator: ParchaOS\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-settings:44 files/parchaos-settings:56
+msgid "ParchaOS Settings"
+msgstr "Ajustes de ParchaOS"
+
+#: files/parchaos-settings:82 files/parchaos-settings:85
+msgid "Keyboard"
+msgstr "Teclado"
+
+#: files/parchaos-settings:86
+msgid "How the Super key works for your account."
+msgstr "Cómo funciona la tecla Super en tu cuenta."
+
+#: files/parchaos-settings:90
+msgid "Super as Ctrl"
+msgstr "Super como Ctrl"
+
+#: files/parchaos-settings:91
+msgid ""
+"Use the Super key for app shortcuts like copy, paste and quit (Super+C, "
+"Super+V, Super+Q). Turn off to keep Super for system shortcuts and Ctrl for "
+"app shortcuts."
+msgstr "Usa la tecla Super para los atajos de las apps, como copiar, pegar y salir (Super+C, Super+V, Super+Q). Desactívalo para dejar Super para los atajos del sistema y Ctrl para los de las apps."
+
+#: files/parchaos-settings:97
+msgid "Keyboard remapping is not installed."
+msgstr "El remapeo del teclado no está instalado."
+
+#: files/parchaos-settings:135
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: files/parchaos-settings:138
+msgid "Sessions"
+msgstr "Sesiones"
+
+#: files/parchaos-settings:141
+msgid "Reopen apps when logging back in"
+msgstr "Reabrir las apps al volver a iniciar sesión"
+
+#: files/parchaos-settings:142
+msgid ""
+"Apps you had open come back where they were, and apps that remember their "
+"documents reopen them too."
+msgstr "Las apps que tenías abiertas vuelven a donde estaban, y las que recuerdan sus documentos también los reabren."
+
+#. Desktop icons (Desktop Icons NG keeps these keys).
+#: files/parchaos-settings:157
+msgid "Tiny"
+msgstr "Diminuto"
+
+#: files/parchaos-settings:157
+msgid "Small"
+msgstr "Pequeño"
+
+#: files/parchaos-settings:157
+msgid "Standard"
+msgstr "Estándar"
+
+#: files/parchaos-settings:157
+msgid "Large"
+msgstr "Grande"
+
+#: files/parchaos-settings:161
+msgid "Icons on the desktop"
+msgstr "Iconos en el escritorio"
+
+#: files/parchaos-settings:162
+msgid "Files, folders and the Trash that sit on the desktop."
+msgstr "Archivos, carpetas y la Papelera que están en el escritorio."
+
+#: files/parchaos-settings:166 files/parchaos-settings:405
+msgid "Not available"
+msgstr "No disponible"
+
+#: files/parchaos-settings:167
+msgid "The desktop icons package is not installed."
+msgstr "El paquete de iconos del escritorio no está instalado."
+
+#: files/parchaos-settings:173
+msgid "Snap icons to the grid"
+msgstr "Ajustar los iconos a la cuadrícula"
+
+#: files/parchaos-settings:174
+msgid "Off: an icon stays exactly where you drop it."
+msgstr "Desactivado: un icono se queda exactamente donde lo sueltas."
+
+#: files/parchaos-settings:177
+msgid "Show Home"
+msgstr "Mostrar Inicio"
+
+#: files/parchaos-settings:177
+msgid "Show Trash"
+msgstr "Mostrar la Papelera"
+
+#: files/parchaos-settings:183
+msgid "Icon size"
+msgstr "Tamaño de los iconos"
+
+#: files/parchaos-settings:206
+msgid "Focus"
+msgstr "Concentración"
+
+#: files/parchaos-settings:207
+msgid "Silence notification popups at the same time every day."
+msgstr "Silencia las notificaciones emergentes a la misma hora todos los días."
+
+#: files/parchaos-settings:208
+msgid "Scheduled Do Not Disturb"
+msgstr "No molestar programado"
+
+#: files/parchaos-settings:227
+msgid "Schedule disabled — start time equals end time"
+msgstr "Horario desactivado: la hora de inicio es igual a la de fin"
+
+#: files/parchaos-settings:273
+msgid "Appearance"
+msgstr "Apariencia"
+
+#: files/parchaos-settings:276
+msgid "Style"
+msgstr "Estilo"
+
+#: files/parchaos-settings:277
+msgid "How the menu bar, launcher and Parcha Controls look."
+msgstr "Cómo se ven la barra de menús, el lanzador y Parcha Controls."
+
+#: files/parchaos-settings:283
+msgid "Styles are not available"
+msgstr "Los estilos no están disponibles"
+
+#: files/parchaos-settings:284
+msgid "The ParchaOS desktop package is not installed."
+msgstr "El paquete del escritorio de ParchaOS no está instalado."
+
+#: files/parchaos-settings:290
+msgid "Glass"
+msgstr "Cristal"
+
+#: files/parchaos-settings:291
+msgid "Translucent, softly blurred surfaces with rounded shapes."
+msgstr "Superficies translúcidas y suavemente difuminadas, con formas redondeadas."
+
+#: files/parchaos-settings:292
+msgid "Classic"
+msgstr "Clásico"
+
+#: files/parchaos-settings:293
+msgid "Calmer frosted surfaces, more opaque, with tighter corners."
+msgstr "Superficies esmeriladas más tranquilas y opacas, con esquinas más cerradas."
+
+#: files/parchaos-settings:315
+msgid "Passion"
+msgstr "Pasión"
+
+#: files/parchaos-settings:316
+msgid "Berry"
+msgstr "Baya"
+
+#: files/parchaos-settings:317
+msgid "Sunny"
+msgstr "Soleado"
+
+#: files/parchaos-settings:318
+msgid "Leaf"
+msgstr "Hoja"
+
+#: files/parchaos-settings:319
+msgid "Ocean"
+msgstr "Océano"
+
+#: files/parchaos-settings:320
+msgid "Graphite"
+msgstr "Grafito"
+
+#: files/parchaos-settings:325
+msgid "Folder colour"
+msgstr "Color de las carpetas"
+
+#: files/parchaos-settings:326
+msgid "The colour of folders and the trash. Other icons stay as they are."
+msgstr "El color de las carpetas y la papelera. Los demás iconos no cambian."
+
+#: files/parchaos-settings:327
+msgid "Colour"
+msgstr "Color"
+
+#: files/parchaos-settings:351 files/parchaos-settings:369
+msgid "Backups"
+msgstr "Copias de seguridad"
+
+#: files/parchaos-settings:354
+msgid "History on this disk"
+msgstr "Historial en este disco"
+
+#: files/parchaos-settings:355
+msgid ""
+"Snapshots let you look back at your files and put them back. They live on "
+"the same disk, so they are history, not a backup."
+msgstr "Las instantáneas te permiten ver tus archivos como estaban y recuperarlos. Están en el mismo disco, así que son un historial, no una copia de seguridad."
+
+#: files/parchaos-settings:360
+msgid "Snapshots are on"
+msgstr "Las instantáneas están activadas"
+
+#: files/parchaos-settings:360
+msgid "Snapshots are not set up"
+msgstr "Las instantáneas no están configuradas"
+
+#: files/parchaos-settings:361
+msgid ""
+"Taken every hour, and before and after each update. Open the snapshot menu "
+"in the top bar to browse them."
+msgstr "Se toman cada hora, y antes y después de cada actualización. Abre el menú de instantáneas en la barra superior para verlas."
+
+#: files/parchaos-settings:363
+msgid "They need a Btrfs disk, which this computer does not use."
+msgstr "Necesitan un disco Btrfs, que esta computadora no usa."
+
+#: files/parchaos-settings:370
+msgid "Copy your files to an external drive or a network share, on a schedule."
+msgstr "Copia tus archivos a una unidad externa o a una carpeta de red, con un horario."
+
+#: files/parchaos-settings:373
+msgid "Parcha Backup"
+msgstr "Parcha Backup"
+
+#: files/parchaos-settings:374
+msgid "Choose what to back up, where to, and how often."
+msgstr "Elige qué respaldar, dónde y con qué frecuencia."
+
+#: files/parchaos-settings:379
+msgid "Parcha Backup is not installed."
+msgstr "Parcha Backup no está instalado."
+
+#: files/parchaos-settings:389
+msgid "Privacy"
+msgstr "Privacidad"
+
+#: files/parchaos-settings:392
+msgid "Network access"
+msgstr "Acceso a la red"
+
+#: files/parchaos-settings:393
+msgid ""
+"Turn a switch off to keep that app off the network. It takes effect the next "
+"time the app starts. A blocked app cannot reach the internet or your local "
+"network."
+msgstr "Apaga el interruptor para que esa app no use la red. Se aplica la próxima vez que la app se inicie. Una app bloqueada no puede llegar a internet ni a tu red local."
+
+#: files/parchaos-settings:396
+msgid "Find an app"
+msgstr "Buscar una app"
+
+#: files/parchaos-settings:401
+msgid "Loading apps..."
+msgstr "Cargando apps..."
+
+#: files/parchaos-settings:406
+msgid "The network access helper is not installed."
+msgstr "El ayudante de acceso a la red no está instalado."
+
+#: files/parchaos-settings:413 files/parchaos-settings:422
+msgid "Could not list apps"
+msgstr "No se pudo mostrar la lista de apps"
+
+#: files/parchaos-settings:428
+msgid "Flatpak app"
+msgstr "App de Flatpak"
+
+#: files/parchaos-settings:428
+msgid "App"
+msgstr "App"
+
+#: files/parchaos-settings:458
+msgid "The change was not saved."
+msgstr "El cambio no se guardó."
+
+#: files/parchaos-settings:462
+#, python-format
+msgid "%s is blocked from the network. Restart it for this to apply."
+msgstr "%s está bloqueada de la red. Reiníciala para que se aplique."
+
+#: files/parchaos-settings:465
+#, python-format
+msgid "%s can use the network again. Restart it for this to apply."
+msgstr "%s puede volver a usar la red. Reiníciala para que se aplique."
+
+#: files/parchaos-settings:495
+#, python-format
+msgid "Could not change it: %s"
+msgstr "No se pudo cambiar: %s"

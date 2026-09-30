@@ -105,6 +105,16 @@ def main():
                              env={**os.environ, 'LOC': os.path.join(tmp, 'locale'), 'LANGUAGE': 'xx', 'LC_ALL': 'C.UTF-8'}).stdout.strip()
         check(out == '[Keyboard] Not translated', f'a catalog changes translated strings only (got: {out})')
 
+    # Every shipped translation is valid and covers every string.
+    podir = os.path.join(HERE, '..', 'po')
+    for name in sorted(os.listdir(podir)):
+        if name.endswith('.po'):
+            path = os.path.join(podir, name)
+            r = subprocess.run(['msgfmt', '--check', '-o', os.devnull, path], capture_output=True, text=True)
+            check(r.returncode == 0, f'{name} passes msgfmt --check: {r.stderr.strip()}')
+            r = subprocess.run(['msgcmp', path, POT], capture_output=True, text=True)
+            check(r.returncode == 0, f'{name} translates every string in the template: {r.stderr.strip()}')
+
     print('i18n: all checks passed' if failures == 0 else f'i18n: {failures} check(s) failed')
     return 0 if failures == 0 else 1
 

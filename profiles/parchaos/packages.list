@@ -159,6 +159,9 @@ gnome-bluetooth
 # window, though that failure mode wasn't directly isolated to the
 # locale as precisely as Terminal's was.
 glibc-langpack-en
+# Spanish, including Puerto Rico (es_PR): Calamares offers it, and choosing a
+# locale the system has no data for breaks Terminal and Files (see above).
+glibc-langpack-es
 dracut
 dracut-live
 

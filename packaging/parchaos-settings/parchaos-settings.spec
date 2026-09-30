@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -18,10 +18,12 @@ Source0:        parchaos-settings
 Source1:        org.parchaos.Settings.desktop
 Source2:        parchaos-app-network
 Source3:        parchaos-app-network-refresh.service
+Source5:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
 BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
 BuildRequires:  systemd-rpm-macros
 
 Requires:       parchaos-desktop-schemas >= 2026.09.23-33
@@ -44,9 +46,14 @@ cp -p %{SOURCE90} .
 
 %install
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-settings
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-settings.mo
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Settings.desktop
 install -Dm0755 %{SOURCE2} %{buildroot}%{_libexecdir}/parchaos-app-network
 install -Dm0644 %{SOURCE3} %{buildroot}%{_userunitdir}/parchaos-app-network-refresh.service
+# Spanish (es_PR falls back to es). Add a language: Source line + one more
+# msgfmt line here.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-settings.mo %{SOURCE5}
 # Enabled by a packaged link: a unit that is new on an upgrade is not
 # enabled by the usual scriptlets.
 install -d %{buildroot}%{_userunitdir}/graphical-session.target.wants
@@ -64,6 +71,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Tue Sep 29 2026 ParchaOS packaging - 1.0.0-18
+- Ticket #146: Spanish translation of ParchaOS Settings, written in
+  Puerto Rican usage (computadora, tú). Installed as "es", which is what
+  es_PR falls back to.
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-17
 - Ticket #53: ParchaOS Settings is translation-ready. Every string shown to
   the user goes through gettext (domain parchaos-settings, catalogs read from
