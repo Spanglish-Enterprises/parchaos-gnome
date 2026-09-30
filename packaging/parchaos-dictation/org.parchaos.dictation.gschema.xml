@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.dictation" path="/org/parchaos/dictation/">
+    <key name="toggle-shortcut" type="as">
+      <default><![CDATA[['<Control><Alt>d']]]></default>
+      <summary>Start or stop dictation</summary>
+    </key>
+  </schema>
+</schemalist>

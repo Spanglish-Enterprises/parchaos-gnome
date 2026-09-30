@@ -22,3 +22,11 @@ The feature will be shipped as a new package `parchaos-dictation/` containing a 
 ## 3. UI/UX
 - **Recording Indicator**: While listening, a highly visible recording indicator (microphone icon) will appear in the top bar.
 - **Status Menu**: We will reuse the `PanelMenu.Button` pattern (established in the WeatherIndicator of `parchaos-global-menu`) to provide a status icon and a popup menu to select language models or adjust input sensitivity.
+
+## 4. As built (2026-09-29)
+- Package `parchaos-dictation` (extension `parchaos-dictation@parchaos.org`, helpers in `/usr/libexec/parchaos-dictation/`). Shortcut **Ctrl+Alt+D** (gsettings `org.parchaos.dictation toggle-shortcut`; Super is avoided because xremap uses it).
+- Fedora's `whisper-cpp` ships libraries only, no CLI, so transcription uses `python3-pywhispercpp` (`parchaos-dictation-transcribe`). Recording uses `pw-record` (pipewire-utils) at 16 kHz mono.
+- **Not in the ISO and not required by parchaos-desktop.** `whisper-cpp` depends on the ROCm/HIP and OpenVINO libraries: installing it pulls 40 packages (53 MiB download), which the release-size limit (see DEVELOPMENT.md) cannot absorb. Users opt in with `sudo dnf install parchaos-dictation`.
+- The model (`base.en`, 148 MB) is fetched on first use by `parchaos-dictation-model`, size and SHA-256 pinned in the script and checked before the file is used.
+- Text is typed as key presses through a Clutter virtual keyboard (no clipboard, works in terminals). A keyboard layout can only type its own letters, so the transcriber reduces text to plain ASCII (curly quotes straight, accents dropped). English only for now.
+- Tested in the isolated headless shell with stand-in recorder/transcriber typing into a GTK entry (`PARCHAOS_DICTATION_RECORDER/TRANSCRIBER/MODEL_TOOL` env overrides); not yet with a real microphone or real model.

@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-dictation-transcribe WAV: print the words spoken in a recording.
+#
+# Runs whisper.cpp (through its Python binding) on this computer. Nothing is
+# sent anywhere. The speech model is fetched once by parchaos-dictation-model.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+import re
+import sys
+import unicodedata
+
+MODEL_DIR = os.path.join(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'),
+                         'parchaos-dictation', 'models')
+MODEL = os.environ.get('PARCHAOS_DICTATION_MODEL', 'base.en')
+
+# Markers whisper prints for silence and noise; they are not speech.
+NOISE = re.compile(r'\[[^\]]*\]|\([^)]*\)|\*[^*]*\*|♪+')
+
+
+# Typed as key presses, and a keyboard layout only has its own letters, so
+# the text is reduced to plain characters: curly quotes and dashes become
+# straight ones and accents are dropped ("café" is typed "cafe").
+PLAIN = str.maketrans({'‘': "'", '’': "'", '“': '"', '”': '"', '–': '-', '—': '-', '…': '...'})
+
+
+def clean(segments):
+    text = ' '.join(s.strip() for s in segments)
+    text = NOISE.sub(' ', text).translate(PLAIN)
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode()
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def main(argv):
+    if len(argv) != 2:
+        print('usage: parchaos-dictation-transcribe FILE.wav', file=sys.stderr)
+        return 2
+    model = os.path.join(MODEL_DIR, f'ggml-{MODEL}.bin')
+    if not os.path.isfile(model):
+        print('parchaos-dictation-transcribe: speech model not downloaded', file=sys.stderr)
+        return 3
+    from pywhispercpp.model import Model
+    engine = Model(model, print_progress=False, print_realtime=False, n_threads=max(2, (os.cpu_count() or 4) // 2))
+    print(clean(seg.text for seg in engine.transcribe(argv[1])))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

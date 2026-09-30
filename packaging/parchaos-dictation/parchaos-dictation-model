@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-dictation-model status|download [NAME]
+#
+# The speech model is not part of the ISO (it is 148 MB). This fetches it on
+# first use from the whisper.cpp model repository, checks its SHA-256 against
+# the value pinned here, and only then moves it into place, so a broken or
+# tampered download is never used.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import hashlib
+import os
+import sys
+import urllib.request
+
+MODELS = {
+    'base.en': (147964211, 'a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002'),
+    'base': (147951465, '60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe'),
+    'tiny.en': (77704715, '921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f'),
+}
+URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-%s.bin'
+MODEL_DIR = os.path.join(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'),
+                         'parchaos-dictation', 'models')
+
+
+def path_for(name):
+    return os.path.join(MODEL_DIR, f'ggml-{name}.bin')
+
+
+def sha256_of(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def download(name, url=None):
+    size, want = MODELS[name]
+    dest = path_for(name)
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    tmp = dest + '.part'
+    with urllib.request.urlopen(url or URL % name, timeout=60) as response, open(tmp, 'wb') as out:
+        while True:
+            block = response.read(1 << 20)
+            if not block:
+                break
+            out.write(block)
+    if os.path.getsize(tmp) != size or sha256_of(tmp) != want:
+        os.remove(tmp)
+        raise RuntimeError('the downloaded model failed its check and was discarded')
+    os.replace(tmp, dest)
+
+
+def main(argv):
+    name = argv[2] if len(argv) > 2 else 'base.en'
+    if len(argv) < 2 or name not in MODELS:
+        print('usage: parchaos-dictation-model status|download [base.en|base|tiny.en]', file=sys.stderr)
+        return 2
+    if argv[1] == 'status':
+        ok = os.path.isfile(path_for(name))
+        print('ready' if ok else 'missing')
+        return 0 if ok else 1
+    if argv[1] == 'download':
+        try:
+            download(name)
+        except (OSError, RuntimeError) as err:
+            print(f'parchaos-dictation-model: {err}', file=sys.stderr)
+            return 1
+        return 0
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

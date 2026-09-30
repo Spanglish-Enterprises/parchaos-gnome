@@ -1,0 +1,8 @@
+{
+  "uuid": "parchaos-dictation@parchaos.org",
+  "name": "Parcha Dictation",
+  "description": "Press Ctrl+Alt+D, speak, press it again: what you said is typed where the cursor is. Runs entirely on this computer.",
+  "shell-version": ["48", "49", "50"],
+  "settings-schema": "org.parchaos.dictation",
+  "url": "https://parchaos.org"
+}
