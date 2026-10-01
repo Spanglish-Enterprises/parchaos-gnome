@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-24
+- Ticket #135: notification banners appear at the top right (the session extension places them itself; it no longer relies on the third-party banner-position extension, which has no GNOME 50/51 release).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-23
 - Ticket #135: notification banners and the volume/brightness popup are drawn with ParchaOS's own glass when refraction is on.
 

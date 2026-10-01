@@ -12,6 +12,7 @@ Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test ri
   screenshots in `[private-dropbox]` (SMB share `[private-network-share]`, path `ParchaOS/dropbox`; read with
   smbprotocol, credentials in `[credentials-file-removed]`, never print them). Crop, scale to one height, `hstack`, measure, list
   every difference, fix, send the image. Figma's Starter plan has a tool-call limit: save numbers and screenshots locally.
+- **Notifications at the top right** (like the reference). Done in `parchaos-session` `_placeBanners()`; the `notification-banner-reloaded` extension (no GNOME 50/51 release) can be dropped from the enabled list later.
 - **Motion:** menus, popovers, windows: short fade in (120 ms), slightly slower fade out (200 ms), no sliding/zooming.
   Control Center keeps its own animation.
 - **Edit Controls is always available**, in every style, and has no wiggle: resize handle on every tile at once.

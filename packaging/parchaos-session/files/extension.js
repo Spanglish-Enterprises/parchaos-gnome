@@ -401,7 +401,25 @@ export default class ParchaSessionExtension extends Extension {
         });
     }
 
+    // Notification banners appear at the top right, like the reference (GNOME shows them centred).
+    // This is done here so it does not depend on a third-party extension that has no GNOME 50/51 release.
+    _placeBanners(on) {
+        const bin = Main.messageTray?._bannerBin;
+        if (!bin)
+            return;
+        if (on) {
+            this._bannerAlign ??= bin.get_x_align();
+            bin.set_x_align(Clutter.ActorAlign.END);
+            bin.set_style('margin-right: 8px; margin-top: 4px;');
+        } else if (this._bannerAlign !== undefined) {
+            bin.set_x_align(this._bannerAlign);
+            bin.set_style(null);
+            this._bannerAlign = undefined;
+        }
+    }
+
     _hookBannerGlass() {
+        this._placeBanners(true);
         if (!GlassPane || !this._settings)
             return;
         const sync = () => {
@@ -440,6 +458,8 @@ export default class ParchaSessionExtension extends Extension {
     }
 
     _dropFollowers() {
+        if (!this._dockDead)
+            this._placeBanners(false);
         for (const id of this._bannerClassIds ?? [])
             this._settings?.disconnect(id);
         this._bannerClassIds = [];
