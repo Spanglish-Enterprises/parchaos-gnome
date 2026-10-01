@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        ParchaOS's own liquid glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -19,6 +19,9 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
+# The third-party glass extension this replaces.
+Obsoletes:      parchaos-glass-effects < 1
+Provides:       parchaos-glass-effects = 1
 
 %description
 A shared library for ParchaOS shell extensions: panes of glass that bend, blur and
@@ -41,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-6
+- Replaces the third-party glass extension package (parchaos-glass-effects): obsoletes it so an upgrade removes it.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-5
 - Brighter backdrops get a warm grey veil dark enough for white text (menus on light wallpapers).
 

@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        71%{?dist}
+Release:        72%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -120,7 +120,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-speak
-Requires:       parchaos-glass-effects
+Requires:       parchaos-glass
 Requires:       parchaos-image-search
 Requires:       sushi
 Requires:       parchaos-snapshots
@@ -273,6 +273,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-72
+- Ticket #135: the third-party glass extension (parchaos-glass-effects) is no longer required or enabled. Refractive glass is drawn by ParchaOS's own parchaos-glass, used by the session and Parcha Controls extensions; parchaos-theme-sync only keeps the switch consistent (Classic turns it off) and turns the dock's own blur off while it is on.
+
 * Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-71
 - Ticket #135: the third-party glass extension's notification and popup glass is switched off in the refraction preset (it no longer draws anything with the preset).
 

@@ -120,8 +120,8 @@ project's own real hardware more than once.
 
 - Deeper Calamares installer skinning to match the desktop's look (real QML/UI work,
   not started; ParchaOS's own original work).
-- Deeper glass effects (refraction, highlights) beyond the blur the
-  Glass style uses today (a candidate source: `ryohsuke1231/liquid-glass`).
+- Glass polish: the refractive glass is ParchaOS's own (`packaging/parchaos-glass`); remaining work is in
+  [glass-and-controls-spec.md](glass-and-controls-spec.md).
 - `parchaos-cloud`'s replacement (see above).
 
 ## Release image gate

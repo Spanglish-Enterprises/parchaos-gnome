@@ -15,7 +15,7 @@ for u in ${EXTS:-}; do
 done
 cp -r scripts/devshot/devshot@parchaos.test "$H/.local/share/gnome-shell/extensions/"
 cp packaging/parchaos-desktop/files/org.parchaos.desktop.gschema.xml "$W/schemas/"
-for s in /usr/share/gnome-shell/extensions/liquid-glass@thinkingcoding1231.gmail.com/schemas; do [ -d "$s" ] && cp "$s"/*.gschema.xml "$W/schemas/" 2>/dev/null; done
+true
 glib-compile-schemas "$W/schemas"
 EN=$(printf "'%s', " devshot@parchaos.test ${EXTS:-} ${SYSEXTS:-})
 cat > "$W/inner.sh" <<IN

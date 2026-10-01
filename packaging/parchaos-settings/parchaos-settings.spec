@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-27
+- Ticket #135: the Refractive glass switch is shown when ParchaOS's own glass (parchaos-glass) is installed.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-26
 - Ticket #148: Refractive glass wording no longer says Control Center is replaced; Spanish updated.
 
@@ -103,7 +106,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-19
 - Ticket #135: Appearance has an opt-in "Refractive glass" switch (off by
-  default) that turns on the optional glass-effects extension.
+  default) that turns on the optional refractive glass (parchaos-glass).
 
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-18
 - Ticket #146: Spanish translation of ParchaOS Settings, written in

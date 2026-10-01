@@ -472,7 +472,7 @@ class Window(Adw.ApplicationWindow):
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
         if 'glass-effects' in schema.list_keys() and os.path.isdir(
-                '/usr/share/gnome-shell/extensions/liquid-glass@thinkingcoding1231.gmail.com'):
+                '/usr/share/parchaos-glass'):
             page.add(self._glass_effects_group())
         if 'folder-colour' in schema.list_keys():
             page.add(self._folder_colour_group())

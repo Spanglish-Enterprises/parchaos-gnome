@@ -195,9 +195,9 @@ PROFILE_REPO_PACKAGES=(
     # Read the selected text aloud, Ctrl+Alt+S (packaging/parchaos-speak/).
     parchaos-speak
 
-    # Optional refractive glass effects, off until switched on in Settings
-    # (packaging/parchaos-glass-effects/).
-    parchaos-glass-effects
+    # ParchaOS's own glass library for the optional refractive effects
+    # (packaging/parchaos-glass/); needed by the session and Controls extensions.
+    parchaos-glass
 
     # Photo search, off until switched on in Settings (packaging/parchaos-image-search/).
     parchaos-image-search

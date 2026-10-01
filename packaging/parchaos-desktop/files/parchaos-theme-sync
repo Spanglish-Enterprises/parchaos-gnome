@@ -181,91 +181,17 @@ class ThemeSync:
         Gio.Settings.sync()
 
 
-GLASS_EXTENSION = 'liquid-glass@thinkingcoding1231.gmail.com'
-CONTROLS_EXTENSION = 'parchaos-controls@parchaos.org'
-GLASS_SCHEMA = 'org.gnome.shell.extensions.liquid-glass@thinkingcoding1231.gmail.com'
-
-
-def extension_call(method, uuid):
-    """Ask GNOME Shell to switch one extension on or off in this session."""
-    try:
-        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        bus.call_sync('org.gnome.Shell.Extensions', '/org/gnome/Shell/Extensions',
-                      'org.gnome.Shell.Extensions', method, GLib.Variant('(s)', (uuid,)),
-                      None, Gio.DBusCallFlags.NONE, 5000, None)
-    except GLib.Error:
-        pass  # the shell is not up yet; the extension list settles at login
-
-
 BLUR_DOCK_KEY = '/org/gnome/shell/extensions/blur-my-shell/dash-to-dock/blur'
-
-GLASS_PRESET = {
-    # Parcha Controls lives inside the standard Quick Settings menu while
-    # refraction is on; its tiles carry the toggle classes, so each tile
-    # gets its own glass capsule, like the reference.
-    'enable-quick-settings-glass': True,
-    'quick-settings-apply-to': 1,
-    'quick-settings-glass-expand': 0,
-    'quick-settings-x-offset': 0,
-    'quick-settings-y-offset': 0,
-    'quick-settings-corner-radius': 34.0,
-    'quick-settings-toggle-corner-radius': 32.0,
-    'quick-settings-enable-adaptive-text-color': True,
-    'quick-settings-tint-color': '#1a1a1a',
-    'quick-settings-tint-strength': 0.1,
-    'quick-settings-toggle-tint-strength': 0.1,
-    'quick-settings-blur-radius': 12,
-    # Brighter edges and stronger bending, like the reference look.
-    'dock-tint-color': '#1a1a1a',
-    'dock-tint-strength': 0.3,
-    'dock-blur-radius': 12,
-    'dock-corner-radius': 26.0,
-    'dock-saturation': 1.2,
-    'glass-rim-intensity': 0.7,
-    'glass-rim-width': 2.3,
-    'glass-displacement-scale': 14.0,
-    'glass-specular-intensity': 0.0,
-    # Menus and popovers (ticket #135): the stock look is a 60 px bubble that
-    # springs open. Tight rounded panes and no springing; Quick Settings keeps
-    # its own animation.
-    # Menus and popovers are drawn by ParchaOS's own glass (parchaos-session); the extension's
-    # menu glass is off so the two do not stack.
-    'enable-dock-glass': False,
-    'enable-notification-glass': False,
-    'enable-osd-glass': False,
-    'enable-menu-glass': False,
-    'enable-extra-menu-glass': False,
-    'enable-menu-animation': False,
-    'enable-panel-menu-animation': False,
-    'menu-glass-expand': 0,
-    'panel-menu-glass-expand': 0,
-    'menu-x-offset': 0,
-    'menu-y-offset': 0,
-    'panel-menu-x-offset': 0,
-    'panel-menu-y-offset': 0,
-    'menu-corner-radius': 12.0,
-    'panel-menu-corner-radius': 12.0,
-    'menu-tint-color': '#1a1a1a',
-    'panel-menu-tint-color': '#1a1a1a',
-    'menu-tint-strength': 0.6,
-    'panel-menu-tint-strength': 0.6,
-    'menu-blur-radius': 18,
-    'panel-menu-blur-radius': 18,
-    # White text on the smoked pane whatever the wallpaper is, like the
-    # reference; the extension's automatic dark/light text flipped to dark
-    # over a bright sky.
-    'menu-enable-adaptive-text-color': False,
-    'panel-menu-enable-adaptive-text-color': False,
-    'menu-saturation': 1.0,
-    'panel-menu-saturation': 1.0,
-}
 
 
 class GlassEffects:
-    """The optional glass-effects switch (ParchaOS Settings > Appearance).
+    """The optional refractive-glass switch (ParchaOS Settings > Appearance).
 
-    On: the glass extension runs (menus, dock, notifications). Parcha Controls
-    stays on in both cases so Edit Controls is always available.
+    The glass itself is drawn by ParchaOS's own glass library (parchaos-glass) from the
+    session and Parcha Controls extensions, which watch this setting. What is left here:
+      * refraction belongs to the Glass style: Classic switches it off;
+      * the dock's own blur (Blur My Shell) would paint over the glass, so it is turned
+        off while refraction is on and put back afterwards.
     """
 
     def __init__(self, desktop):
@@ -273,68 +199,24 @@ class GlassEffects:
 
     def usable(self):
         return (self.desktop is not None
-                and 'glass-effects' in self.desktop.props.settings_schema.list_keys()
-                and os.path.isdir('/usr/share/gnome-shell/extensions/' + GLASS_EXTENSION))
+                and 'glass-effects' in self.desktop.props.settings_schema.list_keys())
 
     def watch(self):
         if self.usable():
             self.desktop.connect('changed::glass-effects', lambda *_: self.apply(True))
             self.desktop.connect('changed::style', lambda *_: self.apply())
 
-    def apply_preset(self):
-        """Give the extension ParchaOS's look each time the switch goes on.
-
-        Every toggle is its own capsule of glass (mode 1), with the glass
-        drawn exactly over the toggle and dark text chosen for bright
-        backgrounds.
-        """
-        directory = os.path.join('/usr/share/gnome-shell/extensions', GLASS_EXTENSION, 'schemas')
-        try:
-            source = Gio.SettingsSchemaSource.new_from_directory(
-                directory, Gio.SettingsSchemaSource.get_default(), False)
-        except GLib.Error:
-            return
-        schema = source.lookup(GLASS_SCHEMA, False)
-        if schema is None:
-            return
-        store = Gio.Settings(settings_schema=schema)
-        keys = schema.list_keys()
-        # The dock's own blur would paint over the glass.
-        subprocess.run(['dconf', 'write', BLUR_DOCK_KEY, 'false'], check=False)
-        # Control Center draws its own glass; the extension must leave its menu alone.
-        if 'disabled-extra-menus' in keys:
-            mine = set(store.get_strv('disabled-extra-menus'))
-            mine.add('parchaos-controls')
-            store.set_strv('disabled-extra-menus', sorted(mine))
-        for key, value in GLASS_PRESET.items():
-            if key not in keys:
-                continue
-            if isinstance(value, bool):
-                store.set_boolean(key, value)
-            elif isinstance(value, int):
-                store.set_int(key, value)
-            elif isinstance(value, float):
-                store.set_double(key, value)
-            else:
-                store.set_string(key, value)
-
     def apply(self, changed=False):
         if not self.usable():
             return
-        # Refraction belongs to the Glass style: Classic switches it off.
         if (self.desktop.get_string('style') == 'classic'
                 and self.desktop.get_boolean('glass-effects')):
             self.desktop.set_boolean('glass-effects', False)
             return
         if self.desktop.get_boolean('glass-effects'):
-            self.apply_preset()
-            extension_call('EnableExtension', GLASS_EXTENSION)
-            # Parcha Controls stays on and follows this switch itself.
-            extension_call('EnableExtension', CONTROLS_EXTENSION)
+            subprocess.run(['dconf', 'write', BLUR_DOCK_KEY, 'false'], check=False)
         elif changed:
             subprocess.run(['dconf', 'reset', BLUR_DOCK_KEY], check=False)
-            extension_call('DisableExtension', GLASS_EXTENSION)
-            extension_call('EnableExtension', CONTROLS_EXTENSION)
 
 
 RECOLOR = '/usr/libexec/parchaos-recolor-titlebuttons'
