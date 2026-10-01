@@ -112,3 +112,7 @@ Shipped: `/var/lib/parchaos/session-updated` marker (`%transfiletriggerin` in `p
 
 - `Screen Recording 2026-10-01 at 6.02.27 PM.mov` (macOS Settings > Appearance): a Liquid Glass slider, Clear (very transparent glass, little tint) to Tinted (darker, more opaque, more frost), with a live preview. New ticket "Glass transparency slider in Settings"; maps onto GlassPane `tint`/`dim`/`bgblur`.
 - "What's New" for major updates: owner wants it as its own feature, separate from the glass work (the card in the Edit Controls picker is only a placeholder). New ticket "What's New window for major updates"; the owner's reference capture for it had not arrived in the dropbox yet (only the slider recording did).
+
+### 4.8 What's New reference (ticket 5biF6utu7ZtlEvs1yo0v)
+
+Reference: dropbox `Screen Recording 2026-10-01 at 5.59.44 PM.mov` (macOS 27 Tips, "What's New", 10 slides). Summary: one dark window; toolbar = traffic lights, sidebar toggle pill, back/forward pill, Home, title "What's New" (+ "n of 10" inside a tip), search at the right; welcome slide with headline and a large glass version badge; feature slides with a media panel on top and title + description below, chevrons bottom left/right; last slide "Explore more tips" with cards. Full measurements and the ParchaOS plan are in the ticket comment. Not started; separate from the glass work, so the "What's New" card in the Edit Controls picker stays a small placeholder.
