@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-30
+- Ticket #148: a tile now really takes the size chosen (it stayed wide with only an icon). At one cell a connection shows only its icon; wider it shows the name and the state (the network name, On, Off).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-29
 - Ticket #148: like the reference, each connection (Wi-Fi, Bluetooth, Wired, VPN, Airplane Mode) is its own tile that can be resized (wide with name and state, or icon-only); plain on/off switches (Dark Mode, Night Light, Power Mode) have one fixed size; shortcut buttons (Screenshot, Settings, Lock) can be icon-only or wide.
 

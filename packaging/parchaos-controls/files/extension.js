@@ -606,6 +606,8 @@ const ControlsPanel = GObject.registerClass({
                     placed = true;
                 }
             }
+            // The tile's own size follows the chosen size.
+            item.widget.set_size(item.cols * CELL + (item.cols - 1) * GAP, item.rows * CELL + (item.rows - 1) * GAP);
             item.widget._smallLayout?.(item.cols, item.rows);
             item.badge.visible = this._editing;
             item.resizeHandle.visible = this._editing && item.sizes.length > 1;
@@ -897,7 +899,7 @@ const ControlsPanel = GObject.registerClass({
     // wide size shows the name and state beside the icon, the small size is just the icon.
     _connectionTile(source, settingsPanel, defaultSub) {
         const t = tile(2, 1, 'parchaos-controls-connection');
-        const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER, style: 'padding: 0 14px 0 12px;'});
+        const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER, style: 'padding: 0 14px 0 12px; spacing: 10px;'});
         const circle = circleFor(source, 36);
         row.add_child(circle);
         const {box, t: title, s} = labels();
@@ -918,7 +920,7 @@ const ControlsPanel = GObject.registerClass({
             const iconOnly = cols === 1 && rows === 1;
             text.visible = !iconOnly;
             row.x_align = iconOnly ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.FILL;
-            row.set_style(iconOnly ? null : 'padding: 0 14px 0 12px;');
+            row.set_style(iconOnly ? null : 'padding: 0 14px 0 12px; spacing: 10px;');
             t.set_style_class_name(`parchaos-controls-tile parchaos-controls-connection${iconOnly ? ' parchaos-controls-small-icononly' : ''}`);
         };
         return t;
