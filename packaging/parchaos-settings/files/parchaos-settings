@@ -411,16 +411,63 @@ class Window(Adw.ApplicationWindow):
             page.add(self._folder_colour_group())
         return page
 
+    # Glass is the style; refraction is an extra on top of it (ticket #20):
+    # turning Glass on offers refraction, turning Glass off turns refraction
+    # off, turning refraction off leaves Glass on, and refraction cannot be
+    # on with Classic.
     def _glass_effects_group(self):
         group = Adw.PreferencesGroup(
             title=_('Glass effects'),
             description=_('Menus, Quick Settings, notifications and the dock drawn as glass that bends what is behind it.'))
-        row = Adw.SwitchRow(
+        self._refraction_row = Adw.SwitchRow(
             title=_('Refractive glass'),
             subtitle=_('Experimental. Needs more graphics power, and shows the standard Quick Settings panel instead of Parcha Controls.'))
-        self._desktop.bind('glass-effects', row, 'active', Gio.SettingsBindFlags.DEFAULT)
-        group.add(row)
+        self._refraction_row.connect('notify::active', self._on_refraction_toggled)
+        self._desktop.connect('changed::glass-effects', lambda *_: self._sync_refraction())
+        self._desktop.connect('changed::style', lambda *_: self._sync_refraction())
+        self._sync_refraction()
+        group.add(self._refraction_row)
         return group
+
+    def _sync_refraction(self):
+        row = getattr(self, '_refraction_row', None)
+        if row is None:
+            return
+        glass = self._desktop.get_string('style') == 'glass'
+        on = glass and self._desktop.get_boolean('glass-effects')
+        row.set_sensitive(glass)
+        if row.get_active() != on:
+            row.handler_block_by_func(self._on_refraction_toggled)
+            row.set_active(on)
+            row.handler_unblock_by_func(self._on_refraction_toggled)
+        if glass:
+            row.set_tooltip_text(None)
+        else:
+            row.set_tooltip_text(_('Refraction needs the Glass style.'))
+
+    def _on_refraction_toggled(self, row, _pspec):
+        if self._desktop.get_string('style') != 'glass':
+            return
+        if self._desktop.get_boolean('glass-effects') != row.get_active():
+            self._desktop.set_boolean('glass-effects', row.get_active())
+
+    def _offer_refraction(self):
+        dialog = Adw.AlertDialog(
+            heading=_('Turn on refraction too?'),
+            body=_('Refraction bends what is behind menus, panels and the dock. It needs more graphics power '
+                   'and shows the standard Quick Settings panel instead of Parcha Controls. '
+                   'You can change this any time in Glass effects.'))
+        dialog.add_response('no', _('Not Now'))
+        dialog.add_response('yes', _('Turn On'))
+        dialog.set_response_appearance('yes', Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response('yes')
+        dialog.set_close_response('no')
+
+        def answered(dlg, result):
+            if dlg.choose_finish(result) == 'yes' and self._desktop.get_string('style') == 'glass':
+                self._desktop.set_boolean('glass-effects', True)
+
+        dialog.choose(self, None, answered)
 
     FOLDER_COLOURS = [
         ('passion', _('Passion')),
@@ -674,7 +721,12 @@ class Window(Adw.ApplicationWindow):
         if button.get_active() and self._desktop.get_string('style') != value:
             # parchaos-theme-sync (parchaos-desktop) switches the GTK and
             # Shell themes to match.
+            was = self._desktop.get_string('style')
             self._desktop.set_string('style', value)
+            if value == 'classic' and 'glass-effects' in self._desktop.props.settings_schema.list_keys():
+                self._desktop.set_boolean('glass-effects', False)
+            elif (value == 'glass' and was != 'glass' and hasattr(self, '_refraction_row')):
+                self._offer_refraction()
 
     def _on_super_toggled(self, row, _pspec):
         style = 'super-ctrl' if row.get_active() else 'standard'

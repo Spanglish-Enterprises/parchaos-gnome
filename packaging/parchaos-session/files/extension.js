@@ -94,6 +94,7 @@ export default class ParchaSessionExtension extends Extension {
         this._hookLogind();
         this._hookUpdateNotice();
         this._hookMotion();
+        this._hookControlCenterIcon();
 
         if (!restoredThisLogin) {
             restoredThisLogin = true;
@@ -126,6 +127,10 @@ export default class ParchaSessionExtension extends Extension {
         this._windowHandlers.clear();
         this._motion?.clear();
         this._motion = null;
+        this._removeControlCenterIcon();
+        if (this._ccSettingsId)
+            this._settings?.disconnect(this._ccSettingsId);
+        this._ccSettingsId = 0;
         this._updateMonitor?.cancel();
         this._updateMonitor = null;
         if (this._logindId)
@@ -340,6 +345,42 @@ export default class ParchaSessionExtension extends Extension {
                     delete actor.ease;
                 }
             });
+    }
+
+    // With refractive glass on, the standard Quick Settings button is shown in
+    // place of Parcha Controls. It gets the same toggles icon at its right end,
+    // so the Control Center button stays where it always is on the top bar
+    // (ticket #20).
+    _hookControlCenterIcon() {
+        if (!this._settings)
+            return;
+        this._ccSettingsId = this._settings.connect('changed::glass-effects', () => {
+            this._removeControlCenterIcon();
+            this._later(1200, () => this._addControlCenterIcon());
+        });
+        this._later(2500, () => this._addControlCenterIcon());
+    }
+
+    _addControlCenterIcon() {
+        if (this._ccIcon || !(this._settings?.get_boolean('glass-effects')))
+            return;
+        if (Main.panel.statusArea['parchaos-controls'])
+            return;
+        const box = Main.panel.statusArea.quickSettings?._indicators;
+        const file = Gio.File.new_for_path(
+            '/usr/share/gnome-shell/extensions/parchaos-controls@parchaos.org/icons/parchaos-controls-symbolic.svg');
+        if (!box || !file.query_exists(null))
+            return;
+        this._ccIcon = new St.Icon({
+            gicon: new Gio.FileIcon({file}),
+            style_class: 'system-status-icon',
+        });
+        box.add_child(this._ccIcon);
+    }
+
+    _removeControlCenterIcon() {
+        this._ccIcon?.destroy();
+        this._ccIcon = null;
     }
 
     _backgroundState() {

@@ -269,6 +269,7 @@ class GlassEffects:
     def watch(self):
         if self.usable():
             self.desktop.connect('changed::glass-effects', lambda *_: self.apply(True))
+            self.desktop.connect('changed::style', lambda *_: self.apply())
 
     def apply_preset(self):
         """Give the extension ParchaOS's look each time the switch goes on.
@@ -304,6 +305,11 @@ class GlassEffects:
 
     def apply(self, changed=False):
         if not self.usable():
+            return
+        # Refraction belongs to the Glass style: Classic switches it off.
+        if (self.desktop.get_string('style') == 'classic'
+                and self.desktop.get_boolean('glass-effects')):
+            self.desktop.set_boolean('glass-effects', False)
             return
         if self.desktop.get_boolean('glass-effects'):
             self.apply_preset()

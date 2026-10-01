@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        61%{?dist}
+Release:        62%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -273,6 +273,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-62
+- Ticket #20: parchaos-theme-sync switches refraction off whenever the style is Classic, and reacts to the style changing.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-61
 - Ticket #135: Refractive glass menu tint 0.6 and saturation 1.0 (neutral dark pane like the kit).
 
