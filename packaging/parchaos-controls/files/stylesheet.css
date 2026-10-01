@@ -640,3 +640,17 @@ StWidget:drop {
   min-width: 0;
   max-width: none;
 }
+
+/* Our own glass is drawn behind each tile: the panel and the tiles are clear. */
+.parchaos-controls-panel.parchaos-glass-on,
+.parchaos-controls-panel.parchaos-glass-on.parchaos-style-glass {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-tile {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

@@ -6,4 +6,4 @@ rim light and chromatic fringing. Rounded corners come from a signed-distance fi
 
 Develop with a real GPU: `sudo dnf install mutter-devkit`, then
 `DEVKIT=1 EXTS="parchaos-glass@parchaos.org" scripts/devshot/run.sh plan.json` opens a nested shell window and writes
-screenshots. Status: prototype (demo panes only). Next: apply to Control Center tiles, menus, dock; clone windows too.
+screenshots. Used by Parcha Controls (tile glass). Demo extension for tuning: scripts/glass-demo. Next: menus, dock, notifications; adaptive text colour.

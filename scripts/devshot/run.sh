@@ -31,6 +31,6 @@ if [ -n "\${DEVKIT:-}" ]; then exec gnome-shell --devkit --wayland --no-x11 > $W
 IN
 if [ -n "${DEVKIT:-}" ]; then RT=/run/user/$(id -u); WL=${WAYLAND_DISPLAY:-wayland-0}; else RT=$W/run; WL=; fi
 env -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY ${WL:+WAYLAND_DISPLAY=$WL} ${DEVKIT:+DEVKIT=1} HOME=$H XDG_CONFIG_HOME=$H/.config XDG_DATA_HOME=$H/.local/share \
-  XDG_CACHE_HOME=$H/.cache XDG_STATE_HOME=$H/.local/state XDG_RUNTIME_DIR=$RT DEVSHOT_OUT=$OUT SETTINGS="${SETTINGS:-}" \
+  XDG_CACHE_HOME=$H/.cache XDG_STATE_HOME=$H/.local/state XDG_RUNTIME_DIR=$RT DEVSHOT_OUT=$OUT SETTINGS="${SETTINGS:-}" PARCHAOS_GLASS_JS=$REPO/packaging/parchaos-glass/glass.js \
   timeout "${2:-90}" dbus-run-session -- bash "$W/inner.sh"
 cp "$W/shell.log" "$OUT/shell.log"; echo "out: $OUT (log $OUT/shell.log)"

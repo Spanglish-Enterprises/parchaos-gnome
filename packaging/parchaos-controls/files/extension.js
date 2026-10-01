@@ -24,6 +24,16 @@ import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+// ParchaOS glass (parchaos-glass): our own refractive glass for the tiles. Optional: without it
+// the panel keeps its plain look.
+const GLASS_JS = GLib.getenv('PARCHAOS_GLASS_JS') ?? '/usr/share/parchaos-glass/glass.js';
+let GlassPane = null;
+try {
+    ({GlassPane} = await import(`file://${GLASS_JS}`));
+} catch (e) {
+    console.log(`parchaos-controls: glass library not available (${e.message})`);
+}
+
 const CELL = 72;
 const GAP = 10;
 const PAD = 12;
@@ -257,6 +267,9 @@ const ControlsPanel = GObject.registerClass({
         this.connect('destroy', () => {
             this._interface.disconnect(schemeId);
             this._endDrag();
+            if (this._glassSyncId)
+                GLib.source_remove(this._glassSyncId);
+            this._glassSyncId = 0;
         });
         syncScheme();
         this._qs = qs;
@@ -622,6 +635,70 @@ const ControlsPanel = GObject.registerClass({
     endResize(state) {
         this._saveSizes(state.ordered);
         this.emit('items-changed');
+    }
+
+    // ---- ParchaOS glass behind the tiles (refractive glass on) ----
+    useGlass(layer) {
+        this._glassLayer = layer;
+        this._glassPanes = new Map();
+        this.add_style_class_name('parchaos-glass-on');
+        for (const item of this._items) {
+            item.widget.connect('notify::allocation', () => this._queueGlassSync());
+            item.widget.connect('notify::visible', () => this._queueGlassSync());
+        }
+        this.connect('notify::allocation', () => this._queueGlassSync());
+        this._queueGlassSync();
+    }
+
+    dropGlass() {
+        if (!this._glassLayer)
+            return;
+        for (const pane of this._glassPanes.values())
+            pane.destroy();
+        this._glassPanes.clear();
+        this._glassLayer = null;
+        this.remove_style_class_name('parchaos-glass-on');
+    }
+
+    _queueGlassSync() {
+        if (this._glassSyncId || !this._glassLayer)
+            return;
+        this._glassSyncId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._glassSyncId = 0;
+            this._syncGlass();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _syncGlass() {
+        const layer = this._glassLayer;
+        if (!layer || !GlassPane)
+            return;
+        const [lx, ly] = layer.get_transformed_position();
+        if (!Number.isFinite(lx) || !Number.isFinite(ly))
+            return;
+        for (const item of this._items) {
+            const w = item.widget;
+            let pane = this._glassPanes.get(item.id);
+            const show = !item.hidden && w.visible && w.mapped;
+            if (!show) {
+                pane?.hide();
+                continue;
+            }
+            if (!pane) {
+                pane = new GlassPane({});
+                layer.add_child(pane);
+                this._glassPanes.set(item.id, pane);
+            }
+            const [x, y] = w.get_transformed_position();
+            const [pw, ph] = w.get_transformed_size();
+            if (!Number.isFinite(x) || pw <= 0 || ph <= 0)
+                continue;
+            pane.show();
+            pane.set_position(x - lx, y - ly);
+            pane.set_size(pw, ph);
+            pane.set({radius: Math.min(36, Math.min(pw, ph) / 2)});
+        }
     }
 
     _cycleSize(item) {
@@ -1206,13 +1283,25 @@ class ControlsButton extends PanelMenu.Button {
         this._destroyPanel();
         this._panel = new ControlsPanel(this._qs);
         this._panel.connect('request-close', () => this.menu.close());
-        this._row = new St.BoxLayout({style_class: 'parchaos-controls-row-holder'});
+        this._row = new St.Widget({style_class: 'parchaos-controls-row-holder'});
+        if (GlassPane && this._glassWanted?.()) {
+            this._glassLayer = new Clutter.Actor();
+            this._row.add_child(this._glassLayer);
+        }
         this._row.add_child(this._panel);
+        if (this._glassLayer)
+            this._panel.useGlass(this._glassLayer);
         this._panel.connect('edit-changed', () => {
             if (this._panel.editing)
                 this._beginEdit();
         });
         this._holder.set_child(this._row);
+    }
+
+    _glassWanted() {
+        const settings = styleSettings();
+        return !!settings?.settings_schema.has_key('glass-effects') && settings.get_boolean('glass-effects') &&
+            settings.get_string('style') !== 'classic';
     }
 
     _destroyPanel() {
@@ -1235,6 +1324,9 @@ class ControlsButton extends PanelMenu.Button {
         const [px, py] = panel.get_transformed_position();
         // On its own layer the panel needs its own background.
         panel.remove_style_class_name('parchaos-hosted');
+        panel.dropGlass();
+        this._glassLayer?.destroy();
+        this._glassLayer = null;
         const overlay = new St.Widget({
             reactive: true,
             x: monitor.x,
@@ -1429,8 +1521,14 @@ class HostedControls {
             unclip(item.widget);
         }
         this._panel.connect('request-close', () => this.menu.close());
-        this._row = new St.BoxLayout({style_class: 'parchaos-controls-row-holder'});
+        this._row = new St.Widget({style_class: 'parchaos-controls-row-holder'});
+        if (GlassPane && this._glassWanted?.()) {
+            this._glassLayer = new Clutter.Actor();
+            this._row.add_child(this._glassLayer);
+        }
         this._row.add_child(this._panel);
+        if (this._glassLayer)
+            this._panel.useGlass(this._glassLayer);
         this._panel.connect('edit-changed', () => {
             if (this._panel?.editing)
                 this._beginEdit();
@@ -1464,7 +1562,7 @@ const SHELL_BUS_XML = `<node><interface name="org.parchaos.Shell">
   <method name="OpenScreenshotUI"/>
 </interface></node>`;
 
-for (const name of ['_destroyPanel', '_beginEdit', '_endEdit'])
+for (const name of ['_destroyPanel', '_beginEdit', '_endEdit', '_glassWanted'])
     HostedControls.prototype[name] = ControlsButton.prototype[name];
 
 export default class ParchaControlsExtension extends Extension {
@@ -1513,7 +1611,9 @@ export default class ParchaControlsExtension extends Extension {
         this._settings = styleSettings();
         this._modeId = this._settings?.settings_schema.has_key('glass-effects')
             ? this._settings.connect('changed::glass-effects', () => this._remake()) : 0;
-        this._hosted = this._refracted();
+        // Our own glass draws the tiles now, so the button form is used in every style (the
+        // third-party glass extension no longer has to host the panel).
+        this._hosted = false;
         if (this._hosted) {
             this._host = new HostedControls(qs);
             return;
