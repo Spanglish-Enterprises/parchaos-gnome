@@ -107,3 +107,8 @@ Shipped: `/var/lib/parchaos/session-updated` marker (`%transfiletriggerin` in `p
 - Remote control of the real desktop (clicks) is blocked by the harness permission check; read-only screenshots work.
 - Real-desktop confirmation of everything above is still pending: all work was checked in nested or headless shells.
 - Figma access: tool-call limit on the Starter plan; ask for frame links when more kit numbers are needed.
+
+### 4.7 New reference material (2026-10-01)
+
+- `Screen Recording 2026-10-01 at 6.02.27 PM.mov` (macOS Settings > Appearance): a Liquid Glass slider, Clear (very transparent glass, little tint) to Tinted (darker, more opaque, more frost), with a live preview. New ticket "Glass transparency slider in Settings"; maps onto GlassPane `tint`/`dim`/`bgblur`.
+- "What's New" for major updates: owner wants it as its own feature, separate from the glass work (the card in the Edit Controls picker is only a placeholder). New ticket "What's New window for major updates"; the owner's reference capture for it had not arrived in the dropbox yet (only the slider recording did).
