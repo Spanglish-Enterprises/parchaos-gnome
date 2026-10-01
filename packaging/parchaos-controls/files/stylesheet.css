@@ -563,3 +563,63 @@ StWidget:drop {
   min-width: 96px;
   min-height: 84px;
 }
+
+.parchaos-controls-grip {
+  padding: 2px 0 8px 0;
+  height: 14px;
+}
+
+.parchaos-controls-grip-pill {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.parchaos-controls-placeholder {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.parchaos-controls-resize-handle {
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0 4px 4px 0;
+  border-radius: 999px;
+  background-color: rgba(60, 60, 64, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.parchaos-controls-gallery-item {
+  border-radius: 18px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 10px;
+  spacing: 6px;
+}
+
+.parchaos-controls-gallery-item.round {
+  border-radius: 999px;
+  padding: 0;
+}
+
+.parchaos-controls-gallery-inline {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.parchaos-controls-drag-copy .parchaos-controls-gallery-item {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+
+.parchaos-controls-picker.parchaos-style-glass,
+.parchaos-controls-picker {
+  background-color: rgba(30, 30, 33, 0.95);
+}
+
+.parchaos-controls-picker.parchaos-light {
+  background-color: rgba(246, 246, 248, 0.96);
+}

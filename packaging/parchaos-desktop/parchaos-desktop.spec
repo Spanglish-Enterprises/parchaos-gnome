@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        62%{?dist}
+Release:        63%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -273,6 +273,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-63
+- Ticket #148: new setting controls-sizes (the sizes chosen with Edit Controls).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-62
 - Ticket #20: parchaos-theme-sync switches refraction off whenever the style is Classic, and reacts to the style changing.
 
