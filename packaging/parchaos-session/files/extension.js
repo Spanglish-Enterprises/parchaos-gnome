@@ -102,6 +102,7 @@ export default class ParchaSessionExtension extends Extension {
         this._hookLogind();
         this._hookUpdateNotice();
         this._hookMotion();
+        this._hookDockGlass();
         this._hookControlCenterIcon();
 
         if (!restoredThisLogin) {
@@ -135,6 +136,7 @@ export default class ParchaSessionExtension extends Extension {
         this._windowHandlers.clear();
         this._motion?.clear();
         this._motion = null;
+        this._dropDockGlass();
         this._removeControlCenterIcon();
         if (this._ccSettingsId)
             this._settings?.disconnect(this._ccSettingsId);
@@ -289,6 +291,68 @@ export default class ParchaSessionExtension extends Extension {
                 pane.hide();
         });
         sync();
+    }
+
+    // The dock's own pane (its `dash-background`) is drawn with our glass when refraction is on: one pane
+    // under the dock that follows the background actor each frame (it stretches while icons magnify).
+    _hookDockGlass() {
+        if (!GlassPane || !this._settings)
+            return;
+        const wanted = () => (this._settings.get_boolean('glass-effects') ?? false) &&
+            this._settings.get_string('style') !== 'classic';
+        this._dockFrame = global.stage.connect('before-update', () => {
+            if (!wanted()) {
+                this._dockPane?.hide();
+                Main.uiGroup.get_children().find(a => a.name === 'dashtodockContainer')?.remove_style_class_name('parchaos-glass-dock');
+                return;
+            }
+            const container = Main.uiGroup.get_children().find(a => a.name === 'dashtodockContainer');
+            const bg = container ? this._findByClass(container, 'dash-background') : null;
+            if (!bg || !bg.mapped) {
+                this._dockPane?.hide();
+                return;
+            }
+            container.add_style_class_name('parchaos-glass-dock');
+            if (!this._dockPane) {
+                this._dockPane = new GlassPane({radius: 26, band: 16, disp: 20, blur: 9, tint: 0.28, shr: 20, shi: 0.1, dark: 1});
+                this._dockPane.hide();
+                Main.uiGroup.insert_child_below(this._dockPane, container);
+            }
+            const [x, y] = bg.get_transformed_position();
+            const [w, h] = bg.get_transformed_size();
+            const [px, py] = Main.uiGroup.get_transformed_position();
+            if (!Number.isFinite(x) || w <= 1 || h <= 1)
+                return;
+            const pane = this._dockPane;
+            const kids = Main.uiGroup.get_children();
+            if (kids.indexOf(pane) !== kids.indexOf(container) - 1)
+                Main.uiGroup.set_child_below_sibling(pane, container);
+            pane.set_position(x - px, y - py);
+            pane.set_size(w, h);
+            pane.set({radius: Math.min(26, h / 2)});
+            pane.opacity = container.opacity;
+            pane.show();
+        });
+    }
+
+    _findByClass(actor, cls) {
+        if (actor.has_style_class_name?.(cls))
+            return actor;
+        for (const child of actor.get_children?.() ?? []) {
+            const found = this._findByClass(child, cls);
+            if (found)
+                return found;
+        }
+        return null;
+    }
+
+    _dropDockGlass() {
+        if (this._dockFrame)
+            global.stage.disconnect(this._dockFrame);
+        this._dockFrame = 0;
+        Main.uiGroup.get_children().find(a => a.name === 'dashtodockContainer')?.remove_style_class_name('parchaos-glass-dock');
+        this._dockPane?.destroy();
+        this._dockPane = null;
     }
 
     _menuContent(actor) {

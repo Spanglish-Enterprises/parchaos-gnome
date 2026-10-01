@@ -138,3 +138,11 @@
 .popup-menu-boxpointer.parchaos-glass-own.parchaos-menu-dark .popup-menu-item StLabel {
   color: #ffffff;
 }
+
+/* The dock's own background steps aside when ParchaOS glass is drawn behind it (Glass style only;
+   the session extension only draws the pane while refractive glass is on, so the rule is added then). */
+#dashtodockContainer.parchaos-glass-dock #dash .dash-background {
+  background-color: transparent !important;
+  border: none;
+  box-shadow: none;
+}
