@@ -1,6 +1,6 @@
 # parchaos-glass
 
-ParchaOS's own liquid glass (ticket #135). A `GlassPane` actor draws a refracted, lightly blurred, tinted copy of the
+ParchaOS's own glass (ticket #135). A `GlassPane` actor draws a refracted, lightly blurred, tinted copy of the
 desktop behind it (a Clutter.Clone of the background through a Clutter.ShaderEffect), with a curved-edge lens, a thin
 rim light and chromatic fringing. Rounded corners come from a signed-distance field in the shader, so no square halo.
 

@@ -1,5 +1,5 @@
 # ==============================================================================
-# ParchaOS glass (ticket #135): our own refractive "liquid glass" for GNOME Shell
+# ParchaOS glass (ticket #135): our own refractive glass for GNOME Shell
 # extensions: a GlassPane actor that shows a refracted, blurred, tinted copy of the
 # desktop behind it, with a curved-bezel lens, rim light and a soft shadow. Shared by
 # Parcha Controls (tile glass) and, next, the menus and the dock.
@@ -7,8 +7,8 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        6%{?dist}
-Summary:        ParchaOS's own liquid glass for the desktop
+Release:        7%{?dist}
+Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-7
+- New pane options: bgblur (real gaussian blur of the backdrop, for frosted panes) and dim (how much a bright backdrop is darkened).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-6
 - Replaces the third-party glass extension package (parchaos-glass-effects): obsoletes it so an upgrade removes it.
 

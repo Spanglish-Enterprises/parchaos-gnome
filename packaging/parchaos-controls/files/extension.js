@@ -1461,7 +1461,7 @@ class ControlsButton extends PanelMenu.Button {
             panel.useGlass(layer);
             const panes = [[picker, 30]].map(([actor, radius]) => {
                 const pane = new GlassPane({});
-                pane.set({radius, disp: 10, blur: 1.6, tint: 0.2, z: 30});
+                pane.set({radius, disp: 8, blur: 0, bgblur: 24, pad: 90, tint: 0.3, dim: 0.44, z: 30});
                 layer.add_child(pane);
                 actor.add_style_class_name('parchaos-glass-edit');
                 return {actor, pane};

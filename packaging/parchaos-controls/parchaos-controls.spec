@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        40%{?dist}
+Release:        41%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-41
+- Ticket #148: the picker is a heavy frosted glass measured against the reference (real gaussian blur, no lens in the middle, darker veil).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-40
 - Ticket #148: much lighter blur behind the picker (as in the reference); Control Center sits above the picker.
 

@@ -11,6 +11,7 @@
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -29,6 +30,7 @@ uniform float u_disp;       // refraction scale, px
 uniform float u_chroma;     // colour fringing, px
 uniform float u_blur;       // backdrop blur radius, px
 uniform float u_tint;       // tint strength 0..1
+uniform float u_dim;        // how much a bright backdrop is darkened (1 = not at all)
 uniform float u_tr;
 uniform float u_tg;
 uniform float u_tb;
@@ -162,7 +164,7 @@ void main() {
     vec3 smoke = vec3(u_tr, u_tg, u_tb);
     vec3 milk = vec3(0.56, 0.54, 0.53);
     col = mix(col, mix(smoke, milk, bright), mix(u_tint, u_tint * 0.55, bright));
-    col = mix(col, col * 0.68, bright * 0.6);
+    col = mix(col, col * u_dim, bright * 0.6);
 
     // light
     vec3 Ld = normalize(vec3(cos(la), sin(la), 0.38));
@@ -201,7 +203,7 @@ export const GLASS_DEFAULTS = {
     radius: 34, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
     blur: 8.0, tint: 0.3, tintc: [0.07, 0.07, 0.08], bright: 1.0, contrast: 1.0, sat: 1.2,
     rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, spec: 0.0, shin: 42, sheen: 0.0,
-    light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
+    dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
 };
 
 function floatValue(v) {
@@ -220,8 +222,12 @@ class GlassPane extends St.Widget {
         // The wallpaper and the windows above it, both as the desktop shows them.
         this._clone = new Clutter.Clone({source: Main.layoutManager._backgroundGroup});
         this._windows = new Clutter.Clone({source: global.window_group});
-        this._inner.add_child(this._clone);
-        this._inner.add_child(this._windows);
+        // A real gaussian blur (frosted panes: the reference's picker) runs on the copies before the
+        // shader refracts them; small blurs use the shader's own taps.
+        this._base = new Clutter.Actor();
+        this._base.add_child(this._clone);
+        this._base.add_child(this._windows);
+        this._inner.add_child(this._base);
         this.add_child(this._inner);
         this._effect = new Clutter.ShaderEffect();
         this._effect.set_shader_source(FRAG);
@@ -288,6 +294,14 @@ class GlassPane extends St.Widget {
         this._inner.set_position(-pad, -pad);
         this._inner.set_size(w + 2 * pad, h + 2 * pad);
         this._inner.set_clip(0, 0, w + 2 * pad, h + 2 * pad);
+        this._base.set_size(w + 2 * pad, h + 2 * pad);
+        if (p.bgblur > 0 && !this._blurFx) {
+            this._blurFx = new Shell.BlurEffect({mode: Shell.BlurMode.ACTOR, radius: p.bgblur, brightness: 1.0});
+            this._base.add_effect(this._blurFx);
+        } else if (this._blurFx) {
+            this._blurFx.radius = p.bgblur;
+            this._blurFx.enabled = p.bgblur > 0;
+        }
         this._clone.set_position(-(ax - pad), -(ay - pad));
         this._windows.set_position(-(ax - pad), -(ay - pad));
         const f = (k, v) => this._effect.set_uniform_value(k, floatValue(v));
@@ -298,7 +312,7 @@ class GlassPane extends St.Widget {
         f('u_w', w); f('u_h', h); f('u_pad', pad);
         f('u_radius', p.radius); f('u_band', p.band); f('u_falloff', p.falloff); f('u_n', p.n); f('u_z', p.z);
         f('u_ior', p.ior); f('u_disp', p.disp); f('u_chroma', p.chroma); f('u_blur', p.blur);
-        f('u_tint', p.tint); f('u_bright', p.bright); f('u_contrast', p.contrast); f('u_sat', p.sat);
+        f('u_tint', p.tint); f('u_dim', p.dim); f('u_bright', p.bright); f('u_contrast', p.contrast); f('u_sat', p.sat);
         f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow);
         f('u_spec', p.spec); f('u_shin', p.shin); f('u_sheen', p.sheen); f('u_light', p.light);
         f('u_ao', p.ao); f('u_aor', p.aor); f('u_shr', p.shr); f('u_shi', p.shi);
