@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-28
+- Ticket #135: like the reference, the smallest size of a small control shows only its icon (the tile is the circle); a wider tile adds the name beside the icon.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-27
 - Ticket #135: Tile glass panes stay on their tiles while the menu opens (checked every frame).
 

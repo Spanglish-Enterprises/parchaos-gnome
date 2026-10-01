@@ -654,3 +654,15 @@ StWidget:drop {
   border-color: transparent;
   box-shadow: none;
 }
+
+/* Icon-only small tile (as in the reference): the tile is the circle, no inner disc until it is on. */
+.parchaos-controls-small-icononly .parchaos-controls-circle {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.parchaos-controls-small-icononly .parchaos-controls-circle:checked,
+.parchaos-controls-small-icononly .parchaos-controls-circle.checked {
+  background-color: #ffffff;
+}

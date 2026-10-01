@@ -160,6 +160,25 @@ function smallToggle(source, label, onActivate) {
     l.x_align = Clutter.ActorAlign.CENTER;
     box.add_child(l);
     t.add_child(box);
+    // Like the reference: the smallest size shows just the icon; a wider tile adds the name beside it.
+    t._smallLayout = (cols, rows) => {
+        const iconOnly = cols === 1 && rows === 1;
+        l.visible = !iconOnly;
+        t.set_style_class_name(`parchaos-controls-tile parchaos-controls-small${iconOnly ? ' parchaos-controls-small-icononly' : ''}`);
+        if (cols >= 2 && rows === 1) {
+            box.orientation = Clutter.Orientation.HORIZONTAL;
+            box.set_style('spacing: 10px;');
+            l.x_align = Clutter.ActorAlign.START;
+            l.y_align = Clutter.ActorAlign.CENTER;
+            circle.x_align = Clutter.ActorAlign.START;
+            circle.y_align = Clutter.ActorAlign.CENTER;
+        } else {
+            box.orientation = Clutter.Orientation.VERTICAL;
+            box.set_style(null);
+            l.x_align = Clutter.ActorAlign.CENTER;
+            circle.x_align = Clutter.ActorAlign.CENTER;
+        }
+    };
     return t;
 }
 
@@ -585,6 +604,7 @@ const ControlsPanel = GObject.registerClass({
                     placed = true;
                 }
             }
+            item.widget._smallLayout?.(item.cols, item.rows);
             item.badge.visible = this._editing;
             item.resizeHandle.visible = this._editing && item.sizes.length > 1;
             item.overlay.visible = this._editing;
