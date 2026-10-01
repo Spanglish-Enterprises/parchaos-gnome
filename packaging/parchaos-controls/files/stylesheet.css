@@ -686,3 +686,16 @@ StWidget:drop {
 
 .parchaos-controls-whatsnew { padding: 12px 14px; border-radius: 18px; background-color: rgba(255,255,255,0.10); spacing: 4px; margin-bottom: 6px; }
 .parchaos-controls-whatsnew-title { font-weight: bold; font-size: 13px; }
+
+/* Edit mode with glass: the two windows are clear, our glass is drawn behind them. */
+.parchaos-controls-panel.parchaos-glass-edit,
+.parchaos-controls-picker.parchaos-glass-edit {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.parchaos-controls-panel.parchaos-glass-edit .parchaos-controls-tile {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.10);
+}

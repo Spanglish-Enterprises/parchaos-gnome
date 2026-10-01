@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        36%{?dist}
+Release:        37%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-37
+- Ticket #148: Edit Controls windows (Control Center and picker) are glass in edit mode; new Battery control that only exists when the machine has a battery.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-36
 - Ticket #148: picker gets a What's New card and a Suggestions row; gallery tiles wrap in plain rows (fixes overlapping sections).
 

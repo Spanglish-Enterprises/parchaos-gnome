@@ -231,6 +231,7 @@ const ITEM_SIZES = {
     'display': [[4, 1], [2, 1]],
     'sound': [[4, 1], [2, 1]],
     'power': SWITCH_SIZES,
+    'battery': [[2, 1]],
     'screenshot': SMALL_SIZES,
     'settings': SMALL_SIZES,
     'lock': SMALL_SIZES,
@@ -249,6 +250,7 @@ const ITEM_META = {
     'display': {category: 'Display', icon: 'display-brightness-symbolic'},
     'sound': {category: 'Sound and Media', icon: 'audio-volume-high-symbolic'},
     'power': {category: 'System', icon: 'power-profile-balanced-symbolic'},
+    'battery': {category: 'System', icon: 'battery-level-80-symbolic'},
     'screenshot': {category: 'Shortcuts', icon: 'applets-screenshooter-symbolic'},
     'settings': {category: 'Shortcuts', icon: 'emblem-system-symbolic'},
     'lock': {category: 'Shortcuts', icon: 'system-lock-screen-symbolic'},
@@ -359,6 +361,8 @@ const ControlsPanel = GObject.registerClass({
                 openSettings('power');
             }));
         }
+        // Only on machines that have a battery (a desktop PC shows none).
+        add('battery', 'Battery', 2, 1, this._batteryTile());
         add('screenshot', 'Screenshot', 1, 1, smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
@@ -892,6 +896,39 @@ const ControlsPanel = GObject.registerClass({
         return t;
     }
 
+    _batteryTile() {
+        let proxy = null;
+        try {
+            proxy = Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null,
+                'org.freedesktop.UPower', '/org/freedesktop/UPower/devices/DisplayDevice',
+                'org.freedesktop.UPower.Device', null);
+        } catch (e) {
+            return null;
+        }
+        const get = name => proxy.get_cached_property(name)?.deepUnpack();
+        // Type 2 is a battery; IsPresent is false on a desktop.
+        if (!get('IsPresent') || get('Type') !== 2)
+            return null;
+        const t = tile(2, 1, 'parchaos-controls-focus');
+        const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER, style: 'padding: 0 14px 0 12px; spacing: 10px;'});
+        const icon = new St.Icon({icon_size: 24, style_class: 'parchaos-controls-circle-icon'});
+        row.add_child(icon);
+        const {box, t: title, s: sub} = labels('Battery', '');
+        row.add_child(box);
+        const sync = () => {
+            const pct = Math.round(get('Percentage') ?? 0);
+            const state = get('State');
+            icon.icon_name = get('IconName') ?? 'battery-symbolic';
+            title.text = `Battery ${pct}%`;
+            sub.text = state === 1 ? 'Charging' : state === 4 ? 'Fully charged' : 'On battery';
+        };
+        const id = proxy.connect('g-properties-changed', sync);
+        t.connect('destroy', () => proxy.disconnect(id));
+        sync();
+        t.add_child(row);
+        return t;
+    }
+
     _firstItem(indicator) {
         return indicator?.quickSettingsItems?.[0] ?? null;
     }
@@ -1396,6 +1433,7 @@ class ControlsButton extends PanelMenu.Button {
         const [px, py] = panel.get_transformed_position();
         // On its own layer the panel needs its own background.
         panel.remove_style_class_name('parchaos-hosted');
+        const glassOn = !!GlassPane && this._glassWanted();
         panel.dropGlass();
         this._glassLayer?.destroy();
         this._glassLayer = null;
@@ -1413,6 +1451,35 @@ class ControlsButton extends PanelMenu.Button {
         const picker = new ControlsPicker(panel);
         overlay.add_child(picker);
         picker.open();
+        // Glass behind both windows in edit mode too (as in the reference):
+        // one pane each, following them as they move or resize.
+        if (glassOn) {
+            const layer = new Clutter.Actor();
+            overlay.insert_child_below(layer, null);
+            const panes = [[panel, 34], [picker, 30]].map(([actor, radius]) => {
+                const pane = new GlassPane({});
+                pane.set({radius});
+                layer.add_child(pane);
+                actor.add_style_class_name('parchaos-glass-edit');
+                return {actor, pane};
+            });
+            const follow = () => {
+                if (!overlay.mapped)
+                    return;
+                const [ox, oy] = overlay.get_transformed_position();
+                for (const {actor, pane} of panes) {
+                    const [x, y] = actor.get_transformed_position();
+                    const [w, h] = actor.get_transformed_size();
+                    if (!Number.isFinite(x) || w <= 0 || h <= 0)
+                        continue;
+                    pane.set_position(x - ox, y - oy);
+                    pane.set_size(w, h);
+                }
+            };
+            const frame = global.stage.connect('before-update', follow);
+            overlay.connect('destroy', () => global.stage.disconnect(frame));
+            follow();
+        }
         // Front and centre, and it can be moved by its top strip.
         picker.set_size(Math.min(560, Math.round(monitor.width * 0.36)), Math.round(monitor.height * 0.72));
         const place = () => {
