@@ -88,6 +88,7 @@ Shipped: `/var/lib/parchaos/session-updated` marker (`%transfiletriggerin` in `p
 - The tickets MCP: base URL `https://www.spanglishtickets.dev/api/mcp`; long ticket ids from `list_tickets`; comments need `projectId`, `ticketId`, `body`. Keys are masked via `~/.config/claude-redact/literals`.
 
 ## 6. Open decisions / blocked
+- **Publishing `parchaos-glass` as its own public repo: deferred by the owner (2026-10-01).** Risks and prerequisites if revisited: scrub reference-desktop names from docs, comments and package text; neutral name (e.g. `parcha-glass`); keep the MIT credit/NOTICE for the liquid-glass extension; pick one licence (MIT) for our own code; never include the owner's reference screenshots; lawyer skim if commercial.
 - Remote control of the real desktop (clicks) is blocked by the harness permission check; read-only screenshots work.
 - Real-desktop confirmation of everything above is still pending: all work was checked in nested or headless shells.
 - Figma access: tool-call limit on the Starter plan; ask for frame links when more kit numbers are needed.
