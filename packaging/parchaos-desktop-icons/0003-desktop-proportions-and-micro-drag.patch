@@ -1,0 +1,42 @@
+--- a/app/stylesheet.css
++++ b/app/stylesheet.css
+@@ -18,10 +18,10 @@
+ }
+ 
+ .file-item {
+-    padding: 1px;
+-    border-radius: 10px;
++    padding: 6px;
++    border-radius: 8px;
+     border-style: solid;
+-    border-width: 3px;
++    border-width: 0px;
+     border-color: rgba(0, 0, 0, 0);
+ }
+ 
+@@ -36,7 +36,9 @@
+ /* Must put some alpha, never zero, to ensure that Gtk4 doesn't
+    ignore a "fully empty and transparent window" */
+ window.desktopwindow {
+-    background-color: rgba(0, 0, 0, 0.005);
++    background-color: rgba(0, 0, 0, 0.001);
++    border: none;
++    box-shadow: none;
+ }
+ 
+ window.testwindow {
+--- a/app/fileItem.js
++++ b/app/fileItem.js
+@@ -616,6 +616,12 @@ export var FileItem = class extends desktopIconItem.desktopIconItem {
+     }
+ 
+     _hasToRouteDragToGrid() {
++        if (this._desktopManager.isFreePlacement()) {
++            if (!this._isDirectory && !this._isSpecial && !this.trustedDesktopFile)
++                return true;
++            if (this._desktopManager.dragItem !== null && this._desktopManager.dragItem.uri === this._file.get_uri())
++                return true;
++        }
+         return this._isSelected && (this._desktopManager.dragItem !== null) && (this._desktopManager.dragItem.uri !== this._file.get_uri());
+     }
+ 
