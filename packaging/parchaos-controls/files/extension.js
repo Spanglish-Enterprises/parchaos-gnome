@@ -192,6 +192,17 @@ function mediaSource() {
 }
 
 // Where each control shows up in the picker beside the panel in edit mode.
+const CATEGORY_ICONS = {
+    'All Controls': ['view-grid-symbolic', '#8e8e93'],
+    'Connectivity': ['network-wireless-symbolic', '#0a84ff'],
+    'Sound and Media': ['audio-volume-high-symbolic', '#ff453a'],
+    'Focus': ['weather-clear-night-symbolic', '#5e5ce6'],
+    'Display': ['display-brightness-symbolic', '#0a84ff'],
+    'System': ['preferences-system-symbolic', '#8e8e93'],
+    'Shortcuts': ['emblem-system-symbolic', '#ff9f0a'],
+    'Other': ['application-x-addon-symbolic', '#30d158'],
+};
+
 const ITEM_META = {
     'connectivity': {category: 'Connectivity', icon: 'network-wireless-symbolic'},
     'media': {category: 'Sound and Media', icon: 'audio-x-generic-symbolic'},
@@ -930,9 +941,18 @@ class ControlsPicker extends St.BoxLayout {
         const names = [...new Set(available.map(i => i.category))];
         this._categories.destroy_all_children();
         const addCategory = (label, value) => {
+            const [iconName, colour] = CATEGORY_ICONS[label] ?? CATEGORY_ICONS.Other;
+            const line = new St.BoxLayout({style: 'spacing: 10px;', x_align: Clutter.ActorAlign.START, x_expand: true});
+            const chip = new St.Bin({
+                style_class: 'parchaos-controls-category-chip',
+                style: `background-color: ${colour};`,
+                child: new St.Icon({icon_name: iconName, icon_size: 13}),
+            });
+            line.add_child(chip);
+            line.add_child(new St.Label({text: label, y_align: Clutter.ActorAlign.CENTER}));
             const b = new St.Button({
                 style_class: 'parchaos-controls-category',
-                label,
+                child: line,
                 x_align: Clutter.ActorAlign.FILL,
                 can_focus: true,
                 toggle_mode: false,
@@ -1075,14 +1095,15 @@ class ControlsButton extends PanelMenu.Button {
         const picker = new ControlsPicker(panel);
         overlay.add_child(picker);
         picker.open();
-        // Centred on the screen, kept clear of the panel.
+        // Tall window near the left edge, kept clear of the panel (as in the reference).
+        picker.set_size(Math.min(560, Math.round(monitor.width * 0.36)), Math.round(monitor.height * 0.78));
         const place = () => {
-            const [pw, ph] = picker.get_size();
-            let x = Math.round((monitor.width - pw) / 2);
+            const [pw] = picker.get_size();
+            let x = Math.min(80, Math.round(monitor.width * 0.05));
             const panelLeft = px - monitor.x;
             if (x + pw + 24 > panelLeft)
                 x = Math.max(16, panelLeft - 24 - pw);
-            picker.set_position(x, Math.max(48, Math.round((monitor.height - ph) / 2)));
+            picker.set_position(x, 48);
         };
         picker.connect('notify::allocation', place);
         place();

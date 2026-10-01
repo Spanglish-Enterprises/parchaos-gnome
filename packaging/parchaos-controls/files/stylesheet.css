@@ -546,3 +546,20 @@ StWidget:drop {
 .parchaos-light .parchaos-controls-gallery-heading {
   color: rgba(0, 0, 0, 0.55);
 }
+
+.parchaos-controls-category-chip {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 3px;
+}
+
+.parchaos-controls-category {
+  min-width: 170px;
+}
+
+.parchaos-controls-gallery-item {
+  min-width: 96px;
+  min-height: 84px;
+}
