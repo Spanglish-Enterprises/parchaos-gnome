@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        63%{?dist}
+Release:        64%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -273,6 +273,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-64
+- Ticket #148: Parcha Controls (with its Edit Controls button) now stays on in every style, including with refractive glass on; the standard Quick Settings glass is off.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-63
 - Ticket #148: new setting controls-sizes (the sizes chosen with Edit Controls).
 

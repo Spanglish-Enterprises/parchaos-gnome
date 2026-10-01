@@ -488,7 +488,7 @@ class Window(Adw.ApplicationWindow):
             description=_('Menus, Quick Settings, notifications and the dock drawn as glass that bends what is behind it.'))
         self._refraction_row = Adw.SwitchRow(
             title=_('Refractive glass'),
-            subtitle=_('Experimental. Needs more graphics power, and shows the standard Quick Settings panel instead of Parcha Controls.'))
+            subtitle=_('Experimental. Needs more graphics power. Control Center keeps its own look.'))
         self._refraction_row.connect('notify::active', self._on_refraction_toggled)
         self._desktop.connect('changed::glass-effects', lambda *_: self._sync_refraction())
         self._desktop.connect('changed::style', lambda *_: self._sync_refraction())
@@ -521,8 +521,7 @@ class Window(Adw.ApplicationWindow):
     def _offer_refraction(self):
         dialog = Adw.AlertDialog(
             heading=_('Turn on refraction too?'),
-            body=_('Refraction bends what is behind menus, panels and the dock. It needs more graphics power '
-                   'and shows the standard Quick Settings panel instead of Parcha Controls. '
+            body=_('Refraction bends what is behind menus and the dock. It needs more graphics power. '
                    'You can change this any time in Glass effects.'))
         dialog.add_response('no', _('Not Now'))
         dialog.add_response('yes', _('Turn On'))

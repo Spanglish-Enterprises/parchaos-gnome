@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: parchaos-settings\n"
 "Report-Msgid-Bugs-To: https://github.com/Spanglish-Enterprises/parchaos-"
 "gnome/issues\n"
-"POT-Creation-Date: 2026-09-30 19:09-0500\n"
+"POT-Creation-Date: 2026-10-01 12:05-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -101,8 +101,8 @@ msgstr ""
 msgid "Files, folders and the Trash that sit on the desktop."
 msgstr ""
 
-#: files/parchaos-settings:239 files/parchaos-settings:679
-#: files/parchaos-settings:704
+#: files/parchaos-settings:239 files/parchaos-settings:678
+#: files/parchaos-settings:703
 msgid "Not available"
 msgstr ""
 
@@ -252,8 +252,7 @@ msgstr ""
 
 #: files/parchaos-settings:491
 msgid ""
-"Experimental. Needs more graphics power, and shows the standard Quick "
-"Settings panel instead of Parcha Controls."
+"Experimental. Needs more graphics power. Control Center keeps its own look."
 msgstr ""
 
 #: files/parchaos-settings:513
@@ -266,260 +265,259 @@ msgstr ""
 
 #: files/parchaos-settings:524
 msgid ""
-"Refraction bends what is behind menus, panels and the dock. It needs more "
-"graphics power and shows the standard Quick Settings panel instead of Parcha "
-"Controls. You can change this any time in Glass effects."
+"Refraction bends what is behind menus and the dock. It needs more graphics "
+"power. You can change this any time in Glass effects."
 msgstr ""
 
-#: files/parchaos-settings:527
+#: files/parchaos-settings:526
 msgid "Not Now"
 msgstr ""
 
-#: files/parchaos-settings:528
+#: files/parchaos-settings:527
 msgid "Turn On"
 msgstr ""
 
-#: files/parchaos-settings:540
+#: files/parchaos-settings:539
 msgid "Passion"
 msgstr ""
 
-#: files/parchaos-settings:541
+#: files/parchaos-settings:540
 msgid "Berry"
 msgstr ""
 
-#: files/parchaos-settings:542
+#: files/parchaos-settings:541
 msgid "Sunny"
 msgstr ""
 
-#: files/parchaos-settings:543
+#: files/parchaos-settings:542
 msgid "Leaf"
 msgstr ""
 
-#: files/parchaos-settings:544
+#: files/parchaos-settings:543
 msgid "Ocean"
 msgstr ""
 
-#: files/parchaos-settings:545
+#: files/parchaos-settings:544
 msgid "Graphite"
 msgstr ""
 
-#: files/parchaos-settings:550
+#: files/parchaos-settings:549
 msgid "Folder colour"
 msgstr ""
 
-#: files/parchaos-settings:551
+#: files/parchaos-settings:550
 msgid "The colour of folders and the trash. Other icons stay as they are."
 msgstr ""
 
-#: files/parchaos-settings:552
+#: files/parchaos-settings:551
 msgid "Colour"
 msgstr ""
 
-#: files/parchaos-settings:576 files/parchaos-settings:594
+#: files/parchaos-settings:575 files/parchaos-settings:593
 msgid "Backups"
 msgstr ""
 
-#: files/parchaos-settings:579
+#: files/parchaos-settings:578
 msgid "History on this disk"
 msgstr ""
 
-#: files/parchaos-settings:580
+#: files/parchaos-settings:579
 msgid ""
 "Snapshots let you look back at your files and put them back. They live on "
 "the same disk, so they are history, not a backup."
 msgstr ""
 
-#: files/parchaos-settings:585
+#: files/parchaos-settings:584
 msgid "Snapshots are on"
 msgstr ""
 
-#: files/parchaos-settings:585
+#: files/parchaos-settings:584
 msgid "Snapshots are not set up"
 msgstr ""
 
-#: files/parchaos-settings:586
+#: files/parchaos-settings:585
 msgid ""
 "Taken every hour, and before and after each update. Open the snapshot menu "
 "in the top bar to browse them."
 msgstr ""
 
-#: files/parchaos-settings:588
+#: files/parchaos-settings:587
 msgid "They need a Btrfs disk, which this computer does not use."
 msgstr ""
 
-#: files/parchaos-settings:595
+#: files/parchaos-settings:594
 msgid "Copy your files to an external drive or a network share, on a schedule."
 msgstr ""
 
-#: files/parchaos-settings:598
+#: files/parchaos-settings:597
 msgid "Parcha Backup"
 msgstr ""
 
-#: files/parchaos-settings:599
+#: files/parchaos-settings:598
 msgid "Choose what to back up, where to, and how often."
 msgstr ""
 
-#: files/parchaos-settings:604
+#: files/parchaos-settings:603
 msgid "Parcha Backup is not installed."
 msgstr ""
 
-#: files/parchaos-settings:610 files/parchaos-settings:621
+#: files/parchaos-settings:609 files/parchaos-settings:620
 msgid "Network share login"
 msgstr ""
 
-#: files/parchaos-settings:611
+#: files/parchaos-settings:610
 msgid ""
 "If your backup drive on the network asks for a username and password, enter "
 "them here once. They are kept in your password keyring."
 msgstr ""
 
-#: files/parchaos-settings:613
+#: files/parchaos-settings:612
 msgid "Add Login…"
 msgstr ""
 
-#: files/parchaos-settings:622
+#: files/parchaos-settings:621
 msgid ""
 "Connect to the share and remember the login, so Parcha Backup can use it."
 msgstr ""
 
-#: files/parchaos-settings:624
+#: files/parchaos-settings:623
 msgid "Share address, like smb://nas/backups"
 msgstr ""
 
-#: files/parchaos-settings:625
+#: files/parchaos-settings:624
 msgid "Username"
 msgstr ""
 
-#: files/parchaos-settings:626
+#: files/parchaos-settings:625
 msgid "Domain (leave empty if none)"
 msgstr ""
 
-#: files/parchaos-settings:627
+#: files/parchaos-settings:626
 msgid "Password"
 msgstr ""
 
-#: files/parchaos-settings:631
+#: files/parchaos-settings:630
 msgid "Cancel"
 msgstr ""
 
-#: files/parchaos-settings:632
+#: files/parchaos-settings:631
 msgid "Connect"
 msgstr ""
 
-#: files/parchaos-settings:642
+#: files/parchaos-settings:641
 msgid "That is not a share address. Use smb://server/share."
 msgstr ""
 
-#: files/parchaos-settings:645
+#: files/parchaos-settings:644
 msgid "Enter the username for the share."
 msgstr ""
 
-#: files/parchaos-settings:647
+#: files/parchaos-settings:646
 msgid "Connecting…"
 msgstr ""
 
-#: files/parchaos-settings:651
+#: files/parchaos-settings:650
 msgid "Connected. The login is saved."
 msgstr ""
 
-#: files/parchaos-settings:662
+#: files/parchaos-settings:661
 msgid "Privacy"
 msgstr ""
 
-#: files/parchaos-settings:665
+#: files/parchaos-settings:664
 msgid "Network access"
 msgstr ""
 
-#: files/parchaos-settings:666
+#: files/parchaos-settings:665
 msgid ""
 "Turn a switch off to keep that app off the network. It takes effect the next "
 "time the app starts. A blocked app cannot reach the internet or your local "
 "network."
 msgstr ""
 
-#: files/parchaos-settings:669
+#: files/parchaos-settings:668
 msgid "Find an app"
 msgstr ""
 
-#: files/parchaos-settings:674 files/parchaos-settings:701
+#: files/parchaos-settings:673 files/parchaos-settings:700
 msgid "Loading apps..."
 msgstr ""
 
-#: files/parchaos-settings:680
+#: files/parchaos-settings:679
 msgid "The network access helper is not installed."
 msgstr ""
 
-#: files/parchaos-settings:687 files/parchaos-settings:711
-#: files/parchaos-settings:719 files/parchaos-settings:776
+#: files/parchaos-settings:686 files/parchaos-settings:710
+#: files/parchaos-settings:718 files/parchaos-settings:775
 msgid "Could not list apps"
 msgstr ""
 
-#: files/parchaos-settings:697
+#: files/parchaos-settings:696
 msgid "App permissions"
 msgstr ""
 
-#: files/parchaos-settings:698
+#: files/parchaos-settings:697
 msgid ""
 "What each Flatpak app is allowed to use. A switch appears only for things "
 "the app asks for. Changes apply the next time the app starts."
 msgstr ""
 
-#: files/parchaos-settings:724
+#: files/parchaos-settings:723
 msgid "No Flatpak apps with permissions to change"
 msgstr ""
 
-#: files/parchaos-settings:728
+#: files/parchaos-settings:727
 msgid "Network"
 msgstr ""
 
-#: files/parchaos-settings:728
+#: files/parchaos-settings:727
 msgid "Internet and local network"
 msgstr ""
 
-#: files/parchaos-settings:729
+#: files/parchaos-settings:728
 msgid "Files"
 msgstr ""
 
-#: files/parchaos-settings:729
+#: files/parchaos-settings:728
 msgid "Your home folder and other drives"
 msgstr ""
 
-#: files/parchaos-settings:730
+#: files/parchaos-settings:729
 msgid "Devices"
 msgstr ""
 
-#: files/parchaos-settings:730
+#: files/parchaos-settings:729
 msgid "Cameras, game controllers and other hardware"
 msgstr ""
 
-#: files/parchaos-settings:761 files/parchaos-settings:812
+#: files/parchaos-settings:760 files/parchaos-settings:811
 msgid "The change was not saved."
 msgstr ""
 
-#: files/parchaos-settings:763
+#: files/parchaos-settings:762
 #, python-format
 msgid "Saved. Restart %s for this to apply."
 msgstr ""
 
-#: files/parchaos-settings:782
+#: files/parchaos-settings:781
 msgid "Flatpak app"
 msgstr ""
 
-#: files/parchaos-settings:782
+#: files/parchaos-settings:781
 msgid "App"
 msgstr ""
 
-#: files/parchaos-settings:816
+#: files/parchaos-settings:815
 #, python-format
 msgid "%s is blocked from the network. Restart it for this to apply."
 msgstr ""
 
-#: files/parchaos-settings:819
+#: files/parchaos-settings:818
 #, python-format
 msgid "%s can use the network again. Restart it for this to apply."
 msgstr ""
 
-#: files/parchaos-settings:854
+#: files/parchaos-settings:853
 #, python-format
 msgid "Could not change it: %s"
 msgstr ""

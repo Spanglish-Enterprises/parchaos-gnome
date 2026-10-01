@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        25%{?dist}
+Release:        26%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-26
+- Ticket #148: Refractive glass wording no longer says Control Center is replaced; Spanish updated.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-25
 - Ticket #116: Backups page gets "Network share login": enter the share address, username, optional domain and password once; it connects and keeps the login in the password keyring, so Parcha Backup can use the share. Failures are explained in plain words.
 

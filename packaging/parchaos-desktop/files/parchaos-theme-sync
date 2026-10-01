@@ -200,6 +200,9 @@ def extension_call(method, uuid):
 BLUR_DOCK_KEY = '/org/gnome/shell/extensions/blur-my-shell/dash-to-dock/blur'
 
 GLASS_PRESET = {
+    # Parcha Controls draws its own panel, so the glass for the standard
+    # Quick Settings panel is off.
+    'enable-quick-settings-glass': False,
     'quick-settings-apply-to': 1,
     'quick-settings-glass-expand': 0,
     'quick-settings-x-offset': 0,
@@ -253,9 +256,8 @@ GLASS_PRESET = {
 class GlassEffects:
     """The optional glass-effects switch (ParchaOS Settings > Appearance).
 
-    On: the glass extension runs, drawing the standard Quick Settings toggles
-    as separate pieces of glass, and Parcha Controls steps aside so that panel
-    is the one shown. Off: back to Parcha Controls.
+    On: the glass extension runs (menus, dock, notifications). Parcha Controls
+    stays on in both cases so Edit Controls is always available.
     """
 
     def __init__(self, desktop):
@@ -314,7 +316,8 @@ class GlassEffects:
         if self.desktop.get_boolean('glass-effects'):
             self.apply_preset()
             extension_call('EnableExtension', GLASS_EXTENSION)
-            extension_call('DisableExtension', CONTROLS_EXTENSION)
+            # Parcha Controls stays on: Edit Controls must be there in every style.
+            extension_call('EnableExtension', CONTROLS_EXTENSION)
         elif changed:
             subprocess.run(['dconf', 'reset', BLUR_DOCK_KEY], check=False)
             extension_call('DisableExtension', GLASS_EXTENSION)
