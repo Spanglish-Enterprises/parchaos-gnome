@@ -1331,7 +1331,19 @@ class ControlsPicker extends St.BoxLayout {
         shape.add_child(new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon', x_expand: true, y_align: Clutter.ActorAlign.CENTER}));
         if (cols > 1)
             shape.add_child(new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-inline', y_align: Clutter.ActorAlign.CENTER, x_expand: true}));
-        holder.add_child(shape);
+        if (this.glass && !forDrag) {
+            // As in the reference, a gallery tile is glass too (our pane, behind the tile's content).
+            const stack = new St.Widget({layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER});
+            const pane = new GlassPane({});
+            pane.set({radius: Math.min(36, Math.min(w, h) / 2), blur: 14, tint: 0.14, dim: 0.62, disp: 20, z: 60});
+            pane.set_size(w, h);
+            stack.set_size(w, h);
+            stack.add_child(pane);
+            stack.add_child(shape);
+            holder.add_child(stack);
+        } else {
+            holder.add_child(shape);
+        }
         if (cols === 1)
             holder.add_child(new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-label', x_align: Clutter.ActorAlign.CENTER}));
         return holder;
@@ -1450,6 +1462,7 @@ class ControlsButton extends PanelMenu.Button {
         panel.set_position(px - monitor.x, py - monitor.y);
 
         const picker = new ControlsPicker(panel);
+        picker.glass = glassOn;
         overlay.add_child(picker);
         picker.open();
         overlay.set_child_above_sibling(panel, picker);

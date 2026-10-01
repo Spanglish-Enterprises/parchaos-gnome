@@ -710,3 +710,9 @@ StWidget:drop {
 
 .parchaos-controls-whatsnew { padding: 18px 20px; }
 .parchaos-controls-whatsnew-title { font-size: 20px; }
+
+.parchaos-controls-picker.parchaos-glass-edit .parchaos-controls-gallery-item {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
