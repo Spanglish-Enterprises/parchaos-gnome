@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS's own liquid glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -41,5 +41,8 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-2
+- Stronger edge lens and rim, smokier body (tuned against the reference).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #135): the GlassPane library, used by Parcha Controls for tile glass.

@@ -312,9 +312,9 @@
 }
 
 .parchaos-style-glass .parchaos-controls-slider {
-  height: 28px;
-  -barlevel-height: 28px;
-  -barlevel-background-color: rgba(153, 153, 153, 0.25);
+  height: 20px;
+  -barlevel-height: 20px;
+  -barlevel-background-color: rgba(20, 20, 24, 0.38);
   -barlevel-active-background-color: #ffffff;
   -slider-handle-radius: 0;
   -slider-handle-border-width: 0;
@@ -665,4 +665,16 @@ StWidget:drop {
 .parchaos-controls-small-icononly .parchaos-controls-circle:checked,
 .parchaos-controls-small-icononly .parchaos-controls-circle.checked {
   background-color: #ffffff;
+}
+
+/* With our own glass the text is always white on the smoky pane, like the reference. */
+.parchaos-controls-panel.parchaos-glass-on,
+.parchaos-controls-panel.parchaos-glass-on StLabel,
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-title {
+  color: #ffffff;
+}
+
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-subtitle,
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small-label {
+  color: rgba(255, 255, 255, 0.72);
 }

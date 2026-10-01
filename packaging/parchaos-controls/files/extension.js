@@ -730,6 +730,7 @@ const ControlsPanel = GObject.registerClass({
             }
             if (!pane) {
                 pane = new GlassPane({});
+                pane.hide();
                 layer.add_child(pane);
                 this._glassPanes.set(item.id, pane);
             }
@@ -737,9 +738,9 @@ const ControlsPanel = GObject.registerClass({
             const [pw, ph] = w.get_transformed_size();
             if (!Number.isFinite(x) || pw <= 0 || ph <= 0)
                 continue;
-            pane.show();
             pane.set_position(x - lx, y - ly);
             pane.set_size(pw, ph);
+            pane.show();
             pane.set({radius: Math.min(36, Math.min(pw, ph) / 2)});
         }
     }
