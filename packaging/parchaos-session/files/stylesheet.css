@@ -146,3 +146,11 @@
   border: none;
   box-shadow: none;
 }
+
+/* Notification banners and the volume popup are clear over ParchaOS glass (Glass style with refraction). */
+.parchaos-glass-banner .notification-banner,
+.parchaos-glass-banner .osd-window {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

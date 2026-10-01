@@ -231,6 +231,8 @@ GLASS_PRESET = {
     # Menus and popovers are drawn by ParchaOS's own glass (parchaos-session); the extension's
     # menu glass is off so the two do not stack.
     'enable-dock-glass': False,
+    'enable-notification-glass': False,
+    'enable-osd-glass': False,
     'enable-menu-glass': False,
     'enable-extra-menu-glass': False,
     'enable-menu-animation': False,

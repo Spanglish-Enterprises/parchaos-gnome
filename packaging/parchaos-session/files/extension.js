@@ -103,6 +103,7 @@ export default class ParchaSessionExtension extends Extension {
         this._hookUpdateNotice();
         this._hookMotion();
         this._hookDockGlass();
+        this._hookBannerGlass();
         this._hookControlCenterIcon();
 
         if (!restoredThisLogin) {
@@ -351,6 +352,82 @@ export default class ParchaSessionExtension extends Extension {
         }
     }
 
+    // A GlassPane that follows another actor (found each frame by `find`), under that actor's top-level
+    // container. Used for notification banners and the volume/brightness popup.
+    _follow(key, find, params) {
+        if (!GlassPane)
+            return;
+        const wanted = () => (this._settings.get_boolean('glass-effects') ?? false) &&
+            this._settings.get_string('style') !== 'classic';
+        this._followers ??= new Map();
+        const entry = {pane: null, id: 0};
+        this._followers.set(key, entry);
+        entry.id = global.stage.connect('before-update', () => {
+            if (this._dockDead)
+                return;
+            try {
+                const target = wanted() ? find() : null;
+                if (!target || !target.mapped || !target.visible) {
+                    entry.pane?.hide();
+                    return;
+                }
+                let top = target;
+                while (top.get_parent() && top.get_parent() !== Main.uiGroup)
+                    top = top.get_parent();
+                if (top.get_parent() !== Main.uiGroup)
+                    return;
+                if (!entry.pane) {
+                    entry.pane = new GlassPane(params);
+                    entry.pane.hide();
+                    Main.uiGroup.insert_child_below(entry.pane, top);
+                }
+                const [x, y] = target.get_transformed_position();
+                const [w, h] = target.get_transformed_size();
+                const [px, py] = Main.uiGroup.get_transformed_position();
+                if (!Number.isFinite(x) || w <= 1 || h <= 1)
+                    return;
+                const kids = Main.uiGroup.get_children();
+                if (kids.indexOf(entry.pane) !== kids.indexOf(top) - 1)
+                    Main.uiGroup.set_child_below_sibling(entry.pane, top);
+                entry.pane.set_position(x - px, y - py);
+                entry.pane.set_size(w, h);
+                entry.pane.set({radius: Math.min(params.radius ?? 20, h / 2)});
+                entry.pane.opacity = Math.min(target.opacity, top.opacity);
+                entry.pane.show();
+            } catch (e) {
+                if (!String(e).includes('disposed'))
+                    throw e;
+            }
+        });
+    }
+
+    _hookBannerGlass() {
+        if (!GlassPane || !this._settings)
+            return;
+        const sync = () => {
+            if (this._dockDead)
+                return;
+            const on = (this._settings.get_boolean('glass-effects') ?? false) &&
+                this._settings.get_string('style') !== 'classic';
+            if (on)
+                Main.uiGroup.add_style_class_name('parchaos-glass-banner');
+            else
+                Main.uiGroup.remove_style_class_name('parchaos-glass-banner');
+        };
+        this._bannerClassIds = [this._settings.connect('changed::glass-effects', sync),
+            this._settings.connect('changed::style', sync)];
+        sync();
+        this._follow('banner', () => this._findByClass(Main.messageTray, 'notification-banner'),
+            {radius: 22, band: 14, disp: 18, blur: 9, tint: 0.28, shr: 18, shi: 0.1, dark: 1});
+        this._follow('osd', () => {
+            for (const w of Main.osdWindowManager?._osdWindows ?? []) {
+                if (w.visible && w.opacity > 0)
+                    return this._findByClass(w, 'osd-window') ?? w;
+            }
+            return null;
+        }, {radius: 26, band: 16, disp: 18, blur: 9, tint: 0.28, shr: 18, shi: 0.1, dark: 1});
+    }
+
     _findByClass(actor, cls) {
         if (actor.has_style_class_name?.(cls))
             return actor;
@@ -362,7 +439,22 @@ export default class ParchaSessionExtension extends Extension {
         return null;
     }
 
+    _dropFollowers() {
+        for (const id of this._bannerClassIds ?? [])
+            this._settings?.disconnect(id);
+        this._bannerClassIds = [];
+        if (!this._dockDead)
+            Main.uiGroup.remove_style_class_name('parchaos-glass-banner');
+        for (const entry of this._followers?.values() ?? []) {
+            global.stage.disconnect(entry.id);
+            if (!this._dockDead)
+                entry.pane?.destroy();
+        }
+        this._followers?.clear();
+    }
+
     _dropDockGlass() {
+        this._dropFollowers();
         if (this._dockFrame)
             global.stage.disconnect(this._dockFrame);
         this._dockFrame = 0;
