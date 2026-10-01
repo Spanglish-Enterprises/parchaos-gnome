@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -48,6 +48,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-17
+- Parcha Controls draws its own glass panel, so the session extension's menu glass leaves it alone.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
 - Ticket #20: with refractive glass on, the standard Quick Settings button gets the same toggles icon at its right end, so the Control Center button stays in the same place when refraction is turned on or off.
 

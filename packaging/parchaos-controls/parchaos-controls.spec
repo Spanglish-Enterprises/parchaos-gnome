@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-18
+- Ticket #148: Edit Controls gets the picker panel beside Control Center: a search box, categories, a gallery of the controls that are not in the panel, and Done; clicking a control puts it back. Fixes in this build are checked against the reference screenshot.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-17
 - Ticket #148: Edit Controls redesigned. Each tile gets a round - (or +) badge on
   its corner and wiggles slightly; drag a tile onto another to move it. The old

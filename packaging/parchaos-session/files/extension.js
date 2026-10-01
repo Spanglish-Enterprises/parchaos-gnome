@@ -207,6 +207,9 @@ export default class ParchaSessionExtension extends Extension {
             'parchaos-menu-dark', 'parchaos-menu-light'])
             pointer.remove_style_class_name(name);
         const content = this._menuContent(pointer);
+        // Parcha Controls draws its own glass panel.
+        if (content?.has_style_class_name('parchaos-controls-popup'))
+            return;
         const effect = pointer._parchaosBlur;
         if (!glass || !content) {
             if (effect) {

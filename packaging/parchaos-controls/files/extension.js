@@ -191,8 +191,24 @@ function mediaSource() {
     return _mediaSource;
 }
 
+// Where each control shows up in the picker beside the panel in edit mode.
+const ITEM_META = {
+    'connectivity': {category: 'Connectivity', icon: 'network-wireless-symbolic'},
+    'media': {category: 'Sound and Media', icon: 'audio-x-generic-symbolic'},
+    'focus': {category: 'Focus', icon: 'notifications-disabled-symbolic'},
+    'dark-mode': {category: 'Display', icon: 'weather-clear-night-symbolic'},
+    'night-light': {category: 'Display', icon: 'night-light-symbolic'},
+    'display': {category: 'Display', icon: 'display-brightness-symbolic'},
+    'sound': {category: 'Sound and Media', icon: 'audio-volume-high-symbolic'},
+    'power': {category: 'System', icon: 'power-profile-balanced-symbolic'},
+    'screenshot': {category: 'Shortcuts', icon: 'applets-screenshooter-symbolic'},
+    'settings': {category: 'Shortcuts', icon: 'emblem-system-symbolic'},
+    'lock': {category: 'Shortcuts', icon: 'system-lock-screen-symbolic'},
+    'external': {category: 'Other', icon: 'application-x-addon-symbolic'},
+};
+
 const ControlsPanel = GObject.registerClass({
-    Signals: {'request-close': {}},
+    Signals: {'request-close': {}, 'edit-changed': {}, 'items-changed': {}},
 }, class ControlsPanel extends St.BoxLayout {
     _init(qs) {
         super._init({
@@ -233,8 +249,11 @@ const ControlsPanel = GObject.registerClass({
         // ones can be saved (Edit Controls).
         this._items = [];
         const add = (id, name, cols, rows, widget) => {
-            if (widget)
-                this._items.push({id, name, cols, rows, widget, hidden: false});
+            if (widget) {
+                const meta = ITEM_META[id] ?? ITEM_META.external;
+                this._items.push({id, name, cols, rows, widget, hidden: false,
+                    category: meta.category, icon: meta.icon});
+            }
         };
 
         add('connectivity', 'Network', 2, 2, this._connectivityTile());
@@ -510,7 +529,33 @@ const ControlsPanel = GObject.registerClass({
         this._editing = editing;
         this._endDrag();
         this._editButton.label = editing ? 'Done' : 'Edit Controls';
+        // The picker has its own Done.
+        this._editButton.visible = this._canEdit && !editing;
         this._layout();
+        this.emit('edit-changed');
+    }
+
+    get editing() {
+        return this._editing;
+    }
+
+    finishEditing() {
+        this._setEditing(false);
+    }
+
+    // The controls not shown in the panel, for the picker.
+    availableItems() {
+        this._ordered();
+        return this._items.filter(i => i.hidden);
+    }
+
+    // Put a control from the picker back into the panel.
+    addItem(item) {
+        const ordered = this._ordered();
+        item.hidden = false;
+        this._save(ordered);
+        this._layout();
+        this.emit('items-changed');
     }
 
     _save(ordered) {
@@ -523,6 +568,7 @@ const ControlsPanel = GObject.registerClass({
         item.hidden = !item.hidden;
         this._save(ordered);
         this._layout();
+        this.emit('items-changed');
     }
 
     // Quick Settings keeps no list of extension-added items; they're the
@@ -803,6 +849,144 @@ const ControlsPanel = GObject.registerClass({
     }
 });
 
+
+// ---------------------------------------------------------------------
+// The picker beside the panel in edit mode (ticket #148): a search box, the
+// categories of controls, a gallery of the controls that are not in the
+// panel, and Done. Clicking a control puts it back in the panel.
+// ---------------------------------------------------------------------
+const ControlsPicker = GObject.registerClass(
+class ControlsPicker extends St.BoxLayout {
+    _init(panel) {
+        super._init({
+            style_class: 'parchaos-controls-panel parchaos-controls-picker',
+            orientation: Clutter.Orientation.VERTICAL,
+        });
+        this._panel = panel;
+        this._category = null;
+        this._query = '';
+        applyStyleClass(this, styleSettings());
+        if (panel.has_style_class_name('parchaos-light'))
+            this.add_style_class_name('parchaos-light');
+        this.add_effect(new Shell.BlurEffect({radius: 60, brightness: 0.9, mode: Shell.BlurMode.BACKGROUND}));
+
+        this._search = new St.Entry({
+            style_class: 'parchaos-controls-search',
+            hint_text: 'Search Controls',
+            can_focus: true,
+        });
+        this._search.clutter_text.connect('text-changed', () => {
+            this._query = this._search.get_text().trim().toLowerCase();
+            this._refresh();
+        });
+        this.add_child(this._search);
+
+        const body = new St.BoxLayout({style_class: 'parchaos-controls-picker-body', x_expand: true, y_expand: true});
+        this._categories = new St.BoxLayout({
+            style_class: 'parchaos-controls-categories',
+            orientation: Clutter.Orientation.VERTICAL,
+        });
+        this._gallery = new St.BoxLayout({
+            style_class: 'parchaos-controls-gallery',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+        });
+        body.add_child(this._categories);
+        body.add_child(new St.ScrollView({
+            child: this._gallery,
+            x_expand: true,
+            y_expand: true,
+            overlay_scrollbars: true,
+            style_class: 'parchaos-controls-gallery-scroll',
+        }));
+        this.add_child(body);
+
+        const footer = new St.BoxLayout({style_class: 'parchaos-controls-picker-footer'});
+        footer.add_child(new St.Label({
+            text: 'Click a control to put it in Control Center.',
+            style_class: 'parchaos-controls-picker-hint',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        const done = new St.Button({style_class: 'parchaos-controls-done', label: 'Done', can_focus: true});
+        done.connect('clicked', () => this._panel.finishEditing());
+        footer.add_child(done);
+        this.add_child(footer);
+
+        panel.connect('items-changed', () => this._refresh());
+    }
+
+    open() {
+        this._query = '';
+        this._search.set_text('');
+        this._category = null;
+        this._refresh();
+        this.show();
+    }
+
+    _refresh() {
+        const available = this._panel.availableItems();
+        const names = [...new Set(available.map(i => i.category))];
+        this._categories.destroy_all_children();
+        const addCategory = (label, value) => {
+            const b = new St.Button({
+                style_class: 'parchaos-controls-category',
+                label,
+                x_align: Clutter.ActorAlign.FILL,
+                can_focus: true,
+                toggle_mode: false,
+            });
+            if (this._category === value)
+                b.add_style_pseudo_class('active');
+            b.connect('clicked', () => {
+                this._category = value;
+                this._refresh();
+            });
+            this._categories.add_child(b);
+        };
+        addCategory('All Controls', null);
+        for (const name of names)
+            addCategory(name, name);
+
+        this._gallery.destroy_all_children();
+        const shown = available.filter(i =>
+            (!this._category || i.category === this._category) &&
+            (!this._query || i.name.toLowerCase().includes(this._query) ||
+                i.category.toLowerCase().includes(this._query)));
+        if (available.length === 0) {
+            this._gallery.add_child(new St.Label({
+                text: 'Everything is already in Control Center.',
+                style_class: 'parchaos-controls-picker-hint',
+            }));
+            return;
+        }
+        if (shown.length === 0) {
+            this._gallery.add_child(new St.Label({
+                text: 'No controls match.',
+                style_class: 'parchaos-controls-picker-hint',
+            }));
+            return;
+        }
+        for (const category of [...new Set(shown.map(i => i.category))]) {
+            this._gallery.add_child(new St.Label({text: category, style_class: 'parchaos-controls-gallery-heading'}));
+            const row = new St.BoxLayout({style_class: 'parchaos-controls-gallery-row'});
+            for (const item of shown.filter(i => i.category === category)) {
+                const cell = new St.Button({
+                    style_class: 'parchaos-controls-gallery-item',
+                    can_focus: true,
+                    child: new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL}),
+                });
+                const inner = cell.child;
+                inner.add_child(new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon'}));
+                inner.add_child(new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-label'}));
+                cell.connect('clicked', () => this._panel.addItem(item));
+                row.add_child(cell);
+            }
+            this._gallery.add_child(row);
+        }
+    }
+});
+
 const ControlsButton = GObject.registerClass(
 class ControlsButton extends PanelMenu.Button {
     _init(ext) {
@@ -849,11 +1033,25 @@ class ControlsButton extends PanelMenu.Button {
         this._destroyPanel();
         this._panel = new ControlsPanel(this._qs);
         this._panel.connect('request-close', () => this.menu.close());
-        this._holder.set_child(this._panel);
+        // In edit mode a picker sits to the left of the panel.
+        this._row = new St.BoxLayout({style_class: 'parchaos-controls-row-holder'});
+        this._picker = new ControlsPicker(this._panel);
+        this._picker.hide();
+        this._row.add_child(this._picker);
+        this._row.add_child(this._panel);
+        this._panel.connect('edit-changed', () => {
+            if (this._panel.editing)
+                this._picker.open();
+            else
+                this._picker.hide();
+        });
+        this._holder.set_child(this._row);
     }
 
     _destroyPanel() {
-        this._panel?.destroy();
+        this._row?.destroy();
+        this._row = null;
+        this._picker = null;
         this._panel = null;
     }
 

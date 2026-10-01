@@ -421,3 +421,126 @@ StWidget:drop {
 .parchaos-light .parchaos-controls-edit:hover {
   background-color: rgba(0, 0, 0, 0.13);
 }
+
+/* The picker beside the panel in edit mode (reference: Control Center's edit
+   mode: search box, categories, gallery, hint line and a blue Done). */
+.parchaos-controls-row-holder {
+  spacing: 12px;
+}
+
+.parchaos-controls-picker {
+  min-width: 420px;
+  min-height: 380px;
+}
+
+.parchaos-controls-search {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.parchaos-controls-picker-body {
+  spacing: 10px;
+}
+
+.parchaos-controls-categories {
+  min-width: 130px;
+  spacing: 2px;
+}
+
+.parchaos-controls-category {
+  padding: 6px 12px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.parchaos-controls-category:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.parchaos-controls-category:active,
+.parchaos-controls-category:checked {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.parchaos-controls-gallery-scroll {
+  min-height: 300px;
+}
+
+.parchaos-controls-gallery {
+  spacing: 8px;
+  padding: 2px 4px;
+}
+
+.parchaos-controls-gallery-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.parchaos-controls-gallery-row {
+  spacing: 10px;
+}
+
+.parchaos-controls-gallery-item {
+  padding: 10px 12px;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  min-width: 78px;
+}
+
+.parchaos-controls-gallery-item:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.parchaos-controls-gallery-icon {
+  icon-size: 22px;
+  margin-bottom: 4px;
+}
+
+.parchaos-controls-gallery-label {
+  font-size: 11px;
+  text-align: center;
+}
+
+.parchaos-controls-picker-footer {
+  margin-top: 10px;
+  spacing: 10px;
+}
+
+.parchaos-controls-picker-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.parchaos-controls-done {
+  padding: 6px 20px;
+  border-radius: 999px;
+  background-color: #0a84ff;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.parchaos-controls-done:hover {
+  background-color: #3b9bff;
+}
+
+.parchaos-light .parchaos-controls-search,
+.parchaos-light .parchaos-controls-category,
+.parchaos-light .parchaos-controls-gallery-label {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.parchaos-light .parchaos-controls-picker-hint,
+.parchaos-light .parchaos-controls-gallery-heading {
+  color: rgba(0, 0, 0, 0.55);
+}
