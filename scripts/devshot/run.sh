@@ -27,9 +27,10 @@ dconf write /org/gnome/shell/disable-extension-version-validation true
 dconf write /org/gnome/shell/welcome-dialog-last-shown-version "'999'"
 IFS=';' read -ra KV <<< "\${SETTINGS:-}"
 for kv in "\${KV[@]}"; do [ -n "\$kv" ] && dconf write \${kv%% *} "\${kv#* }"; done
-exec gnome-shell --headless --virtual-monitor 1600x900 --wayland-display=devshot-0 --no-x11 > $W/shell.log 2>&1
+if [ -n "\${DEVKIT:-}" ]; then exec gnome-shell --devkit --wayland --no-x11 > $W/shell.log 2>&1; else exec gnome-shell --headless --virtual-monitor 1600x900 --wayland-display=devshot-0 --no-x11 > $W/shell.log 2>&1; fi
 IN
-env -u DBUS_SESSION_BUS_ADDRESS -u WAYLAND_DISPLAY -u DISPLAY HOME=$H XDG_CONFIG_HOME=$H/.config XDG_DATA_HOME=$H/.local/share \
-  XDG_CACHE_HOME=$H/.cache XDG_STATE_HOME=$H/.local/state XDG_RUNTIME_DIR=$W/run DEVSHOT_OUT=$OUT SETTINGS="${SETTINGS:-}" \
+if [ -n "${DEVKIT:-}" ]; then RT=/run/user/$(id -u); WL=${WAYLAND_DISPLAY:-wayland-0}; else RT=$W/run; WL=; fi
+env -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY ${WL:+WAYLAND_DISPLAY=$WL} ${DEVKIT:+DEVKIT=1} HOME=$H XDG_CONFIG_HOME=$H/.config XDG_DATA_HOME=$H/.local/share \
+  XDG_CACHE_HOME=$H/.cache XDG_STATE_HOME=$H/.local/state XDG_RUNTIME_DIR=$RT DEVSHOT_OUT=$OUT SETTINGS="${SETTINGS:-}" \
   timeout "${2:-90}" dbus-run-session -- bash "$W/inner.sh"
 cp "$W/shell.log" "$OUT/shell.log"; echo "out: $OUT (log $OUT/shell.log)"
