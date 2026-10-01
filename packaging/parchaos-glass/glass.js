@@ -201,7 +201,7 @@ export const GLASS_DEFAULTS = {
     radius: 34, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
     blur: 8.0, tint: 0.3, tintc: [0.07, 0.07, 0.08], bright: 1.0, contrast: 1.0, sat: 1.2,
     rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, spec: 0.0, shin: 42, sheen: 0.0,
-    light: 135 * Math.PI / 180, ao: 0.3, aor: 16, shr: 36, shi: 0.2, pad: 44,
+    light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
 };
 
 function floatValue(v) {

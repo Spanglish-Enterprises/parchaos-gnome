@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        ParchaOS's own liquid glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -41,6 +41,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-4
+- Ticket #135: much softer drop shadow and inner edge shadow (they were far stronger than the reference).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-3
 - Ticket #135: The tint follows the backdrop: smoky on a dark wallpaper, a light milky veil on a bright one (the reference's light and dark looks).
 
