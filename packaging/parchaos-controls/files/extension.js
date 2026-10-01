@@ -219,11 +219,11 @@ const CATEGORY_ICONS = {
 const SWITCH_SIZES = [[1, 1]];
 const SMALL_SIZES = [[1, 1], [2, 1]];
 const ITEM_SIZES = {
-    'wifi': [[2, 1], [1, 1]],
-    'bluetooth': [[2, 1], [1, 1]],
-    'wired': [[2, 1], [1, 1]],
-    'vpn': [[2, 1], [1, 1]],
-    'airplane': [[2, 1], [1, 1]],
+    'wifi': [[2, 1], [1, 1], [2, 2]],
+    'bluetooth': [[2, 1], [1, 1], [2, 2]],
+    'wired': [[2, 1], [1, 1], [2, 2]],
+    'vpn': [[2, 1], [1, 1], [2, 2]],
+    'airplane': [[2, 1], [1, 1], [2, 2]],
     'media': [[2, 2], [2, 1]],
     'focus': [[2, 1], [1, 1]],
     'dark-mode': SWITCH_SIZES,
@@ -919,9 +919,14 @@ const ControlsPanel = GObject.registerClass({
         t.add_child(row);
         t._smallLayout = (cols, rows) => {
             const iconOnly = cols === 1 && rows === 1;
+            const tall = rows >= 2;
             text.visible = !iconOnly;
+            // Tall: the icon on top, the name and the state under it.
+            row.orientation = tall ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
+            row.y_align = Clutter.ActorAlign.CENTER;
+            circle.x_align = tall ? Clutter.ActorAlign.START : Clutter.ActorAlign.FILL;
             row.x_align = iconOnly ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.FILL;
-            row.set_style(iconOnly ? null : 'padding: 0 14px 0 12px; spacing: 10px;');
+            row.set_style(iconOnly ? null : (tall ? 'padding: 14px; spacing: 12px;' : 'padding: 0 14px 0 12px; spacing: 10px;'));
             t.set_style_class_name(`parchaos-controls-tile parchaos-controls-connection${iconOnly ? ' parchaos-controls-small-icononly' : ''}`);
         };
         return t;
