@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-25
+- Ticket #116: Backups page gets "Network share login": enter the share address, username, optional domain and password once; it connects and keeps the login in the password keyring, so Parcha Backup can use the share. Failures are explained in plain words.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-24
 - Ticket #20: Glass effects rules. Turning Glass on offers refraction (Not Now / Turn On); turning Glass off turns refraction off; turning refraction off leaves Glass on; the refraction switch is greyed out with Classic. Spanish strings added.
 

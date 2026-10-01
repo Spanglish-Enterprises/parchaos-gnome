@@ -29,6 +29,73 @@ gettext.textdomain('parchaos-settings')
 _ = gettext.gettext
 
 
+def normalize_share(text):
+    """The address of a network share, as the file system layer wants it.
+
+    Accepts smb://server/share, a Windows-style \\\\server\\share, or just
+    server/share (taken as a Windows share). Returns None for anything else.
+    """
+    text = (text or '').strip()
+    if not text:
+        return None
+    if '://' in text:
+        scheme = text.split('://', 1)[0].lower()
+        return text if scheme in ('smb', 'nfs', 'sftp', 'ftp', 'dav', 'davs') else None
+    text = text.replace('\\', '/').lstrip('/')
+    return 'smb://' + text if '/' in text else None
+
+
+def share_error_text(error):
+    """A plain-words reason for a failed mount."""
+    message = (getattr(error, 'message', None) or str(error)).lower()
+    if 'permission denied' in message or 'password' in message or 'logon' in message:
+        return _('The share did not accept that username or password.')
+    if 'timed out' in message or 'timeout' in message or 'refused' in message:
+        return _('The server did not answer. Check the address and that it is switched on.')
+    if 'not found' in message or 'no such' in message or 'resolve' in message or 'host' in message:
+        return _('That server or share could not be found. Check the address.')
+    return getattr(error, 'message', None) or str(error)
+
+
+def mount_share(uri, username, domain, password, done):
+    """Connect to a network share with a login and remember it in the keyring.
+
+    done(None) on success, done(error) otherwise. The login is given up front;
+    if the share asks again the answer was wrong, so the attempt stops instead
+    of asking forever.
+    """
+    operation = Gio.MountOperation()
+    operation.set_username(username)
+    if domain:
+        operation.set_domain(domain)
+    operation.set_password(password)
+    operation.set_password_save(Gio.PasswordSave.PERMANENTLY)
+    asked = []
+
+    def ask(op, _message, _user, _domain, _flags):
+        asked.append(1)
+        op.reply(Gio.MountOperationResult.ABORTED)
+
+    operation.connect('ask-password', ask)
+    target = Gio.File.new_for_uri(uri)
+
+    def finished(source, result):
+        try:
+            source.mount_enclosing_volume_finish(result)
+        except GLib.Error as err:
+            if err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.ALREADY_MOUNTED):
+                done(None)
+            elif asked:
+                done(GLib.Error.new_literal(Gio.io_error_quark(), 'Permission denied',
+                                            Gio.IOErrorEnum.PERMISSION_DENIED))
+            else:
+                done(err)
+            return
+        done(None)
+
+    target.mount_enclosing_volume(Gio.MountMountFlags.NONE, operation, None, finished)
+
+
 def keyboard_style():
     try:
         out = subprocess.run([KEYBOARD_STYLE, 'status'], capture_output=True,
@@ -539,7 +606,55 @@ class Window(Adw.ApplicationWindow):
             button.connect('clicked', lambda *_: info.launch([], None))
         brow.add_suffix(button)
         backups.add(brow)
+        share = Adw.ActionRow(
+            title=_('Network share login'),
+            subtitle=_('If your backup drive on the network asks for a username and password, enter them here once. '
+                       'They are kept in your password keyring.'))
+        add = Gtk.Button(label=_('Add Login\u2026'), valign=Gtk.Align.CENTER)
+        add.connect('clicked', lambda *_: self._share_login_dialog())
+        share.add_suffix(add)
+        backups.add(share)
         return page
+
+    def _share_login_dialog(self):
+        dialog = Adw.AlertDialog(
+            heading=_('Network share login'),
+            body=_('Connect to the share and remember the login, so Parcha Backup can use it.'))
+        group = Adw.PreferencesGroup()
+        address = Adw.EntryRow(title=_('Share address, like smb://nas/backups'))
+        user = Adw.EntryRow(title=_('Username'))
+        domain = Adw.EntryRow(title=_('Domain (leave empty if none)'))
+        password = Adw.PasswordEntryRow(title=_('Password'))
+        for entry in (address, user, domain, password):
+            group.add(entry)
+        dialog.set_extra_child(group)
+        dialog.add_response('cancel', _('Cancel'))
+        dialog.add_response('connect', _('Connect'))
+        dialog.set_response_appearance('connect', Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response('connect')
+        dialog.set_close_response('cancel')
+
+        def answered(dlg, result):
+            if dlg.choose_finish(result) != 'connect':
+                return
+            uri = normalize_share(address.get_text())
+            if uri is None:
+                self.add_toast(Adw.Toast(title=_('That is not a share address. Use smb://server/share.')))
+                return
+            if not user.get_text().strip():
+                self.add_toast(Adw.Toast(title=_('Enter the username for the share.')))
+                return
+            self.add_toast(Adw.Toast(title=_('Connecting\u2026')))
+
+            def finished(error):
+                if error is None:
+                    self.add_toast(Adw.Toast(title=_('Connected. The login is saved.')))
+                else:
+                    self.add_toast(Adw.Toast(title=share_error_text(error)))
+
+            mount_share(uri, user.get_text().strip(), domain.get_text().strip(), password.get_text(), finished)
+
+        dialog.choose(self, None, answered)
 
     # Which apps may use the network (ticket #126). The list comes from
     # parchaos-app-network; a change applies the next time the app starts.
