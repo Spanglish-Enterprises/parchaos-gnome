@@ -228,6 +228,10 @@ GLASS_PRESET = {
     # Menus and popovers (ticket #135): the stock look is a 60 px bubble that
     # springs open. Tight rounded panes and no springing; Quick Settings keeps
     # its own animation.
+    # Menus and popovers are drawn by ParchaOS's own glass (parchaos-session); the extension's
+    # menu glass is off so the two do not stack.
+    'enable-menu-glass': False,
+    'enable-extra-menu-glass': False,
     'enable-menu-animation': False,
     'enable-panel-menu-animation': False,
     'menu-glass-expand': 0,

@@ -1,6 +1,6 @@
 # Glass, Control Center and menus: plan and hand-over spec
 
-Status: 2026-10-01. Tickets #135 (Glass), #148 (Edit Controls), #131 (dock), #169 (upgrade breakage).
+Status: 2026-10-01 (updated after menus moved to our glass). Tickets #135 (Glass), #148 (Edit Controls), #131 (dock), #169 (upgrade breakage).
 Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test rigs must never touch the real desktop).
 
 ## 1. Owner requirements (settled, do not re-ask)
@@ -24,9 +24,9 @@ Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test ri
 |---|---|---|
 | Own glass library | `packaging/parchaos-glass/glass.js` | `GlassPane` actor: a `Clutter.Clone` of the background group and the window group through a `Clutter.ShaderEffect`. Signed-distance rounded rect, superellipse bezel, Snell refraction through the bezel normal, edge lens that builds to the rim, rim light along the light direction, inner shadow away from the light, cool drop shadow. Model follows the MIT liquid-glass extension (credit in `NOTICE`). |
 | Control Center | `packaging/parchaos-controls/files/extension.js` | `ControlsPanel` (tiles, edit mode), `ControlsPicker` (separate window), `ControlsButton` (top-bar button). With refraction on, one `GlassPane` per tile. |
-| Menus | `packaging/parchaos-session/files` (`_dressMenu`, `_hookMotion`), `parchaos-global-menu` | Glass menu style classes and fades. Still use the third-party glass for the pane when refraction is on. |
+| Menus | `packaging/parchaos-session/files` (`_dressMenu`, `_glassBehind`, `_hookMotion`), `parchaos-global-menu` | Style classes, fades, and our own `GlassPane` behind each menu when refraction is on. |
 | Preset | `packaging/parchaos-desktop/files/parchaos-theme-sync` (`GLASS_PRESET`) | Writes the third-party extension's settings. Retire as our glass takes over. |
-| Third-party glass | `packaging/parchaos-glass-effects` (MIT, liquid-glass by Ryosuke Watanabe) | Still draws dock, notifications, menus. Settings schema path is `/org/gnome/shell/extensions/liquid-glass/` (not the uuid path). |
+| Third-party glass | `packaging/parchaos-glass-effects` (MIT, liquid-glass by Ryosuke Watanabe) | Still draws dock and notifications (menus and Control Center are ours). Settings schema path is `/org/gnome/shell/extensions/liquid-glass/` (not the uuid path). |
 
 Settings keys: `org.parchaos.desktop` `style` (glass|classic), `glass-effects` (refraction), `controls-order`, `controls-hidden`,
 `controls-sizes` (`id=COLSxROWS`).
@@ -42,6 +42,7 @@ Settings keys: `org.parchaos.desktop` `style` (glass|classic), `glass-effects` (
 - Clutter 50 notes: `new Clutter.ShaderEffect()` (no `shader_type`); uniforms need `GObject.Value` (float/int); vec3 uniforms are not
   supported from GJS, pass three floats; `St.BoxLayout` has no `vertical`/`spacing`/`children` properties (use `orientation`, style `spacing`, `add_child`).
 - `scripts/smoke-test.sh` must pass; `scripts/lint.sh` must pass; add a spec changelog entry and bump Release for every package change.
+- Shadows: keep the drop shadow (`shi`) and inner shadow (`ao`) low; the owner flagged stronger-than-reference shadows once.
 - **Real-desktop checks** are read-only screenshots through the portal
   (`gdbus call --session -d org.freedesktop.portal.Desktop -o /org/freedesktop/portal/desktop -m org.freedesktop.portal.Screenshot.Screenshot "" "{'interactive': <false>}"` writes `~/Pictures/Screenshot-N.png`). No remote control is available (see section 6).
 
@@ -50,9 +51,9 @@ Settings keys: `org.parchaos.desktop` `style` (glass|classic), `glass-effects` (
 ### 4.1 Glass: match the reference (ticket #135)
 Done: working shader, Control Center tiles. To do:
 1. **Tune to the macOS reference** (Control Center photo in the ticket and `dropbox`): stronger edge lens and the visible warped ring ~15% in; rim hot-spots at top and bottom; dark smoky body; verify with a grid test image and with the real wallpaper.
-2. **Adaptive text colour**: white on dark glass whatever the wallpaper; sample the backdrop behind each pane.
-3. **Slider look**: thin glass track with a bright pill, not a flat white blob (Display and Sound).
-4. **Menus**: draw menu panes with `GlassPane` (12 px corners, UI-kit sizes already in `parchaos-session/files/stylesheet.css`), then stop depending on the third-party extension for menus.
+2. **Backdrop-adaptive tint**: DONE (smoky on dark, warm grey veil on bright, text stays white). Still to do: per-pane text colour sampling for very bright wallpapers; warm refraction tint like the light reference.
+3. **Slider look**: thin track and thin fill DONE; still to do: Display slider (no tile yet), end icons, and the AirDrop-style round button on the Sound tile.
+4. **Menus**: DONE for refraction mode: `parchaos-session` `_glassBehind()` puts a `GlassPane` under each menu's content (follows it per frame, fades with it, 14 px corners); the third-party menu glass is switched off in the preset. To do: left-align menus to their button like the reference, per-item hover pill on glass, popovers (weather, calendar) check, Classic style unchanged.
 5. **Dock and notifications** with `GlassPane`; then remove `parchaos-glass-effects` and the preset in `parchaos-theme-sync`.
 6. **GNOME 51 / Fedora 45**: re-check `Clutter.ShaderEffect`, `global.stage.context`, clone sources; extensions already declare 51.
 7. **GPU cost**: measure (nested shell with `GALLIUM_HUD` or `intel_gpu_top` equivalent); add a switch in Settings if heavy. Refraction stays opt-in (Settings asks when Glass is turned on).

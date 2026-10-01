@@ -30,6 +30,14 @@ import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extension
 
 const LOGIND = 'org.freedesktop.login1';
 
+// ParchaOS glass (parchaos-glass), optional.
+let GlassPane = null;
+try {
+    ({GlassPane} = await import(`file://${GLib.getenv('PARCHAOS_GLASS_JS') ?? '/usr/share/parchaos-glass/glass.js'}`));
+} catch (e) {
+    console.log(`parchaos-session: glass library not available (${e.message})`);
+}
+
 const SAVE_INTERVAL = 30;          // seconds
 const PLACE_WINDOW_S = 90;         // how long to wait for restored windows
 const STATE_DIR = GLib.build_filenamev([GLib.get_user_state_dir(), 'parchaos']);
@@ -225,6 +233,9 @@ export default class ParchaSessionExtension extends Extension {
                 pointer._parchaosBlurHost?.remove_effect(effect);
                 pointer._parchaosBlur = null;
             }
+            // Our own glass sits behind the menu; the menu's own pane is clear.
+            if (GlassPane)
+                this._glassBehind(pointer, content, dark);
             return;
         }
         pointer.add_style_class_name('parchaos-glass-menu');
@@ -239,6 +250,45 @@ export default class ParchaSessionExtension extends Extension {
             pointer._parchaosBlurHost = content;
             content.add_effect(pointer._parchaosBlur);
         }
+    }
+
+    // A GlassPane under the menu's content, kept on it every frame and faded with the menu.
+    _glassBehind(pointer, content, dark) {
+        if (pointer._parchaosGlass)
+            return;
+        const pane = new GlassPane({radius: 14, band: 14, disp: 24, blur: 10, tint: 0.3, shr: 22, shi: 0.12,
+            dark: dark ? 1 : 0});
+        pane.hide();
+        const parent = pointer.get_parent() ?? Main.uiGroup;
+        parent.insert_child_below(pane, pointer);
+        pointer._parchaosGlass = pane;
+        pointer.add_style_class_name('parchaos-glass-own');
+        const sync = () => {
+            if (!pointer.mapped || !content.mapped) {
+                pane.hide();
+                return;
+            }
+            const [x, y] = content.get_transformed_position();
+            const [w, h] = content.get_transformed_size();
+            const [px, py] = (pane.get_parent() ?? Main.uiGroup).get_transformed_position();
+            if (!Number.isFinite(x) || w <= 0 || h <= 0)
+                return;
+            pane.set_position(x - px, y - py);
+            pane.set_size(w, h);
+            pane.opacity = pointer.opacity;
+            pane.show();
+        };
+        const id = global.stage.connect('before-update', sync);
+        pointer.connect('destroy', () => {
+            global.stage.disconnect(id);
+            pane.destroy();
+            pointer._parchaosGlass = null;
+        });
+        pointer.connect('notify::visible', () => {
+            if (!pointer.visible)
+                pane.hide();
+        });
+        sync();
     }
 
     _menuContent(actor) {

@@ -124,3 +124,15 @@
   color: rgba(0, 0, 0, 0.8);
   background-color: rgba(0, 0, 0, 0.1);
 }
+
+/* Our own glass draws the pane; the menu's content is clear over it. */
+.popup-menu-boxpointer.parchaos-glass-own .popup-menu-content {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.popup-menu-boxpointer.parchaos-glass-own.parchaos-menu-dark .popup-menu-item,
+.popup-menu-boxpointer.parchaos-glass-own.parchaos-menu-dark .popup-menu-item StLabel {
+  color: #ffffff;
+}

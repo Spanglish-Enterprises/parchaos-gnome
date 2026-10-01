@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        18%{?dist}
+Release:        19%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -23,6 +23,7 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
+Requires:       parchaos-glass
 Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 
 %description
@@ -48,6 +49,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-19
+- Ticket #135: with refractive glass on, menus and popovers are drawn with ParchaOS's own glass (parchaos-glass) behind a clear menu, following the menu while it fades.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-18
 - Ticket #169: after an update the session extension also checks the menu bar and, if any of its six menus are missing, turns the global menu extension off and on to rebuild it. The count is logged ("parchaos-session: menu bar buttons present").
 

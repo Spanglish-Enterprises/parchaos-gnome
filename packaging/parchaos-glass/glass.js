@@ -160,9 +160,9 @@ void main() {
     float bl = dot(col, vec3(0.299, 0.587, 0.114));
     float bright = smoothstep(0.38, 0.72, bl);
     vec3 smoke = vec3(u_tr, u_tg, u_tb);
-    vec3 milk = vec3(0.86, 0.84, 0.82);
+    vec3 milk = vec3(0.56, 0.54, 0.53);
     col = mix(col, mix(smoke, milk, bright), mix(u_tint, u_tint * 0.55, bright));
-    col = mix(col, col * 0.78, bright * 0.5);
+    col = mix(col, col * 0.68, bright * 0.6);
 
     // light
     vec3 Ld = normalize(vec3(cos(la), sin(la), 0.38));
