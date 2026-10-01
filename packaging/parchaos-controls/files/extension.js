@@ -125,26 +125,6 @@ function labels(title, subtitle) {
 
 // One row of the connectivity tile: circle toggle + title/subtitle. The
 // text opens the matching Settings panel.
-function connectivityRow(source, settingsPanel, close) {
-    const row = new St.BoxLayout({style_class: 'parchaos-controls-row', x_expand: true});
-    row.add_child(circleFor(source, 32));
-    const {box, t, s} = labels();
-    const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
-    const sync = () => {
-        t.text = source.title ?? '';
-        s.text = source.subtitle || (source.checked ? 'On' : 'Off');
-    };
-    source.connectObject('notify::title', sync, 'notify::subtitle', sync,
-        'notify::checked', sync, row);
-    sync();
-    text.connect('clicked', () => {
-        close();
-        openSettings(settingsPanel);
-    });
-    row.add_child(text);
-    return row;
-}
-
 function smallToggle(source, label, onActivate) {
     const t = tile(1, 1, 'parchaos-controls-small');
     const box = new St.BoxLayout({
@@ -167,7 +147,7 @@ function smallToggle(source, label, onActivate) {
         t.set_style_class_name(`parchaos-controls-tile parchaos-controls-small${iconOnly ? ' parchaos-controls-small-icononly' : ''}`);
         if (cols >= 2 && rows === 1) {
             box.orientation = Clutter.Orientation.HORIZONTAL;
-            box.set_style('spacing: 10px;');
+            box.set_style('spacing: 10px; padding: 0 12px;');
             l.x_align = Clutter.ActorAlign.START;
             l.y_align = Clutter.ActorAlign.CENTER;
             circle.x_align = Clutter.ActorAlign.START;
@@ -234,23 +214,34 @@ const CATEGORY_ICONS = {
 
 // Sizes a control can take, in grid cells (columns x rows); the first is the
 // default. Edit Controls cycles through them with the corner handle.
-const SMALL_SIZES = [[1, 1], [2, 1], [2, 2]];
+// Plain on/off switches (Dark Mode, Night Light, Power Mode) have one size; shortcut buttons
+// (Screenshot, Settings, Lock) can be icon-only or wide.
+const SWITCH_SIZES = [[1, 1]];
+const SMALL_SIZES = [[1, 1], [2, 1]];
 const ITEM_SIZES = {
-    'connectivity': [[2, 2], [2, 1]],
+    'wifi': [[2, 1], [1, 1]],
+    'bluetooth': [[2, 1], [1, 1]],
+    'wired': [[2, 1], [1, 1]],
+    'vpn': [[2, 1], [1, 1]],
+    'airplane': [[2, 1], [1, 1]],
     'media': [[2, 2], [2, 1]],
     'focus': [[2, 1], [1, 1]],
-    'dark-mode': SMALL_SIZES,
-    'night-light': SMALL_SIZES,
+    'dark-mode': SWITCH_SIZES,
+    'night-light': SWITCH_SIZES,
     'display': [[4, 1], [2, 1]],
     'sound': [[4, 1], [2, 1]],
-    'power': SMALL_SIZES,
+    'power': SWITCH_SIZES,
     'screenshot': SMALL_SIZES,
     'settings': SMALL_SIZES,
     'lock': SMALL_SIZES,
 };
 
 const ITEM_META = {
-    'connectivity': {category: 'Connectivity', icon: 'network-wireless-symbolic'},
+    'wifi': {category: 'Connectivity', icon: 'network-wireless-symbolic'},
+    'bluetooth': {category: 'Connectivity', icon: 'bluetooth-active-symbolic'},
+    'wired': {category: 'Connectivity', icon: 'network-wired-symbolic'},
+    'vpn': {category: 'Connectivity', icon: 'network-vpn-symbolic'},
+    'airplane': {category: 'Connectivity', icon: 'airplane-mode-symbolic'},
     'media': {category: 'Sound and Media', icon: 'audio-x-generic-symbolic'},
     'focus': {category: 'Focus', icon: 'notifications-disabled-symbolic'},
     'dark-mode': {category: 'Display', icon: 'weather-clear-night-symbolic'},
@@ -318,7 +309,18 @@ const ControlsPanel = GObject.registerClass({
             }
         };
 
-        add('connectivity', 'Network', 2, 2, this._connectivityTile());
+        const net = this._qs._network;
+        const connections = [
+            ['wifi', 'Wi-Fi', net?._wirelessToggle, 'wifi', 'Off'],
+            ['bluetooth', 'Bluetooth', this._firstItem(this._qs._bluetooth), 'bluetooth', 'Off'],
+            ['wired', 'Wired', net?._wiredToggle, 'network', 'Off'],
+            ['vpn', 'VPN', net?._vpnToggle, 'network', 'Off'],
+            ['airplane', 'Airplane Mode', this._firstItem(this._qs._rfkill), 'wifi', 'Off'],
+        ];
+        for (const [id, name, source, panel, sub] of connections) {
+            if (source?.visible)
+                add(id, name, 2, 1, this._connectionTile(source, panel, sub));
+        }
         add('media', 'Now playing', 2, 2, this._nowPlayingTile());
 
         const dnd = this._firstItem(qs._doNotDisturb);
@@ -891,39 +893,34 @@ const ControlsPanel = GObject.registerClass({
         return indicator?.quickSettingsItems?.[0] ?? null;
     }
 
-    _connectivityTile() {
-        const t = tile(2, 2, 'parchaos-controls-connectivity');
-        const box = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
-            style_class: 'parchaos-controls-connectivity-box',
-            x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
+    // One tile per connection (Wi-Fi, Bluetooth, Wired, ...), each resizable like the reference: the
+    // wide size shows the name and state beside the icon, the small size is just the icon.
+    _connectionTile(source, settingsPanel, defaultSub) {
+        const t = tile(2, 1, 'parchaos-controls-connection');
+        const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER, style: 'padding: 0 14px 0 12px;'});
+        const circle = circleFor(source, 36);
+        row.add_child(circle);
+        const {box, t: title, s} = labels();
+        const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
+        const sync = () => {
+            title.text = source.title ?? '';
+            s.text = source.subtitle || (source.checked ? 'On' : defaultSub);
+        };
+        source.connectObject('notify::title', sync, 'notify::subtitle', sync, 'notify::checked', sync, row);
+        sync();
+        text.connect('clicked', () => {
+            this.emit('request-close');
+            openSettings(settingsPanel);
         });
-        const net = this._qs._network;
-        const rows = [];
-        const wifi = net?._wirelessToggle;
-        const wired = net?._wiredToggle;
-        if (wifi?.visible)
-            rows.push([wifi, 'wifi']);
-        else if (wired?.visible)
-            rows.push([wired, 'network']);
-        const bt = this._firstItem(this._qs._bluetooth);
-        if (bt?.visible)
-            rows.push([bt, 'bluetooth']);
-        if (wifi?.visible && wired?.visible)
-            rows.push([wired, 'network']);
-        const vpn = net?._vpnToggle;
-        if (vpn?.visible && rows.length < 3)
-            rows.push([vpn, 'network']);
-        const airplane = this._firstItem(this._qs._rfkill);
-        if (airplane?.visible && rows.length < 3)
-            rows.push([airplane, 'wifi']);
-        for (const [source, panel] of rows.slice(0, 3)) {
-            box.add_child(connectivityRow(source, panel, () => this.emit('request-close')));
-        }
-        if (rows.length === 0)
-            box.add_child(new St.Label({style_class: 'parchaos-controls-subtitle', text: 'No network devices'}));
-        t.add_child(box);
+        row.add_child(text);
+        t.add_child(row);
+        t._smallLayout = (cols, rows) => {
+            const iconOnly = cols === 1 && rows === 1;
+            text.visible = !iconOnly;
+            row.x_align = iconOnly ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.FILL;
+            row.set_style(iconOnly ? null : 'padding: 0 14px 0 12px;');
+            t.set_style_class_name(`parchaos-controls-tile parchaos-controls-connection${iconOnly ? ' parchaos-controls-small-icononly' : ''}`);
+        };
         return t;
     }
 
