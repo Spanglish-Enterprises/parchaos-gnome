@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -48,6 +48,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-18
+- Ticket #169: after an update the session extension also checks the menu bar and, if any of its six menus are missing, turns the global menu extension off and on to rebuild it. The count is logged ("parchaos-session: menu bar buttons present").
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-17
 - Parcha Controls draws its own glass panel, so the session extension's menu glass leaves it alone.
 

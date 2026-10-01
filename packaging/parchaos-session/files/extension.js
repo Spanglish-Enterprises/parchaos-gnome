@@ -406,6 +406,18 @@ export default class ParchaSessionExtension extends Extension {
             log(`parchaos-session: after update, wallpaper state ${this._backgroundState()}`);
             Main.layoutManager._updateBackgrounds();
             log(`parchaos-session: wallpaper rebuilt ${this._backgroundState()}`);
+            // The menu bar came up with only "Help" after an upgrade: rebuild it
+            // too if its buttons are gone.
+            const bar = Main.panel.statusArea;
+            const present = ['file', 'edit', 'view', 'go', 'window', 'help']
+                .filter(r => bar[`parchaos-global-menu-${r}`]).length;
+            log(`parchaos-session: menu bar buttons present ${present}/6`);
+            if (present < 6) {
+                const uuid = 'parchaos-global-menu@parchaos.org';
+                const manager = Main.extensionManager;
+                manager.disableExtension(uuid);
+                this._later(800, () => manager.enableExtension(uuid));
+            }
         } catch (e) {
             logError(e, 'parchaos-session: could not rebuild the wallpaper');
         }
