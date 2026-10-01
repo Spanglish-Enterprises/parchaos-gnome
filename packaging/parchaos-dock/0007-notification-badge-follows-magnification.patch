@@ -1,0 +1,53 @@
+--- a/dash.js
++++ b/dash.js
+@@ -923,6 +923,31 @@
+                 badge.translation_y = finalTransY * 0.3;
+             }
+ 
++            // The red notification count (the Unity-style badge) is also a
++            // sibling of the icon. It sits on the icon's top-right corner, so
++            // under the icon's magnification (which pivots near the bottom
++            // centre) the corner moves further than the icon's own offset:
++            // carry the badge along that same corner, at the icon's scale.
++            const count = data.icon._indicator?._indicators
++                ?.map(i => i._notificationBadgeBin).find(b => b);
++            if (count) {
++                const iconBox = targetActor.get_allocation_box();
++                const badgeBox = count.get_allocation_box();
++                const pivotX = iconBox.x1 + (iconBox.x2 - iconBox.x1) * 0.5;
++                const pivotY = iconBox.y1 + (iconBox.y2 - iconBox.y1) * (this._position === St.Side.BOTTOM ? 0.9 : 0.5);
++                const centreX = (badgeBox.x1 + badgeBox.x2) / 2;
++                const centreY = (badgeBox.y1 + badgeBox.y2) / 2;
++                count.remove_transition('scale-x');
++                count.remove_transition('scale-y');
++                count.remove_transition('translation-x');
++                count.remove_transition('translation-y');
++                count.set_pivot_point(0.5, 0.5);
++                count.scale_x = data.scale;
++                count.scale_y = data.scale;
++                count.translation_x = finalTransX + (data.scale - 1) * (centreX - pivotX);
++                count.translation_y = finalTransY * 0.3 + (data.scale - 1) * (centreY - pivotY);
++            }
++
+             // The running indicator (the default style's _dot, or the
+             // drawing area of the dots styles) is also outside targetActor.
+             // Slide it along the dock with its icon; it stays at the dock
+@@ -1009,6 +1034,18 @@
+                 badge.translation_y = 0;
+             }
+ 
++            const count = icon._indicator?._indicators?.map(i => i._notificationBadgeBin).find(b => b);
++            if (count) {
++                count.remove_transition('scale-x');
++                count.remove_transition('scale-y');
++                count.remove_transition('translation-x');
++                count.remove_transition('translation-y');
++                count.scale_x = 1.0;
++                count.scale_y = 1.0;
++                count.translation_x = 0;
++                count.translation_y = 0;
++            }
++
+             for (const indicator of this._runningIndicatorActors(icon)) {
+                 indicator.remove_transition('translation-x');
+                 indicator.remove_transition('translation-y');

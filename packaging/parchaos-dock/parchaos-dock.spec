@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -99,6 +99,10 @@ Patch4:         0005-follow-parchaos-style.patch
 # St.BoxLayout; the dock did not load there. First part is upstream's own
 # fix (Meta.CursorTracker), the second follows upstream's orientation change.
 Patch5:         0006-gnome-51-compatibility.patch
+# The red notification count on an icon stayed in place while the icon
+# magnified, so it no longer sat on the icon it belongs to. Patch6 carries it
+# along the icon's corner (the same idea Patch2 uses for the running dot).
+Patch6:         0007-notification-badge-follows-magnification.patch
 
 BuildArch:      noarch
 
@@ -190,6 +194,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 106-17
+- Ticket #131: the red notification count follows its icon while the dock magnifies (it stayed put before).
+
 * Wed Sep 30 2026 ParchaOS packaging - 106-16
 - Fedora 45 prep (ticket #37): loads on GNOME Shell 51 (pointer tracking
   through Meta.CursorTracker, box orientation). Checked in a headless
