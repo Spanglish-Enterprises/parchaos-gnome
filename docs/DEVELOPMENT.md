@@ -31,6 +31,13 @@ LICENSE file behind it. Upstream components without one aren't
 packaged; ParchaOS writes its own version instead. Don't rely on a license field in a
 PKGBUILD or `DEBIAN/control` alone.
 
+## Glass, Control Center and the preview rig
+
+The plan and hand-over notes for glass, Control Center, Edit Controls, menus and the dock are in
+[glass-and-controls-spec.md](glass-and-controls-spec.md). To see a shell change on a real GPU, install `mutter-devkit` and run
+`DEVKIT=1 scripts/devshot/run.sh` (nested shell window with a private HOME and bus; the headless mode cannot judge glass).
+Every UI change is compared side by side with the owner's references before it counts as done.
+
 ## Layout
 
 ```
