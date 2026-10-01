@@ -1486,7 +1486,7 @@ class ControlsButton extends PanelMenu.Button {
         picker.set_size(Math.min(820, Math.round(monitor.width * 0.52)), Math.round(monitor.height * 0.84));
         const place = () => {
             const [pw, ph] = picker.get_size();
-            picker.set_position(Math.round(monitor.width * 0.09), Math.round((monitor.height - ph) / 2));
+            picker.set_position(Math.round((monitor.width - pw) / 2), Math.round((monitor.height - ph) / 2));
         };
         place();
 
