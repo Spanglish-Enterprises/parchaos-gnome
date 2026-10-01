@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        19%{?dist}
+Release:        20%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-20
+- Ticket #135: menus start right under their button (the theme's side margins pushed them away).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-19
 - Ticket #135: with refractive glass on, menus and popovers are drawn with ParchaOS's own glass (parchaos-glass) behind a clear menu, following the menu while it fades.
 

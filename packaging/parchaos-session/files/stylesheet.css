@@ -14,6 +14,8 @@
 .popup-menu-boxpointer.parchaos-menu-metrics .popup-menu-content {
   padding: 5px;
   border-radius: 12px;
+  /* The menu starts right under its button; the theme's side margins pushed it away. */
+  margin: 2px 0 8px 0;
 }
 
 .popup-menu-boxpointer.parchaos-menu-metrics .popup-menu-item {
