@@ -375,17 +375,28 @@ const ControlsPanel = GObject.registerClass({
         });
         badge.set_translation(-7, -7, 0);
         badge.connect('clicked', () => this._toggleHidden(item));
-        const handle = new St.Button({
+        // The resize handle of the reference: a curved white stroke on the
+        // tile's bottom-right corner, dragged to the size wanted.
+        const handle = new St.DrawingArea({
             style_class: 'parchaos-controls-resize-handle',
-            label: '\u2922',
             x_align: Clutter.ActorAlign.END,
             y_align: Clutter.ActorAlign.END,
             x_expand: true,
             y_expand: true,
-            can_focus: true,
+            reactive: true,
             visible: false,
         });
-        handle.connect('clicked', () => this._cycleSize(item));
+        handle.set_size(30, 30);
+        handle.connect('repaint', area => {
+            const cr = area.get_context();
+            const [w, h] = area.get_surface_size();
+            cr.setLineCap(1);
+            cr.setLineWidth(4);
+            cr.setSourceRGBA(1, 1, 1, 0.95);
+            cr.arc(w, h, Math.min(w, h) - 8, Math.PI, Math.PI * 1.5);
+            cr.stroke();
+            cr.$dispose();
+        });
         item.resizeHandle = handle;
         item.badge = badge;
         item.widget.add_child(badge);
@@ -591,6 +602,38 @@ const ControlsPanel = GObject.registerClass({
                 }
             }
         }
+    }
+
+    // Resizing by dragging the corner handle: the pointer position picks the
+    // nearest size the control allows.
+    beginResize(item) {
+        const [ox, oy] = item.widget.get_transformed_position();
+        return {item, ox, oy, ordered: this._ordered()};
+    }
+
+    dragResize(state, x, y) {
+        const item = state.item;
+        const step = CELL + GAP;
+        const wantC = (x - state.ox + GAP) / step;
+        const wantR = (y - state.oy + GAP) / step;
+        let best = null;
+        for (const [c, r] of item.sizes) {
+            const d = Math.abs(c - wantC) + Math.abs(r - wantR);
+            if (!best || d < best.d)
+                best = {c, r, d};
+        }
+        if (best.c !== item.cols || best.r !== item.rows) {
+            item.cols = best.c;
+            item.rows = best.r;
+            // Saved as it goes: the layout reads the saved sizes.
+            this._saveSizes(state.ordered);
+            this._layout();
+        }
+    }
+
+    endResize(state) {
+        this._saveSizes(state.ordered);
+        this.emit('items-changed');
     }
 
     _cycleSize(item) {
@@ -1256,6 +1299,11 @@ class ControlsButton extends PanelMenu.Button {
                     drag = {kind: 'window', x, y, px0, py0};
                     return Clutter.EVENT_STOP;
                 }
+                const resizing = panel._items.find(i => !i.hidden && within(hit, i.resizeHandle));
+                if (resizing) {
+                    drag = {kind: 'resize', state: panel.beginResize(resizing)};
+                    return Clutter.EVENT_STOP;
+                }
                 const item = within(hit, picker) ? picker.itemOf(hit) : null;
                 if (item) {
                     drag = {kind: 'item', item, x, y, moved: false, copy: null};
@@ -1272,6 +1320,8 @@ class ControlsButton extends PanelMenu.Button {
             if (type === Clutter.EventType.MOTION) {
                 if (drag.kind === 'window') {
                     picker.set_position(drag.px0 + x - drag.x, drag.py0 + y - drag.y);
+                } else if (drag.kind === 'resize') {
+                    panel.dragResize(drag.state, x, y);
                 } else {
                     if (!drag.moved && Math.hypot(x - drag.x, y - drag.y) < 8)
                         return Clutter.EVENT_STOP;
@@ -1288,6 +1338,8 @@ class ControlsButton extends PanelMenu.Button {
             if (type === Clutter.EventType.BUTTON_RELEASE) {
                 const done = drag;
                 drag = null;
+                if (done.kind === 'resize')
+                    panel.endResize(done.state);
                 if (done.kind === 'item') {
                     done.copy?.destroy();
                     if (!done.moved)

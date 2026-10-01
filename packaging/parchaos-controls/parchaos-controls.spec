@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        22%{?dist}
+Release:        23%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-23
+- Ticket #148: resizing works like the reference: each tile has a curved white handle on its bottom-right corner; drag it and the tile snaps to the nearest size the control allows. Replaces the click-to-cycle button.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-22
 - Ticket #148: Edit Controls. The picker window opens in the middle of the screen and can be moved by its top strip; gallery tiles show each control at its real size (round, wide or square, name under); controls can be dragged from the picker onto Control Center (or clicked); empty round slots show where controls can go; each tile has a corner handle that cycles its sizes (the size is remembered); controls not in the panel no longer sit in it dimmed, they are in the picker.
 
