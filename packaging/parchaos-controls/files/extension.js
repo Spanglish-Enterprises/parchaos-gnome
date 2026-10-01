@@ -789,16 +789,6 @@ const ControlsPanel = GObject.registerClass({
         return this._items.filter(i => i.hidden);
     }
 
-    // Put a control on the top bar (drag it to the bar; drag it off again to remove).
-    addToMenuBar(item) {
-        if (!this._desktop?.settings_schema.has_key('controls-menubar'))
-            return;
-        const list = this._desktop.get_strv('controls-menubar').filter(i => i !== item.id);
-        list.push(item.id);
-        this._desktop.set_strv('controls-menubar', list);
-        this.emit('items-changed');
-    }
-
     // Put a control from the picker back into the panel.
     addItem(item, target = null) {
         const ordered = this._ordered();
@@ -1165,7 +1155,7 @@ class ControlsPicker extends St.BoxLayout {
 
         const footer = new St.BoxLayout({style_class: 'parchaos-controls-picker-footer'});
         footer.add_child(new St.Label({
-            text: 'Drag a control into Control Center or the menu bar.',
+            text: 'Drag a control to place it in Control Center, or click it.',
             style_class: 'parchaos-controls-picker-hint',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
@@ -1477,8 +1467,6 @@ class ControlsButton extends PanelMenu.Button {
                         panel.addItem(done.item);
                     else if (inside(panel, x, y))
                         panel.addItem(done.item, panel._itemAt(x, y) ?? null);
-                    else if (y < Main.panel.height + 6)
-                        panel.addToMenuBar(done.item);
                 }
                 return Clutter.EVENT_STOP;
             }
@@ -1606,102 +1594,6 @@ class HostedControls {
     }
 }
 
-
-// ---------------------------------------------------------------------
-// Controls on the top bar (Edit Controls, "Control Center or Menu Bar"): a control dragged onto the bar
-// becomes an icon there. A toggle shows its state and switches on a click; a shortcut button runs.
-// ---------------------------------------------------------------------
-function barSpec(qs, id) {
-    const first = ind => ind?.quickSettingsItems?.[0] ?? null;
-    const net = qs._network;
-    switch (id) {
-    case 'wifi': return {source: net?._wirelessToggle, icon: 'network-wireless-symbolic'};
-    case 'wired': return {source: net?._wiredToggle, icon: 'network-wired-symbolic'};
-    case 'bluetooth': return {source: first(qs._bluetooth), icon: 'bluetooth-active-symbolic'};
-    case 'airplane': return {source: first(qs._rfkill), icon: 'airplane-mode-symbolic'};
-    case 'focus': return {source: first(qs._doNotDisturb), icon: 'notifications-disabled-symbolic'};
-    case 'dark-mode': return {source: first(qs._darkMode), icon: 'weather-clear-night-symbolic'};
-    case 'night-light': return {source: first(qs._nightLight), icon: 'night-light-symbolic'};
-    case 'power': return {source: first(qs._powerProfiles), icon: 'power-profile-balanced-symbolic'};
-    case 'screenshot': return {icon: 'applets-screenshooter-symbolic', run: () => Main.screenshotUI.open().catch(logError)};
-    case 'settings': return {icon: 'emblem-system-symbolic', run: () => openSettings()};
-    case 'lock': return {icon: 'system-lock-screen-symbolic', run: () => Main.screenShield?.lock(true)};
-    default: return null;
-    }
-}
-
-class MenuBarControls {
-    constructor(qs, ext) {
-        this._qs = qs;
-        this._ext = ext;
-        this._buttons = new Map();
-        this._settings = styleSettings();
-        this._id = this._settings?.settings_schema.has_key('controls-menubar')
-            ? this._settings.connect('changed::controls-menubar', () => this.sync()) : 0;
-        this.sync();
-    }
-
-    sync() {
-        if (!this._settings?.settings_schema.has_key('controls-menubar'))
-            return;
-        const wanted = this._settings.get_strv('controls-menubar');
-        for (const [id, button] of this._buttons) {
-            if (!wanted.includes(id)) {
-                button.destroy();
-                this._buttons.delete(id);
-            }
-        }
-        wanted.forEach((id, index) => {
-            if (this._buttons.has(id))
-                return;
-            const spec = barSpec(this._qs, id);
-            if (!spec || (spec.source && !spec.source.visible && !spec.source.quickSettingsItems && false))
-                return;
-            const button = new PanelMenu.Button(0.5, `Parcha ${id}`, true);
-            button.add_style_class_name('parchaos-controls-barbutton');
-            const icon = new St.Icon({icon_name: spec.icon, style_class: 'system-status-icon'});
-            button.add_child(icon);
-            const refresh = () => {
-                if (spec.source?.icon_name)
-                    icon.icon_name = spec.source.icon_name;
-                if (spec.source?.checked)
-                    button.add_style_pseudo_class('checked');
-                else
-                    button.remove_style_pseudo_class('checked');
-            };
-            if (spec.source) {
-                spec.source.connectObject('notify::checked', refresh, 'notify::icon-name', refresh, button);
-                refresh();
-            }
-            button.connect('button-press-event', (_a, event) => {
-                if (event.get_button() === 3) {
-                    // Right click takes it off the bar again.
-                    const left = this._settings.get_strv('controls-menubar').filter(i => i !== id);
-                    this._settings.set_strv('controls-menubar', left);
-                    return Clutter.EVENT_STOP;
-                }
-                if (spec.source)
-                    clickToggle(spec.source);
-                else
-                    spec.run?.();
-                return Clutter.EVENT_STOP;
-            });
-            Main.panel.addToStatusArea(`parchaos-bar-${id}`, button, 0, 'right');
-            this._buttons.set(id, button);
-            void index;
-        });
-    }
-
-    destroy() {
-        if (this._id)
-            this._settings?.disconnect(this._id);
-        this._id = 0;
-        for (const button of this._buttons.values())
-            button.destroy();
-        this._buttons.clear();
-    }
-}
-
 // A tiny D-Bus method for the Screenshot app in the app grid (ticket #130):
 // GNOME Shell's capture tool can only be opened from inside the Shell, and
 // the old standalone screenshot app cannot reach it on Wayland.
@@ -1755,7 +1647,6 @@ export default class ParchaControlsExtension extends Extension {
 
     _setup(qs) {
         this._qs = qs;
-        this._bar = new MenuBarControls(qs, this);
         this._settings = styleSettings();
         this._modeId = this._settings?.settings_schema.has_key('glass-effects')
             ? this._settings.connect('changed::glass-effects', () => this._remake()) : 0;
@@ -1790,8 +1681,6 @@ export default class ParchaControlsExtension extends Extension {
 
     // Switching refractive glass on or off swaps between the two forms.
     _teardown() {
-        this._bar?.destroy();
-        this._bar = null;
         if (this._modeId)
             this._settings?.disconnect(this._modeId);
         this._modeId = 0;

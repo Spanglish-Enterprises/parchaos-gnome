@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        68%{?dist}
+Release:        69%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -273,8 +273,8 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
-* Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-68
-- Ticket #148: new setting controls-menubar (controls placed on the top bar).
+* Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-69
+- Ticket #148: removed the controls-menubar setting.
 
 * Thu Oct 01 2026 ParchaOS packaging - 2026.09.23-67
 - Ticket #135: the third-party glass extension's menu glass is switched off in the refraction preset, since menus use ParchaOS's own glass.

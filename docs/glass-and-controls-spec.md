@@ -15,6 +15,7 @@ Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test ri
 - **Motion:** menus, popovers, windows: short fade in (120 ms), slightly slower fade out (200 ms), no sliding/zooming.
   Control Center keeps its own animation.
 - **Edit Controls is always available**, in every style, and has no wiggle: resize handle on every tile at once.
+- **Controls live in Control Center only.** Dragging a control onto the top bar was tried (2026-10-01) and removed: the owner never asked for it (it came from a line in the macOS reference's hint text). Do not re-add without being asked.
 - **Naming:** original ParchaOS names and wording; no reference-desktop names in the UI or docs.
 - Don't use the word "liquid" in package names or UI.
 
@@ -60,7 +61,7 @@ Done: working shader, Control Center tiles. To do:
 
 ### 4.2 Edit Controls (ticket #148)
 Done: edit mode, separate movable picker, drag from picker, placeholders, corner resize handle (drag, snaps to allowed sizes), per-connection tiles, icon-only at 1x1.
-Menu Bar option DONE: dragging a picker control onto the top bar adds it to `controls-menubar`; `MenuBarControls` (in `parchaos-controls`) makes a `PanelMenu.Button` per id (`barSpec()` maps ids to toggle sources or actions); right-click removes. Still to do for it: drag along the bar to reorder, drag off the bar to remove, menu-bar icons for sliders (Sound) and for Wi-Fi with a popover. To do:  (b) richer gallery: What's New card, Suggestions, live previews, more categories (battery, clock, ...); (c) Wi-Fi/Network tiles can also go taller (2x2); (d) drop onto a specific empty slot; (e) resize handle shape: match the reference stroke exactly (thick, hugging the corner); (f) Control Center in Classic style keeps the old flat look; confirm.
+To do: (a) **Menu Bar option**: drag a control from the picker onto the top bar; it shows as an icon in the bar (`controls-menubar` key, a `PanelMenu.Button` per control, drag off to remove); (b) richer gallery: What's New card, Suggestions, live previews, more categories (battery, clock, ...); (c) Wi-Fi/Network tiles can also go taller (2x2); (d) drop onto a specific empty slot; (e) resize handle shape: match the reference stroke exactly (thick, hugging the corner); (f) Control Center in Classic style keeps the old flat look; confirm.
 
 ### 4.3 Menu bar menus (ticket #135)
 Done: logo, app, File/Edit/View/Go/Window/Help with shortcuts, Recent Items, Force Quit. To do: apps' own menus (D-Bus menu export, like the reference's Bookmarks/Mail/Tools), Sort By / Open With submenus, Services; open-item capsule polish; shortcut symbols for all items; Quick Look wiring.
