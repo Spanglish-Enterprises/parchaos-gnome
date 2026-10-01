@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        19%{?dist}
+Release:        20%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Wed Sep 30 2026 ParchaOS packaging - 1.0.0-20
+- Ticket #148: no more square halo around the rounded Control Center and picker windows. The background blur cannot follow rounded corners, so it is gone and the panels are more opaque instead.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-19
 - Ticket #148: the Edit Controls picker is its own window in the middle of the screen (as in the reference), not attached to Control Center. Control Center stays where it was; a press outside the two, Escape or Done ends editing.
 

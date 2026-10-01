@@ -232,11 +232,9 @@ const ControlsPanel = GObject.registerClass({
         });
         syncScheme();
         this._qs = qs;
-        this.add_effect(new Shell.BlurEffect({
-            radius: 60,
-            brightness: 0.9,
-            mode: Shell.BlurMode.BACKGROUND,
-        }));
+        // No background blur: Shell.BlurEffect cannot follow rounded corners and
+        // showed square halos around the panel, so the panel is more opaque instead.
+
 
         this._desktop = styleSettings();
         this._grid = new St.Widget({layout_manager: new Clutter.GridLayout({
@@ -868,7 +866,6 @@ class ControlsPicker extends St.BoxLayout {
         applyStyleClass(this, styleSettings());
         if (panel.has_style_class_name('parchaos-light'))
             this.add_style_class_name('parchaos-light');
-        this.add_effect(new Shell.BlurEffect({radius: 60, brightness: 0.9, mode: Shell.BlurMode.BACKGROUND}));
 
         this._search = new St.Entry({
             style_class: 'parchaos-controls-search',
