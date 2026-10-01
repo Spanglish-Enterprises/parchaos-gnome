@@ -219,7 +219,8 @@ export default class ParchaSessionExtension extends Extension {
             pointer.remove_style_class_name(name);
         const content = this._menuContent(pointer);
         // Parcha Controls draws its own glass panel.
-        if (content?.has_style_class_name('parchaos-controls-popup'))
+        if (content?.has_style_class_name('parchaos-controls-popup') || pointer.has_style_class_name('parchaos-controls-popup') ||
+            content?.get_parent()?.has_style_class_name?.('parchaos-controls-popup'))
             return;
         const effect = pointer._parchaosBlur;
         if (!glass || !content) {
