@@ -270,6 +270,9 @@ const ControlsPanel = GObject.registerClass({
             if (this._glassSyncId)
                 GLib.source_remove(this._glassSyncId);
             this._glassSyncId = 0;
+            if (this._frameId)
+                global.stage.disconnect(this._frameId);
+            this._frameId = 0;
         });
         syncScheme();
         this._qs = qs;
@@ -647,12 +650,28 @@ const ControlsPanel = GObject.registerClass({
             item.widget.connect('notify::visible', () => this._queueGlassSync());
         }
         this.connect('notify::allocation', () => this._queueGlassSync());
+        // The menu can still be sliding or scaling as it opens: keep the panes on their tiles.
+        this._frameId = global.stage.connect('before-update', () => {
+            if (!this.mapped || !this._glassLayer)
+                return;
+            const [x, y] = this._glassLayer.get_transformed_position();
+            const [sx] = this._glassLayer.get_transformed_size();
+            if (x !== this._gx || y !== this._gy || sx !== this._gw) {
+                this._gx = x;
+                this._gy = y;
+                this._gw = sx;
+                this._syncGlass();
+            }
+        });
         this._queueGlassSync();
     }
 
     dropGlass() {
         if (!this._glassLayer)
             return;
+        if (this._frameId)
+            global.stage.disconnect(this._frameId);
+        this._frameId = 0;
         for (const pane of this._glassPanes.values())
             pane.destroy();
         this._glassPanes.clear();

@@ -294,6 +294,11 @@ class GlassEffects:
         keys = schema.list_keys()
         # The dock's own blur would paint over the glass.
         subprocess.run(['dconf', 'write', BLUR_DOCK_KEY, 'false'], check=False)
+        # Control Center draws its own glass; the extension must leave its menu alone.
+        if 'disabled-extra-menus' in keys:
+            mine = set(store.get_strv('disabled-extra-menus'))
+            mine.add('parchaos-controls')
+            store.set_strv('disabled-extra-menus', sorted(mine))
         for key, value in GLASS_PRESET.items():
             if key not in keys:
                 continue

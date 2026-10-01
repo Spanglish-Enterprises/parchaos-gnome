@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-27
+- Ticket #135: Tile glass panes stay on their tiles while the menu opens (checked every frame).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-26
 - Ticket #135: with refractive glass on, each tile is drawn with ParchaOS's own glass (parchaos-glass): refraction, blur, rim light and shadow, one pane per tile; the panel stays clear. The button form is used in every style.
 
