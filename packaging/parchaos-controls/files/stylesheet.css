@@ -695,7 +695,18 @@ StWidget:drop {
   box-shadow: none;
 }
 
-.parchaos-controls-panel.parchaos-glass-edit .parchaos-controls-tile {
-  background-color: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.10);
+
+/* Empty slots in edit mode: dark translucent discs, no outline (reference). */
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-placeholder {
+  background-color: rgba(20, 28, 18, 0.16);
+  border-color: transparent;
 }
+
+.parchaos-controls-gallery-heading {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 14px;
+  margin-top: 8px;
+}
+
+.parchaos-controls-whatsnew { padding: 18px 20px; }
+.parchaos-controls-whatsnew-title { font-size: 20px; }

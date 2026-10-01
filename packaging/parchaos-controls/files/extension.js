@@ -1301,7 +1301,7 @@ class ControlsPicker extends St.BoxLayout {
 
     // Lay tiles out in rows that wrap at the gallery width.
     _flow(parent, items) {
-        const budget = 232;
+        const budget = Math.max(232, (this.get_width() || 560) - 330);
         let row = null, used = 0;
         for (const item of items) {
             const w = item.defaultSize[0] * 54 + (item.defaultSize[0] - 1) * 8 + 12;
@@ -1437,6 +1437,7 @@ class ControlsButton extends PanelMenu.Button {
         panel.dropGlass();
         this._glassLayer?.destroy();
         this._glassLayer = null;
+        // As in the reference: no panel behind Control Center, every tile is its own glass.
         const overlay = new St.Widget({
             reactive: true,
             x: monitor.x,
@@ -1456,9 +1457,10 @@ class ControlsButton extends PanelMenu.Button {
         if (glassOn) {
             const layer = new Clutter.Actor();
             overlay.insert_child_below(layer, null);
-            const panes = [[panel, 34], [picker, 30]].map(([actor, radius]) => {
+            panel.useGlass(layer);
+            const panes = [[picker, 30]].map(([actor, radius]) => {
                 const pane = new GlassPane({});
-                pane.set({radius});
+                pane.set({radius, disp: 16, blur: 3, tint: 0.2, z: 40});
                 layer.add_child(pane);
                 actor.add_style_class_name('parchaos-glass-edit');
                 return {actor, pane};
@@ -1481,10 +1483,10 @@ class ControlsButton extends PanelMenu.Button {
             follow();
         }
         // Front and centre, and it can be moved by its top strip.
-        picker.set_size(Math.min(560, Math.round(monitor.width * 0.36)), Math.round(monitor.height * 0.72));
+        picker.set_size(Math.min(820, Math.round(monitor.width * 0.52)), Math.round(monitor.height * 0.84));
         const place = () => {
             const [pw, ph] = picker.get_size();
-            picker.set_position(Math.round((monitor.width - pw) / 2), Math.round((monitor.height - ph) / 2));
+            picker.set_position(Math.round(monitor.width * 0.09), Math.round((monitor.height - ph) / 2));
         };
         place();
 
