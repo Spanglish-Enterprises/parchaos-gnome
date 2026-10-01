@@ -916,6 +916,10 @@ class ControlsPicker extends St.BoxLayout {
         panel.connect('items-changed', () => this._refresh());
     }
 
+    focusSearch() {
+        this._search.grab_key_focus();
+    }
+
     open() {
         this._query = '';
         this._search.set_text('');
@@ -1033,29 +1037,114 @@ class ControlsButton extends PanelMenu.Button {
         this._destroyPanel();
         this._panel = new ControlsPanel(this._qs);
         this._panel.connect('request-close', () => this.menu.close());
-        // In edit mode a picker sits to the left of the panel.
         this._row = new St.BoxLayout({style_class: 'parchaos-controls-row-holder'});
-        this._picker = new ControlsPicker(this._panel);
-        this._picker.hide();
-        this._row.add_child(this._picker);
         this._row.add_child(this._panel);
         this._panel.connect('edit-changed', () => {
             if (this._panel.editing)
-                this._picker.open();
-            else
-                this._picker.hide();
+                this._beginEdit();
         });
         this._holder.set_child(this._row);
     }
 
     _destroyPanel() {
+        if (this._editOverlay)
+            return;
         this._row?.destroy();
         this._row = null;
+        this._panel = null;
+    }
+
+    // Edit mode (ticket #148): the picker is its own window, as in the
+    // reference, with Control Center beside it. Both live on a transparent
+    // full-screen layer that takes over input from the menu; a press outside
+    // them, Escape or Done ends editing.
+    _beginEdit() {
+        const panel = this._panel;
+        if (!panel || this._editOverlay)
+            return;
+        const monitor = Main.layoutManager.currentMonitor;
+        const [px, py] = panel.get_transformed_position();
+        const overlay = new St.Widget({
+            reactive: true,
+            x: monitor.x,
+            y: monitor.y,
+            width: monitor.width,
+            height: monitor.height,
+        });
+        this._row.remove_child(panel);
+        overlay.add_child(panel);
+        panel.set_position(px - monitor.x, py - monitor.y);
+
+        const picker = new ControlsPicker(panel);
+        overlay.add_child(picker);
+        picker.open();
+        // Centred on the screen, kept clear of the panel.
+        const place = () => {
+            const [pw, ph] = picker.get_size();
+            let x = Math.round((monitor.width - pw) / 2);
+            const panelLeft = px - monitor.x;
+            if (x + pw + 24 > panelLeft)
+                x = Math.max(16, panelLeft - 24 - pw);
+            picker.set_position(x, Math.max(48, Math.round((monitor.height - ph) / 2)));
+        };
+        picker.connect('notify::allocation', place);
+        place();
+
+        this._editOverlay = overlay;
+        this._picker = picker;
+        const finish = () => {
+            if (panel.editing)
+                panel.finishEditing();
+        };
+        overlay.connect('captured-event', (_o, event) => {
+            if (event.type() !== Clutter.EventType.BUTTON_PRESS)
+                return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            for (let a = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y); a; a = a.get_parent()) {
+                if (a === panel || a === picker)
+                    return Clutter.EVENT_PROPAGATE;
+            }
+            finish();
+            return Clutter.EVENT_STOP;
+        });
+        overlay.connect('key-press-event', (_o, event) => {
+            if (event.get_key_symbol() === Clutter.KEY_Escape) {
+                finish();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+        panel.connect('edit-changed', () => {
+            if (!panel.editing)
+                this._endEdit();
+        });
+
+        Main.uiGroup.add_child(overlay);
+        Main.uiGroup.set_child_above_sibling(overlay, null);
+        this._grab = Main.pushModal(overlay, {actionMode: Shell.ActionMode.POPUP});
+        picker.focusSearch();
+        // The menu has done its job; its panel now lives on the overlay.
+        this.menu.close(false);
+    }
+
+    _endEdit() {
+        const overlay = this._editOverlay;
+        if (!overlay)
+            return;
+        this._editOverlay = null;
+        if (this._grab) {
+            Main.popModal(this._grab);
+            this._grab = null;
+        }
+        overlay.destroy();
         this._picker = null;
+        this._row?.destroy();
+        this._row = null;
         this._panel = null;
     }
 
     destroy() {
+        this._endEdit();
         this.releaseIndicators();
         this._destroyPanel();
         super.destroy();

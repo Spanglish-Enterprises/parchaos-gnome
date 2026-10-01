@@ -429,8 +429,10 @@ StWidget:drop {
 }
 
 .parchaos-controls-picker {
-  min-width: 420px;
-  min-height: 380px;
+  min-width: 460px;
+  min-height: 420px;
+  border-radius: 20px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
 }
 
 .parchaos-controls-search {
