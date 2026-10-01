@@ -1452,6 +1452,7 @@ class ControlsButton extends PanelMenu.Button {
         const picker = new ControlsPicker(panel);
         overlay.add_child(picker);
         picker.open();
+        overlay.set_child_above_sibling(panel, picker);
         // Glass behind both windows in edit mode too (as in the reference):
         // one pane each, following them as they move or resize.
         if (glassOn) {
@@ -1460,7 +1461,7 @@ class ControlsButton extends PanelMenu.Button {
             panel.useGlass(layer);
             const panes = [[picker, 30]].map(([actor, radius]) => {
                 const pane = new GlassPane({});
-                pane.set({radius, disp: 16, blur: 3, tint: 0.2, z: 40});
+                pane.set({radius, disp: 10, blur: 1.6, tint: 0.2, z: 30});
                 layer.add_child(pane);
                 actor.add_style_class_name('parchaos-glass-edit');
                 return {actor, pane};
