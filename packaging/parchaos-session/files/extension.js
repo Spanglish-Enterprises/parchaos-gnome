@@ -300,7 +300,23 @@ export default class ParchaSessionExtension extends Extension {
             return;
         const wanted = () => (this._settings.get_boolean('glass-effects') ?? false) &&
             this._settings.get_string('style') !== 'classic';
+        this._dockDead = false;
+        // The shell is shutting down: the actors are gone, so stop touching them.
+        this._dockDeadId = Main.uiGroup.connect('destroy', () => { this._dockDead = true; this._dockPane = null; });
         this._dockFrame = global.stage.connect('before-update', () => {
+            if (this._dockDead)
+                return;
+            try {
+                this._dockStep(wanted);
+            } catch (e) {
+                if (!String(e).includes('disposed'))
+                    throw e;
+            }
+        });
+    }
+
+    _dockStep(wanted) {
+        {
             if (!wanted()) {
                 this._dockPane?.hide();
                 Main.uiGroup.get_children().find(a => a.name === 'dashtodockContainer')?.remove_style_class_name('parchaos-glass-dock');
@@ -332,7 +348,7 @@ export default class ParchaSessionExtension extends Extension {
             pane.set({radius: Math.min(26, h / 2)});
             pane.opacity = container.opacity;
             pane.show();
-        });
+        }
     }
 
     _findByClass(actor, cls) {
@@ -350,6 +366,11 @@ export default class ParchaSessionExtension extends Extension {
         if (this._dockFrame)
             global.stage.disconnect(this._dockFrame);
         this._dockFrame = 0;
+        if (this._dockDeadId && !this._dockDead)
+            Main.uiGroup.disconnect(this._dockDeadId);
+        this._dockDeadId = 0;
+        if (this._dockDead)
+            return;
         Main.uiGroup.get_children().find(a => a.name === 'dashtodockContainer')?.remove_style_class_name('parchaos-glass-dock');
         this._dockPane?.destroy();
         this._dockPane = null;

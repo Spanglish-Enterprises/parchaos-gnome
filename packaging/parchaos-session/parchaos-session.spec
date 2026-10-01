@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-22
+- Ticket #135: the dock glass stops touching the shell's actors when the shell shuts down (it logged a disposed-object error).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-21
 - Ticket #135: with refractive glass on, the dock is drawn with ParchaOS's own glass (one pane that follows the dock's background, including while icons magnify).
 
