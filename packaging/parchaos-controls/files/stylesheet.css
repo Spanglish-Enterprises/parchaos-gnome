@@ -683,3 +683,6 @@ StWidget:drop {
 .parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small .parchaos-controls-circle-icon {
   icon-size: 22px;
 }
+
+.parchaos-controls-whatsnew { padding: 12px 14px; border-radius: 18px; background-color: rgba(255,255,255,0.10); spacing: 4px; margin-bottom: 6px; }
+.parchaos-controls-whatsnew-title { font-weight: bold; font-size: 13px; }

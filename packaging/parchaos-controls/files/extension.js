@@ -1238,15 +1238,43 @@ class ControlsPicker extends St.BoxLayout {
             }));
             return;
         }
+        if (!this._category && !this._query) {
+            const card = new St.BoxLayout({style_class: 'parchaos-controls-whatsnew', orientation: Clutter.Orientation.VERTICAL});
+            card.add_child(new St.Label({text: "What's New", style_class: 'parchaos-controls-whatsnew-title'}));
+            const blurb = new St.Label({
+                text: 'Connections can be icon-only, wide or tall. Drag a corner to resize.',
+                style_class: 'parchaos-controls-picker-hint',
+            });
+            blurb.clutter_text.line_wrap = true;
+            blurb.clutter_text.ellipsize = 0;
+            card.add_child(blurb);
+            this._gallery.add_child(card);
+            const picks = ['wifi', 'bluetooth', 'focus', 'screenshot', 'lock', 'night-light']
+                .map(id => shown.find(i => i.id === id)).filter(Boolean).slice(0, 4);
+            if (picks.length) {
+                this._gallery.add_child(new St.Label({text: 'Suggestions', style_class: 'parchaos-controls-gallery-heading'}));
+                this._flow(this._gallery, picks);
+            }
+        }
         for (const category of [...new Set(shown.map(i => i.category))]) {
             this._gallery.add_child(new St.Label({text: category, style_class: 'parchaos-controls-gallery-heading'}));
-            const row = new St.Widget({layout_manager: new Clutter.FlowLayout({
-                column_spacing: 12,
-                row_spacing: 10,
-            })});
-            for (const item of shown.filter(i => i.category === category))
-                row.add_child(this._tile(item));
-            this._gallery.add_child(row);
+            this._flow(this._gallery, shown.filter(i => i.category === category));
+        }
+    }
+
+    // Lay tiles out in rows that wrap at the gallery width.
+    _flow(parent, items) {
+        const budget = 232;
+        let row = null, used = 0;
+        for (const item of items) {
+            const w = item.defaultSize[0] * 54 + (item.defaultSize[0] - 1) * 8 + 12;
+            if (!row || used + w > budget) {
+                row = new St.BoxLayout({style: 'spacing: 12px; margin-bottom: 10px;', y_expand: false, x_align: Clutter.ActorAlign.START});
+                parent.add_child(row);
+                used = 0;
+            }
+            row.add_child(this._tile(item));
+            used += w;
         }
     }
 
@@ -1259,7 +1287,7 @@ class ControlsPicker extends St.BoxLayout {
         holder._controlItem = item;
         const shape = new St.BoxLayout({
             style_class: 'parchaos-controls-gallery-item' + (cols === 1 && rows === 1 ? ' round' : ''),
-            style: `width: ${w}px; height: ${h}px;`,
+            style: `width: ${w}px; height: ${h}px; min-width: ${w}px; min-height: ${h}px;`,
             x_align: Clutter.ActorAlign.CENTER,
             reactive: !forDrag,
         });
