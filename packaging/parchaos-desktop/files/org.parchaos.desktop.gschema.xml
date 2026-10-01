@@ -77,6 +77,11 @@
       <summary>Tiles hidden in Parcha Controls</summary>
       <description>Tile ids the user hid with Edit Controls.</description>
     </key>
+    <key name="controls-menubar" type="as">
+      <default>[]</default>
+      <summary>Controls placed on the top bar</summary>
+      <description>Control ids the user dragged onto the menu bar with Edit Controls, left to right.</description>
+    </key>
     <key name="controls-sizes" type="as">
       <default>[]</default>
       <summary>Tile sizes in Parcha Controls</summary>

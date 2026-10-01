@@ -683,3 +683,10 @@ StWidget:drop {
 .parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small .parchaos-controls-circle-icon {
   icon-size: 22px;
 }
+
+/* A control placed on the top bar. */
+.parchaos-controls-barbutton:checked,
+.parchaos-controls-barbutton:active {
+  background-color: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}

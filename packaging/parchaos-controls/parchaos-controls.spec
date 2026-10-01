@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        32%{?dist}
+Release:        33%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-33
+- Ticket #148: Menu Bar option. Drag a control from the Edit Controls picker onto the top bar and it becomes an icon there (a toggle shows its state and switches on a click, a shortcut runs); right-click the icon to take it off.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-32
 - Ticket #135: Thin slider track, larger glyphs on small tiles.
 
