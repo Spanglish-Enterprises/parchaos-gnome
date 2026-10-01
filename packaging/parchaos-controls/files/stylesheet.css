@@ -313,8 +313,8 @@
 
 .parchaos-style-glass .parchaos-controls-slider {
   height: 20px;
-  -barlevel-height: 20px;
-  -barlevel-background-color: rgba(20, 20, 24, 0.38);
+  -barlevel-height: 6px;
+  -barlevel-background-color: rgba(255, 255, 255, 0.28);
   -barlevel-active-background-color: #ffffff;
   -slider-handle-radius: 0;
   -slider-handle-border-width: 0;
@@ -677,4 +677,9 @@ StWidget:drop {
 .parchaos-controls-panel.parchaos-glass-on .parchaos-controls-subtitle,
 .parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small-label {
   color: rgba(255, 255, 255, 0.72);
+}
+
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small-icononly .parchaos-controls-circle-icon,
+.parchaos-controls-panel.parchaos-glass-on .parchaos-controls-small .parchaos-controls-circle-icon {
+  icon-size: 22px;
 }

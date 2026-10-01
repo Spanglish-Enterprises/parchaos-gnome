@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-32
+- Ticket #135: Thin slider track, larger glyphs on small tiles.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-31
 - Ticket #135: white text on the glass tiles, thinner dark slider track with a bright fill (like the reference), panes are sized before they are shown.
 

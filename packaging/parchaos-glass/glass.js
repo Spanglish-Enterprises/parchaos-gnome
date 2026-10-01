@@ -155,7 +155,14 @@ void main() {
     col = mix(vec3(0.5), col, u_contrast);
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
     col = max(mix(vec3(lum), col, u_sat), 0.0);
-    col = mix(col, vec3(u_tr, u_tg, u_tb), u_tint);
+    // The tint follows the backdrop: smoky on a dark wallpaper, a light milky veil on a bright one
+    // (the reference's two looks), so text and rim stay readable either way.
+    float bl = dot(col, vec3(0.299, 0.587, 0.114));
+    float bright = smoothstep(0.38, 0.72, bl);
+    vec3 smoke = vec3(u_tr, u_tg, u_tb);
+    vec3 milk = vec3(0.86, 0.84, 0.82);
+    col = mix(col, mix(smoke, milk, bright), mix(u_tint, u_tint * 0.55, bright));
+    col = mix(col, col * 0.78, bright * 0.5);
 
     // light
     vec3 Ld = normalize(vec3(cos(la), sin(la), 0.38));
