@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -65,6 +65,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-25
+- Ticket #148/#135: with refractive glass on, Control Center now lives inside the standard Quick Settings menu and its tiles carry the toggle classes, so the glass extension draws one glass capsule per tile (no grey pane). Edit Controls works there too. Edit mode: no wiggle, the resize handle is on every tile right away.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-24
 - Ticket #148: the resize handle is drawn like the reference: a thick white stroke that follows the tile's rounded bottom-right corner and bulges outwards (it was turned the wrong way).
 

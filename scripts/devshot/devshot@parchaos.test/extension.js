@@ -6,6 +6,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const OUT = GLib.getenv('DEVSHOT_OUT');
@@ -49,6 +50,7 @@ export default class X extends Extension {
                     for (const k of ks) { kbd.notify_keyval(t(), k, Clutter.KeyState.PRESSED); await wait(30); }
                     for (const k of [...ks].reverse()) { kbd.notify_keyval(t(), k, Clutter.KeyState.RELEASED); await wait(30); }
                 } else if (step.log) log(step.log);
+                else if (step.states) log('DEVSHOT states ' + Main.extensionManager.getUuids().map(u => `${u}=${Main.extensionManager.lookup(u)?.state}`).join(' '));
             }
             Gio.File.new_for_path(`${OUT}/done`).create(0, null);
         })().catch(e => log(`devshot ERR ${e}${e.stack}`));

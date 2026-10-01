@@ -615,3 +615,28 @@ StWidget:drop {
 .parchaos-controls-picker.parchaos-light {
   background-color: rgba(246, 246, 248, 0.96);
 }
+
+/* Hosted in the standard Quick Settings menu (refractive glass): the glass
+   extension draws the pane, so the panel itself is clear. */
+.parchaos-controls-panel.parchaos-hosted {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.parchaos-controls-panel.parchaos-hosted .parchaos-controls-tile {
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.parchaos-controls-panel.parchaos-hosted .parchaos-controls-tile.quick-toggle {
+  background-color: transparent;
+}
+
+.parchaos-controls-panel.parchaos-hosted .parchaos-controls-tile StLabel {
+  min-width: 0;
+  max-width: none;
+}

@@ -496,24 +496,11 @@ const ControlsPanel = GObject.registerClass({
         this._layout();
     }
 
-    // A slight, endless tilt on every tile while editing.
+    // No wiggle: while editing, everything is editable right away (resize handle on
+    // every tile, drag to move), so tiles stay still.
     _wiggle(item) {
-        const widget = item.widget;
-        widget.remove_all_transitions();
-        widget.rotation_angle_z = 0;
-        if (!this._editing || item.hidden)
-            return;
-        const swing = (angle) => {
-            if (!this._editing || widget.is_finalized?.())
-                return;
-            widget.ease({
-                rotation_angle_z: angle,
-                duration: 110 + Math.floor(Math.random() * 40),
-                mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
-                onComplete: () => swing(-angle),
-            });
-        };
-        swing(Math.random() < 0.5 ? 0.9 : -0.9);
+        item.widget.remove_all_transitions();
+        item.widget.rotation_angle_z = 0;
     }
 
     // Items in the saved order; ones the saved order does not know keep their
@@ -1246,6 +1233,8 @@ class ControlsButton extends PanelMenu.Button {
             return;
         const monitor = Main.layoutManager.currentMonitor;
         const [px, py] = panel.get_transformed_position();
+        // On its own layer the panel needs its own background.
+        panel.remove_style_class_name('parchaos-hosted');
         const overlay = new St.Widget({
             reactive: true,
             x: monitor.x,
@@ -1396,12 +1385,87 @@ class ControlsButton extends PanelMenu.Button {
     }
 });
 
+
+// With refractive glass on, the glass extension draws the standard Quick
+// Settings menu and nothing else, so Control Center lives *in* that menu
+// (ticket #148): the standard button and menu stay, the panel replaces the
+// menu's own grid while it is open, and the extension's glass shows through
+// the transparent panel. Edit Controls works exactly as in the button version.
+class HostedControls {
+    constructor(qs) {
+        this._qs = qs;
+        this.menu = qs.menu;
+        this._row = null;
+        this._panel = null;
+        this._picker = null;
+        this._editOverlay = null;
+        this._grab = null;
+        this._openId = this.menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                this._build();
+            else
+                this._closed();
+        });
+    }
+
+    _build() {
+        this._destroyPanel();
+        this.menu._grid?.hide();
+        // The menu's own pane is the glass extension's job (one capsule per tile).
+        this.menu.box.set_style('background-color: transparent; border-color: transparent; box-shadow: none;');
+        this._panel = new ControlsPanel(this._qs);
+        this._panel.add_style_class_name('parchaos-hosted');
+        // The glass extension gives every Quick Settings toggle its own piece
+        // of glass; our tiles carry the same classes so they get one each.
+        for (const item of this._panel._items) {
+            item.widget.add_style_class_name(item.id === 'display' || item.id === 'sound' ? 'quick-slider' : 'quick-toggle');
+            // The toggle classes make the theme shorten labels; let them show in full.
+            const unclip = a => {
+                if (a instanceof St.Label)
+                    a.clutter_text.ellipsize = 0;
+                for (const c of a.get_children?.() ?? [])
+                    unclip(c);
+            };
+            unclip(item.widget);
+        }
+        this._panel.connect('request-close', () => this.menu.close());
+        this._row = new St.BoxLayout({style_class: 'parchaos-controls-row-holder'});
+        this._row.add_child(this._panel);
+        this._panel.connect('edit-changed', () => {
+            if (this._panel?.editing)
+                this._beginEdit();
+        });
+        this.menu.box.add_child(this._row);
+    }
+
+    _closed() {
+        this._destroyPanel();
+        this.menu._grid?.show();
+        this.menu.box.set_style(null);
+    }
+
+    destroy() {
+        this._endEdit();
+        if (this._openId)
+            this.menu.disconnect(this._openId);
+        this._openId = 0;
+        this._row?.destroy();
+        this._row = null;
+        this._panel = null;
+        this.menu._grid?.show();
+        this.menu.box.set_style(null);
+    }
+}
+
 // A tiny D-Bus method for the Screenshot app in the app grid (ticket #130):
 // GNOME Shell's capture tool can only be opened from inside the Shell, and
 // the old standalone screenshot app cannot reach it on Wayland.
 const SHELL_BUS_XML = `<node><interface name="org.parchaos.Shell">
   <method name="OpenScreenshotUI"/>
 </interface></node>`;
+
+for (const name of ['_destroyPanel', '_beginEdit', '_endEdit'])
+    HostedControls.prototype[name] = ControlsButton.prototype[name];
 
 export default class ParchaControlsExtension extends Extension {
     _exportShellBus() {
@@ -1439,8 +1503,21 @@ export default class ParchaControlsExtension extends Extension {
         tryInit();
     }
 
+    _refracted() {
+        const settings = styleSettings();
+        return !!settings?.settings_schema.has_key('glass-effects') && settings.get_boolean('glass-effects');
+    }
+
     _setup(qs) {
         this._qs = qs;
+        this._settings = styleSettings();
+        this._modeId = this._settings?.settings_schema.has_key('glass-effects')
+            ? this._settings.connect('changed::glass-effects', () => this._remake()) : 0;
+        this._hosted = this._refracted();
+        if (this._hosted) {
+            this._host = new HostedControls(qs);
+            return;
+        }
         this._button = new ControlsButton(this);
         this._button.adoptIndicators(qs);
         const box = qs.get_parent();
@@ -1463,6 +1540,29 @@ export default class ParchaControlsExtension extends Extension {
         });
     }
 
+    // Switching refractive glass on or off swaps between the two forms.
+    _teardown() {
+        if (this._modeId)
+            this._settings?.disconnect(this._modeId);
+        this._modeId = 0;
+        this._settings = null;
+        this._host?.destroy();
+        this._host = null;
+        this._injections?.clear();
+        this._injections = new InjectionManager();
+        this._button?.destroy();
+        this._button = null;
+        this._qs?.container.disconnectObject(this);
+        this._qs?.container.show();
+    }
+
+    _remake() {
+        const qs = this._qs;
+        this._teardown();
+        if (qs)
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => { this._setup(qs); return GLib.SOURCE_REMOVE; });
+    }
+
     disable() {
         this._shellBus?.unexport();
         this._shellBus = null;
@@ -1474,12 +1574,9 @@ export default class ParchaControlsExtension extends Extension {
             GLib.source_remove(this._waitId);
             this._waitId = 0;
         }
+        this._teardown();
         this._injections?.clear();
         this._injections = null;
-        this._button?.destroy();
-        this._button = null;
-        this._qs?.container.disconnectObject(this);
-        this._qs?.container.show();
         this._qs = null;
     }
 }
