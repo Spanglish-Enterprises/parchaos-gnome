@@ -386,14 +386,15 @@ const ControlsPanel = GObject.registerClass({
             reactive: true,
             visible: false,
         });
-        handle.set_size(30, 30);
+        handle.set_size(32, 32);
         handle.connect('repaint', area => {
             const cr = area.get_context();
             const [w, h] = area.get_surface_size();
             cr.setLineCap(1);
-            cr.setLineWidth(4);
+            cr.setLineWidth(5.5);
             cr.setSourceRGBA(1, 1, 1, 0.95);
-            cr.arc(w, h, Math.min(w, h) - 8, Math.PI, Math.PI * 1.5);
+            // Hugs the tile's rounded corner, bulging outwards like the reference.
+            cr.arc(3, 3, Math.min(w, h) - 8, Math.PI * 0.03, Math.PI * 0.47);
             cr.stroke();
             cr.$dispose();
         });

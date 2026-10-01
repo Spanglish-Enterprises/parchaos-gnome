@@ -582,7 +582,7 @@ StWidget:drop {
 }
 
 .parchaos-controls-resize-handle {
-  margin: 0 3px 3px 0;
+  margin: 0;
 }
 
 .parchaos-controls-gallery-item {
