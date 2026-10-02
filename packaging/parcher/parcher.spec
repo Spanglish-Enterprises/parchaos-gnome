@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -93,8 +93,6 @@ Patch9:         0010-sidebar-polish.patch
 # Quick Preview (spacebar): Sushi 50's ShowFile takes a fourth argument, the
 # activation token, and rejects Nautilus 48's three-argument call.
 Patch10:        0011-previewer-activation-token.patch
-
-BuildArch:      x86_64
 
 Provides:       parchaos-finder = %{version}-%{release}
 Obsoletes:      parchaos-finder < 48.7-12
@@ -309,6 +307,9 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-30
+- Ticket #167: no longer pinned to x86_64, so it builds for aarch64 as well.
+
 * Wed Sep 30 2026 ParchaOS packaging - 48.7-29
 - Quick Preview (ticket #153): pressing the spacebar did nothing. Sushi 50's
   ShowFile takes a fourth argument (an activation token) and refused

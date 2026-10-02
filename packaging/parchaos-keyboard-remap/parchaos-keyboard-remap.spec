@@ -86,7 +86,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
@@ -99,8 +99,10 @@ Source91:       GPL-2.0.txt
 Source92:       THIRD-PARTY-LICENSES.md
 Source93:       https://raw.githubusercontent.com/xremap/xremap/v%{xremap_version}/LICENSE#/xremap-LICENSE
 Source94:       xremap-crate-licenses.txt
+# The same release, built for 64-bit ARM (ticket #167)
+Source3:        https://github.com/xremap/xremap/releases/download/v%{xremap_version}/xremap-linux-aarch64-full.zip
 
-ExclusiveArch:  x86_64
+ExclusiveArch:  x86_64 aarch64
 
 BuildRequires:  unzip
 
@@ -133,7 +135,11 @@ creates.
 %prep
 %setup -q -c -T -n %{name}-%{version}
 mkdir xremap-bin
+%ifarch aarch64
+(cd xremap-bin && unzip -o %{SOURCE3})
+%else
 (cd xremap-bin && unzip -o %{SOURCE0})
+%endif
 tar xzf %{SOURCE1}
 tar xzf %{SOURCE2}
 cp -p %{SOURCE90} %{SOURCE91} %{SOURCE92} %{SOURCE93} %{SOURCE94} .
@@ -248,6 +254,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.15.13-16
+- Ticket #167: build for aarch64 too, from xremap's own aarch64 release of the same version.
+
 * Tue Sep 29 2026 ParchaOS packaging - %{xremap_version}-15
 - Ticket #132: per-app remaps no longer depend on user@.service restarting.
   New parchaos-keyboard-remap-dirs.service (root) watches systemd-logind and
