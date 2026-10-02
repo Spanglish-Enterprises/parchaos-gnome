@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        30%{?dist}
+Release:        31%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -259,18 +259,21 @@ grep -q '© 1999-2026 The Nautilus Authors' src/nautilus-window.c
 sed -i 's/_("iCloud & Cloud Drives")/_("Cloud Drives")/' src/gtk/nautilusgtkplacessidebar.c
 grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
 
-# Neutralize and remove third-party vendor references from embedded CSS and UI comments (ticket #109, naming policy)
-sed -i \
+# Neutralize and remove third-party vendor references from embedded CSS, UI and C sources (ticket #109,
+# naming policy; look-alike audit). One pass over every CSS, UI and C file, so a comment, a CSS class name or
+# a string cannot slip past an edit aimed at one file (the old edit named the wrong .ui file and its
+# trailing "|| :" hid that).
+find src -type f \( -name '*.css' -o -name '*.ui' -o -name '*.c' -o -name '*.h' \) -exec sed -i \
     -e 's/Apple macOS Finder Styling/ParchaOS File Manager Styling/g' \
-    -e 's/Finder Window Base/Parcher Window Base/g' \
-    -e 's/Finder Color Tags/Parcher Color Tags/g' \
-    -e 's/Finder Pill View Switcher/Parcher Pill View Switcher/g' \
-    -e 's/Finder Bottom Status/Parcher Bottom Status/g' \
-    src/resources/css/Adwaita.css 2>/dev/null || :
-sed -i \
-    -e 's/Finder Title/Parcher Title/g' \
     -e 's/Segmented Finder Views (Icons, List, Sort) with macOS pill container/Segmented Parcher Views (Icons, List, Sort) with pill container/g' \
-    src/resources/ui/nautilus-window.ui 2>/dev/null || :
+    -e 's/finder-pill-segmented/parcher-pill-segmented/g' \
+    -e 's/finder-toolbar/parcher-toolbar/g' \
+    -e 's/finder-pathbar-container/parcher-pathbar-container/g' \
+    -e 's/Finder-like semantics/starred-state semantics/g' \
+    -e 's/Finder Favorites/Favorites/g' \
+    -e 's/\bFinder\b/Parcher/g' \
+    {} +
+! grep -rIq 'finder-' src
 
 %build
 %meson -Ddocs=false -Dtests=none
@@ -307,6 +310,9 @@ sed -i \
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-31
+- Look-alike audit: the vendor-name clean-up covers every CSS, UI and C source (it aimed at one file and missed a comment in nautilus-view-controls.ui); the toolbar CSS classes are parcher-* instead of another product's name.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-30
 - Ticket #167: no longer pinned to x86_64, so it builds for aarch64 as well.
 
