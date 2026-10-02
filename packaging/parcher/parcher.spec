@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        33%{?dist}
+Release:        34%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -296,6 +296,10 @@ sed -i -e 's/<property name="spacing">0<\/property>/<property name="spacing">6<\
     src/resources/ui/nautilus-history-controls.ui
 grep -q 'parcher-history-buttons' src/resources/ui/nautilus-history-controls.ui
 cat %{SOURCE1} >> src/resources/style.css
+# Parcher's own stylesheet must win over the GTK theme's per-user stylesheet (~/.config/gtk-4.0/gtk.css,
+# installed by parchaos-gtk-theme at the same USER priority, which otherwise put the capsules back).
+sed -i 's/GTK_STYLE_PROVIDER_PRIORITY_USER);/GTK_STYLE_PROVIDER_PRIORITY_USER + 1);/' src/nautilus-application.c
+grep -q 'GTK_STYLE_PROVIDER_PRIORITY_USER + 1);' src/nautilus-application.c
 ! grep -q '#ff453a\|#0a84ff' src/resources/style.css
 ! ( sed -n '/Parcher Pill View Switcher/,$p' src/resources/style.css | grep -q 'border-radius: 9999px' )
 
@@ -334,6 +338,9 @@ cat %{SOURCE1} >> src/resources/style.css
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-34
+- Parcher's stylesheet loads one step above the GTK theme's per-user stylesheet, which had the same priority and put the capsules back on a real desktop. The back/forward box has no background of its own.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-33
 - Look-alike audit (own layout): back and forward are two separate rounded buttons instead of one joined capsule.
 

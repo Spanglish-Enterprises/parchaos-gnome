@@ -15,8 +15,13 @@ placessidebar row:selected {
 }
 
 /* Back and forward are two separate buttons, each a small rounded rectangle (not one joined capsule). */
-headerbar box.parcher-history-buttons {
+headerbar box.parcher-history-buttons,
+headerbar windowhandle box.parcher-history-buttons {
   border-spacing: 6px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 headerbar box.parcher-history-buttons button,
