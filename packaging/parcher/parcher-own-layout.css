@@ -1,0 +1,15 @@
+
+/* ParchaOS's own look for the sidebar (look-alike audit, 2026-10-02): flat rows, and the selected
+   place has an accent bar on its left edge. Appended to the stylesheet at build time; the rounded
+   rectangles in the toolbar are edits to the rules above. */
+.sidebar-row,
+placessidebar row {
+  border-radius: 0 8px 8px 0;
+  margin: 1px 6px 1px 0;
+}
+
+.sidebar-row:selected,
+placessidebar row:selected {
+  background-color: alpha(currentColor, 0.08);
+  box-shadow: inset 3px 0 0 @accent_bg_color;
+}

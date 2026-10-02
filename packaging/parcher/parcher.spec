@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -93,6 +93,8 @@ Patch9:         0010-sidebar-polish.patch
 # Quick Preview (spacebar): Sushi 50's ShowFile takes a fourth argument, the
 # activation token, and rejects Nautilus 48's three-argument call.
 Patch10:        0011-previewer-activation-token.patch
+# ParchaOS's own look for the sidebar (appended to the stylesheet in %prep).
+Source1:        parcher-own-layout.css
 
 Provides:       parchaos-finder = %{version}-%{release}
 Obsoletes:      parchaos-finder < 48.7-12
@@ -275,6 +277,23 @@ find src -type f \( -name '*.css' -o -name '*.ui' -o -name '*.c' -o -name '*.h' 
     {} +
 ! grep -rIq 'finder-' src
 
+# ParchaOS's own look for the window (look-alike audit): the toolbar's capsules become small
+# rounded rectangles (edits to the Parcher rules only, from their section heading to the end of
+# the file; the upstream rules above stay as they are), the tag colours are ParchaOS's own, and the
+# sidebar gets flat rows with an accent bar.
+sed -i \
+    -e '/Parcher Pill View Switcher/,$ s/border-radius: 9999px;/border-radius: 8px;/' \
+    -e '/Parcher Pill View Switcher/,$ s/border-radius: 999px;/border-radius: 8px;/' \
+    -e '/Parcher Pill View Switcher/,$ s/border: 1px solid alpha(currentColor, 0.12);/border: none;/' \
+    -e '/Parcher Pill View Switcher/,$ s/min-width: 34px;/min-width: 30px;/' \
+    -e '/Parcher Pill View Switcher/,$ s/min-height: 34px;/min-height: 30px;/' \
+    -e 's/#ff453a/#e5586e/; s/#ff9f0a/#ee8f3a/; s/#ffd60a/#e6c34a/; s/#30d158/#4fb286/' \
+    -e 's/#0a84ff/#4f8fd8/; s/#bf5af2/#8a6ce0/; s/#8e8e93/#8c8f99/' \
+    src/resources/style.css
+cat %{SOURCE1} >> src/resources/style.css
+! grep -q '#ff453a\|#0a84ff' src/resources/style.css
+! ( sed -n '/Parcher Pill View Switcher/,$p' src/resources/style.css | grep -q 'border-radius: 9999px' )
+
 %build
 %meson -Ddocs=false -Dtests=none
 %meson_build
@@ -310,6 +329,9 @@ find src -type f \( -name '*.css' -o -name '*.ui' -o -name '*.c' -o -name '*.h' 
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-32
+- Look-alike audit (own layout): the toolbar's capsules (view switcher, back/forward, search, more, entries) are small rounded rectangles; the tag colours are ParchaOS's own palette instead of another platform's system colours; the sidebar has flat rows and an accent bar on the selected place.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-31
 - Look-alike audit: the vendor-name clean-up covers every CSS, UI and C source (it aimed at one file and missed a comment in nautilus-view-controls.ui); the toolbar CSS classes are parcher-* instead of another product's name.
 
