@@ -1,6 +1,6 @@
 Name:           parchaos-whatsnew
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        What changed in this version of ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -14,6 +14,7 @@ BuildArch:      noarch
 
 BuildRequires:  desktop-file-utils
 BuildRequires:  gettext
+BuildRequires:  python3
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
@@ -53,5 +54,8 @@ python3 -c "import json; d = json.load(open('%{SOURCE3}')); assert d['version'] 
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-whatsnew.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-2
+- BuildRequires python3 for the content check in %check.
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-1
 - Ticket #170: first version. A scrolling list of what changed in this version (ParchaOS's own design, no slideshow): a greeting, then a card per change; shown once after a major update (never on a new account's first login or in the live session), re-openable from the logo menu; a switch turns the automatic window off. The release content is a JSON file with English and Spanish text.
