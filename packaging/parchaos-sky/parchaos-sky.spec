@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -83,6 +83,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.1-2
+- Ticket #192: the place and temperature sit dead centre; Parchi keeps them company off to one side instead of sharing the centre.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.1-1
 - Ticket #192: Parchi uses the owner's own character art, traced to vectors (one SVG per pose: front, sunny, rain, partly cloudy, storm, snow, windy, with their scenery). Parchi bobs, sways in the wind, nods to the music in storms, floats with the cloud and blinks now and then; at night the front pose gets sleepy lids and drifting z's. The hand-drawn Parchi stays as the fallback.
 

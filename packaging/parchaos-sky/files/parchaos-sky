@@ -2666,7 +2666,8 @@ class SkyWindow(Adw.ApplicationWindow):
         night = sun < -2
         place = self.places[self.index]['name'] if self.places else ''
         _icon, cond, _thunder = symbol_info(h['symbol'], night)
-        row = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
+        # The place and temperature sit dead centre; Parchi keeps them company off to one side.
+        row = Gtk.CenterBox(hexpand=True)
         text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         text.append(self._label(place, 'sky-place'))
         if self.scrub:
@@ -2689,12 +2690,17 @@ class SkyWindow(Adw.ApplicationWindow):
             bits.append(_('Feels like {temp}').format(temp=fmt_temp(fl, imp)))
         if bits:
             text.append(self._label('   '.join(bits), 'sky-cond', 'sky-dim'))
-        row.append(text)
+        row.set_center_widget(text)
         if self.prefs.get('playful', True) and self.prefs.get('parchita', True):
             self.parchita = Parchita()
             self.parchita.set_mood(parchita_mood(h, sun))
             self.parchita.set_tooltip_text(_('Parchi'))
-            row.append(self.parchita)
+            self.parchita.set_halign(Gtk.Align.START)
+            self.parchita.set_valign(Gtk.Align.END)
+            self.parchita.set_margin_start(28)
+            side = Gtk.Box(hexpand=True)   # fills the right half, so Parchi stays near the text
+            side.append(self.parchita)
+            row.set_end_widget(side)
         box.append(row)
         if not self.scrub:
             nh = next_hour_text(self.next_hour)
