@@ -55,9 +55,6 @@ packaging/parchaos-cloud/*                  | google drive | fact: a cloud servi
 profiles/parchaos/packages.sh               | *     | fact: comments on replaced packages and the cloud services the tool mounts
 profiles/parchaos/packages.list             | finder | fact: comment naming the old package
 
-# --- history written in the public repository: decide whether to clean or remove (#102)
-SESSION_LOG.md                              | *     | debt: a session log in the public repo that narrates reference work; clean or move to the private vault
-documents/*                                 | *     | debt: a session summary in the public repo that narrates reference work; clean or move to the private vault
 
 # --- what a built image ships (the --image scan)
 image/usr/share/doc/parchaos/LEGAL.md        | apple | fact: the non-affiliation notice
