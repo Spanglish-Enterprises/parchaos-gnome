@@ -11,6 +11,10 @@ Claude Memory vault, parchaos-gnome/architecture/lookalike-audit-spec.md).
      docs/asset-provenance.csv saying where it came from. A shipped asset with no row fails.
 
 Plain run (used by scripts/lint.sh): fails on a new deny hit or an asset with no row.
+--image DIR  also scans a built image's root (a rootfs): desktop entries, metainfo, schemas, shell
+             extensions, ParchaOS docs, and the printable strings of the packages' binaries and
+             translations, because the build rewrites strings the source scan cannot see. Allow-list lines for
+             it start with "image/" (the path inside the rootfs).
 --gate       the release and revenue gate: also fails while any provenance row is still "unverified"
              or of kind "unknown", and while any allow-list line is marked "debt:" (clean-up still owed).
 --report DIR writes a hand-over folder for counsel (summary, provenance rows still open, review hits).
@@ -125,6 +129,68 @@ def scan_names(root, files):
     return denied, review
 
 
+IMAGE_TEXT = ('usr/share/applications', 'usr/share/metainfo', 'usr/share/glib-2.0/schemas', 'usr/share/doc/parchaos',
+              'usr/share/polkit-1/actions', 'etc/os-release', 'usr/lib/os-release', 'etc/system-release')
+IMAGE_STRINGS = ('usr/bin/nautilus', 'usr/bin/parchaos-', 'usr/libexec/parchaos-', 'usr/lib64/nautilus')
+IMAGE_MO = ('nautilus', 'parchaos', 'parcha')
+
+
+def image_files(root):
+    found = []
+    for base, dirs, files in os.walk(root):
+        rel_base = os.path.relpath(base, root)
+        if rel_base.startswith(('proc', 'sys', 'dev', 'run', 'var/cache', 'var/lib/rpm')):
+            dirs[:] = []
+            continue
+        for f in files:
+            rel = os.path.normpath(os.path.join(rel_base, f))
+            full = os.path.join(base, f)
+            if os.path.islink(full) or not os.path.isfile(full):
+                continue
+            if rel.startswith(IMAGE_TEXT) or (rel.startswith('usr/share/gnome-shell/extensions/') and
+                                              ('parchaos' in rel or 'parcha' in rel)) or \
+                    rel.startswith(IMAGE_STRINGS) or \
+                    (rel.startswith('usr/share/locale/') and rel.endswith('.mo') and
+                     os.path.basename(rel).startswith(IMAGE_MO)):
+                found.append(rel)
+    return sorted(found)
+
+
+def printable_runs(data, minimum=6):
+    out, run = [], bytearray()
+    for b in data:
+        if 32 <= b < 127 or b in (9,):
+            run.append(b)
+        else:
+            if len(run) >= minimum:
+                out.append(run.decode('ascii'))
+            run = bytearray()
+    if len(run) >= minimum:
+        out.append(run.decode('ascii'))
+    return out
+
+
+def scan_image(root):
+    terms, allow = load_terms(), load_allow()
+    denied = []
+    for rel in image_files(root):
+        try:
+            data = open(os.path.join(root, rel), 'rb').read()
+        except OSError:
+            continue
+        lines = printable_runs(data) if b'\0' in data[:4096] else data.decode('utf-8', 'replace').splitlines()
+        shown = 'image/' + rel
+        for n, line in enumerate(lines, 1):
+            for level, rx in terms:
+                if level != 'deny':
+                    continue
+                for m in rx.finditer(line):
+                    term = m.group(0).lower()
+                    if not allowed(allow, shown, term):
+                        denied.append((shown, n, term, line.strip()[:140]))
+    return denied
+
+
 def load_provenance(root):
     path = os.path.join(root, PROVENANCE)
     rows = []
@@ -164,6 +230,7 @@ def check_assets(root, files):
 
 def main(argv):
     gate = '--gate' in argv
+    image = argv[argv.index('--image') + 1] if '--image' in argv else None
     root = os.getcwd()
     report = None
     if '--root' in argv:
@@ -187,6 +254,22 @@ def main(argv):
         print('  no unexcused names')
     if review:
         print('  for review (not failures): ' + ', '.join(f'{t} ({len(p)} files)' for t, p in sorted(review.items())))
+
+    if image:
+        print(f'== look-alike audit: the built image ({image}) ==')
+        idenied = scan_image(image)
+        seen = set()
+        for path, n, term, text in idenied:
+            key = (path, term)
+            if key in seen:
+                continue
+            seen.add(key)
+            print(f'  {path}: "{term}": {text}')
+        if idenied:
+            print(f'FAIL: {len(seen)} listed name(s) in what the image ships (counted once per file and name).')
+            failed = True
+        else:
+            print('  no listed names in the shipped strings that were scanned')
 
     print('== look-alike audit: asset provenance ==')
     problems, uncovered, stale, open_rows, count = check_assets(root, files)
