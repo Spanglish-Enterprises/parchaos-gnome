@@ -1440,18 +1440,18 @@ def mood_for(hour, sun, feels=None, setting=False):
 # or without librsvg, the hand-drawn Parchi above stands in.
 PARCHI_DIRS = [os.path.dirname(os.path.abspath(__file__)), '/usr/share/parchaos-sky']
 PARCHI_ART = {
-    'front': ((804, 744), ((252, 274, 48, 45), (462, 274, 48, 45))),
-    'sunny': ((929, 1039), ()),          # sunglasses: nothing to blink
+    'front': ((803, 743), ((252, 273, 48, 45), (462, 273, 48, 45))),
+    'sunny': ((928, 1037), ()),          # sunglasses: nothing to blink
     'rain': ((786, 997), ((255, 499, 42, 40), (425, 499, 42, 40))),
     'cloudy': ((884, 843), ((316, 412, 38, 36), (474, 412, 36, 36))),
     'storm': ((894, 1001), ((266, 600, 40, 36), (424, 600, 40, 36))),
-    'windy': ((956, 713), ()),           # already squinting into the wind
-    'waving': ((758, 686), ((313, 227, 47, 45), (515, 227, 49, 45))),
+    'windy': ((956, 712), ()),           # already squinting into the wind
+    'waving': ((756, 713), ((312, 254, 47, 45), (508, 254, 49, 45))),
     'night': ((551, 550), ((226, 277, 26, 22), (329, 283, 24, 23))),  # gazing at the moon
-    'cold': ((619, 581), ((189, 252, 29, 28), (297, 250, 28, 28))),
+    'cold': ((618, 580), ((189, 252, 29, 28), (297, 250, 28, 28))),
     'snowy': ((964, 1022), ((408, 531, 34, 34), (549, 531, 34, 34))),
-    'foggy': ((1012, 1015), ((406, 560, 36, 37), (566, 567, 41, 40))),
-    'sunset': ((939, 1014), ()),  # sunglasses again
+    'foggy': ((1011, 1013), ((406, 560, 36, 37), (566, 567, 41, 40))),
+    'sunset': ((956, 1013), ()),  # sunglasses again
 }
 POSE_ART = {'happy': 'waving', 'sunny': 'sunny', 'rain': 'rain', 'cloudy': 'cloudy', 'storm': 'storm',
             'snow': 'snowy', 'cold': 'cold', 'windy': 'windy', 'night': 'night', 'fog': 'foggy',

@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.3-3
+- Ticket #192: Parchi's poses are cut out more completely: the dark outer rind and the arms that were missing on the front and waving poses are back, and enclosed bits of background are cleared without taking real art with them. Eye boxes re-measured for the blink.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.3-2
 - Look-alike audit: a new app icon, a passion-fruit sun with rays on a violet-to-rose dusk, in place of a sun behind a cloud on a blue-orange sky that was too close to a well-known weather app's icon. It is a placeholder until an artist draws the final one.
 
