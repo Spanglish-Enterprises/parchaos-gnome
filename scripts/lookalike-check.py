@@ -129,8 +129,12 @@ def scan_names(root, files):
     return denied, review
 
 
-IMAGE_TEXT = ('usr/share/applications', 'usr/share/metainfo', 'usr/share/glib-2.0/schemas', 'usr/share/doc/parchaos',
-              'usr/share/polkit-1/actions', 'etc/os-release', 'usr/lib/os-release', 'etc/system-release')
+# Only what ParchaOS owns or builds is scanned: its own files and Parcher (the file manager); the other
+# applications in the image keep their own wording.
+IMAGE_TEXT = ('usr/share/doc/parchaos', 'etc/os-release', 'usr/lib/os-release', 'etc/system-release')
+IMAGE_OWNED_DIRS = ('usr/share/applications', 'usr/share/metainfo', 'usr/share/glib-2.0/schemas',
+                    'usr/share/polkit-1/actions')
+IMAGE_OWNED_NAMES = ('parcha', 'org.parchaos', 'org.gnome.nautilus', 'org.gnome.nautilus.')
 IMAGE_STRINGS = ('usr/bin/nautilus', 'usr/bin/parchaos-', 'usr/libexec/parchaos-', 'usr/lib64/nautilus')
 IMAGE_MO = ('nautilus', 'parchaos', 'parcha')
 
@@ -147,7 +151,8 @@ def image_files(root):
             full = os.path.join(base, f)
             if os.path.islink(full) or not os.path.isfile(full):
                 continue
-            if rel.startswith(IMAGE_TEXT) or (rel.startswith('usr/share/gnome-shell/extensions/') and
+            owned = rel.startswith(IMAGE_OWNED_DIRS) and os.path.basename(rel).lower().startswith(IMAGE_OWNED_NAMES)
+            if rel.startswith(IMAGE_TEXT) or owned or (rel.startswith('usr/share/gnome-shell/extensions/') and
                                               ('parchaos' in rel or 'parcha' in rel)) or \
                     rel.startswith(IMAGE_STRINGS) or \
                     (rel.startswith('usr/share/locale/') and rel.endswith('.mo') and
