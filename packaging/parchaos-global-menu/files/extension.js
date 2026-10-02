@@ -783,13 +783,26 @@ function openSystemSettings() {
         apps.lookup_app('gnome-control-center.desktop'))?.activate();
 }
 
+// Mutter 18 (GNOME 50) replaced get_maximized() with is_maximized() and
+// dropped the MaximizeFlags argument to maximize()/unmaximize().
+function isMaximized(window) {
+    if (typeof window.is_maximized === 'function')
+        return window.is_maximized();
+    return window.get_maximized() !== 0;
+}
+
+function setMaximized(window, maximized) {
+    const flags = typeof window.is_maximized === 'function' ? [] : [Meta.MaximizeFlags.BOTH];
+    if (maximized)
+        window.maximize(...flags);
+    else
+        window.unmaximize(...flags);
+}
+
 function toggleMaximized(window) {
     if (!window)
         return;
-    if (window.get_maximized())
-        window.unmaximize(Meta.MaximizeFlags.BOTH);
-    else
-        window.maximize(Meta.MaximizeFlags.BOTH);
+    setMaximized(window, !isMaximized(window));
 }
 
 function openUri(uri) {
@@ -804,8 +817,8 @@ function tileWindow(window, side) {
     if (!window)
         return;
     const area = window.get_work_area_current_monitor();
-    if (window.get_maximized())
-        window.unmaximize(Meta.MaximizeFlags.BOTH);
+    if (isMaximized(window))
+        setMaximized(window, false);
     const width = Math.floor(area.width / 2);
     window.move_resize_frame(false, side === 'left' ? area.x : area.x + width, area.y, width, area.height);
 }

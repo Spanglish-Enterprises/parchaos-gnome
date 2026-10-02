@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        25%{?dist}
+Release:        26%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,9 @@ install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-26
+- Ticket #76: session restore maximizes and restores windows with the Mutter 18 calls (no MaximizeFlags argument), which ends the "too many arguments" warnings at every login.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-25
 - Ticket #135: no menu glass behind Control Center (it draws its own tile glass); the check looked at the wrong actor.
 

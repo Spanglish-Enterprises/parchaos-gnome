@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -107,6 +107,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 2.1.0-30
+- Window > Zoom and the Move Window to Left/Right Half items work again on GNOME 50: Mutter 18 removed get_maximized() and the MaximizeFlags argument, so every click threw. The smoke test now drives these items on a real window.
+
 * Wed Sep 30 2026 ParchaOS packaging - 2.1.0-29
 - Ticket #135, checked against the reference menus: icons on About, System Settings and Parcha Store; Force Quit, Lock Screen and Log Out show their shortcuts and now answer to them (Ctrl+Alt+Esc, Ctrl+Super+Q, Ctrl+Shift+Q as the compositor sees them; a keyboard shortcut schema org.parchaos.globalmenu ships with the extension); the Force Quit dialog lists all running apps and wraps its text.
 

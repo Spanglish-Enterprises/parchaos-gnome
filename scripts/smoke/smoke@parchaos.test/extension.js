@@ -210,6 +210,65 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        // Window > Zoom and the tiling items act on a real app window. Mutter
+        // 18 dropped get_maximized() and the MaximizeFlags argument, which
+        // left these items throwing on every click without a visible error.
+        if (menu) {
+            await this._check('window menu zoom and tiling', async () => {
+                const windowMenu = menu._menuBarButtons.find(b => b.roleId === 'window')?.menu;
+                const item = label => windowMenu?._getMenuItems()
+                    .find(i => i.label?.get_text?.() === label);
+                for (const label of ['Zoom', 'Move Window to Left Half']) {
+                    if (!item(label))
+                        throw new Error(`no "${label}" item in the Window menu`);
+                }
+
+                const [, pid] = GLib.spawn_async(null, ['gjs', '-c', [
+                    "imports.gi.versions.Gtk = '4.0';",
+                    "const {Gtk, GLib} = imports.gi; Gtk.init();",
+                    "const w = new Gtk.Window({title: 'smoke-window', default_width: 400, default_height: 300});",
+                    "w.present(); new GLib.MainLoop(null, false).run();",
+                ].join(' ')], null, GLib.SpawnFlags.SEARCH_PATH, null);
+                try {
+                    let win = null;
+                    for (let i = 0; i < 40 && !win; i++) {
+                        await sleep(250);
+                        win = global.get_window_actors().map(a => a.meta_window)
+                            .find(w => w.get_title() === 'smoke-window') ?? null;
+                    }
+                    if (!win)
+                        throw new Error('the test window never appeared');
+                    win.activate(global.get_current_time());
+                    await sleep(500);
+                    if (menu._trackedWindow !== win)
+                        throw new Error('the menu bar did not track the test window');
+
+                    const maximized = () => win.is_maximized?.() ?? win.get_maximized() !== 0;
+                    item('Zoom').activate(null);
+                    await sleep(500);
+                    if (!maximized())
+                        throw new Error('Zoom did not maximize the window');
+                    item('Zoom').activate(null);
+                    await sleep(500);
+                    if (maximized())
+                        throw new Error('Zoom again did not restore the window');
+
+                    item('Zoom').activate(null);
+                    await sleep(500);
+                    item('Move Window to Left Half').activate(null);
+                    await sleep(500);
+                    const area = win.get_work_area_current_monitor();
+                    const rect = win.get_frame_rect();
+                    if (maximized() || rect.x !== area.x || Math.abs(rect.width - area.width / 2) > 1)
+                        throw new Error(`left half gave ${rect.x},${rect.width} in a ${area.x},${area.width} area`);
+                } finally {
+                    GLib.spawn_command_line_sync(`kill ${pid}`);
+                    GLib.spawn_close_pid(pid);
+                    await sleep(300);
+                }
+            });
+        }
+
         const schema = Gio.SettingsSchemaSource.get_default().lookup('org.parchaos.desktop', true);
         if (schema) {
             await this._check('style switch', async () => {

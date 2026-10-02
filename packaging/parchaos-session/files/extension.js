@@ -59,20 +59,20 @@ function isMaximized(win) {
     return win.get_maximized?.() === Meta.MaximizeFlags.BOTH;
 }
 
+// Mutter 18 (GNOME 50) dropped the MaximizeFlags argument along with
+// get_maximized(); passing it only logs "too many arguments".
 function maximize(win) {
-    try {
-        win.maximize(Meta.MaximizeFlags.BOTH);
-    } catch (e) {
+    if (typeof win.is_maximized === 'function')
         win.maximize();
-    }
+    else
+        win.maximize(Meta.MaximizeFlags.BOTH);
 }
 
 function unmaximize(win) {
-    try {
-        win.unmaximize(Meta.MaximizeFlags.BOTH);
-    } catch (e) {
+    if (typeof win.is_maximized === 'function')
         win.unmaximize();
-    }
+    else
+        win.unmaximize(Meta.MaximizeFlags.BOTH);
 }
 
 // A package update replaces the shell extensions and theme under a running
