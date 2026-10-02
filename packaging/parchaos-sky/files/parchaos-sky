@@ -2717,11 +2717,15 @@ class SkyWindow(Adw.ApplicationWindow):
             row.append(Gtk.Image(icon_name=icon, pixel_size=18))
             row.append(self._label(text, 'sky-row-text', xalign=0, wrap=True, hexpand=True))
             target.append(row)
-        self.content.append(card)
-
+        # Heads-up and the next hour: full width in one column; at the top of the right-hand
+        # column when wide, so no card stretches across the window with a few lines in it
+        top = [card]
         nh = next_hour_text(self.next_hour)
         if nh:
-            self.content.append(self._next_hour_card(nh))
+            top.append(self._next_hour_card(nh))
+        if not self.wide:
+            for w in top:
+                self.content.append(w)
 
         # Two columns when wide: forecasts on the left, the rest on the right.
         cols = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL if self.wide else Gtk.Orientation.VERTICAL,
@@ -2741,6 +2745,9 @@ class SkyWindow(Adw.ApplicationWindow):
             left.append(self._radar_card(fc))
         left.append(self._days_card(fc, imp))
 
+        if self.wide:
+            for w in top:
+                right.append(w)
         bw = self._best_card(fc, imp)
         if bw:
             right.append(bw)

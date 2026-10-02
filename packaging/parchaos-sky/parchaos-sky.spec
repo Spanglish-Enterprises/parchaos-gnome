@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.2-4
+- Ticket #192: in a wide window the Heads-up (Parchi) and Next hour cards sit at the top of the right-hand column instead of stretching across the window; only alerts stay full width. One column on narrow windows, as before.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.2-3
 - Ticket #192: the sunny pose fills its panel whole (towel and drink in view) over a sky of its own colour instead of a faded circle.
 
