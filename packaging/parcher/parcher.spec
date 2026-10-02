@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        32%{?dist}
+Release:        33%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -290,6 +290,11 @@ sed -i \
     -e 's/#ff453a/#e5586e/; s/#ff9f0a/#ee8f3a/; s/#ffd60a/#e6c34a/; s/#30d158/#4fb286/' \
     -e 's/#0a84ff/#4f8fd8/; s/#bf5af2/#8a6ce0/; s/#8e8e93/#8c8f99/' \
     src/resources/style.css
+# Back and forward: two separate buttons (no shared capsule).
+sed -i -e 's/<property name="spacing">0<\/property>/<property name="spacing">6<\/property>/' \
+    -e 's/<class name="parcher-pill-segmented"\/>/<class name="parcher-history-buttons"\/>/' \
+    src/resources/ui/nautilus-history-controls.ui
+grep -q 'parcher-history-buttons' src/resources/ui/nautilus-history-controls.ui
 cat %{SOURCE1} >> src/resources/style.css
 ! grep -q '#ff453a\|#0a84ff' src/resources/style.css
 ! ( sed -n '/Parcher Pill View Switcher/,$p' src/resources/style.css | grep -q 'border-radius: 9999px' )
@@ -329,6 +334,9 @@ cat %{SOURCE1} >> src/resources/style.css
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-33
+- Look-alike audit (own layout): back and forward are two separate rounded buttons instead of one joined capsule.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-32
 - Look-alike audit (own layout): the toolbar's capsules (view switcher, back/forward, search, more, entries) are small rounded rectangles; the tag colours are ParchaOS's own palette instead of another platform's system colours; the sidebar has flat rows and an accent bar on the selected place.
 

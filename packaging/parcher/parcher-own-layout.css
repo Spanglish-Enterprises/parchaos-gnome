@@ -13,3 +13,21 @@ placessidebar row:selected {
   background-color: alpha(currentColor, 0.08);
   box-shadow: inset 3px 0 0 @accent_bg_color;
 }
+
+/* Back and forward are two separate buttons, each a small rounded rectangle (not one joined capsule). */
+headerbar box.parcher-history-buttons {
+  border-spacing: 6px;
+}
+
+headerbar box.parcher-history-buttons button,
+headerbar windowhandle box.parcher-history-buttons button {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+  background-color: alpha(currentColor, 0.07);
+}
+
+headerbar box.parcher-history-buttons button:hover,
+headerbar windowhandle box.parcher-history-buttons button:hover {
+  background-color: alpha(currentColor, 0.15);
+}
