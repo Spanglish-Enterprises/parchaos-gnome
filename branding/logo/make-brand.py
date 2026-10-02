@@ -164,6 +164,59 @@ def replace_tile(path, new_tile_px_fn):
     return im
 
 
+def _ss(draw_fn, size, scale=4):
+    """Draw at 4x and shrink, so shapes have smooth edges."""
+    im = Image.new("RGBA", (size[0] * scale, size[1] * scale), (0, 0, 0, 0))
+    draw_fn(ImageDraw.Draw(im), scale)
+    return im.resize(size, Image.LANCZOS)
+
+
+def arrow(draw, scale, cx, cy, w, h, colour, direction):
+    """A plain block arrow, drawn here (not taken from anywhere)."""
+    s = scale
+    shaft, head = w * 0.34, h * 0.52
+    if direction == "down":
+        draw.rectangle(((cx - shaft / 2) * s, (cy - h / 2) * s, (cx + shaft / 2) * s, (cy + h / 2 - head) * s), fill=colour)
+        draw.polygon([((cx - w / 2) * s, (cy + h / 2 - head) * s), ((cx + w / 2) * s, (cy + h / 2 - head) * s),
+                      (cx * s, (cy + h / 2) * s)], fill=colour)
+    else:
+        draw.rectangle(((cx - w / 2) * s, (cy - shaft / 2) * s, (cx + w / 2 - head) * s, (cy + shaft / 2) * s), fill=colour)
+        draw.polygon([((cx + w / 2 - head) * s, (cy - h / 2) * s), ((cx + w / 2 - head) * s, (cy + h / 2) * s),
+                      ((cx + w / 2) * s, cy * s)], fill=colour)
+
+
+def installer_welcome():
+    """The installer's welcome image: the ParchaOS tile with an arrow pointing down at it."""
+    w, h = 900, 516
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 255))
+    layer = _ss(lambda d, s: arrow(d, s, w / 2, 150, 70, 90, (122, 122, 133, 255), "down"), (w, h))
+    im.alpha_composite(layer)
+    t = tile(180)
+    im.alpha_composite(t, (w // 2 - 90, 250))
+    return im
+
+
+def installer_slide():
+    """The installer slide: the ParchaOS tile, an arrow, and a laptop drawn as plain shapes."""
+    w, h = 1920, 1080
+    im = Image.new("RGBA", (w, h))
+    px = ImageDraw.Draw(im)
+    for y in range(h):
+        f = y / (h - 1)
+        px.line([(0, y), (w, y)], fill=(int(28 + 10 * f), int(28 + 10 * f), int(32 + 10 * f), 255))
+    im.alpha_composite(tile(300), (410, 390))
+
+    def shapes(d, s):
+        arrow(d, s, 960, 540, 150, 110, (122, 122, 133, 255), "right")
+        # laptop: a rounded screen, a small dot above the base line
+        d.rounded_rectangle((1210 * s, 410 * s, 1510 * s, 600 * s), radius=18 * s, fill=(205, 205, 212, 255))
+        d.ellipse((1352 * s, 496 * s, 1368 * s, 512 * s), fill=(140, 140, 150, 255))
+        d.rectangle((1230 * s, 566 * s, 1490 * s, 569 * s), fill=(160, 160, 170, 255))
+
+    im.alpha_composite(_ss(shapes, (w, h)))
+    return im.convert("RGB")
+
+
 OUTPUTS = {}
 
 
@@ -204,8 +257,10 @@ def main():
     cal = "packaging/parchaos-gnome-calamares-config/files/etc/calamares/branding/ParchaOS/"
     tile(256).save(cal + "icon.png")
     render(white, 256).save(cal + "logo.png")
-    replace_tile(cal + "welcome.png", tile).save(cal + "welcome.png")
-    replace_tile(cal + "slide1.png", tile).convert("RGB").save(cal + "slide1.png")
+    # Drawn from scratch here: the shapes are plain (an arrow, a tile, a laptop outline) and nothing is
+    # inherited from an earlier installer theme.
+    installer_welcome().save(cal + "welcome.png")
+    installer_slide().save(cal + "slide1.png")
 
     # Wallpaper.
     wallpaper(3840, 2160).save(

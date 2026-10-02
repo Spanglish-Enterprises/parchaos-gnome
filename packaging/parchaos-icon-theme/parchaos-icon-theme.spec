@@ -18,7 +18,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        21%{?dist}
+Release:        22%{?dist}
 Summary:        ParchaOS icon theme
 
 License:        GPL-3.0-or-later
@@ -30,7 +30,7 @@ Source0:        %{url}/archive/%{commit}/MacTahoe-icon-theme-%{shortcommit}.tar.
 # icons (Finder, App Store, Safari): see parchaos-icons/README.md.
 Source1:        parcher.svg
 Source2:        parcha-store.svg
-Source3:        pafari.svg
+Source3:        parchaos-web-browser.svg
 Source4:        parcha-browser.svg
 # Batch 2 (ticket #13): original icons for the most visible apps, generated
 # by parchaos-icons/generate.py, replacing MacTahoe's copies of Apple's.
@@ -348,6 +348,9 @@ done
 %{_datadir}/icons/*
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-22
+- Look-alike audit: the generic browser icon file is named parchaos-web-browser.svg (the old name was a pun on another company's browser; the drawing is unchanged).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-21
 - Ticket #141: a new, soft 3D trash can (empty and full): a rounded
   tapered bin in the folder colour with a grey flanged rim, a hood and a

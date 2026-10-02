@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        GPL-3.0-or-later AND CC0-1.0 AND CC-BY-SA-4.0
@@ -120,6 +120,9 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 %{_datadir}/polkit-1/actions/org.parchaos.installer.policy
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-32
+- Look-alike audit: the installer welcome image and slide are drawn from scratch (a ParchaOS tile, an arrow, a laptop outline) instead of editing images inherited from an earlier installer theme.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-31
 - Ticket #167: the EFI scripts pick the architecture's file names at run time (shimx64/BOOTX64.EFI on x86_64, shimaa64/BOOTAA64.EFI on aarch64).
 
