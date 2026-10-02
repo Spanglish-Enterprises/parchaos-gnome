@@ -716,3 +716,9 @@ StWidget:drop {
   border-color: transparent;
   box-shadow: none;
 }
+
+/* Sliders (4x1) and 2x2 tiles are rounded rectangles, not capsules (owner's reference);
+ * the radius matches BLOCK_RADIUS in extension.js. */
+.parchaos-style-glass .parchaos-controls-tile.parchaos-controls-block {
+  border-radius: 18px;
+}

@@ -36,6 +36,32 @@ try {
 
 const CELL = 72;
 const GAP = 10;
+// Corner radius of the bigger tiles (sliders 4x1, 2x2 tiles), measured on the owner's reference
+// (about a third of a row). 1x1 and 2x1 tiles are full capsules.
+const BLOCK_RADIUS = 18;
+// How far the resize handle's box reaches past the tile's corner.
+const HANDLE_OUT = 5;
+
+function isBlockTile(item) {
+    return item.rows > 1 || item.cols > 2;
+}
+
+function tileRadius(item) {
+    return isBlockTile(item) ? BLOCK_RADIUS : CELL / 2;
+}
+
+// True when a stage point is on (or near) the resize stroke, not just in its box: the box covers
+// a big part of a round button, where a press should move the tile instead.
+function onResizeStroke(item, x, y) {
+    const handle = item.resizeHandle;
+    if (!handle?.visible || !handle.mapped)
+        return false;
+    const [ok, lx, ly] = handle.transform_stage_point(x, y);
+    if (!ok)
+        return false;
+    const dist = Math.hypot(lx - HANDLE_OUT, ly - HANDLE_OUT);
+    return lx >= 0 && ly >= 0 && Math.abs(dist - (tileRadius(item) + 1)) <= 10;
+}
 const PAD = 12;
 
 // ParchaOS visual style ("glass" or "classic") from the org.parchaos.desktop
@@ -427,15 +453,16 @@ const ControlsPanel = GObject.registerClass({
             reactive: true,
             visible: false,
         });
-        handle.set_size(32, 32);
+        // The stroke sits on the tile's own corner curve (concentric with it), so the box is
+        // the corner square plus a little room for the stroke outside the tile.
+        handle.set_translation(HANDLE_OUT, HANDLE_OUT, 0);
         handle.connect('repaint', area => {
             const cr = area.get_context();
-            const [w, h] = area.get_surface_size();
+            const r = tileRadius(item);
             cr.setLineCap(1);
-            cr.setLineWidth(5.5);
+            cr.setLineWidth(6.5);
             cr.setSourceRGBA(1, 1, 1, 0.95);
-            // Hugs the tile's rounded corner, bulging outwards like the reference.
-            cr.arc(3, 3, Math.min(w, h) - 8, Math.PI * 0.03, Math.PI * 0.47);
+            cr.arc(HANDLE_OUT, HANDLE_OUT, r + 1, Math.PI * 0.09, Math.PI * 0.41);
             cr.stroke();
             cr.$dispose();
         });
@@ -613,6 +640,13 @@ const ControlsPanel = GObject.registerClass({
             // The tile's own size follows the chosen size.
             item.widget.set_size(item.cols * CELL + (item.cols - 1) * GAP, item.rows * CELL + (item.rows - 1) * GAP);
             item.widget._smallLayout?.(item.cols, item.rows);
+            if (isBlockTile(item))
+                item.widget.add_style_class_name('parchaos-controls-block');
+            else
+                item.widget.remove_style_class_name('parchaos-controls-block');
+            const hs = tileRadius(item) + 2 * HANDLE_OUT;
+            item.resizeHandle?.set_size(hs, hs);
+            item.resizeHandle?.queue_repaint();
             item.badge.visible = this._editing;
             item.resizeHandle.visible = this._editing && item.sizes.length > 1;
             item.overlay.visible = this._editing;
@@ -745,7 +779,10 @@ const ControlsPanel = GObject.registerClass({
             pane.set_position(x - lx, y - ly);
             pane.set_size(pw, ph);
             pane.show();
-            pane.set({radius: Math.min(36, Math.min(pw, ph) / 2)});
+            // hair: the reference tiles keep a crisp bright outline even over a bright sky
+            // band: on a small round button the default 26 px bezel covers almost the whole face and
+            // pulls the backdrop across it; the reference's buttons are clear in the middle.
+            pane.set({radius: Math.min(tileRadius(item), Math.min(pw, ph) / 2), hair: 0.38, band: Math.min(26, Math.min(pw, ph) * 0.26)});
         }
     }
 
@@ -1536,7 +1573,7 @@ class ControlsButton extends PanelMenu.Button {
                     drag = {kind: 'window', x, y, px0, py0};
                     return Clutter.EVENT_STOP;
                 }
-                const resizing = panel._items.find(i => !i.hidden && within(hit, i.resizeHandle));
+                const resizing = panel._items.find(i => !i.hidden && onResizeStroke(i, x, y));
                 if (resizing) {
                     drag = {kind: 'resize', state: panel.beginResize(resizing)};
                     return Clutter.EVENT_STOP;

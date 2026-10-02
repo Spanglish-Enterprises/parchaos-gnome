@@ -41,6 +41,7 @@ uniform float u_rim;        // rim light strength
 uniform float u_rimw;       // rim width, px
 uniform float u_rimdir;     // rim directional power
 uniform float u_rimpow;     // rim fresnel power
+uniform float u_hair;       // hairline along the whole edge (the reference's crisp outline)
 uniform float u_spec;       // specular strength
 uniform float u_shin;       // specular shininess
 uniform float u_sheen;      // surface sheen
@@ -75,16 +76,25 @@ vec3 tap(vec2 px) {
     return texture2D(tex, px / (vec2(u_w, u_h) + 2.0 * vec2(u_pad))).rgb;
 }
 
-// blurred backdrop: golden-spiral taps, wider along the lens near the rim
+// blurred backdrop: golden-spiral taps, wider along the lens near the rim. The spiral is turned
+// by a per-pixel angle and the taps are gaussian-weighted, so a sparse kernel gives a fine grain
+// instead of sharp ghost copies of lines behind the pane.
+float ign(vec2 p) {
+    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
 vec3 backdrop(vec2 px, vec2 stretch) {
     vec3 acc = tap(px);
     float ws = 1.0;
-    for (int i = 0; i < 12; i++) {
-        float a = float(i) * 2.399963;
-        float rr = u_blur * sqrt((float(i) + 0.5) / 12.0);
-        vec2 o = vec2(cos(a), sin(a)) * rr + stretch * ((float(i) + 0.5) / 12.0 - 0.5);
-        acc += tap(px + o);
-        ws += 1.0;
+    float rot = ign(floor(px)) * 6.2831853;
+    for (int i = 0; i < 24; i++) {
+        float f = (float(i) + 0.5) / 24.0;
+        float a = float(i) * 2.399963 + rot;
+        float rr = u_blur * sqrt(f);
+        float w = exp(-2.0 * f);
+        vec2 o = vec2(cos(a), sin(a)) * rr + stretch * (f - 0.5);
+        acc += tap(px + o) * w;
+        ws += w;
     }
     return acc / ws;
 }
@@ -147,10 +157,12 @@ void main() {
 
     vec2 cdir = dl > 1e-3 ? normalize(dispPx) : vec2(0.0);
     vec2 cv = cdir * u_chroma * lens;
-    vec3 col;
-    col.r = backdrop(px + dispPx + cv, stretch).r;
-    col.g = backdrop(px + dispPx, stretch).g;
-    col.b = backdrop(px + dispPx - cv, stretch).b;
+    vec3 col = backdrop(px + dispPx, stretch);
+    // colour fringing only where the lens bends: three blurs per pixel cost too much elsewhere
+    if (length(cv) > 0.05) {
+        col.r = backdrop(px + dispPx + cv, stretch).r;
+        col.b = backdrop(px + dispPx - cv, stretch).b;
+    }
 
     // brightness / contrast / saturation, then tint
     col *= u_bright;
@@ -183,7 +195,9 @@ void main() {
     vec3 R = reflect(-Ld, N);
     float spec = pow(max(R.z, 0.0), max(u_shin, 1.0)) * u_spec * mix(0.25, 1.0, inside) * clamp(band2 + inside * 0.65, 0.0, 1.0);
     float sheen = pow(max(dot(N, Ld), 0.0), 1.65) * mix(1.0, 0.55, band2) * u_sheen;
-    vec3 add = vec3(spec + rimL + band2 * 0.008 + sheen);
+    // a crisp ~1 px line just inside the edge, all the way round, brighter where it faces the light
+    float hair = clamp(1.0 - abs(d + 0.7) / 0.9, 0.0, 1.0) * u_hair * mix(0.55, 1.0, lightMask);
+    vec3 add = vec3(spec + rimL + hair + band2 * 0.008 + sheen);
     vec3 lit = col + add - col * add;
     float mx = max(lit.r, max(lit.g, lit.b));
     if (mx > 1.0)
@@ -202,7 +216,7 @@ void main() {
 export const GLASS_DEFAULTS = {
     radius: 34, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
     blur: 8.0, tint: 0.3, tintc: [0.07, 0.07, 0.08], bright: 1.0, contrast: 1.0, sat: 1.2,
-    rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, spec: 0.0, shin: 42, sheen: 0.0,
+    rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, hair: 0.0, spec: 0.0, shin: 42, sheen: 0.0,
     dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
 };
 
@@ -313,7 +327,7 @@ class GlassPane extends St.Widget {
         f('u_radius', p.radius); f('u_band', p.band); f('u_falloff', p.falloff); f('u_n', p.n); f('u_z', p.z);
         f('u_ior', p.ior); f('u_disp', p.disp); f('u_chroma', p.chroma); f('u_blur', p.blur);
         f('u_tint', p.tint); f('u_dim', p.dim); f('u_bright', p.bright); f('u_contrast', p.contrast); f('u_sat', p.sat);
-        f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow);
+        f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow); f('u_hair', p.hair);
         f('u_spec', p.spec); f('u_shin', p.shin); f('u_sheen', p.sheen); f('u_light', p.light);
         f('u_ao', p.ao); f('u_aor', p.aor); f('u_shr', p.shr); f('u_shi', p.shi);
         f('u_tr', p.tintc[0]); f('u_tg', p.tintc[1]); f('u_tb', p.tintc[2]);

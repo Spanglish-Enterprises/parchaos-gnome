@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        42%{?dist}
+Release:        43%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -27,7 +27,7 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
-Requires:       parchaos-glass
+Requires:       parchaos-glass >= 1.0.0-8
 # The Screenshot app (ticket #130) replaces the old standalone one, which
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-43
+- Tickets #135, #148: sliders (4x1) and 2x2 tiles are rounded rectangles with 18 px corners, as in the reference; 1x1 and 2x1 tiles stay capsules. Tiles get the reference's crisp outline, and small buttons a narrower lens so their middle stays clear. The resize handle is a thicker stroke on the tile's own corner curve, and only a press on the stroke resizes (a press elsewhere near the corner moves the tile).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-42
 - Ticket #148: the tiles in the picker are glass, as in the reference.
 
