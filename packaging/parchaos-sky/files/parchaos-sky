@@ -1450,7 +1450,24 @@ PARCHI_ART = {
 POSE_ART = {'happy': 'waving', 'sunny': 'sunny', 'rain': 'rain', 'cloudy': 'cloudy', 'storm': 'storm',
             'snow': 'snowy', 'cold': 'cold', 'windy': 'windy', 'night': 'night', 'fog': 'foggy',
             'sunset': 'sunset'}   # anything else (neutral): front
-SCENE_POSES = {'sunny', 'night', 'snowy', 'foggy', 'sunset'}   # drawn on a round backdrop
+# Poses drawn on a round scene: the circle's centre and radius in art pixels. In Parchi's panel
+# the scene is enlarged until it covers the whole rounded panel, so no circle shows.
+PARCHI_SCENE = {'sunny': (546, 388, 366), 'night': (275, 274, 274), 'snowy': (482, 509, 478),
+                'foggy': (507, 505, 501), 'sunset': (470, 508, 466)}
+# Where to look, and how many art pixels span the panel, when the circle's centre is not the
+# best framing (Parchi lounges low in the sunny scene).
+PARCHI_FRAME = {'sunny': (560, 600, 760)}
+SCENE_POSES = set(PARCHI_SCENE)
+# The rest stand in front of a sky painted to match (top colour, bottom colour).
+PARCHI_SKY = {
+    'front': ((0.47, 0.71, 0.94), (0.82, 0.91, 0.98)),
+    'waving': ((0.47, 0.71, 0.94), (0.82, 0.91, 0.98)),
+    'rain': ((0.45, 0.53, 0.64), (0.71, 0.77, 0.83)),
+    'cloudy': ((0.53, 0.73, 0.91), (0.84, 0.91, 0.96)),
+    'storm': ((0.27, 0.31, 0.39), (0.50, 0.55, 0.62)),
+    'cold': ((0.68, 0.80, 0.91), (0.93, 0.96, 0.98)),
+    'windy': ((0.58, 0.78, 0.90), (0.88, 0.94, 0.88)),
+}
 
 
 class ParchiArt:
@@ -1476,7 +1493,7 @@ class ParchiArt:
 
     @classmethod
     def surface(cls, pose, w, h, scale):
-        """The pose fitted into w x h (bottom centre), the factor used, and the pulp colour."""
+        """The pose laid out in a w x h panel, the factor and offset used, and the face colour."""
         key = (pose, w, h, scale)
         if key not in cls._cache:
             handle = cls.handle(pose)
@@ -1484,20 +1501,61 @@ class ParchiArt:
                 return None
             from gi.repository import Rsvg
             (aw, ah), eyes = PARCHI_ART[pose]
-            k = min(w / aw, h / ah)
+            sky = None
+            if pose in PARCHI_SCENE:
+                # the circle a little wider than the panel; its edge fades out and the corners
+                # take the scene's own sky, so the scene fills the panel with no circle showing
+                cx, cy, r = PARCHI_SCENE[pose]
+                fx, fy, span = PARCHI_FRAME.get(pose, (cx, cy, r / 0.58))
+                k = min(w, h) / span
+                ox, oy = w / 2 - fx * k, h / 2 - fy * k
+                dcx, dcy = ox + cx * k, oy + cy * k     # the circle, in panel coordinates
+            else:
+                k = min((w - 14) / aw, (h - 10) / ah)
+                ox, oy = (w - aw * k) / 2, h - ah * k - 4
             surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w * scale), int(h * scale))
             surf.set_device_scale(scale, scale)
             cr = cairo.Context(surf)
-            ox, oy = (w - aw * k) / 2, h - ah * k
             viewport = Rsvg.Rectangle()
             viewport.x, viewport.y, viewport.width, viewport.height = ox, oy, aw * k, ah * k
-            handle.render_document(cr, viewport)
+            if pose in PARCHI_SCENE:
+                layer = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w * scale), int(h * scale))
+                layer.set_device_scale(scale, scale)
+                lc = cairo.Context(layer)
+                handle.render_document(lc, viewport)
+                layer.flush()
+                sky = (cls._sample(layer, scale, dcx, max(4, dcy - r * k * 0.86)),
+                       cls._sample(layer, scale, dcx, min(h - 4, dcy + r * k * 0.86)))
+                fade = cairo.RadialGradient(dcx, dcy, r * k * 0.86, dcx, dcy, r * k * 0.99)
+                fade.add_color_stop_rgba(0, 0, 0, 0, 1)
+                fade.add_color_stop_rgba(1, 0, 0, 0, 0)
+                cr.set_source_surface(layer, 0, 0)
+                cr.mask(fade)
+            else:
+                handle.render_document(cr, viewport)
             surf.flush()
             pulp = cls._pulp(surf, scale, [(ox + x * k, oy + y * k, rx * k, ry * k) for x, y, rx, ry in eyes])
             if len(cls._cache) > 24:
                 cls._cache.clear()
-            cls._cache[key] = (surf, k, ox, oy, pulp)
+            cls._cache[key] = (surf, k, ox, oy, pulp, sky)
         return cls._cache[key]
+
+    @staticmethod
+    def _sample(surf, scale, x, y):
+        """The average colour of a small patch, as (r, g, b) 0..1."""
+        data, stride = surf.get_data(), surf.get_stride()
+        sw, sh = surf.get_width(), surf.get_height()
+        acc, n = [0, 0, 0], 0
+        for dy in range(-3, 4):
+            for dx in range(-6, 7):
+                px, py = int(x * scale) + dx, int(y * scale) + dy
+                if 0 <= px < sw and 0 <= py < sh:
+                    b, g, r, a = data[py * stride + px * 4:py * stride + px * 4 + 4]
+                    if a > 200:
+                        acc[0] += r; acc[1] += g; acc[2] += b; n += 1
+        if not n:
+            return (0.6, 0.75, 0.9)
+        return tuple(c / n / 255 for c in acc)
 
     @staticmethod
     def _pulp(surf, scale, eyes):
@@ -1583,8 +1641,9 @@ def draw_lids(cr, eyes, shut, pulp):
 class Parchita(Gtk.DrawingArea):
     """Parchi on screen: the pose follows the weather; Parchi bobs, sways and blinks."""
 
-    def __init__(self):
-        super().__init__(content_width=124, content_height=134, valign=Gtk.Align.CENTER)
+    def __init__(self, size=150, radius=22):
+        super().__init__(content_width=size, content_height=size, valign=Gtk.Align.CENTER)
+        self.radius = radius
         self.mood = 'happy'
         self.t0 = time.monotonic()
         self.seed = random.randrange(1000)
@@ -1604,19 +1663,33 @@ class Parchita(Gtk.DrawingArea):
         animate = Gtk.Settings.get_default().props.gtk_enable_animations
         t = time.monotonic() - self.t0 if animate else 0.0
         pose = POSE_ART.get(self.mood, 'front')
+        r = self.radius
+        cr.new_sub_path()
+        cr.arc(w - r, r, r, -math.pi / 2, 0)
+        cr.arc(w - r, h - r, r, 0, math.pi / 2)
+        cr.arc(r, h - r, r, math.pi / 2, math.pi)
+        cr.arc(r, r, r, math.pi, 1.5 * math.pi)
+        cr.close_path()
+        cr.clip()
         try:
-            art = ParchiArt.surface(pose, w, h - 4, self.get_scale_factor())
+            art = ParchiArt.surface(pose, w, h, self.get_scale_factor())
         except (GLib.Error, TypeError, cairo.Error):
             ParchiArt._handles[pose] = None
             art = None
+        top, bottom = (art and art[5]) or PARCHI_SKY.get(pose, PARCHI_SKY['front'])
+        sky = cairo.LinearGradient(0, 0, 0, h)
+        sky.add_color_stop_rgb(0, *top)
+        sky.add_color_stop_rgb(1, *bottom)
+        cr.set_source(sky)
+        cr.paint()
         if art is None:
             draw_parchi(cr, w, h, self.mood, t, animate)
             return
-        surf, k, ox, oy, pulp = art
+        surf, k, ox, oy, pulp, _sky = art
         dx, dy, angle, feet = parchi_motion(pose, t) if animate else (0, 0, 0, True)
         cr.save()
         px, py = w / 2, (h - 4 if feet else h / 2)
-        cr.translate(px + dx, py + dy + 2)
+        cr.translate(px + dx, py + dy)
         cr.rotate(angle)
         cr.translate(-px, -py)
         cr.set_source_surface(surf, 0, 0)
@@ -2614,13 +2687,32 @@ class SkyWindow(Adw.ApplicationWindow):
             box.append(self._label(a['headline'], 'sky-small', xalign=0, wrap=True))
             self.content.append(box)
 
-        # Heads-up
-        card = self._card(_('Heads-up'))
+        # Heads-up: with Parchi on, Parchi tells it, next to the pose for the weather
+        if self._parchi_on():
+            card = self._card()
+            row = Gtk.Box(spacing=16)
+            self.parchita = Parchita(size=118, radius=14)
+            self.parchita.set_valign(Gtk.Align.START)
+            self.parchita.set_mood(self._parchi_mood(fc.now(), sun_elevation(fc.lat, fc.lon, datetime.now(timezone.utc))))
+            self.parchita.set_tooltip_text(_('Parchi'))
+            row.append(self.parchita)
+            body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True, valign=Gtk.Align.CENTER)
+            title = Gtk.Label(label=_('Heads-up').upper(), xalign=0)
+            title.add_css_class('sky-card-title')
+            body.append(title)
+            body.append(self._label(self._summary(fc.now()), 'sky-mid', xalign=0, wrap=True))
+            row.append(body)
+            card.append(row)
+            target = body
+        else:
+            self.parchita = None
+            card = self._card(_('Heads-up'))
+            target = card
         for icon, text in heads_up(fc, imp):
             row = Gtk.Box(spacing=10)
             row.append(Gtk.Image(icon_name=icon, pixel_size=18))
             row.append(self._label(text, 'sky-row-text', xalign=0, wrap=True, hexpand=True))
-            card.append(row)
+            target.append(row)
         self.content.append(card)
 
         nh = next_hour_text(self.next_hour)
@@ -2673,9 +2765,7 @@ class SkyWindow(Adw.ApplicationWindow):
         night = sun < -2
         place = self.places[self.index]['name'] if self.places else ''
         _icon, cond, _thunder = symbol_info(h['symbol'], night)
-        # The place and temperature sit dead centre; Parchi keeps them company off to one side.
-        row = Gtk.CenterBox(hexpand=True)
-        text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, halign=Gtk.Align.CENTER)
         text.append(self._label(place, 'sky-place'))
         if self.scrub:
             local = h['time'].astimezone()
@@ -2697,27 +2787,29 @@ class SkyWindow(Adw.ApplicationWindow):
             bits.append(_('Feels like {temp}').format(temp=fmt_temp(fl, imp)))
         if bits:
             text.append(self._label('   '.join(bits), 'sky-cond', 'sky-dim'))
-        row.set_center_widget(text)
-        if self.prefs.get('playful', True) and self.prefs.get('parchita', True):
-            self.parchita = Parchita()
-            when = h['time'] if self.scrub else datetime.now(timezone.utc)
-            setting = sun_elevation(fc.lat, fc.lon, when + timedelta(minutes=30)) < sun
-            self.parchita.set_mood(parchita_mood(h, sun, setting))
-            self.parchita.set_tooltip_text(_('Parchi'))
-            self.parchita.set_halign(Gtk.Align.START)
-            self.parchita.set_valign(Gtk.Align.END)
-            self.parchita.set_margin_start(28)
-            side = Gtk.Box(hexpand=True)   # fills the right half, so Parchi stays near the text
-            side.append(self.parchita)
-            row.set_end_widget(side)
-        box.append(row)
-        if not self.scrub:
-            nh = next_hour_text(self.next_hour)
-            line = summary_line(fc, self.prefs.get('playful', True), fmt_temp(h['temp'], imp))
-            if nh and nh[0] in ('starts', 'stops'):
-                line = nh[2] + '.'
-            box.append(self._label(line,
+        box.append(text)
+        if self._parchi_on():
+            if getattr(self, 'parchita', None):
+                self.parchita.set_mood(self._parchi_mood(h, sun))
+        elif not self.scrub:
+            box.append(self._label(self._summary(h),
                                    'sky-line', wrap=True, justify=Gtk.Justification.CENTER, margin_top=10))
+
+    def _parchi_on(self):
+        return self.prefs.get('playful', True) and self.prefs.get('parchita', True)
+
+    def _parchi_mood(self, h, sun):
+        when = h['time'] if self.scrub else datetime.now(timezone.utc)
+        setting = sun_elevation(self.forecast.lat, self.forecast.lon, when + timedelta(minutes=30)) < sun
+        return parchita_mood(h, sun, setting)
+
+    def _summary(self, h):
+        """The one-line story of the day (or of the next few minutes, when rain starts or stops)."""
+        nh = next_hour_text(self.next_hour)
+        line = summary_line(self.forecast, self.prefs.get('playful', True), fmt_temp(h['temp'], self.imperial))
+        if nh and nh[0] in ('starts', 'stops'):
+            line = nh[2] + '.'
+        return line
 
     def _lens_bar(self):
         bar = Gtk.Box(spacing=2, halign=Gtk.Align.CENTER)
