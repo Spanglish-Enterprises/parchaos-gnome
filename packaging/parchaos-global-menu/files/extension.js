@@ -132,43 +132,32 @@ const SHORTCUTS = {
 // of the keyboard style in use.
 const HINTS = {
     'new-window': 'c N', 'new-tab': 'c T', 'new-folder': 'cs N', 'open': 'c O', 'get-info': 'c I',
-    'rename': 'F2', 'quick-preview': 'Space', 'trash': 'c \u232B', 'print': 'c P', 'undo': 'c Z', 'redo': 'cs Z',
+    'rename': 'F2', 'quick-preview': 'Space', 'trash': 'c Backspace', 'print': 'c P', 'undo': 'c Z', 'redo': 'cs Z',
     'cut': 'c X', 'copy': 'c C', 'paste': 'c V', 'select-all': 'c A', 'find': 'c F', 'settings': 'c ,',
     'view-icons': 'c 1', 'view-list': 'c 2', 'hidden-files': 'cs .', 'zoom-in': 'c +', 'zoom-out': 'c \u2212',
     'zoom-reset': 'c 0', 'reload': 'c R', 'back': 'c [', 'forward': 'c ]', 'enclosing': 'c \u2191',
     'go-to-folder': 'cs G',
 };
 
-// "c N" -> the text shown next to a menu item. With the Super-as-Ctrl
-// keyboard style the command key is what people press, so symbols; with the
-// standard style the keys are named.
+// "c N" -> the text shown next to a menu item, as the keys are printed on a PC keyboard (named keys,
+// not another platform's modifier symbols). "c" is the command key: Super with the Super-as-Ctrl
+// keyboard style, Ctrl with the standard style; "k" is the other of the two.
 function hintText(notation) {
     if (!notation)
         return '';
     const [mods, key] = notation.includes(' ') ? notation.split(' ') : ['', notation];
     if (!mods)
         return key;
-    const symbols = keyboardStyle() === 'super-ctrl';
+    const superIsCommand = keyboardStyle() === 'super-ctrl';
     const parts = [];
-    if (symbols) {
-        if (mods.includes('k'))
-            parts.push('\u2303');
-        if (mods.includes('a'))
-            parts.push('\u2325');
-        if (mods.includes('s'))
-            parts.push('\u21E7');
-        if (mods.includes('c'))
-            parts.push('\u2318');
-        return parts.join('\u200A') + '\u200A' + key;
-    }
     if (mods.includes('k'))
-        parts.push('Super');
-    if (mods.includes('c'))
-        parts.push('Ctrl');
+        parts.push(superIsCommand ? 'Ctrl' : 'Super');
     if (mods.includes('a'))
         parts.push('Alt');
     if (mods.includes('s'))
         parts.push('Shift');
+    if (mods.includes('c'))
+        parts.push(superIsCommand ? 'Super' : 'Ctrl');
     return [...parts, key].join('+');
 }
 
@@ -1314,7 +1303,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             SEPARATOR,
             { label: 'Recent Items', recent: true },
             SEPARATOR,
-            { label: 'Force Quit\u2026', hint: 'ac \u238B', run: () => new ForceQuitDialog().open() },
+            { label: 'Force Quit\u2026', hint: 'ac Esc', run: () => new ForceQuitDialog().open() },
             SEPARATOR,
             { label: 'Sleep', run: () => GLib.spawn_command_line_async('systemctl suspend') },
             { label: 'Restart\u2026', run: powerAction('Restart now? Any unsaved work will be lost.',

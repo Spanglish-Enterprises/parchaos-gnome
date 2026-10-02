@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        35%{?dist}
+Release:        36%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -107,6 +107,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2.1.0-36
+- Look-alike audit: menu shortcuts are written as the keys are printed on a PC keyboard (Super+Q, Alt+Super+Esc) instead of another platform's modifier symbols.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2.1.0-35
 - Ticket #170: the logo menu has a What's New item that opens the What's New window.
 
