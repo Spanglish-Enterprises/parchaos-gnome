@@ -722,3 +722,37 @@ StWidget:drop {
 .parchaos-style-glass .parchaos-controls-tile.parchaos-controls-block {
   border-radius: 18px;
 }
+
+/* The "recently" pill above the tiles (Weather recently / Screenshot taken), measured on the
+ * owner's reference: about 23 px tall, bold 13 px label, a blue round icon. */
+.parchaos-controls-recent {
+  margin-bottom: 8px;
+  padding: 3px 12px 3px 4px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.parchaos-controls-recent:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+.parchaos-controls-recent-box {
+  spacing: 6px;
+}
+
+.parchaos-controls-recent-icon {
+  icon-size: 10px;
+  padding: 4px;
+  border-radius: 999px;
+  background-color: #2f7cf6;
+  color: #ffffff;
+}
+
+/* The reference (light appearance) keeps the same grey glass and white text. */
+.parchaos-light .parchaos-controls-recent {
+  color: #ffffff;
+}

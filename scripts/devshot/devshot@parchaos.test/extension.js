@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
-// type "text", combo ["KEY_A",...], log. Test tool only; never run against a real session.
+// type "text", combo ["KEY_A",...], log, screenshotTaken "name". Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -29,6 +29,11 @@ export default class X extends Extension {
             for (const step of plan) {
                 if (step.wait) await wait(step.wait);
                 else if (step.shot) await shot(step.shot);
+                // Saves a screenshot and announces it as the capture tool does ("screenshot-taken").
+                else if (step.screenshotTaken) {
+                    await shot(step.screenshotTaken);
+                    Main.screenshotUI.emit('screenshot-taken', Gio.File.new_for_path(`${OUT}/${step.screenshotTaken}.png`));
+                }
                 else if (step.move) dev.notify_absolute_motion(t(), step.move[0], step.move[1]);
                 else if (step.press) dev.notify_button(t(), step.press, Clutter.ButtonState.PRESSED);
                 else if (step.release) dev.notify_button(t(), step.release, Clutter.ButtonState.RELEASED);

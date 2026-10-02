@@ -22,6 +22,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
+import * as Location from 'resource:///org/gnome/shell/ui/status/location.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // ParchaOS glass (parchaos-glass): our own refractive glass for the tiles. Optional: without it
@@ -36,6 +37,81 @@ try {
 
 const CELL = 72;
 const GAP = 10;
+// The "recently" pill above the tiles (owner's reference): the app that last asked for the
+// location ("Weather recently", opens the app) or the last screenshot ("Screenshot taken",
+// shows it in the file browser). An entry stays this long.
+const RECENT_SECONDS = 15 * 60;
+
+class RecentActivity {
+    constructor() {
+        this._latest = null;
+        // Geoclue asks the shell's agent to authorize every app that wants the location; the
+        // agent object is called by method name, so wrapping the instance method is enough.
+        this._agent = Location.getGeoclueAgent();
+        const agent = this._agent;
+        const original = agent.AuthorizeAppAsync;
+        agent.AuthorizeAppAsync = (params, invocation) => {
+            // Count the app only when the shell grants it the location: the reply carries the
+            // decision, so the invocation is wrapped to read it on the way out.
+            const [desktopId] = params;
+            const reply = new Proxy(invocation, {
+                get: (target, key) => {
+                    if (key === 'return_value') {
+                        return value => {
+                            try {
+                                const [granted] = value.deepUnpack();
+                                const app = Shell.AppSystem.get_default().lookup_app(`${desktopId}.desktop`);
+                                if (granted && app)
+                                    this._latest = {kind: 'location', app, time: GLib.get_monotonic_time()};
+                            } catch (e) {
+                                logError(e, 'parchaos-controls: recent location');
+                            }
+                            target.return_value(value);
+                        };
+                    }
+                    const v = target[key];
+                    return typeof v === 'function' ? v.bind(target) : v;
+                },
+            });
+            return original.call(agent, params, reply);
+        };
+        this._shotId = Main.screenshotUI.connect('screenshot-taken', (_ui, file) => {
+            this._latest = {kind: 'screenshot', file, time: GLib.get_monotonic_time()};
+        });
+    }
+
+    latest() {
+        const l = this._latest;
+        if (!l || GLib.get_monotonic_time() - l.time > RECENT_SECONDS * 1e6)
+            return null;
+        if (l.kind === 'screenshot' && !l.file?.query_exists(null))
+            return null;
+        return l;
+    }
+
+    destroy() {
+        // The wrapper is an own property over the class method; removing it restores the shell's.
+        delete this._agent.AuthorizeAppAsync;
+        Main.screenshotUI.disconnect(this._shotId);
+        this._latest = null;
+    }
+}
+
+let recentActivity = null;
+
+function showInFiles(file) {
+    Gio.DBus.session.call('org.freedesktop.FileManager1', '/org/freedesktop/FileManager1',
+        'org.freedesktop.FileManager1', 'ShowItems', new GLib.Variant('(ass)', [[file.get_uri()], '']),
+        null, Gio.DBusCallFlags.NONE, -1, null, (conn, res) => {
+            try {
+                conn.call_finish(res);
+            } catch (e) {
+                // No file manager on the bus: open the folder instead.
+                Gio.AppInfo.launch_default_for_uri(file.get_parent().get_uri(), null);
+            }
+        });
+}
+
 // Corner radius of the bigger tiles (sliders 4x1, 2x2 tiles), measured on the owner's reference
 // (about a third of a row). 1x1 and 2x1 tiles are full capsules.
 const BLOCK_RADIUS = 18;
@@ -323,6 +399,7 @@ const ControlsPanel = GObject.registerClass({
             row_spacing: GAP,
             column_spacing: GAP,
         })});
+        this._addRecentPill();
         this.add_child(this._grid);
 
         // Every tile is an item with a stable id, so the order and the hidden
@@ -424,6 +501,36 @@ const ControlsPanel = GObject.registerClass({
         this._editButton.connect('clicked', () => this._setEditing(!this._editing));
         this.add_child(this._editButton);
         this._layout();
+    }
+
+    _addRecentPill() {
+        const recent = recentActivity?.latest();
+        if (!recent)
+            return;
+        const box = new St.BoxLayout({style_class: 'parchaos-controls-recent-box'});
+        const icon = new St.Icon({
+            icon_name: recent.kind === 'location' ? 'find-location-symbolic' : 'camera-photo-symbolic',
+            style_class: 'parchaos-controls-recent-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        const text = recent.kind === 'location' ? `${recent.app.get_name()} recently` : 'Screenshot taken';
+        box.add_child(icon);
+        box.add_child(new St.Label({text, y_align: Clutter.ActorAlign.CENTER}));
+        this._recentPill = new St.Button({
+            style_class: 'parchaos-controls-recent',
+            child: box,
+            x_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            accessible_name: text,
+        });
+        this._recentPill.connect('clicked', () => {
+            this.emit('request-close');
+            if (recent.kind === 'location')
+                recent.app.activate();
+            else
+                showInFiles(recent.file);
+        });
+        this.add_child(this._recentPill);
     }
 
     // Edit mode (like rearranging apps on a phone): each tile gets a round
@@ -1775,6 +1882,7 @@ export default class ParchaControlsExtension extends Extension {
 
     enable() {
         this._exportShellBus();
+        recentActivity = new RecentActivity();
         this._injections = new InjectionManager();
         this._waitId = 0;
         // Quick Settings builds its indicators asynchronously at startup.
@@ -1867,6 +1975,8 @@ export default class ParchaControlsExtension extends Extension {
             this._waitId = 0;
         }
         this._teardown();
+        recentActivity?.destroy();
+        recentActivity = null;
         this._injections?.clear();
         this._injections = null;
         this._qs = null;

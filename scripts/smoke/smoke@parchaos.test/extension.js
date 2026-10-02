@@ -8,6 +8,7 @@
 import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
+import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -90,6 +91,77 @@ export default class SmokeTest extends Extension {
                     Main.panel.closeQuickSettings();
                     await sleep(300);
                 }
+            });
+        }
+
+        // The "recently" pill above the tiles: a location request the shell grants shows
+        // "<App> recently", a refused one does not, and a screenshot shows "Screenshot taken".
+        const controlsButton = Main.panel.statusArea['parchaos-controls'];
+        if (controlsButton) {
+            await this._check('controls recently pill', async () => {
+                const Location = await import('resource:///org/gnome/shell/ui/status/location.js');
+                const agent = Location.getGeoclueAgent();
+                const pillText = async () => {
+                    controlsButton.menu.open();
+                    await sleep(600);
+                    const pill = controlsButton._panel?._recentPill;
+                    const text = pill ? pill.child.get_children()[1].text : null;
+                    controlsButton.menu.close();
+                    await sleep(300);
+                    return text;
+                };
+                if (await pillText() !== null)
+                    throw new Error('a pill showed before anything happened');
+
+                const location = new Gio.Settings({schema_id: 'org.gnome.system.location'});
+                const store = agent._permStoreProxy;
+                // A stand-in permission store where both apps were allowed before, so the shell
+                // decides without its permission dialog (which would wait for a click).
+                agent._permStoreProxy = {
+                    LookupAsync: () => Promise.resolve([{
+                        'org.gnome.Weather': ['EXACT', '0'],
+                        'org.gnome.Settings': ['EXACT', '0'],
+                    }]),
+                    SetAsync: () => Promise.resolve(),
+                };
+                const ask = async (desktopId, enabled) => {
+                    location.set_boolean('enabled', enabled);
+                    location.set_string('max-accuracy-level', 'exact');
+                    await sleep(200);
+                    let reply = null;
+                    await agent.AuthorizeAppAsync([desktopId, 8], {return_value: v => {
+                        reply = v.deepUnpack();
+                    }});
+                    return reply;
+                };
+                try {
+                    const weather = Shell.AppSystem.get_default().lookup_app('org.gnome.Weather.desktop');
+                    if (!weather)
+                        throw new Error('org.gnome.Weather is not installed here');
+                    const granted = await ask('org.gnome.Weather', true);
+                    if (!granted?.[0])
+                        throw new Error(`the shell did not grant the test request: ${JSON.stringify(granted)}`);
+                    let text = await pillText();
+                    if (text !== `${weather.get_name()} recently`)
+                        throw new Error(`after a granted request the pill said ${JSON.stringify(text)}`);
+                    const refused = await ask('org.gnome.Settings', false);
+                    if (refused?.[0])
+                        throw new Error('a request with location off was granted');
+                    text = await pillText();
+                    if (text !== `${weather.get_name()} recently`)
+                        throw new Error(`a refused request changed the pill to ${JSON.stringify(text)}`);
+                } finally {
+                    agent._permStoreProxy = store;
+                    location.reset('enabled');
+                    location.reset('max-accuracy-level');
+                }
+
+                const file = Gio.File.new_for_path(`${GLib.get_home_dir()}/smoke-shot.png`);
+                file.replace_contents(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), null, false, 0, null);
+                Main.screenshotUI.emit('screenshot-taken', file);
+                const text = await pillText();
+                if (text !== 'Screenshot taken')
+                    throw new Error(`after a screenshot the pill said ${JSON.stringify(text)}`);
             });
         }
 
