@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        50%{?dist}
+Release:        51%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -27,7 +27,7 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
-Requires:       parchaos-glass >= 1.0.0-10
+Requires:       parchaos-glass >= 1.0.0-11
 # The Screenshot app (ticket #130) replaces the old standalone one, which
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-51
+- Ticket #148 (owner): when Edit Controls opens, the open windows on that screen slide off its nearer side and come back when editing ends; the picker is front and centre (moved left only as far as needed to clear Control Center); a control dragged in from the picker takes the next free slot and the tiles already placed stay where they are (no reordering, no gaps); the gallery's tiles are no longer clipped by a couple of pixels at its left edge.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-50
 - Ticket #148: Suggestions learn from use, privately. Control Center counts a control when it is tapped or slid, when a screenshot is taken and when Settings is opened (automatic switches such as sunset dark mode, scheduled Do Not Disturb or idle lock are not counted). Only control names with a fading score (half-life 14 days) and a time are kept, in ~/.local/share/parchaos/controls-usage.json, readable by the user only. Suggestions list the used controls that are not in the panel first, then the other missing ones; the fixed handful only while there is no history. Turning learn-usage off or pressing Forget in Settings deletes the record (the extension drops its copy too).
 

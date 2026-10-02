@@ -15,6 +15,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Graphene from 'gi://Graphene';
+import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
@@ -2040,18 +2041,20 @@ class ControlsButton extends PanelMenu.Button {
             overlay.connect('destroy', () => global.stage.disconnect(frame));
             follow();
         }
-        // Centred in the room left of Control Center, so the two never overlap (on a narrow
-        // screen it shrinks to fit); it can be moved by dragging its background.
+        // Front and centre on the screen (owner); moved left only as far as needed to clear
+        // Control Center, and narrowed on a screen too small for both. It can be moved by
+        // dragging its background.
         const place = () => {
             const panelLeft = px - monitor.x;
             const room = panelLeft - 24;
             let [pw, ph] = picker.get_size();
-            if (pw > room - 32) {
-                pw = Math.max(520, room - 32);
+            if (pw > room - 16) {
+                pw = Math.max(520, room - 16);
                 picker.layoutWidth = pw;
                 picker.set_size(pw, ph);
             }
-            const x = Math.max(16, Math.round((room - pw) / 2));
+            const centred = Math.round((monitor.width - pw) / 2);
+            const x = Math.max(16, Math.min(centred, room - pw));
             picker.set_position(x, Math.round((monitor.height - ph) / 2));
         };
         this._editOverlay = overlay;
@@ -2136,7 +2139,9 @@ class ControlsButton extends PanelMenu.Button {
                             panel.flash(done.item);
                     }
                     else if (inside(panel, x, y))
-                        panel.addItem(done.item, panel._itemAt(x, y) ?? null);
+                        // A new control takes the next free slot; the tiles the user placed
+                        // stay where they are (owner: no reordering, no gaps).
+                        done.item.hidden ? panel.addItem(done.item) : panel.flash(done.item);
                 }
                 return Clutter.EVENT_STOP;
             }
@@ -2159,10 +2164,45 @@ class ControlsButton extends PanelMenu.Button {
         // Filled once it is on stage (its gallery tiles carry glass panes that need the stage).
         place();
         picker.open();
+        this._slideWindowsAway(monitor);
         this._grab = Main.pushModal(overlay, {actionMode: Shell.ActionMode.POPUP});
         picker.focusSearch();
         // The menu has done its job; its panel now lives on the overlay.
         this.menu.close(false);
+    }
+
+    // While editing, the open windows on this screen slide off its nearer side (as the
+    // reference does) so the desktop is clear; they come back when editing ends. Only their
+    // picture moves: the windows keep their real places.
+    _slideWindowsAway(monitor) {
+        this._slid = [];
+        const settings = St.Settings.get();
+        const duration = settings.enable_animations ? 320 : 0;
+        for (const actor of global.get_window_actors()) {
+            const win = actor.meta_window;
+            if (!win || win.minimized || win.get_window_type() !== Meta.WindowType.NORMAL ||
+                !win.showing_on_its_workspace?.() || win.get_monitor() !== monitor.index)
+                continue;
+            const rect = win.get_frame_rect();
+            const centre = rect.x + rect.width / 2 - monitor.x;
+            const dx = centre < monitor.width / 2
+                ? -(rect.x - monitor.x + rect.width + 40)
+                : monitor.x + monitor.width - rect.x + 40;
+            this._slid.push(actor);
+            actor.remove_transition('translation-x');
+            actor.ease({translation_x: dx, opacity: 0, duration, mode: Clutter.AnimationMode.EASE_IN_OUT_CUBIC});
+        }
+    }
+
+    _slideWindowsBack() {
+        const duration = St.Settings.get().enable_animations ? 320 : 0;
+        for (const actor of this._slid ?? []) {
+            if (!actor.get_stage())
+                continue;
+            actor.remove_transition('translation-x');
+            actor.ease({translation_x: 0, opacity: 255, duration, mode: Clutter.AnimationMode.EASE_OUT_CUBIC});
+        }
+        this._slid = [];
     }
 
     _endEdit() {
@@ -2170,6 +2210,7 @@ class ControlsButton extends PanelMenu.Button {
         if (!overlay)
             return;
         this._editOverlay = null;
+        this._slideWindowsBack();
         if (this._grab) {
             Main.popModal(this._grab);
             this._grab = null;

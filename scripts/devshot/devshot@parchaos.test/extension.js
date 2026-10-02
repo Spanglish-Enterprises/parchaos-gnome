@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
-// type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N. Test tool only; never run against a real session.
+// type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv]. Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -33,6 +33,26 @@ export default class X extends Extension {
                 else if (step.shot) await shot(step.shot);
                 // Slows every shell animation down (the shell's own slow-down factor), to photograph a transition.
                 else if (step.slowdown) St.Settings.get().slow_down_factor = step.slowdown;
+                // Starts a program inside the test session (e.g. a window to look at).
+                else if (step.spawn) GLib.spawn_async(null, step.spawn, null, GLib.SpawnFlags.SEARCH_PATH, null);
+                // Starts or stops the shell's own screen recorder (to catch one-frame glitches).
+                else if (step.record) {
+                    await new Promise(r => Gio.DBus.session.call('org.gnome.Shell.Screencast', '/org/gnome/Shell/Screencast',
+                        'org.gnome.Shell.Screencast', 'Screencast',
+                        new GLib.Variant('(sa{sv})', [`${OUT}/${step.record}.webm`, {framerate: new GLib.Variant('i', 60)}]),
+                        null, Gio.DBusCallFlags.NONE, 5000, null, (c, res) => {
+                            try {
+                                log(`DEVSHOT record ${JSON.stringify(c.call_finish(res).deepUnpack())}`);
+                            } catch (e) {
+                                log(`DEVSHOT record failed ${e}`);
+                            }
+                            r();
+                        }));
+                } else if (step.stoprecord) {
+                    await new Promise(r => Gio.DBus.session.call('org.gnome.Shell.Screencast', '/org/gnome/Shell/Screencast',
+                        'org.gnome.Shell.Screencast', 'StopScreencast', null, null, Gio.DBusCallFlags.NONE, 5000, null,
+                        (c, res) => { try { c.call_finish(res); } catch (e) { log(`DEVSHOT stop failed ${e}`); } r(); }));
+                }
                 // Saves a screenshot and announces it as the capture tool does ("screenshot-taken").
                 else if (step.screenshotTaken) {
                     await shot(step.screenshotTaken);

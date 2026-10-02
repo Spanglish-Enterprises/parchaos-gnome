@@ -838,12 +838,14 @@ StWidget:drop {
 }
 
 .parchaos-controls-picker-main {
-  padding: 20px 17px 0 17px;
+  /* 17 px to the tiles, as measured; 4 px of it sit inside the scroll view (below) so the
+     tiles' glass outline is not clipped at its edge */
+  padding: 16px 13px 0 13px;
 }
 
 .parchaos-controls-picker .parchaos-controls-gallery {
   spacing: 0;
-  padding: 0;
+  padding: 4px;
 }
 
 .parchaos-controls-picker .parchaos-controls-whatsnew {

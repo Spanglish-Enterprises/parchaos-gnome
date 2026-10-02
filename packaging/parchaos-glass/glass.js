@@ -257,6 +257,9 @@ class GlassPane extends St.Widget {
         this._base.add_child(this._windows);
         this._inner.add_child(this._base);
         this.add_child(this._inner);
+        // Nothing is drawn until the first full sync: an unplaced, unclipped copy of the desktop
+        // showed for one frame as a full-screen flash (Edit Controls opening, 2026-10-01).
+        this._inner.hide();
         this._effect = new Clutter.ShaderEffect();
         this._effect.set_shader_source(FRAG);
         this._inner.add_effect(this._effect);
@@ -348,6 +351,7 @@ class GlassPane extends St.Widget {
         f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow); f('u_hair', p.hair);
         f('u_spec', p.spec); f('u_shin', p.shin); f('u_sheen', p.sheen); f('u_light', p.light);
         f('u_ao', p.ao); f('u_aor', p.aor); f('u_shr', p.shr); f('u_shi', p.shi);
+        this._inner.show();
         f('u_tr', p.tintc[0]); f('u_tg', p.tintc[1]); f('u_tb', p.tintc[2]);
         this._effect.queue_repaint();
     }
