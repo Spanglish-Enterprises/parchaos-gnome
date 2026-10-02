@@ -2888,8 +2888,8 @@ class SkyWindow(Adw.ApplicationWindow):
         inner.append(cols)
         self.chart = HourChart(self, hours, self.lens, self.COL_W)
         inner.append(self.chart)
-        sc = Gtk.ScrolledWindow(vscrollbar_policy=Gtk.PolicyType.NEVER, child=inner)
-        sc.set_size_request(-1, 190)
+        sc = Gtk.ScrolledWindow(vscrollbar_policy=Gtk.PolicyType.NEVER, child=inner,
+                                propagate_natural_height=True)   # as tall as the strip, no empty band
         self.hour_scroll = sc
         # scroll to the chosen hour once the strip knows its size
         # (after GTK has finished sizing it; a value set while it sizes is reset to 0)
