@@ -1,0 +1,1221 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Sky: ParchaOS's weather app (ticket #192, spec docs/weather-app-spec.md).
+#
+# The window is the sky outside right now: a living background drawn from real data (sun height
+# for this place and time, cloud cover, wind, rain or snow, fog, thunder), with the forecast on
+# glass cards over it. Original code for ParchaOS.
+#
+# Data, no accounts or keys, coarse coordinates only (rounded to 0.01 degree, about 1 km):
+#   MET Norway Locationforecast 2.0 (worldwide; attribution required, identifying User-Agent)
+#   US National Weather Service alerts (US and Puerto Rico; public domain)
+
+import gettext
+import json
+import locale
+import math
+import os
+import random
+import sys
+import time
+from datetime import datetime, timedelta, timezone
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+gi.require_version('Gsk', '4.0')
+gi.require_version('Graphene', '1.0')
+gi.require_version('Soup', '3.0')
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk, Soup  # noqa: E402
+
+gettext.bindtextdomain('parchaos-sky', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-sky')
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.Sky'
+VERSION = '0.1.0'
+USER_AGENT = f'ParchaOS-Sky/{VERSION} (+https://www.parchaos.org/support)'
+MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.2f}&lon={lon:.2f}'
+NWS_ALERTS_URL = 'https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}'
+CONFIG_DIR = os.path.join(GLib.get_user_config_dir(), 'parchaos', 'sky')
+CACHE_DIR = os.path.join(GLib.get_user_cache_dir(), 'parchaos', 'sky')
+PLACES_FILE = os.path.join(CONFIG_DIR, 'places.json')
+PREFS_FILE = os.path.join(CONFIG_DIR, 'prefs.json')
+REFRESH_SECONDS = 15 * 60
+
+
+# ---------------------------------------------------------------------------------------------
+# Small helpers
+# ---------------------------------------------------------------------------------------------
+
+def rgba(r, g, b, a=1.0):
+    c = Gdk.RGBA()
+    c.red, c.green, c.blue, c.alpha = r, g, b, a
+    return c
+
+
+def mix(c1, c2, t):
+    t = max(0.0, min(1.0, t))
+    return tuple(a + (b - a) * t for a, b in zip(c1, c2))
+
+
+def stops(*pairs):
+    out = []
+    for offset, col in pairs:
+        s = Gsk.ColorStop()
+        s.offset = offset
+        s.color = rgba(*col)
+        out.append(s)
+    return out
+
+
+def rect(x, y, w, h):
+    return Graphene.Rect().init(x, y, w, h)
+
+
+def point(x, y):
+    return Graphene.Point().init(x, y)
+
+
+def load_json(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(data, f)
+    os.replace(tmp, path)
+
+
+def uses_imperial():
+    # Fahrenheit and mph where people expect them.
+    loc = (os.environ.get('LC_MEASUREMENT') or os.environ.get('LC_ALL') or os.environ.get('LANG') or '')
+    return any(loc.startswith(p) for p in ('en_US', 'es_US', 'en_LR', 'my_MM'))
+
+
+def spanish():
+    lang = os.environ.get('LANGUAGE') or os.environ.get('LC_MESSAGES') or os.environ.get('LANG') or ''
+    return lang.startswith('es')
+
+
+# ---------------------------------------------------------------------------------------------
+# The sun: height above the horizon, sunrise and sunset (NOAA's simplified algorithm)
+# ---------------------------------------------------------------------------------------------
+
+def _sun_params(when):
+    day = when.timetuple().tm_yday
+    hour = when.hour + when.minute / 60 + when.second / 3600
+    g = 2 * math.pi / 365 * (day - 1 + (hour - 12) / 24)
+    eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                       - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+            + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    return eqtime, decl
+
+
+def sun_elevation(lat, lon, when_utc):
+    eqtime, decl = _sun_params(when_utc)
+    minutes = when_utc.hour * 60 + when_utc.minute + when_utc.second / 60
+    tst = minutes + eqtime + 4 * lon
+    ha = math.radians(tst / 4 - 180)
+    la = math.radians(lat)
+    cos_zen = math.sin(la) * math.sin(decl) + math.cos(la) * math.cos(decl) * math.cos(ha)
+    return 90 - math.degrees(math.acos(max(-1.0, min(1.0, cos_zen))))
+
+
+def sun_times(lat, lon, day_utc):
+    """Sunrise and sunset (UTC datetimes) for the date of day_utc, or None in polar day/night."""
+    noon = day_utc.replace(hour=12, minute=0, second=0, microsecond=0)
+    eqtime, decl = _sun_params(noon)
+    la = math.radians(lat)
+    cos_ha = (math.cos(math.radians(90.833)) / (math.cos(la) * math.cos(decl))
+              - math.tan(la) * math.tan(decl))
+    if cos_ha < -1 or cos_ha > 1:
+        return None
+    ha = math.degrees(math.acos(cos_ha))
+    base = noon.replace(hour=0)
+    rise = base + timedelta(minutes=720 - 4 * (lon + ha) - eqtime)
+    sset = base + timedelta(minutes=720 - 4 * (lon - ha) - eqtime)
+    return rise, sset
+
+
+def moon_phase(when_utc):
+    """0 = new, 0.5 = full."""
+    known_new = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
+    days = (when_utc - known_new).total_seconds() / 86400
+    return (days % 29.530588853) / 29.530588853
+
+
+# ---------------------------------------------------------------------------------------------
+# Weather data
+# ---------------------------------------------------------------------------------------------
+
+SYMBOLS = {
+    # MET symbol code (without _day/_night/_polartwilight) -> (icon, English, Spanish)
+    'clearsky': ('weather-clear', 'Clear', 'Despejado'),
+    'fair': ('weather-few-clouds', 'Mostly clear', 'Mayormente despejado'),
+    'partlycloudy': ('weather-few-clouds', 'Partly cloudy', 'Parcialmente nublado'),
+    'cloudy': ('weather-overcast', 'Cloudy', 'Nublado'),
+    'fog': ('weather-fog', 'Fog', 'Niebla'),
+    'lightrain': ('weather-showers-scattered', 'Light rain', 'Lluvia ligera'),
+    'rain': ('weather-showers', 'Rain', 'Lluvia'),
+    'heavyrain': ('weather-showers', 'Heavy rain', 'Lluvia fuerte'),
+    'lightrainshowers': ('weather-showers-scattered', 'Light showers', 'Chubascos ligeros'),
+    'rainshowers': ('weather-showers-scattered', 'Showers', 'Chubascos'),
+    'heavyrainshowers': ('weather-showers', 'Heavy showers', 'Aguaceros'),
+    'lightsleet': ('weather-snow', 'Light sleet', 'Aguanieve ligera'),
+    'sleet': ('weather-snow', 'Sleet', 'Aguanieve'),
+    'heavysleet': ('weather-snow', 'Heavy sleet', 'Aguanieve fuerte'),
+    'lightsnow': ('weather-snow', 'Light snow', 'Nieve ligera'),
+    'snow': ('weather-snow', 'Snow', 'Nieve'),
+    'heavysnow': ('weather-snow', 'Heavy snow', 'Nevada fuerte'),
+}
+
+
+def symbol_info(code, night=False):
+    base = (code or 'cloudy').split('_')[0]
+    thunder = base.endswith('andthunder')
+    base = base.replace('andthunder', '')
+    for suffix in ('showers',):
+        pass
+    icon, en, es = SYMBOLS.get(base, ('weather-overcast', base, base))
+    if thunder:
+        icon, en, es = 'weather-storm', en + ' and thunder', es + ' con tormenta'
+    if night and icon in ('weather-clear', 'weather-few-clouds'):
+        icon += '-night'
+    return icon + '-symbolic', (es if spanish() else en), thunder
+
+
+class Forecast:
+    """Parsed MET Norway 'complete' forecast for one place."""
+
+    def __init__(self, data, lat, lon):
+        self.lat, self.lon = lat, lon
+        self.updated = data.get('properties', {}).get('meta', {}).get('updated_at', '')
+        self.hours = []
+        for entry in data.get('properties', {}).get('timeseries', []):
+            t = datetime.fromisoformat(entry['time'].replace('Z', '+00:00'))
+            d = entry['data']['instant']['details']
+            n1 = entry['data'].get('next_1_hours') or {}
+            n6 = entry['data'].get('next_6_hours') or {}
+            nxt = n1 or n6
+            details = nxt.get('details', {})
+            precip = details.get('precipitation_amount', 0.0)
+            if not n1 and n6:
+                precip = precip / 6
+            self.hours.append({
+                'time': t,
+                'temp': d.get('air_temperature'),
+                'wind': d.get('wind_speed', 0.0),
+                'gust': d.get('wind_speed_of_gust'),
+                'wind_from': d.get('wind_from_direction', 0.0),
+                'clouds': d.get('cloud_area_fraction', 0.0),
+                'fog': d.get('fog_area_fraction', 0.0),
+                'humidity': d.get('relative_humidity'),
+                'dew': d.get('dew_point_temperature'),
+                'pressure': d.get('air_pressure_at_sea_level'),
+                'uv': d.get('ultraviolet_index_clear_sky'),
+                'symbol': nxt.get('summary', {}).get('symbol_code', ''),
+                'precip': precip,
+                'pop': details.get('probability_of_precipitation'),
+                'thunder_p': details.get('probability_of_thunder'),
+                'hourly': bool(n1),
+            })
+
+    def now(self):
+        now = datetime.now(timezone.utc)
+        past = [h for h in self.hours if h['time'] <= now]
+        return past[-1] if past else (self.hours[0] if self.hours else None)
+
+    def next_hours(self, count=24):
+        now = datetime.now(timezone.utc) - timedelta(hours=1)
+        return [h for h in self.hours if h['time'] >= now and h['hourly']][:count]
+
+    def days(self, count=10):
+        out = {}
+        for h in self.hours:
+            local = h['time'].astimezone()
+            key = local.date()
+            day = out.setdefault(key, {'date': key, 'lo': None, 'hi': None, 'precip': 0.0,
+                                       'pop': 0, 'symbols': []})
+            if h['temp'] is not None:
+                day['lo'] = h['temp'] if day['lo'] is None else min(day['lo'], h['temp'])
+                day['hi'] = h['temp'] if day['hi'] is None else max(day['hi'], h['temp'])
+            day['precip'] += h['precip'] * (1 if h['hourly'] else 6)
+            if h['pop'] is not None:
+                day['pop'] = max(day['pop'], h['pop'])
+            if h['symbol'] and 9 <= local.hour <= 18:
+                day['symbols'].append(h['symbol'])
+        days = sorted(out.values(), key=lambda d: d['date'])
+        for d in days:
+            d['n'] = sum(1 for h in self.hours if h['time'].astimezone().date() == d['date'])
+        # Late in the evening, "today" is only an hour or two: start from tomorrow instead.
+        if days and days[0]['n'] < 3:
+            days = days[1:]
+        for d in days:
+            syms = d['symbols'] or ['cloudy']
+            d['symbol'] = max(set(syms), key=syms.count)
+        return [d for d in days if d['hi'] is not None][:count]
+
+    def rain_soon(self):
+        """('starts'|'stops'|None, local datetime) for rain in the next six hours."""
+        hours = self.next_hours(7)
+        if not hours:
+            return None, None
+        wet = [h['precip'] >= 0.1 for h in hours]
+        if not wet[0]:
+            for h, w in zip(hours[1:], wet[1:]):
+                if w:
+                    return 'starts', h['time'].astimezone()
+        else:
+            for h, w in zip(hours[1:], wet[1:]):
+                if not w:
+                    return 'stops', h['time'].astimezone()
+        return None, None
+
+
+class WeatherService(GObject.Object):
+    """Fetches and caches forecasts and alerts; honours MET's Expires header."""
+
+    __gsignals__ = {
+        'forecast': (GObject.SignalFlags.RUN_FIRST, None, (object,)),
+        'alerts': (GObject.SignalFlags.RUN_FIRST, None, (object,)),
+        'failed': (GObject.SignalFlags.RUN_FIRST, None, (str,)),
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.session = Soup.Session(user_agent=USER_AGENT, timeout=20)
+
+    def _cache_path(self, lat, lon):
+        return os.path.join(CACHE_DIR, f'met-{lat:.2f},{lon:.2f}.json')
+
+    def fetch(self, lat, lon, force=False):
+        lat, lon = round(lat, 2), round(lon, 2)
+        cached = load_json(self._cache_path(lat, lon), None)
+        if cached and cached.get('data'):
+            self.emit('forecast', Forecast(cached['data'], lat, lon))
+            if not force and time.time() < cached.get('expires', 0):
+                self._fetch_alerts(lat, lon)
+                return
+        msg = Soup.Message.new('GET', MET_URL.format(lat=lat, lon=lon))
+        if cached and cached.get('last_modified'):
+            msg.get_request_headers().append('If-Modified-Since', cached['last_modified'])
+        self.session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, None, self._on_met, (lat, lon, cached))
+        self._fetch_alerts(lat, lon)
+
+    def _on_met(self, session, result, ctx):
+        lat, lon, cached = ctx
+        try:
+            body = session.send_and_read_finish(result)
+        except GLib.Error as err:
+            if not cached:
+                self.emit('failed', err.message)
+            return
+        msg = session.get_async_result_message(result)
+        status = msg.get_status()
+        headers = msg.get_response_headers()
+        expires = headers.get_one('Expires')
+        try:
+            exp = datetime.strptime(expires, '%a, %d %b %Y %H:%M:%S GMT').replace(tzinfo=timezone.utc).timestamp()
+        except (TypeError, ValueError):
+            exp = time.time() + REFRESH_SECONDS
+        if status == 304 and cached:
+            cached['expires'] = exp
+            save_json(self._cache_path(lat, lon), cached)
+            return
+        if status != 200:
+            if not cached:
+                self.emit('failed', _('The weather service answered %d.') % status)
+            return
+        try:
+            data = json.loads(body.get_data().decode())
+        except ValueError:
+            self.emit('failed', _('The weather service sent something unreadable.'))
+            return
+        save_json(self._cache_path(lat, lon), {'data': data, 'expires': exp,
+                                                'last_modified': headers.get_one('Last-Modified')})
+        self.emit('forecast', Forecast(data, lat, lon))
+
+    def _fetch_alerts(self, lat, lon):
+        # The US National Weather Service covers the US and its territories (Puerto Rico included).
+        in_us = (24 <= lat <= 72 and -180 <= lon <= -64) or (17 <= lat <= 19 and -68 <= lon <= -64) or \
+                (18 <= lat <= 23 and -161 <= lon <= -154) or (13 <= lat <= 21 and 144 <= lon <= 146)
+        if not in_us:
+            self.emit('alerts', [])
+            return
+        msg = Soup.Message.new('GET', NWS_ALERTS_URL.format(lat=lat, lon=lon))
+        msg.get_request_headers().append('Accept', 'application/geo+json')
+        self.session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, None, self._on_alerts, None)
+
+    def _on_alerts(self, session, result, _ctx):
+        try:
+            body = session.send_and_read_finish(result)
+            data = json.loads(body.get_data().decode())
+        except (GLib.Error, ValueError):
+            self.emit('alerts', [])
+            return
+        alerts = []
+        for f in data.get('features', []):
+            p = f.get('properties', {})
+            alerts.append({'event': p.get('event', ''), 'headline': p.get('headline', ''),
+                           'severity': p.get('severity', ''), 'description': p.get('description', ''),
+                           'ends': p.get('ends') or p.get('expires')})
+        self.emit('alerts', alerts)
+
+
+# ---------------------------------------------------------------------------------------------
+# The living sky
+# ---------------------------------------------------------------------------------------------
+
+class SkyState:
+    def __init__(self):
+        self.sun = 30.0          # degrees above the horizon
+        self.day_fraction = 0.5  # 0 sunrise .. 1 sunset, for where the sun sits
+        self.clouds = 0.2        # 0..1
+        self.wind = 3.0          # m/s
+        self.wind_from = 270.0   # degrees
+        self.rain = 0.0          # mm/h
+        self.snow = False
+        self.fog = 0.0           # 0..1
+        self.thunder = False
+        self.moon = 0.5          # phase
+
+
+DAY_TOP, DAY_BOTTOM = (0.20, 0.47, 0.82), (0.58, 0.79, 0.95)
+GOLD_TOP, GOLD_BOTTOM = (0.27, 0.36, 0.62), (0.98, 0.62, 0.38)
+NIGHT_TOP, NIGHT_BOTTOM = (0.02, 0.04, 0.10), (0.08, 0.13, 0.26)
+GREY_TOP, GREY_BOTTOM = (0.38, 0.43, 0.50), (0.62, 0.66, 0.71)
+
+
+class SkyView(Gtk.Widget):
+    """Draws the sky from a SkyState, moving gently, and the frosted glass under the cards."""
+
+    def __init__(self):
+        super().__init__()
+        self.state = SkyState()
+        self.cards = []        # (x, y, w, h, radius) in this widget's coordinates
+        self.glass = True
+        self.t0 = time.monotonic()
+        self.last_frame = 0
+        self.flash = 0.0
+        self.next_flash = time.monotonic() + 3
+        rnd = random.Random(7)
+        self.cloud_seeds = [(rnd.random(), rnd.random() * 0.55, 0.6 + rnd.random() * 0.8, rnd.random())
+                            for _ in range(14)]
+        self.star_seeds = [(rnd.random(), rnd.random() * 0.75, rnd.random()) for _ in range(110)]
+        self.drop_seeds = [(rnd.random(), rnd.random(), 0.6 + rnd.random() * 0.8) for _ in range(420)]
+        self.add_tick_callback(self._tick)
+
+    def animating(self):
+        return Gtk.Settings.get_default().props.gtk_enable_animations and \
+            os.environ.get('PARCHA_SKY_STILL') != '1'
+
+    def _tick(self, widget, clock):
+        now = time.monotonic()
+        # 30 frames a second is plenty for drifting clouds and rain.
+        if self.animating() and now - self.last_frame >= 1 / 30:
+            self.last_frame = now
+            self.queue_draw()
+        return GLib.SOURCE_CONTINUE
+
+    def set_cards(self, cards):
+        if cards != self.cards:
+            self.cards = cards
+            self.queue_draw()
+
+    # -- drawing --------------------------------------------------------------------------------
+
+    def _colors(self):
+        s = self.state
+        if s.sun >= 8:
+            top, bottom = DAY_TOP, DAY_BOTTOM
+        elif s.sun >= -2:
+            t = (s.sun + 2) / 10
+            top, bottom = mix(GOLD_TOP, DAY_TOP, t), mix(GOLD_BOTTOM, DAY_BOTTOM, t)
+        elif s.sun >= -10:
+            t = (s.sun + 10) / 8
+            top, bottom = mix(NIGHT_TOP, GOLD_TOP, t), mix(NIGHT_BOTTOM, GOLD_BOTTOM, t)
+        else:
+            top, bottom = NIGHT_TOP, NIGHT_BOTTOM
+        # Overcast and rain grey the sky out (less at night, where it is dark anyway).
+        grey = max(0.0, s.clouds - 0.45) / 0.55 * 0.85 + min(s.rain, 4) / 4 * 0.25
+        night = 1 - max(0.0, min(1.0, (s.sun + 6) / 12))
+        g_top, g_bottom = mix(GREY_TOP, NIGHT_TOP, night * 0.85), mix(GREY_BOTTOM, NIGHT_BOTTOM, night * 0.8)
+        return mix(top, g_top, grey), mix(bottom, g_bottom, grey)
+
+    def _sky_node(self, w, h, t):
+        snap = Gtk.Snapshot()
+        s = self.state
+        top, bottom = self._colors()
+        snap.append_linear_gradient(rect(0, 0, w, h), point(0, 0), point(0, h),
+                                    stops((0, top + (1,)), (1, bottom + (1,))))
+        night = 1 - max(0.0, min(1.0, (s.sun + 4) / 10))
+        clear = 1 - s.clouds
+
+        # Stars and the moon at night.
+        if night > 0.05 and clear > 0.1:
+            for sx, sy, ph in self.star_seeds:
+                tw = 0.55 + 0.45 * math.sin(t * (0.6 + ph) + ph * 10)
+                a = night * clear * tw * 0.9
+                snap.append_color(rgba(1, 1, 1, a), rect(sx * w, sy * h, 1.6, 1.6))
+            mx, my, mr = w * 0.78, h * 0.16, 26
+            snap.append_radial_gradient(rect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8), point(mx, my), mr * 4, mr * 4,
+                                        0, 1, stops((0, (0.85, 0.9, 1, 0.22 * night * clear)), (1, (0.85, 0.9, 1, 0))))
+            lit = abs(math.cos(math.pi * s.moon))  # 1 new/full..0 quarters -> brightness hint
+            snap.append_radial_gradient(rect(mx - mr, my - mr, mr * 2, mr * 2), point(mx, my), mr, mr, 0, 1,
+                                        stops((0, (0.97, 0.96, 0.9, night * (0.95 if s.moon > 0.03 else 0.2))),
+                                              (0.96, (0.92, 0.92, 0.88, night * (0.9 - 0.3 * lit * (s.moon < 0.25 or s.moon > 0.75)))),
+                                              (1, (0.92, 0.92, 0.88, 0))))
+
+        # The sun travels along the upper right (clear of the temperature in the middle): lower and
+        # to the right early and late, highest at noon, from its real elevation and the time of day.
+        if s.sun > -4:
+            sx = w * (0.64 + 0.26 * s.day_fraction)
+            sy = h * (0.30 - 0.22 * max(0.0, min(1.0, s.sun / 60)))
+            vis = max(0.0, min(1.0, (s.sun + 4) / 6)) * (1 - 0.85 * max(0.0, s.clouds - 0.3) / 0.7)
+            r = 34
+            warm = 1 - max(0.0, min(1.0, s.sun / 15))
+            core = mix((1.0, 0.98, 0.88), (1.0, 0.72, 0.42), warm)
+            snap.append_radial_gradient(rect(sx - r * 7, sy - r * 7, r * 14, r * 14), point(sx, sy), r * 7, r * 7, 0, 1,
+                                        stops((0, core + (0.45 * vis,)), (0.35, core + (0.12 * vis,)), (1, core + (0,))))
+            snap.append_radial_gradient(rect(sx - r, sy - r, r * 2, r * 2), point(sx, sy), r, r, 0, 1,
+                                        stops((0, (1, 1, 0.97, vis)), (0.8, core + (vis,)), (1, core + (0,))))
+
+        # Clouds: soft clusters drifting with the real wind (east-west component).
+        n = int(round(2 + s.clouds * 12))
+        drift = -math.sin(math.radians(s.wind_from)) * (6 + s.wind * 5)  # px/s, wind *from* -> moves away
+        shade = mix((1, 1, 1), (0.55, 0.58, 0.64), max(0.0, s.clouds - 0.5) * 2 + min(s.rain, 3) / 6)
+        shade = mix(shade, (0.32, 0.36, 0.46), night * 0.85)
+        for i, (cx, cy, size, ph) in enumerate(self.cloud_seeds[:n]):
+            span = w + 600
+            x = ((cx * span + drift * t * (0.6 + size * 0.5)) % span) - 300
+            y = cy * h * 0.75 + 20
+            base = 110 * size * (0.8 + s.clouds * 0.7)
+            alpha = (0.35 + 0.5 * s.clouds) * (0.85 + 0.15 * math.sin(t * 0.1 + ph * 6))
+            for k in range(5):
+                ox = (k - 2) * base * 0.55 + math.sin(ph * 9 + k) * base * 0.15
+                oy = -abs(k - 2) * base * 0.14 + math.cos(ph * 7 + k) * base * 0.1
+                rr = base * (0.75 if k in (0, 4) else 1.0)
+                snap.append_radial_gradient(rect(x + ox - rr, y + oy - rr * 0.7, rr * 2, rr * 1.4),
+                                            point(x + ox, y + oy), rr, rr * 0.7, 0, 1,
+                                            stops((0, shade + (alpha,)), (0.6, shade + (alpha * 0.55,)), (1, shade + (0,))))
+
+        # Rain or snow, slanted by the wind.
+        if s.rain > 0.02:
+            count = int(min(420, 40 + s.rain * 110))
+            slant = max(-0.5, min(0.5, -math.sin(math.radians(s.wind_from)) * s.wind / 25))
+            snap.save()
+            snap.translate(point(w / 2, h / 2))
+            snap.rotate(math.degrees(math.atan(slant)) * -1)
+            snap.translate(point(-w, -h))
+            if s.snow:
+                for dx, dy, sp in self.drop_seeds[:count]:
+                    x = (dx * 2 * w + math.sin(t * sp + dx * 20) * 18) % (2 * w)
+                    y = ((dy * 2 * h) + t * 45 * sp) % (2 * h)
+                    snap.append_color(rgba(1, 1, 1, 0.85), rect(x, y, 4 * sp, 4 * sp))
+            else:
+                col = rgba(0.88, 0.93, 1, 0.55 if night < 0.5 else 0.38)
+                for dx, dy, sp in self.drop_seeds[:count]:
+                    x = dx * 2 * w
+                    y = ((dy * 2 * h) + t * 900 * sp) % (2 * h)
+                    snap.append_color(col, rect(x, y, 1.6, 22 * sp))
+            snap.restore()
+
+        # Fog: pale bands near the ground.
+        if s.fog > 0.05:
+            a = min(0.8, s.fog * 0.9)
+            fogc = mix((0.85, 0.87, 0.9), (0.3, 0.33, 0.4), night)
+            snap.append_linear_gradient(rect(0, 0, w, h), point(0, h * 0.25), point(0, h),
+                                        stops((0, fogc + (0,)), (0.6, fogc + (a * 0.7,)), (1, fogc + (a,))))
+
+        # Thunder: a short flash now and then.
+        if self.flash > 0:
+            snap.append_color(rgba(0.92, 0.94, 1, 0.55 * self.flash), rect(0, 0, w, h))
+        return snap.to_node()
+
+    def do_snapshot(self, snapshot):
+        w, h = self.get_width(), self.get_height()
+        if w <= 0 or h <= 0:
+            return
+        now = time.monotonic()
+        t = now - self.t0 if self.animating() else 0
+        if self.state.thunder and self.animating():
+            if now >= self.next_flash:
+                self.flash = 1.0
+                self.next_flash = now + random.uniform(4, 10)
+            else:
+                self.flash = max(0.0, self.flash - 0.08)
+        else:
+            self.flash = 0.0
+        sky = self._sky_node(w, h, t)
+        snapshot.append_node(sky)
+
+        # Glass under each card: the sky behind it, blurred, tinted, with a bright rim.
+        for (x, y, cw, ch, r) in self.cards:
+            bounds = rect(x, y, cw, ch)
+            rr = Gsk.RoundedRect()
+            rr.init_from_rect(bounds, r)
+            if self.glass:
+                snapshot.push_rounded_clip(rr)
+                snapshot.push_blur(28)
+                snapshot.append_node(sky)
+                snapshot.pop()
+                snapshot.pop()
+                snapshot.push_rounded_clip(rr)
+                snapshot.append_color(rgba(0.08, 0.10, 0.16, 0.22), bounds)
+                # soft light from above
+                snapshot.append_linear_gradient(bounds, point(x, y), point(x, y + ch),
+                                                stops((0, (1, 1, 1, 0.10)), (0.25, (1, 1, 1, 0.02)), (1, (1, 1, 1, 0.0))))
+                snapshot.pop()
+                white = rgba(1, 1, 1, 0.30)
+                snapshot.append_border(rr, [1, 1, 1, 1], [white, rgba(1, 1, 1, 0.12), rgba(1, 1, 1, 0.08), rgba(1, 1, 1, 0.12)])
+            else:
+                snapshot.push_rounded_clip(rr)
+                snapshot.append_color(rgba(0.13, 0.14, 0.17, 0.92), bounds)
+                snapshot.pop()
+
+
+# ---------------------------------------------------------------------------------------------
+# Plain talk: the one-line summary (playful or plain, English or Spanish)
+# ---------------------------------------------------------------------------------------------
+
+def summary_line(fc, playful, temp_text):
+    now = fc.now()
+    if not now:
+        return ''
+    es = spanish()
+    hot = now['temp'] is not None and now['temp'] >= 30
+    cold = now['temp'] is not None and now['temp'] <= 3
+    kind, when = fc.rain_soon()
+    when_txt = when.strftime('%-I %p').lower() if when and uses_imperial() else (when.strftime('%H:%M') if when else '')
+    _icon, cond, thunder = symbol_info(now['symbol'])
+    if not playful:
+        if kind == 'starts':
+            return (f'Lluvia a partir de las {when_txt}.' if es else f'Rain starting around {when_txt}.')
+        if kind == 'stops':
+            return (f'La lluvia para hacia las {when_txt}.' if es else f'Rain stopping around {when_txt}.')
+        return f'{cond}, {temp_text}.'
+    if thunder:
+        return 'Truenos por ahí. Mejor adentro un rato.' if es else 'Thunder about. Good time for indoors.'
+    if kind == 'starts':
+        return (f'Seco por ahora; el aguacero llega como a las {when_txt}. Paraguas a mano.' if es
+                else f'Dry for now, rain rolls in around {when_txt}. Keep the umbrella close.')
+    if kind == 'stops':
+        return (f'Llueve, pero escampa como a las {when_txt}.' if es
+                else f'Wet out there, but it clears up around {when_txt}.')
+    if hot:
+        return 'Calorón. Agua, sombra y nada de prisa.' if es else 'Proper hot. Water, shade, no rushing.'
+    if cold:
+        return 'Frío de verdad. Abrígate bien.' if es else 'Properly cold. Layers on.'
+    if now['clouds'] < 25:
+        return 'Cielo limpio. Buen día para estar afuera.' if es else 'Clear skies. A good one to be outside.'
+    if now['clouds'] > 85:
+        return 'Gris y tranquilo. Día de café.' if es else 'Grey and quiet. Coffee weather.'
+    return f'{cond}, {temp_text}. Nada que reportar.' if es else f'{cond}, {temp_text}. Nothing dramatic.'
+
+
+# ---------------------------------------------------------------------------------------------
+# The window
+# ---------------------------------------------------------------------------------------------
+
+CSS = b"""
+.sky-window { background: transparent; }
+.sky-content label { color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+.sky-place { font-size: 22px; font-weight: 600; }
+.sky-temp { font-size: 96px; font-weight: 200; letter-spacing: -2px; }
+.sky-cond { font-size: 18px; font-weight: 500; }
+.sky-dim { opacity: 0.78; }
+.sky-line { font-size: 15px; font-weight: 500; }
+.sky-card { padding: 14px 16px; border-radius: 22px; }
+.sky-card-title { font-size: 11px; font-weight: 700; opacity: 0.72; letter-spacing: 0.5px; }
+.sky-small { font-size: 12px; }
+.sky-big { font-size: 26px; font-weight: 500; }
+.sky-hour-temp { font-size: 16px; font-weight: 600; }
+.sky-day { font-size: 15px; font-weight: 500; }
+.sky-alert { background-color: rgba(214, 64, 48, 0.55); border-radius: 18px; padding: 12px 16px; }
+.sky-alert label { text-shadow: none; }
+.sky-content image { color: white; -gtk-icon-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.sky-header { background: transparent; box-shadow: none; color: white; }
+.sky-header button { color: white; }
+.sky-attrib { font-size: 11px; opacity: 0.7; }
+"""
+
+
+def fmt_temp(c, imperial):
+    if c is None:
+        return '–'
+    return f'{round(c * 9 / 5 + 32)}°' if imperial else f'{round(c)}°'
+
+
+def fmt_wind(ms, imperial):
+    return f'{round(ms * 2.23694)} mph' if imperial else f'{round(ms * 3.6)} km/h'
+
+
+def compass(deg):
+    names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] if not spanish() else \
+        ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO']
+    return names[int((deg % 360) / 45 + 0.5) % 8]
+
+
+def fmt_hour(dt):
+    return dt.strftime('%-I %p') if uses_imperial() else dt.strftime('%H:%M')
+
+
+class Card(Gtk.Box):
+    def __init__(self, title=None, **kw):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8, **kw)
+        self.add_css_class('sky-card')
+        if title:
+            lbl = Gtk.Label(label=title.upper(), xalign=0)
+            lbl.add_css_class('sky-card-title')
+            self.append(lbl)
+
+
+class TempBar(Gtk.DrawingArea):
+    """A day's low-to-high bar on the range of the whole forecast."""
+
+    def __init__(self, lo, hi, lo_all, hi_all):
+        super().__init__(content_width=120, content_height=6, hexpand=True, valign=Gtk.Align.CENTER)
+        self.lo, self.hi, self.lo_all, self.hi_all = lo, hi, lo_all, hi_all
+        self.set_draw_func(self._draw)
+
+    @staticmethod
+    def _colour(c):
+        # cold blue -> mild green -> warm yellow -> hot orange/red
+        pts = [(-10, (0.45, 0.65, 1.0)), (8, (0.45, 0.85, 0.9)), (18, (0.55, 0.9, 0.5)),
+               (26, (1.0, 0.85, 0.35)), (34, (1.0, 0.5, 0.25)), (40, (0.95, 0.3, 0.3))]
+        for (a, ca), (b, cb) in zip(pts, pts[1:]):
+            if c <= b:
+                return mix(ca, cb, (c - a) / (b - a)) if c >= a else ca
+        return pts[-1][1]
+
+    def _draw(self, area, cr, w, h):
+        span = max(1e-3, self.hi_all - self.lo_all)
+        cr.set_source_rgba(1, 1, 1, 0.18)
+        self._pill(cr, 0, 0, w, h)
+        cr.fill()
+        x0 = w * (self.lo - self.lo_all) / span
+        x1 = w * (self.hi - self.lo_all) / span
+        import cairo
+        grad = cairo.LinearGradient(x0, 0, x1, 0)
+        grad.add_color_stop_rgb(0, *self._colour(self.lo))
+        grad.add_color_stop_rgb(1, *self._colour(self.hi))
+        cr.set_source(grad)
+        self._pill(cr, x0, 0, max(h, x1 - x0), h)
+        cr.fill()
+
+    @staticmethod
+    def _pill(cr, x, y, w, h):
+        r = h / 2
+        cr.new_sub_path()
+        cr.arc(x + w - r, y + r, r, -math.pi / 2, math.pi / 2)
+        cr.arc(x + r, y + r, r, math.pi / 2, 3 * math.pi / 2)
+        cr.close_path()
+
+
+class SkyWindow(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title=_('Parcha Sky'), default_width=880, default_height=780)
+        self.add_css_class('sky-window')
+        self.prefs = load_json(PREFS_FILE, {'playful': True})
+        self.imperial = self.prefs.get('imperial', uses_imperial())
+        self.places = load_json(PLACES_FILE, [])
+        self.index = 0
+        self.forecast = None
+        self.alerts = []
+        self.service = WeatherService()
+        self.service.connect('forecast', self._on_forecast)
+        self.service.connect('alerts', self._on_alerts)
+        self.service.connect('failed', self._on_failed)
+
+        self.sky = SkyView()
+        self.sky.glass = self._glass_style()
+        overlay = Gtk.Overlay(child=self.sky)
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        header = Adw.HeaderBar(show_title=False)
+        header.add_css_class('sky-header')
+        header.add_css_class('flat')
+        self.places_button = Gtk.MenuButton(icon_name='view-list-symbolic', tooltip_text=_('Places'))
+        self.places_button.set_popover(self._places_popover())
+        header.pack_start(self.places_button)
+        refresh = Gtk.Button(icon_name='view-refresh-symbolic', tooltip_text=_('Refresh'))
+        refresh.connect('clicked', lambda *_: self._load(force=True))
+        header.pack_start(refresh)
+        header.pack_end(self._main_menu())
+        root.append(header)
+
+        self.scroller = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.scroller.set_overlay_scrolling(True)
+        self.clamp = Adw.Clamp(maximum_size=760, tightening_threshold=600)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14,
+                               margin_start=16, margin_end=16, margin_bottom=24)
+        self.content.add_css_class('sky-content')
+        self.clamp.set_child(self.content)
+        self.scroller.set_child(self.clamp)
+        root.append(self.scroller)
+        overlay.add_overlay(root)
+        self.set_content(overlay)
+
+        self.cards = []
+        self.add_tick_callback(self._track_cards)
+        self._placeholder(_('Finding the sky over you...'))
+        GLib.timeout_add_seconds(REFRESH_SECONDS, self._refresh_tick)
+        self._start()
+
+    # -- style ----------------------------------------------------------------------------------
+
+    def _glass_style(self):
+        if os.environ.get('PARCHA_SKY_STYLE'):
+            return os.environ['PARCHA_SKY_STYLE'] != 'classic'
+        src = Gio.SettingsSchemaSource.get_default()
+        schema = src.lookup('org.parchaos.desktop', True) if src else None
+        if not schema:
+            return True
+        settings = Gio.Settings(settings_schema=schema)
+        self._desktop = settings
+        settings.connect('changed::style', lambda *_: self._restyle())
+        return settings.get_string('style') != 'classic'
+
+    def _restyle(self):
+        self.sky.glass = self._desktop.get_string('style') != 'classic'
+        self.sky.queue_draw()
+
+    # -- glass follows the cards ------------------------------------------------------------------
+
+    def _track_cards(self, widget, clock):
+        regions = []
+        for card in self.cards:
+            if not card.get_mapped():
+                continue
+            ok, b = card.compute_bounds(self.sky)
+            if ok:
+                regions.append((b.get_x(), b.get_y(), b.get_width(), b.get_height(), 22))
+        self.sky.set_cards(regions)
+        return GLib.SOURCE_CONTINUE
+
+    # -- places ---------------------------------------------------------------------------------
+
+    def _start(self):
+        test = os.environ.get('PARCHA_SKY_PLACE')  # "Name,lat,lon" (tests)
+        if test:
+            name, lat, lon = test.rsplit(',', 2)
+            self.places = [{'name': name, 'lat': float(lat), 'lon': float(lon)}]
+        if not self.places:
+            self.places = self._gnome_weather_places()
+        if self.places:
+            self._load()
+        else:
+            self._locate()
+
+    def _gnome_weather_places(self):
+        # Reuse the places saved in GNOME Weather (name, latitude and longitude in radians).
+        src = Gio.SettingsSchemaSource.get_default()
+        if not src or not src.lookup('org.gnome.Weather', True):
+            return []
+        out = []
+        try:
+            for v in Gio.Settings(schema_id='org.gnome.Weather').get_value('locations'):
+                inner = v.get_variant() if hasattr(v, 'get_variant') else v
+                _ver, loc = inner.unpack()
+                name, _code, _x, coords, _y = loc
+                if coords:
+                    lat, lon = coords[0]
+                    out.append({'name': name, 'lat': math.degrees(lat), 'lon': math.degrees(lon)})
+        except (TypeError, ValueError, GLib.Error):
+            return []
+        if out:
+            save_json(PLACES_FILE, out)
+        return out
+
+    def _locate(self):
+        try:
+            gi.require_version('Geoclue', '2.0')
+            from gi.repository import Geoclue
+        except (ValueError, ImportError):
+            self._placeholder(_('Add a place to see its weather.'))
+            return
+        self._placeholder(_('Finding where you are...'))
+        Geoclue.Simple.new(APP_ID, Geoclue.AccuracyLevel.CITY, None, self._on_located)
+
+    def _on_located(self, _src, result):
+        try:
+            from gi.repository import Geoclue
+            simple = Geoclue.Simple.new_finish(result)
+            loc = simple.get_location()
+            self.places = [{'name': _('Here'), 'lat': loc.props.latitude, 'lon': loc.props.longitude}]
+            save_json(PLACES_FILE, self.places)
+            self._load()
+        except GLib.Error:
+            self._placeholder(_('Location is off. Add a place with the list button.'))
+
+    def _places_popover(self):
+        pop = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8, margin_bottom=8,
+                      margin_start=8, margin_end=8, width_request=300)
+        self.search = Gtk.SearchEntry(placeholder_text=_('Add a city'))
+        self.search.connect('activate', self._on_search)
+        box.append(self.search)
+        self.place_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.place_list.add_css_class('boxed-list')
+        box.append(self.place_list)
+        pop.set_child(box)
+        pop.connect('show', lambda *_: self._fill_places())
+        return pop
+
+    def _fill_places(self):
+        while (row := self.place_list.get_row_at_index(0)):
+            self.place_list.remove(row)
+        for i, p in enumerate(self.places):
+            row = Adw.ActionRow(title=p['name'], activatable=True)
+            row.connect('activated', lambda _r, i=i: self._choose(i))
+            rm = Gtk.Button(icon_name='user-trash-symbolic', valign=Gtk.Align.CENTER, tooltip_text=_('Remove'))
+            rm.add_css_class('flat')
+            rm.connect('clicked', lambda _b, i=i: self._remove(i))
+            row.add_suffix(rm)
+            self.place_list.append(row)
+
+    def _choose(self, i):
+        self.index = i
+        self.places_button.popdown()
+        self._load()
+
+    def _remove(self, i):
+        del self.places[i]
+        save_json(PLACES_FILE, self.places)
+        self.index = min(self.index, max(0, len(self.places) - 1))
+        self._fill_places()
+        if self.places:
+            self._load()
+
+    def _on_search(self, entry):
+        text = entry.get_text().strip()
+        if not text:
+            return
+        hit = self._find_city(text)
+        if not hit:
+            entry.set_text('')
+            entry.set_placeholder_text(_('No city called "%s"') % text)
+            return
+        self.places.append(hit)
+        save_json(PLACES_FILE, self.places)
+        entry.set_text('')
+        self._choose(len(self.places) - 1)
+
+    def _find_city(self, text):
+        # GWeather's offline world list: no network, nothing sent anywhere.
+        try:
+            gi.require_version('GWeather', '4.0')
+            from gi.repository import GWeather
+        except (ValueError, ImportError):
+            return None
+        want = text.lower().split(',')[0].strip()
+        best = None
+        stack = [GWeather.Location.get_world()]
+        while stack:
+            loc = stack.pop()
+            child = loc.next_child(None)
+            while child:
+                stack.append(child)
+                child = loc.next_child(child)
+            if loc.get_level() == GWeather.LocationLevel.CITY and loc.has_coords():
+                name = loc.get_name() or ''
+                if name.lower() == want or (best is None and name.lower().startswith(want)):
+                    lat, lon = loc.get_coords()
+                    country = loc.get_country_name() or ''
+                    best = {'name': name, 'lat': lat, 'lon': lon, 'country': country}
+                    if name.lower() == want:
+                        return best
+        return best
+
+    # -- data -----------------------------------------------------------------------------------
+
+    def _load(self, force=False):
+        if not self.places:
+            return
+        p = self.places[self.index]
+        self.service.fetch(p['lat'], p['lon'], force=force)
+
+    def _refresh_tick(self):
+        self._load()
+        return GLib.SOURCE_CONTINUE
+
+    def _on_failed(self, _svc, message):
+        self._placeholder(_("Couldn't reach the weather service.") + '\n' + message)
+
+    def _on_alerts(self, _svc, alerts):
+        self.alerts = alerts
+        if self.forecast:
+            self._render()
+
+    def _on_forecast(self, _svc, fc):
+        self.forecast = fc
+        self._render()
+
+    # -- sky ------------------------------------------------------------------------------------
+
+    def _update_sky(self, fc):
+        now = fc.now()
+        st = self.sky.state
+        utc = datetime.now(timezone.utc)
+        st.sun = sun_elevation(fc.lat, fc.lon, utc)
+        times = sun_times(fc.lat, fc.lon, utc)
+        if times:
+            rise, sset = times
+            st.day_fraction = max(0.0, min(1.0, (utc - rise).total_seconds() / max(1, (sset - rise).total_seconds())))
+        st.moon = moon_phase(utc)
+        st.clouds = (now['clouds'] or 0) / 100
+        st.wind, st.wind_from = now['wind'] or 0, now['wind_from'] or 0
+        st.rain = now['precip'] or 0
+        st.snow = 'snow' in now['symbol'] or 'sleet' in now['symbol'] or (now['temp'] is not None and now['temp'] < 0.5 and st.rain > 0)
+        st.fog = (now['fog'] or 0) / 100 if now['fog'] else (0.6 if now['symbol'].startswith('fog') else 0)
+        st.thunder = 'thunder' in now['symbol'] or (now['thunder_p'] or 0) >= 30
+        demo = os.environ.get('PARCHA_SKY_DEMO')  # tests: clear | rain | storm | snow | night | fog | dusk
+        if demo:
+            presets = {
+                'clear': dict(sun=45, day_fraction=0.45, clouds=0.1, rain=0, snow=False, fog=0, thunder=False),
+                'rain': dict(sun=30, day_fraction=0.4, clouds=0.9, rain=2.5, snow=False, fog=0, thunder=False, wind=6, wind_from=250),
+                'storm': dict(sun=20, day_fraction=0.6, clouds=1.0, rain=6, snow=False, fog=0, thunder=True, wind=12, wind_from=230),
+                'snow': dict(sun=12, day_fraction=0.5, clouds=0.85, rain=1.2, snow=True, fog=0.15, thunder=False, wind=3),
+                'night': dict(sun=-25, day_fraction=1, clouds=0.15, rain=0, snow=False, fog=0, thunder=False, moon=0.48),
+                'fog': dict(sun=10, day_fraction=0.2, clouds=0.6, rain=0, snow=False, fog=0.8, thunder=False),
+                'dusk': dict(sun=1.5, day_fraction=0.97, clouds=0.35, rain=0, snow=False, fog=0, thunder=False),
+            }
+            for k, v in presets.get(demo, {}).items():
+                setattr(st, k, v)
+        self.sky.queue_draw()
+
+    # -- content --------------------------------------------------------------------------------
+
+    def _clear(self):
+        while (child := self.content.get_first_child()):
+            self.content.remove(child)
+        self.cards = []
+
+    def _placeholder(self, text):
+        self._clear()
+        lbl = Gtk.Label(label=text, wrap=True, justify=Gtk.Justification.CENTER, margin_top=160)
+        lbl.add_css_class('sky-cond')
+        self.content.append(lbl)
+
+    def _card(self, title=None):
+        card = Card(title)
+        self.cards.append(card)
+        return card
+
+    def _render(self):
+        fc = self.forecast
+        now = fc.now() if fc else None
+        if not now:
+            return
+        self._update_sky(fc)
+        self._clear()
+        imp = self.imperial
+        night = self.sky.state.sun < -2
+        place = self.places[self.index]['name'] if self.places else ''
+        icon, cond, _thunder = symbol_info(now['symbol'], night)
+        days = fc.days(10)
+        today = days[0] if days else None
+
+        # Now
+        top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0, margin_top=8)
+        for text, css in ((place, 'sky-place'), (fmt_temp(now['temp'], imp), 'sky-temp'), (cond, 'sky-cond')):
+            lbl = Gtk.Label(label=text)
+            lbl.add_css_class(css)
+            top.append(lbl)
+        if today:
+            hl = Gtk.Label(label=_('H:%s  L:%s') % (fmt_temp(today['hi'], imp), fmt_temp(today['lo'], imp)))
+            hl.add_css_class('sky-cond')
+            hl.add_css_class('sky-dim')
+            top.append(hl)
+        line = Gtk.Label(label=summary_line(fc, self.prefs.get('playful', True), fmt_temp(now['temp'], imp)),
+                         wrap=True, justify=Gtk.Justification.CENTER, margin_top=10)
+        line.add_css_class('sky-line')
+        top.append(line)
+        self.content.append(top)
+
+        # Alerts
+        for a in self.alerts[:3]:
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            box.add_css_class('sky-alert')
+            t = Gtk.Label(label='⚠ ' + a['event'], xalign=0, wrap=True)
+            t.add_css_class('sky-cond')
+            box.append(t)
+            d = Gtk.Label(label=a['headline'], xalign=0, wrap=True)
+            d.add_css_class('sky-small')
+            box.append(d)
+            self.content.append(box)
+
+        # Hourly
+        hours = fc.next_hours(24)
+        if hours:
+            card = self._card(_('Next 24 hours'))
+            row = Gtk.Box(spacing=18)
+            for i, h in enumerate(hours):
+                local = h['time'].astimezone()
+                hn = sun_elevation(fc.lat, fc.lon, h['time']) < -2
+                ic, _c, _t = symbol_info(h['symbol'], hn)
+                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+                tl = Gtk.Label(label=_('Now') if i == 0 else fmt_hour(local))
+                tl.add_css_class('sky-small')
+                col.append(tl)
+                col.append(Gtk.Image(icon_name=ic, pixel_size=24))
+                if (h['pop'] or 0) >= 20:
+                    pl = Gtk.Label(label=f"{round(h['pop'])}%")
+                    pl.add_css_class('sky-small')
+                    pl.add_css_class('sky-dim')
+                    col.append(pl)
+                else:
+                    col.append(Gtk.Label(label=' '))
+                tt = Gtk.Label(label=fmt_temp(h['temp'], imp))
+                tt.add_css_class('sky-hour-temp')
+                col.append(tt)
+                row.append(col)
+            sc = Gtk.ScrolledWindow(vscrollbar_policy=Gtk.PolicyType.NEVER, child=row)
+            sc.set_size_request(-1, 112)
+            card.append(sc)
+            self.content.append(card)
+
+        # Ten days
+        if days:
+            card = self._card(_('%d days') % len(days))
+            lo_all = min(d['lo'] for d in days)
+            hi_all = max(d['hi'] for d in days)
+            grid = Gtk.Grid(column_spacing=14, row_spacing=10)
+            for r, d in enumerate(days):
+                name = _('Today') if d['date'] == datetime.now().date() else d['date'].strftime('%a')
+                dl = Gtk.Label(label=name, xalign=0, width_chars=6)
+                dl.add_css_class('sky-day')
+                grid.attach(dl, 0, r, 1, 1)
+                ic, _c, _t = symbol_info(d['symbol'])
+                grid.attach(Gtk.Image(icon_name=ic, pixel_size=22), 1, r, 1, 1)
+                pl = Gtk.Label(label=f"{round(d['pop'])}%" if d['pop'] >= 20 else '', width_chars=4)
+                pl.add_css_class('sky-small')
+                pl.add_css_class('sky-dim')
+                grid.attach(pl, 2, r, 1, 1)
+                lo = Gtk.Label(label=fmt_temp(d['lo'], imp), width_chars=4, xalign=1)
+                lo.add_css_class('sky-day')
+                lo.add_css_class('sky-dim')
+                grid.attach(lo, 3, r, 1, 1)
+                grid.attach(TempBar(d['lo'], d['hi'], lo_all, hi_all), 4, r, 1, 1)
+                hi = Gtk.Label(label=fmt_temp(d['hi'], imp), width_chars=4, xalign=0)
+                hi.add_css_class('sky-day')
+                grid.attach(hi, 5, r, 1, 1)
+            card.append(grid)
+            self.content.append(card)
+
+        # Detail cards
+        flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=14, row_spacing=14,
+                           homogeneous=True, max_children_per_line=3, min_children_per_line=2)
+        for title, big, small in self._details(fc, now, imp):
+            card = self._card(title)
+            b = Gtk.Label(label=big, xalign=0)
+            b.add_css_class('sky-big')
+            card.append(b)
+            s = Gtk.Label(label=small, xalign=0, wrap=True)
+            s.add_css_class('sky-small')
+            s.add_css_class('sky-dim')
+            card.append(s)
+            card.set_size_request(-1, 118)
+            flow.append(card)
+        self.content.append(flow)
+
+        attrib = Gtk.Label(label=_('Weather data: MET Norway (CC BY 4.0). Alerts: US National Weather Service.'),
+                           wrap=True, margin_top=6)
+        attrib.add_css_class('sky-attrib')
+        self.content.append(attrib)
+
+    def _details(self, fc, now, imp):
+        out = []
+        gust = f" · {_('gusts')} {fmt_wind(now['gust'], imp)}" if now.get('gust') else ''
+        out.append((_('Wind'), fmt_wind(now['wind'], imp), _('From the %s') % compass(now['wind_from']) + gust))
+        if now.get('uv') is not None:
+            uv = now['uv']
+            level = _('Low') if uv < 3 else _('Moderate') if uv < 6 else _('High') if uv < 8 else _('Very high')
+            out.append((_('UV index'), f'{round(uv)}', level + (_(' · sunscreen') if uv >= 6 else '')))
+        if now.get('humidity') is not None:
+            dew = f"{_('Dew point')} {fmt_temp(now['dew'], imp)}" if now.get('dew') is not None else ''
+            out.append((_('Humidity'), f"{round(now['humidity'])}%", dew))
+        times = sun_times(fc.lat, fc.lon, datetime.now(timezone.utc))
+        if times:
+            rise, sset = (t.astimezone() for t in times)
+            length = sset - rise
+            out.append((_('Sun'), f"↑ {fmt_hour(rise)}", f"↓ {fmt_hour(sset)} · "
+                        + _('%dh %dm of daylight') % (length.seconds // 3600, length.seconds % 3600 // 60)))
+        if now.get('pressure') is not None:
+            later = [h for h in fc.hours if h['time'] > now['time'] + timedelta(hours=2)]
+            trend = ''
+            if later and later[0]['pressure'] is not None:
+                diff = later[0]['pressure'] - now['pressure']
+                trend = _('Rising') if diff > 0.8 else _('Falling') if diff < -0.8 else _('Steady')
+            out.append((_('Pressure'), f"{round(now['pressure'])} hPa", trend))
+        phase = moon_phase(datetime.now(timezone.utc))
+        names = [_('New moon'), _('Waxing crescent'), _('First quarter'), _('Waxing gibbous'),
+                 _('Full moon'), _('Waning gibbous'), _('Last quarter'), _('Waning crescent')]
+        out.append((_('Moon'), names[int(phase * 8 + 0.5) % 8], _('%d%% lit') % round((1 - math.cos(2 * math.pi * phase)) / 2 * 100)))
+        return out
+
+    # -- menu -----------------------------------------------------------------------------------
+
+    def _main_menu(self):
+        menu = Gio.Menu()
+        menu.append(_('Playful summaries'), 'win.playful')
+        menu.append(_('Fahrenheit and mph'), 'win.imperial')
+        menu.append(_('About Parcha Sky'), 'win.about')
+        playful = Gio.SimpleAction.new_stateful('playful', None, GLib.Variant('b', self.prefs.get('playful', True)))
+        playful.connect('change-state', self._toggle('playful'))
+        imperial = Gio.SimpleAction.new_stateful('imperial', None, GLib.Variant('b', self.imperial))
+        imperial.connect('change-state', self._toggle('imperial'))
+        about = Gio.SimpleAction.new('about', None)
+        about.connect('activate', self._about)
+        for a in (playful, imperial, about):
+            self.add_action(a)
+        return Gtk.MenuButton(icon_name='open-menu-symbolic', menu_model=menu, tooltip_text=_('Menu'))
+
+    def _toggle(self, key):
+        def handler(action, value):
+            action.set_state(value)
+            self.prefs[key] = value.get_boolean()
+            if key == 'imperial':
+                self.imperial = value.get_boolean()
+            save_json(PREFS_FILE, self.prefs)
+            if self.forecast:
+                self._render()
+        return handler
+
+    def _about(self, *_a):
+        about = Adw.AboutDialog(application_name=_('Parcha Sky'), application_icon=APP_ID, version=VERSION,
+                                developer_name='Spanglish Enterprises LLC', license_type=Gtk.License.GPL_3_0,
+                                website='https://www.parchaos.org',
+                                comments=_('The sky outside, right now.'))
+        about.add_credit_section(_('Weather data'), ['MET Norway https://api.met.no', 'US National Weather Service https://www.weather.gov'])
+        about.present(self)
+
+
+class SkyApp(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        GLib.set_application_name(_('Parcha Sky'))
+
+    def do_activate(self):
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        win = self.props.active_window or SkyWindow(self)
+        win.present()
+
+
+if __name__ == '__main__':
+    try:
+        locale.setlocale(locale.LC_ALL, '')
+    except locale.Error:
+        pass
+    sys.exit(SkyApp().run(sys.argv))

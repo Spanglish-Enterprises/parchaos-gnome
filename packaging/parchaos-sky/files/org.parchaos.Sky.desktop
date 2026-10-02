@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Parcha Sky
+Name[es]=Parcha Sky
+GenericName=Weather
+GenericName[es]=Tiempo
+Comment=The sky outside, right now
+Comment[es]=El cielo de afuera, ahora mismo
+Exec=parchaos-sky
+Icon=org.parchaos.Sky
+Terminal=false
+Type=Application
+Categories=GNOME;GTK;Utility;
+Keywords=weather;forecast;rain;temperature;sky;tiempo;clima;lluvia;
+StartupNotify=true
+DBusActivatable=false
