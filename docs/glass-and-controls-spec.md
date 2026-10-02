@@ -1,6 +1,6 @@
 # Glass, Control Center and menus: plan and hand-over spec
 
-Status: 2026-10-01 (updated after menus moved to our glass). Tickets #135 (Glass), #148 (Edit Controls), #131 (dock), #169 (upgrade breakage).
+Status: 2026-10-01 late (blur, outline, tile corners, resize handle, recently pill, top-bar glyph). Tickets #135 (Glass), #148 (Edit Controls), #131 (dock), #169 (upgrade breakage).
 Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test rigs must never touch the real desktop).
 
 ## 1. Owner requirements (settled, do not re-ask)
@@ -38,7 +38,8 @@ Settings keys: `org.parchaos.desktop` `style` (glass|classic), `glass-effects` (
   `DEVKIT=1 EXTS="parchaos-controls@parchaos.org" SETTINGS="/org/parchaos/desktop/style 'glass';..." OUT=/tmp/x scripts/devshot/run.sh plan.json 60`
   opens a nested GNOME Shell window on the real GPU with a private HOME and bus, runs the JSON plan (clicks, drags, keys, screenshots)
   and writes PNGs. Headless mode (no `DEVKIT`) uses software rendering and cannot judge glass.
-- Plan steps: `wait`, `shot`, `move`, `press`, `release`, `drag`, `type`, `combo`, `log`, `states`.
+- Plan steps: `wait`, `shot`, `move`, `press`, `release`, `drag`, `type`, `combo`, `log`, `states`, `screenshotTaken` (saves a shot and emits the shell's `screenshot-taken`).
+- **The nested monitor is 1280x800.** Moving the virtual pointer outside it (e.g. x 1577) disconnects the devkit viewer and the shell exits at once (log: "Removed virtual monitor", "Disconnected by EIS"; the segfault after it is only teardown). Control Center's button is at (1192, 15). The synthetic Print key does not reach the screenshot shortcut; use `screenshotTaken`.
 - Wallpaper for tests: copy `~/.config/background`; use a grid test image to judge refraction.
 - Clutter 50 notes: `new Clutter.ShaderEffect()` (no `shader_type`); uniforms need `GObject.Value` (float/int); vec3 uniforms are not
   supported from GJS, pass three floats; `St.BoxLayout` has no `vertical`/`spacing`/`children` properties (use `orientation`, style `spacing`, `add_child`).
@@ -50,7 +51,15 @@ Settings keys: `org.parchaos.desktop` `style` (glass|classic), `glass-effects` (
 ## 4. Work remaining, in priority order
 
 ### 4.1 Glass: match the reference (ticket #135)
-Done: working shader, Control Center tiles. To do:
+Done: working shader, Control Center tiles. Done 2026-10-01 late:
+- **Blur**: the 12-tap fixed spiral left sharp ghost copies of lines (see over a grid image); now 24 gaussian-weighted taps on a per-pixel turned spiral; per-channel blurs only where there is colour fringing.
+- **Outline** (`hair`): crisp 1 px line round the whole edge, brighter facing the light (reference tiles keep it even over a bright sky). Tiles use 0.38.
+- **Tile corners** (`cn`, the corner exponent): traced the reference's hairline (9.33 PM screenshot, Display slider and Now Playing 2x2) and fitted: superellipse quadrants, not circles on flat edges. 4x1 slider: corner reaches the whole half-height, n 2.5 (1.0 device px RMS); 2x2: 50 px, n 3.1 (0.82 px RMS); 1x1/2x1 stay circles/capsules. `tileShape()` in controls feeds pane, handle and hit test. Our traced outline is within 0.006 x tile height of the reference.
+- **Bright-backdrop tone**: measured on the real screenshot, the reference tile is ~0.85 of the sky around it, neutral grey; ours 0.78. Close; the phone photo in the ticket exaggerates (camera), do not tune against it.
+- Small buttons: bezel band = min(26, 0.26 x short side) so the middle stays clear.
+- **Recently pill** above the tiles: "<App> recently" when the shell grants an app the location (geoclue agent wrapped; reply read, refusals ignored; click opens the app), "Screenshot taken" (click shows it via FileManager1). 15 min. Smoke-tested.
+- **Top-bar glyph**: original tile mosaic (owner picked B of three drafts); the old two-switch glyph copied the reference.
+To do:
 1. **Tune to the macOS reference** (Control Center photo in the ticket and `dropbox`): stronger edge lens and the visible warped ring ~15% in; rim hot-spots at top and bottom; dark smoky body; verify with a grid test image and with the real wallpaper.
 2. **Backdrop-adaptive tint**: DONE (smoky on dark, warm grey veil on bright, text stays white). Still to do: per-pane text colour sampling for very bright wallpapers; warm refraction tint like the light reference.
 3. **Slider look**: thin track and thin fill DONE; still to do: Display slider (no tile yet), end icons, and the AirDrop-style round button on the Sound tile.
@@ -61,7 +70,7 @@ Done: working shader, Control Center tiles. To do:
 
 ### 4.2 Edit Controls (ticket #148)
 Done: edit mode, separate movable picker, drag from picker, placeholders, corner resize handle (drag, snaps to allowed sizes), per-connection tiles, icon-only at 1x1.
-To do: (a) DROPPED: the owner never asked for menu-bar placement; controls go into Control Center only; (b) richer gallery: DONE 1.0.0-36 What's New card + Suggestions row (wrapped rows via `ControlsPicker._flow`; FlowLayout mis-measured inside the scroll view, do not use it); Edit mode is glass too, measured against the owner's Mac screenshot (`edit controls.png`, 1.0.0-38): NO panel pane behind Control Center (every tile is its own glass via `panel.useGlass`; empty slots are faint dark discs, alpha .16); ONE big light glass pane behind the picker (params disp 10, blur 1.6, tint .2, z 30 (1.0.0-40; blur 3 was judged too blurry by the owner against the reference, 0.6 too sharp), Control Center is stacked above the picker), picker ~52% x 84% of the screen CENTRED on screen (owner: the reference screenshot was a crop, so its left offset means nothing; 1.0.0-39), section headings with divider lines. Reference gaps still open: per-category app-style icons in the sidebar, a preview picture in the What's New card, larger Suggestions (Wi-Fi 'on' is a white tile); Battery control (1.0.0-37, `_batteryTile`) exists only when UPower reports a battery (absent on a desktop PC, so it never shows in the panel or picker); still to do: live previews, more categories (battery, clock, ...); (c) DONE 1.0.0-35: connection tiles (Wi-Fi, Bluetooth, Wired, VPN, Airplane) can also be 2x2 (icon on top, name and state below; `_smallLayout` handles tall); (d) drop onto a specific empty slot; (e) resize handle shape: match the reference stroke exactly (thick, hugging the corner); (f) Control Center in Classic style keeps the old flat look; confirm.
+To do: (a) DROPPED: the owner never asked for menu-bar placement; controls go into Control Center only; (b) richer gallery: DONE 1.0.0-36 What's New card + Suggestions row (wrapped rows via `ControlsPicker._flow`; FlowLayout mis-measured inside the scroll view, do not use it); Edit mode is glass too, measured against the owner's Mac screenshot (`edit controls.png`, 1.0.0-38): NO panel pane behind Control Center (every tile is its own glass via `panel.useGlass`; empty slots are faint dark discs, alpha .16); ONE big light glass pane behind the picker (params disp 10, blur 1.6, tint .2, z 30 (1.0.0-40; blur 3 was judged too blurry by the owner against the reference, 0.6 too sharp), Control Center is stacked above the picker), picker ~52% x 84% of the screen CENTRED on screen (owner: the reference screenshot was a crop, so its left offset means nothing; 1.0.0-39), section headings with divider lines. Reference gaps still open: per-category app-style icons in the sidebar, a preview picture in the What's New card, larger Suggestions (Wi-Fi 'on' is a white tile); Battery control (1.0.0-37, `_batteryTile`) exists only when UPower reports a battery (absent on a desktop PC, so it never shows in the panel or picker); still to do: live previews, more categories (battery, clock, ...); (c) DONE 1.0.0-35: connection tiles (Wi-Fi, Bluetooth, Wired, VPN, Airplane) can also be 2x2 (icon on top, name and state below; `_smallLayout` handles tall); (d) drop onto a specific empty slot; (e) DONE: resize handle is a 6.5 px stroke along the tile's own corner curve (~0.09-0.41 pi), only a press on the stroke resizes; (f) Control Center in Classic style keeps the old flat look; confirm.
 
 
 ### 4.2a Pixel measurements of the owner's edit-mode reference (2026-10-01)
