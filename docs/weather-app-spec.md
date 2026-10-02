@@ -1,12 +1,11 @@
-# ParchaOS weather app: spec
+# Parcha Sky (ParchaOS weather app): spec
 
 Status: 2026-10-02, owner request: "The current weather app is very limited and lacking. I want
 something better, prettier, more dynamic, alive, hyperlocal, quirky even (possibly play with the
 Parcha theme a bit). Design it with the glass effect in mind; at minimum compatible with it."
 Ticket: #192. Replaces GNOME Weather as the default weather app.
 
-Working name: **Parcha Weather** (fits Parcha Keys, Parcha Browser, Parcha Backup). Owner to pick;
-alternatives with a local flavour: *Cielito*, *Parcha Sky*. Original name either way.
+Name: **Parcha Sky** (owner decision, 2026-10-02). App id `org.parchaos.Sky`.
 
 ## 1. What it must feel like
 
