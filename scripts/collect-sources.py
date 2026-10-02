@@ -26,7 +26,7 @@ import urllib.request
 
 COPR_OWNER = "alexgalicea"
 COPR_PROJECT = "parchaos-gnome"
-COPR_CHROOT = "fedora-44-x86_64"
+COPR_CHROOT = "fedora-44-x86_64"   # set from the rootfs's own architecture in main()
 COPR_API = "https://copr.fedorainfracloud.org/api_3"
 KOJI = "https://kojipkgs.fedoraproject.org/packages"
 PART_LIMIT = int(1.9 * 1024 ** 3)
@@ -68,6 +68,8 @@ def copr_url(name, version, release):
         builds = json.load(r)["items"]
     for b in builds:
         pkg = b.get("source_package") or {}
+        if COPR_CHROOT not in (b.get("chroots") or [COPR_CHROOT]):
+            continue
         if b["state"] == "succeeded" and pkg.get("version") == f"{version}-{release}".rsplit(".fc", 1)[0] \
                 or pkg.get("version") == f"{version}-{release}":
             return (f"https://download.copr.fedorainfracloud.org/results/{COPR_OWNER}/{COPR_PROJECT}/"
@@ -113,6 +115,14 @@ def main():
     rootfs, outdir = args
     listing_only = "--no-download" in sys.argv
 
+    # The image's architecture picks the COPR chroot (x86_64 or aarch64, ticket #167):
+    # a build may exist in one chroot only.
+    global COPR_CHROOT
+    arch = subprocess.run(["rpm", "--root", rootfs, "-q", "--qf", "%{ARCH}\n", "kernel-core"],
+                          capture_output=True, text=True).stdout.split()
+    if arch:
+        COPR_CHROOT = f"fedora-44-{arch[-1]}"
+    print(f"COPR chroot: {COPR_CHROOT}")
     srpms = installed_sources(rootfs)
     print(f"{len(srpms)} source packages")
     srpm_dir = os.path.join(outdir, "srpms")

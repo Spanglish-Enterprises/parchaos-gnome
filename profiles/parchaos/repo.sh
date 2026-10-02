@@ -26,11 +26,12 @@ profile_setup_repo() {
     # Name the COPR chroot explicitly. The image carries the generic Remix
     # os-release, so dnf's own guess is generic-$BRANCH-x86_64, which the
     # project does not have ("Chroot not found in the given Copr project").
-    # Found by the first real build of ticket #68.
-    if ! run_in_target dnf copr enable -y "$PROFILE_COPR" "fedora-$BRANCH-x86_64"; then
+    # Found by the first real build of ticket #68. The chroot's architecture
+    # is the image's (--arch, ticket #167).
+    if ! run_in_target dnf copr enable -y "$PROFILE_COPR" "fedora-$BRANCH-${ARCH:-x86_64}"; then
         echo "WARNING: could not enable COPR $PROFILE_COPR — has it been" >&2
         echo "         created yet? (copr-cli create $PROFILE_COPR --chroot" >&2
-        echo "         fedora-44-x86_64). Use --local with hand-built RPMs" >&2
+        echo "         fedora-$BRANCH-${ARCH:-x86_64}). Use --local with hand-built RPMs" >&2
         echo "         in build/local-rpms/ as a fallback." >&2
     fi
 
