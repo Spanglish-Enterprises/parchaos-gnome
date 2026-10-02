@@ -270,7 +270,7 @@ gnome-text-editor
 loupe
 file-roller
 gnome-calculator
-gnome-weather
+# gnome-weather: replaced by Parcha Sky (parchaos-sky, from the COPR; ticket #192)
 gnome-calendar
 gnome-contacts
 

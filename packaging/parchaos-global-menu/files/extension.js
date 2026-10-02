@@ -584,7 +584,10 @@ const WeatherIndicator = GObject.registerClass({
 
     _openWeatherApp() {
         try {
-            const app = Shell.AppSystem.get_default().lookup_app('org.gnome.Weather.desktop');
+            // Parcha Sky, ParchaOS's weather app; GNOME Weather where it isn't installed
+            const apps = Shell.AppSystem.get_default();
+            const app = apps.lookup_app('org.parchaos.Sky.desktop') ??
+                apps.lookup_app('org.gnome.Weather.desktop');
             app?.activate();
         } catch (e) {
             console.error('[ParchaOSGlobalMenu] Failed to open Weather app:', e);
