@@ -9,8 +9,8 @@
 # ==============================================================================
 
 Name:           parchaos-sky
-Version:        0.3.0
-Release:        2%{?dist}
+Version:        0.3.1
+Release:        1%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -21,6 +21,13 @@ Source2:        org.parchaos.Sky.svg
 Source3:        parchaos-sky-map.json.gz
 Source4:        org.parchaos.Sky.metainfo.xml
 Source5:        es.po
+Source6:        parchi-front.svgz
+Source7:        parchi-sunny.svgz
+Source8:        parchi-rain.svgz
+Source9:        parchi-cloudy.svgz
+Source10:       parchi-storm.svgz
+Source11:       parchi-snow.svgz
+Source12:       parchi-windy.svgz
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -33,6 +40,8 @@ Requires:       gtk4
 Requires:       libadwaita
 Requires:       libsoup3
 Requires:       python3-cairo
+# Parchi's artwork (SVG); without it the hand-drawn Parchi stands in
+Requires:       librsvg2
 # Offline city search and the location the user allows.
 Requires:       libgweather >= 4
 Requires:       geoclue2-libs
@@ -55,6 +64,7 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Sky
 install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
 install -Dm0644 %{SOURCE3} %{buildroot}%{_datadir}/parchaos-sky/parchaos-sky-map.json.gz
 install -Dm0644 %{SOURCE4} %{buildroot}%{_metainfodir}/org.parchaos.Sky.metainfo.xml
+install -m0644 %{SOURCE6} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} %{SOURCE11} %{SOURCE12} %{buildroot}%{_datadir}/parchaos-sky/
 # Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
 install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
 msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo %{SOURCE5}
@@ -73,6 +83,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.1-1
+- Ticket #192: Parchi uses the owner's own character art, traced to vectors (one SVG per pose: front, sunny, rain, partly cloudy, storm, snow, windy, with their scenery). Parchi bobs, sways in the wind, nods to the music in storms, floats with the cloud and blinks now and then; at night the front pose gets sleepy lids and drifting z's. The hand-drawn Parchi stays as the fallback.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.0-2
 - Ticket #192: the character is Parchi the Parchita, redrawn after the owner's character kit: maroon rind, pink rim, golden pulp with radiating seeds, big eyes, stubby limbs; poses for sunny (sunglasses, drink), rain (hooded raincoat, leaf umbrella, boots), partly cloudy (sitting in a cloud), storm (headphones), snow and cold (beanie, scarf), wind (leafy branch, squinting), night (nightcap); expressions happy, neutral, concerned, surprised, sleepy, sad.
 

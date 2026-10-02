@@ -67,6 +67,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.3.1" date="2026-10-02">
+      <description>
+        <p>Parchi now uses the original character art: it bobs, sways in the wind, nods along in storms and blinks.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-02">
       <description>
         <p>Next-hour rain and drizzle from radar, radar map, translations through gettext, and many fixes.</p>

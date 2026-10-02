@@ -18,6 +18,8 @@ import os
 import random
 import sys
 import time
+
+import cairo
 from datetime import datetime, timedelta, timezone
 
 import gi
@@ -48,7 +50,7 @@ def day_name(d, short=False):
     return _((DAYS_SHORT if short else DAYS)[d.weekday()])
 
 APP_ID = 'org.parchaos.Sky'
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 USER_AGENT = f'ParchaOS-Sky/{VERSION} (+https://www.parchaos.org/support)'
 MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.2f}&lon={lon:.2f}'
 NWS_ALERTS_URL = 'https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}'
@@ -1423,13 +1425,152 @@ def mood_for(hour, sun, feels=None):
     return 'neutral'
 
 
+# Parchi's own artwork: the owner's character kit, traced to vectors (one SVG per pose, with
+# its scenery). Eye boxes (cx, cy, rx, ry, in art pixels) let Parchi blink. Without the files,
+# or without librsvg, the hand-drawn Parchi above stands in.
+PARCHI_DIRS = [os.path.dirname(os.path.abspath(__file__)), '/usr/share/parchaos-sky']
+PARCHI_ART = {
+    'front': ((804, 744), ((252, 274, 48, 45), (462, 274, 48, 45))),
+    'sunny': ((929, 1039), ()),          # sunglasses: nothing to blink
+    'rain': ((786, 997), ((255, 499, 42, 40), (425, 499, 42, 40))),
+    'cloudy': ((884, 843), ((316, 412, 38, 36), (474, 412, 36, 36))),
+    'storm': ((894, 1001), ((266, 600, 40, 36), (424, 600, 40, 36))),
+    'snow': ((860, 983), ((343, 581, 42, 44), (513, 575, 40, 42))),
+    'windy': ((956, 713), ()),           # already squinting into the wind
+}
+POSE_ART = {'sunny': 'sunny', 'rain': 'rain', 'cloudy': 'cloudy', 'storm': 'storm', 'snow': 'snow',
+            'cold': 'snow', 'windy': 'windy'}   # anything else (happy, neutral, night): front
+
+
+class ParchiArt:
+    """Loads each pose once and keeps a raster of it at the size on screen."""
+    _handles = {}
+    _cache = {}
+
+    @classmethod
+    def handle(cls, pose):
+        if pose not in cls._handles:
+            cls._handles[pose] = None
+            try:
+                gi.require_version('Rsvg', '2.0')
+                from gi.repository import Rsvg
+                for d in PARCHI_DIRS:
+                    path = os.path.join(d, f'parchi-{pose}.svgz')
+                    if os.path.exists(path):
+                        cls._handles[pose] = Rsvg.Handle.new_from_file(path)
+                        break
+            except (ValueError, ImportError, GLib.Error):
+                pass
+        return cls._handles[pose]
+
+    @classmethod
+    def surface(cls, pose, w, h, scale):
+        """The pose fitted into w x h (bottom centre), the factor used, and the pulp colour."""
+        key = (pose, w, h, scale)
+        if key not in cls._cache:
+            handle = cls.handle(pose)
+            if handle is None:
+                return None
+            from gi.repository import Rsvg
+            (aw, ah), eyes = PARCHI_ART[pose]
+            k = min(w / aw, h / ah)
+            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w * scale), int(h * scale))
+            surf.set_device_scale(scale, scale)
+            cr = cairo.Context(surf)
+            ox, oy = (w - aw * k) / 2, h - ah * k
+            viewport = Rsvg.Rectangle()
+            viewport.x, viewport.y, viewport.width, viewport.height = ox, oy, aw * k, ah * k
+            handle.render_document(cr, viewport)
+            surf.flush()
+            pulp = cls._pulp(surf, scale, [(ox + x * k, oy + y * k, rx * k, ry * k) for x, y, rx, ry in eyes])
+            if len(cls._cache) > 24:
+                cls._cache.clear()
+            cls._cache[key] = (surf, k, ox, oy, pulp)
+        return cls._cache[key]
+
+    @staticmethod
+    def _pulp(surf, scale, eyes):
+        """The skin colour around the eyes, for the eyelids: the median of a ring of samples."""
+        if not eyes:
+            return None
+        data, stride = surf.get_data(), surf.get_stride()
+        sw, sh = surf.get_width(), surf.get_height()
+        samples = []
+        for cx, cy, rx, ry in eyes:
+            for i in range(12):
+                a = i / 12 * math.tau
+                x, y = int((cx + math.cos(a) * rx * 1.35) * scale), int((cy + math.sin(a) * ry * 1.35) * scale)
+                if 0 <= x < sw and 0 <= y < sh:
+                    b, g, r, al = data[y * stride + x * 4:y * stride + x * 4 + 4]
+                    if al > 200 and r > 150 and g > 90 and b < 120:   # golden pulp, not a seed or the rim
+                        samples.append((r, g, b))
+        if not samples:
+            return (0.95, 0.72, 0.25)
+        samples.sort(key=sum)
+        r, g, b = samples[len(samples) // 2]
+        return (r / 255, g / 255, b / 255)
+
+
+def parchi_motion(pose, t):
+    """Bob and sway per pose: (dx, dy, angle, pivot at the feet)."""
+    if pose == 'windy':
+        return (math.sin(t * 2.6) * 1.2, 0, -0.03 + math.sin(t * 3.1) * 0.035, True)
+    if pose == 'storm':      # nodding along to the music
+        return (0, -abs(math.sin(t * 4.2)) * 1.6, math.sin(t * 4.2) * 0.02, True)
+    if pose == 'sunny':      # lounging
+        return (0, math.sin(t * 1.1) * 1.0, math.sin(t * 0.9) * 0.012, True)
+    if pose == 'cloudy':     # floating with the cloud
+        return (math.sin(t * 0.7) * 1.5, math.sin(t * 1.4) * 2.5, 0, False)
+    return (0, -abs(math.sin(t * 1.9)) * 2.2, math.sin(t * 0.95) * 0.015, True)
+
+
+def parchi_lids(t, seed):
+    """How shut the eyes are (0 open, 1 shut): a quick blink every few seconds."""
+    period = 3.6 + (seed % 7) * 0.4
+    phase = (t + seed) % period
+    if phase < 0.16:
+        return math.sin(phase / 0.16 * math.pi)
+    if 0.5 < phase < 0.62 and seed % 3 == 0:   # now and then, a double blink
+        return math.sin((phase - 0.5) / 0.12 * math.pi)
+    return 0.0
+
+
+def draw_lids(cr, eyes, shut, pulp):
+    for cx, cy, rx, ry in eyes:
+        top = cy - ry * 1.12
+        edge = top + (ry * 1.12 + ry * 0.7) * shut      # fully shut, the lid rests just below centre
+        cr.save()
+        cr.translate(cx, cy)
+        cr.scale(rx * 1.12, ry * 1.12)
+        cr.arc(0, 0, 1, 0, math.tau)
+        cr.restore()
+        cr.save()
+        cr.clip()
+        cr.set_source_rgb(*pulp)
+        cr.rectangle(cx - rx * 1.3, top - 2, rx * 2.6, edge - top + 2)
+        if shut > 0.9:   # shut eyes cover the whole eye
+            cr.rectangle(cx - rx * 1.3, top - 2, rx * 2.6, ry * 2.4)
+        cr.fill()
+        cr.restore()
+        # lashes along the lid's edge, curving down as it closes
+        half = math.sqrt(max(0.0, 1 - ((edge - cy) / (ry * 1.12)) ** 2)) * rx * 1.08
+        sag = ry * 0.28 * shut
+        cr.set_source_rgba(0.29, 0.13, 0.12, 0.95)
+        cr.set_line_width(max(1.0, ry * 0.14))
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx - half, edge)
+        cr.curve_to(cx - half * 0.4, edge + sag, cx + half * 0.4, edge + sag, cx + half, edge)
+        cr.stroke()
+
+
 class Parchita(Gtk.DrawingArea):
-    """Parchi on screen: the pose follows the weather, with a gentle bob."""
+    """Parchi on screen: the pose follows the weather; Parchi bobs, sways and blinks."""
 
     def __init__(self):
-        super().__init__(content_width=110, content_height=120, valign=Gtk.Align.CENTER)
+        super().__init__(content_width=124, content_height=134, valign=Gtk.Align.CENTER)
         self.mood = 'happy'
         self.t0 = time.monotonic()
+        self.seed = random.randrange(1000)
         self.set_draw_func(self._draw)
         self.add_tick_callback(self._tick)
 
@@ -1444,7 +1585,41 @@ class Parchita(Gtk.DrawingArea):
 
     def _draw(self, area, cr, w, h):
         animate = Gtk.Settings.get_default().props.gtk_enable_animations
-        draw_parchi(cr, w, h, self.mood, time.monotonic() - self.t0, animate)
+        t = time.monotonic() - self.t0 if animate else 0.0
+        pose = POSE_ART.get(self.mood, 'front')
+        try:
+            art = ParchiArt.surface(pose, w, h - 4, self.get_scale_factor())
+        except (GLib.Error, TypeError, cairo.Error):
+            ParchiArt._handles[pose] = None
+            art = None
+        if art is None:
+            draw_parchi(cr, w, h, self.mood, t, animate)
+            return
+        surf, k, ox, oy, pulp = art
+        dx, dy, angle, feet = parchi_motion(pose, t) if animate else (0, 0, 0, True)
+        cr.save()
+        px, py = w / 2, (h - 4 if feet else h / 2)
+        cr.translate(px + dx, py + dy + 2)
+        cr.rotate(angle)
+        cr.translate(-px, -py)
+        cr.set_source_surface(surf, 0, 0)
+        cr.paint()
+        eyes = [(ox + x * k, oy + y * k, rx * k, ry * k) for x, y, rx, ry in PARCHI_ART[pose][1]]
+        if eyes and pulp:
+            shut = 0.55 if self.mood == 'night' else 0.0
+            if animate:
+                shut = max(shut, parchi_lids(t, self.seed))
+            if shut > 0.02:
+                draw_lids(cr, eyes, shut, pulp)
+        cr.restore()
+        if self.mood == 'night':   # drifting z's
+            cr.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            for i in range(3):
+                f = ((t * 0.35 + i / 3) % 1.0) if animate else (i / 3)
+                cr.set_font_size(9 + 6 * f)
+                cr.set_source_rgba(1, 1, 1, 0.85 * (1 - f) + 0.1)
+                cr.move_to(w * 0.72 + f * 14 + math.sin(f * 6) * 2, h * 0.32 - f * 30)
+                cr.show_text('z')
 
 
 def parchita_mood(hour, sun):
@@ -3018,9 +3193,9 @@ class SkyApp(Adw.Application):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         if os.environ.get('PARCHA_SKY_PARCHITA_SHEET'):  # tests: every mood side by side
-            win = Adw.ApplicationWindow(application=self, default_width=760, default_height=220)
+            win = Adw.ApplicationWindow(application=self, default_width=1180, default_height=230)
             box = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
-            for mood in ('sunny', 'calm', 'rain', 'storm', 'cold', 'night'):
+            for mood in ('happy', 'sunny', 'rain', 'cloudy', 'storm', 'snow', 'windy', 'night'):
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
                 p = Parchita()
                 p.set_mood(mood)
