@@ -164,6 +164,12 @@ if [ -n "$narrative_lines" ]; then
     [ -z "$bad" ] || { echo "$bad"; fail macos-narrative; }
 fi
 
+echo "== look-alike audit: names and asset provenance =="
+# Part 1 and 2 of the look-alike audit (docs/DEVELOPMENT.md): no unexcused trademark names, and every
+# shipped image, icon, font or sound has a provenance row.
+python3 scripts/tests/test_lookalike.py || fail lookalike-tests
+python3 scripts/lookalike-check.py || fail lookalike
+
 echo "== spec changelog headers =="
 if grep -n '^%%*changelog' packaging/*/*.spec | grep -v ':%changelog$'; then
     echo "a spec has a garbled %changelog header (must be exactly %changelog)"

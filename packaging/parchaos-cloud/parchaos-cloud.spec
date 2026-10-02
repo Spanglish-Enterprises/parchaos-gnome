@@ -34,7 +34,7 @@
 
 Name:           parchaos-cloud
 Version:        2.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        ParchaOS's cloud drives -- rclone-backed cloud storage under ~/Cloud
 
 License:        GPL-3.0-or-later
@@ -86,6 +86,9 @@ update-desktop-database -q %{_datadir}/applications &>/dev/null || :
 %{_datadir}/icons/hicolor/scalable/apps/parchaos-cloud.svg
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2.0.0-5
+- Look-alike audit: the search keywords no longer include another company's cloud service name.
+
 * Sat Sep 26 2026 ParchaOS packaging - 2.0.0-4
 - Ship the license text (%license) with an accurate SPDX License tag.
   Relicensed GPL-3.0-or-later like the rest of ParchaOS's code; an

@@ -102,7 +102,7 @@ const SHORTCUTS = {
     'open': {default: null, files: [NONE, Clutter.KEY_Return]},
     'get-info': {default: null, files: [CTRL, Clutter.KEY_i]},
     'rename': {default: null, files: [NONE, Clutter.KEY_F2]},
-    'quick-look': {default: null, files: [NONE, Clutter.KEY_space]},
+    'quick-preview': {default: null, files: [NONE, Clutter.KEY_space]},
     'trash': {default: null, files: [NONE, Clutter.KEY_Delete]},
     'print': {default: [CTRL, Clutter.KEY_p], terminal: null},
     'undo': {default: [CTRL, Clutter.KEY_z], terminal: null},
@@ -132,7 +132,7 @@ const SHORTCUTS = {
 // of the keyboard style in use.
 const HINTS = {
     'new-window': 'c N', 'new-tab': 'c T', 'new-folder': 'cs N', 'open': 'c O', 'get-info': 'c I',
-    'rename': 'F2', 'quick-look': 'Space', 'trash': 'c \u232B', 'print': 'c P', 'undo': 'c Z', 'redo': 'cs Z',
+    'rename': 'F2', 'quick-preview': 'Space', 'trash': 'c \u232B', 'print': 'c P', 'undo': 'c Z', 'redo': 'cs Z',
     'cut': 'c X', 'copy': 'c C', 'paste': 'c V', 'select-all': 'c A', 'find': 'c F', 'settings': 'c ,',
     'view-icons': 'c 1', 'view-list': 'c 2', 'hidden-files': 'cs .', 'zoom-in': 'c +', 'zoom-out': 'c \u2212',
     'zoom-reset': 'c 0', 'reload': 'c R', 'back': 'c [', 'forward': 'c ]', 'enclosing': 'c \u2191',
@@ -1060,7 +1060,7 @@ const MENU_TABLE = [
             { label: 'Open', shortcut: 'open' },
             { label: 'Get Info', shortcut: 'get-info' },
             { label: 'Rename', shortcut: 'rename' },
-            { label: 'Quick Look', shortcut: 'quick-look' },
+            { label: 'Quick Preview', shortcut: 'quick-preview' },
             SEPARATOR,
             { label: 'Move to Trash', shortcut: 'trash' },
             SEPARATOR,

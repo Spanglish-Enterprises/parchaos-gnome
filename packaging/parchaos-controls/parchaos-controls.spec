@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        51%{?dist}
+Release:        52%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-52
+- Look-alike audit: a stylesheet comment no longer names another company's product.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-51
 - Ticket #148 (owner): when Edit Controls opens, the open windows on that screen slide off its nearer side and come back when editing ends; the picker is front and centre (moved left only as far as needed to clear Control Center); a control dragged in from the picker takes the next free slot and the tiles already placed stay where they are (no reordering, no gaps); the gallery's tiles are no longer clipped by a couple of pixels at its left edge.
 

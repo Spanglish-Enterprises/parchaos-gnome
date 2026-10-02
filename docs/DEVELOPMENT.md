@@ -191,6 +191,25 @@ Boot test without ARM hardware: `qemu-system-aarch64-core` and
 `QEMU_EFI-pflash.raw`, a virtio GPU and the ISO on a virtio/SCSI CD.
 No hardware promises yet: virtual machines first.
 
+## Look-alike audit: the release and revenue gate
+
+Names, assets and look are checked so ParchaOS does not copy another company's marks or distinctive
+look. The automated parts run in `scripts/lint.sh`:
+
+- `scripts/lookalike-terms.txt`: marks and feature names that must not appear in anything ParchaOS
+  ships or publishes. `scripts/lookalike-allow.txt` lists the places where a name may appear and why
+  (a fact, a tool that removes it, upstream text the build rewrites, history, or `debt:` for clean-up
+  still owed).
+- `docs/asset-provenance.csv`: where every image, icon, font and sound came from, with a licence and
+  whether it is verified. An asset with no row fails lint.
+
+`python3 scripts/lookalike-check.py --gate` is stricter and must pass before an ISO release and before
+anything that earns money goes live: it also fails while a provenance row is unverified or unknown and
+while any allow-list line is `debt:`. `--report DIR` writes a hand-over folder for a lawyer.
+
+What a script cannot judge (the overall look, element by element) is kept in a private register, not
+in this repository. Any change to a visual element re-opens its row there.
+
 ## Release size limit
 
 GitHub rejects release assets of 2 GiB (2,147,483,648 bytes) or more, and

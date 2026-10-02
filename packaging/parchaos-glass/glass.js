@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // ParchaOS glass: a pane that shows a refracted, blurred, tinted copy of the desktop behind it,
-// with a curved-bezel lens, rim light and a soft shadow, like liquid glass.
+// with a curved-bezel lens, rim light and a soft shadow, like real glass.
 //
 // The optical model (superellipse bezel height, Snell refraction through its normal, an edge lens
 // that builds towards the rim, a rim light that follows the light direction, an inner shadow on the

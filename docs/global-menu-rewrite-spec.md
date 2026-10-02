@@ -35,8 +35,8 @@ user window has focus (desktop focused, or a background/overlay window like
 Desktop Icons NG's own rendering surface — exclude any window whose
 GApplication id or WM_CLASS matches known desktop-shell helper apps, not
 just DING specifically, so this generalizes), shows "Parcher" as the
-default idle-state label, matching the reference desktop's own "Finder is focused when
-nothing else is" convention. Clicking it opens a small menu: "About
+default idle-state label, following the common convention of showing the file manager's name when
+nothing else is focused. Clicking it opens a small menu: "About
 {app}," "Hide {app}," "Quit {app}" — Hide should minimize the focused
 window, Quit should close it via the window's own close/delete request.
 

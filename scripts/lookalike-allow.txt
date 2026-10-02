@@ -1,0 +1,60 @@
+# Look-alike audit, part 1: places where a listed name is allowed to appear, and why.
+# Read by scripts/lookalike-check.py. One line per place:
+#
+#     path glob | term (or *) | reason
+#
+# The reason must start with one of:
+#   fact:      a plain statement about the name (credits, a legal notice, a rule, an old package name kept
+#              so upgrades work, the cloud services a tool connects to)
+#   tool:      a script or note whose job is to discuss or remove those names
+#   upstream:  upstream's own text, kept unchanged in a patch; the build rewrites what users see
+#   history:   a log of what happened
+#   debt:      still to be cleaned up; the audit gate (--gate) fails while any "debt:" line exists
+#
+# Review this file whenever it changes: every line is a decision that a name stays.
+
+# --- notices and rules
+README.md                                   | apple | fact: the non-affiliation notice
+docs/LEGAL.md                               | apple | fact: the non-affiliation notice
+docs/release-notes-template.md              | apple | fact: points to the non-affiliation notice
+docs/trademark-clearance-report.md          | *     | fact: the clearance analysis names the marks it assesses
+docs/DEVELOPMENT.md                         | *     | fact: the naming policy, old package names and what the release gate rejects
+docs/feature-roadmap-2026.md                | apple | fact: states the look-alike rule
+docs/parcher-rebase-plan.md                 | finder | fact: names the upstream project Parcher is based on
+
+# --- tools that talk about the names
+scripts/lint.sh                             | *     | tool: the check that keeps these names out
+scripts/public-surface-audit.sh             | *     | tool: flags removed third-party material
+scripts/tests/test_lookalike.py            | *     | tool: the audit's own tests use a listed name as the example
+scripts/check-image.sh                      | *     | tool: rejects packages ParchaOS dropped, by their old names
+packaging/parchaos-icon-theme/parchaos-icons/* | *  | tool: removes and replaces icons that copy another company's
+packaging/parchaos-icon-theme/parchaos-icon-theme.spec | * | tool: describes what is removed from the third-party icon theme and why
+
+# --- upstream patches (the build rewrites the user-visible strings in %prep)
+packaging/parcher/*.patch                   | *     | upstream: Pulsar OS wording; parcher.spec renames what users see at build time
+packaging/parcher/parcher.spec              | *     | fact: history and rationale of the rename to Parcher
+
+# --- package specs: why a name was removed, and old names kept so upgrades work
+packaging/parchaos-app-renames/parchaos-app-renames.spec | * | fact: rationale for the renames
+packaging/parchaos-browser/parchaos-browser.spec | safari | fact: why the icon and old name were replaced
+packaging/parchaos-desktop-icons/parchaos-desktop-icons.spec | * | fact: rationale and an old package name
+packaging/parchaos-desktop/parchaos-desktop.spec | *  | fact: changelog mentions an old package name
+packaging/parchaos-dock/parchaos-dock.spec  | *     | fact: rationale for the naming and a guard that no old name remains
+packaging/parchaos-gnome-calamares-config/parchaos-gnome-calamares-config.spec | * | fact: rationale and an old package name
+packaging/parchaos-global-menu/parchaos-global-menu.spec | * | fact: rationale and changelog
+packaging/parchaos-gtk-theme/parchaos-gtk-theme.spec | * | fact: describes what was replaced in the third-party theme and why
+packaging/parchaos-hanabi/parchaos-hanabi.spec | macos | fact: names the upstream project's old naming
+packaging/parchaos-keyboard-remap/parchaos-keyboard-remap.spec | * | fact: the old package name (Obsoletes/Provides) and rationale
+packaging/parchaos-magic-lamp-effect/parchaos-magic-lamp-effect.spec | macos | fact: naming rationale
+packaging/parchaos-notification-position/parchaos-notification-position.spec | macos | fact: naming rationale
+packaging/parchaos-wiggle/parchaos-wiggle.spec | macos | fact: naming rationale
+
+# --- services a tool connects to
+packaging/parchaos-cloud/*                  | onedrive | fact: a cloud service the tool can mount
+packaging/parchaos-cloud/*                  | google drive | fact: a cloud service the tool can mount
+profiles/parchaos/packages.sh               | *     | fact: comments on replaced packages and the cloud services the tool mounts
+profiles/parchaos/packages.list             | finder | fact: comment naming the old package
+
+# --- history written in the public repository: decide whether to clean or remove (#102)
+SESSION_LOG.md                              | *     | debt: a session log in the public repo that narrates reference work; clean or move to the private vault
+documents/*                                 | *     | debt: a session summary in the public repo that narrates reference work; clean or move to the private vault

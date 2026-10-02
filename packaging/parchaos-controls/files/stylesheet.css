@@ -251,7 +251,7 @@
 }
 
 /* ---- Glass style: liquid-glass look (ticket #135) -------------------------
- * Values follow the owner's reference UI kit (Materials > Liquid Glass): a
+ * Values follow the owner's design reference (kept private): a
  * smoked pane (dark #1a1a1a tint) over a background blurred by 60, corner
  * radius about a fifth of the height, a hairline outline, soft bright rims
  * on the top and bottom edges, and a long soft shadow (blur 48, 18 down).

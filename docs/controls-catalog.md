@@ -29,7 +29,7 @@ battery), Screenshot, Settings, Lock, plus other extensions' Quick Settings togg
 | Text Size | Accessibility | 1x1, 4x1 | Larger text toggle (1x1) or slider (4x1) | `org.gnome.desktop.interface text-scaling-factor` |
 | Zoom | Accessibility | 1x1 | Screen magnifier on/off | `org.gnome.desktop.a11y.applications screen-magnifier-enabled` |
 | High Contrast | Accessibility | 1x1 | High contrast / greyscale | `org.gnome.desktop.a11y.interface high-contrast` |
-| Show Desktop | Desktop & Finder | 1x1 | Hides all windows, again brings them back | window actors (as Edit Controls) |
+| Show Desktop | Desktop | 1x1 | Hides all windows, again brings them back | window actors (as Edit Controls) |
 | Back Up Now | Utilities | 1x1, 2x1 | Starts Parcha Backup; 2x1 shows the last backup | `deja-dup --backup` |
 | Clipboard History | Utilities | 1x1 | Opens the clipboard list | parchaos-clipboard |
 | Dictation | Accessibility | 1x1 | Starts dictation | parchaos-dictation |

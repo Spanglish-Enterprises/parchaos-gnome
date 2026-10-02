@@ -66,7 +66,7 @@ PROFILE_REPO_PACKAGES=(
     # ticket #192). Replaces GNOME Weather on the ISO.
     parchaos-sky
 
-    # ParchaOS's Tahoe-styled GTK3/GTK4 + GNOME Shell theme
+    # ParchaOS's MacTahoe-based GTK3/GTK4 + GNOME Shell theme
     # (packaging/parchaos-gtk-theme/), real upstream vinceliuice
     # ParchaOS-gtk-theme (MIT), dark variant. Installs as
     # /usr/share/themes/ParchaOS-Dark. Applied by default via
@@ -76,7 +76,7 @@ PROFILE_REPO_PACKAGES=(
     # gnome-shell/ subdirectory.
     parchaos-gtk-theme
 
-    # ParchaOS's Tahoe-styled icon theme (packaging/parchaos-icon-theme/),
+    # ParchaOS's MacTahoe-based icon theme (packaging/parchaos-icon-theme/),
     # real upstream vinceliuice ParchaOS-icon-theme (GPL-3.0). Installs
     # three real variants (ParchaOS, ParchaOS-light, ParchaOS-dark --
     # confirmed via rpm -qlp on the built RPM); ParchaOS-dark is applied

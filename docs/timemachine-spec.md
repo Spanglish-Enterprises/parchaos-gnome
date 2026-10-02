@@ -1,8 +1,8 @@
-# ParchaOS Time Machine Specification
+# ParchaOS Backups Specification
 
 This document outlines the architecture, behavior, and UI principles for `parchaos-timemachine`. 
 
-**Legal Note**: This specification is drafted in a clean-room fashion. We do NOT look at, reference, or use Inled's Pulsar OS Time Machine clone. This tool will be an original GTK4 integration over the independent BSD-2-Clause `restic` project.
+**Legal Note**: This specification is drafted in a clean-room fashion. We do NOT look at, reference, or use Inled's Pulsar OS backup app. This tool will be an original GTK4 integration over the independent BSD-2-Clause `restic` project.
 
 ## 1. Core Behavior
 The app provides automated, versioned backups with a browsable historical timeline.
@@ -13,11 +13,11 @@ The app provides automated, versioned backups with a browsable historical timeli
 ## 2. Storage Targets
 - **Local Disks**: The user can designate an external USB/SATA drive as the primary repository.
 - **Cloud Destinations**: Reuses the work from `parchaos-cloud`. If a user has `~/Cloud/<provider>` mounted via rclone, `restic` can seamlessly target it as an off-site repository.
-- **NAS & Network Shares**: Supports mounting local SMB/NFS network attached storage (NAS) via standard `gvfs-smb` or system-level mounts, granting users the privacy of local network backups without being locked into the classic macOS "Time Capsule" proprietary network requirements.
+- **NAS & Network Shares**: Supports mounting local SMB/NFS network attached storage (NAS) via standard `gvfs-smb` or system-level mounts, granting users the privacy of local network backups without being locked into proprietary network-storage requirements.
 
 ## 3. User Interface (GTK4/Libadwaita)
 - **Settings & Status**: A simple GTK4 control panel showing the backup destination, next scheduled backup time, and total disk space used.
-- **Restore Browser ("Enter Time Machine")**: 
+- **Restore Browser ("Browse backups")**: 
   - Instead of a traditional list of archives, the user enters a full-screen or maximized immersive mode.
   - A timeline scrubber (e.g., a right-side scrollbar or bottom slider) allows the user to step back through time.
   - As the scrubber moves, the UI simply browses the `restic mount` FUSE points (`/run/user/.../restic-mount/snapshots/<timestamp>/...`). 

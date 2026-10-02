@@ -5,18 +5,17 @@ Written so another agent can continue. Read `docs/DEVELOPMENT.md` first (test ri
 
 ## 1. Owner requirements (settled, do not re-ask)
 
-- **Glass must be exactly how macOS 27's liquid glass works. No less.** Build ParchaOS's *own* glass (not the third-party
+- **Glass must match the owner's design reference exactly. No less.** Build ParchaOS's *own* glass (not the third-party
   extension), judged side by side against the owner's references.
-- **Every UI task is checked side by side** with the owner's references before it is called done: the Figma UI kit
-  (file key `[design-kit-key-removed]`: Menus 207:14481, Menu Bar and Dock 207:14475, Materials 483:8848) and the macOS
-  screenshots in `[private-dropbox]` (SMB share `[private-network-share]`, path `ParchaOS/dropbox`; read with
-  smbprotocol, credentials in `[credentials-file-removed]`, never print them). Crop, scale to one height, `hstack`, measure, list
-  every difference, fix, send the image. Figma's Starter plan has a tool-call limit: save numbers and screenshots locally.
+- **Every UI task is checked side by side** with the owner's references before it is called done: the UI kit
+  and the screenshots the owner supplies. They are private and never go in this repository; where they are kept and how to
+  read them is in the owner's private notes. Crop, scale to one height, `hstack`, measure, list every difference, fix, send
+  the image. Save measured numbers and screenshots locally.
 - **Notifications at the top right** (like the reference). Done in `parchaos-session` `_placeBanners()`; the `notification-banner-reloaded` extension (no GNOME 50/51 release) can be dropped from the enabled list later.
 - **Motion:** menus, popovers, windows: short fade in (120 ms), slightly slower fade out (200 ms), no sliding/zooming.
   Control Center keeps its own animation.
 - **Edit Controls is always available**, in every style, and has no wiggle: resize handle on every tile at once.
-- **Controls live in Control Center only.** Dragging a control onto the top bar was tried (2026-10-01) and removed: the owner never asked for it (it came from a line in the macOS reference's hint text). Do not re-add without being asked.
+- **Controls live in Control Center only.** Dragging a control onto the top bar was tried (2026-10-01) and removed: the owner never asked for it (it came from a line in the reference's hint text). Do not re-add without being asked.
 - **Naming:** original ParchaOS names and wording; no reference-desktop names in the UI or docs.
 - Don't use the word "liquid" in package names or UI.
 
@@ -60,9 +59,9 @@ Done: working shader, Control Center tiles. Done 2026-10-01 late:
 - **Recently pill** above the tiles: "<App> recently" when the shell grants an app the location (geoclue agent wrapped; reply read, refusals ignored; click opens the app), "Screenshot taken" (click shows it via FileManager1). 15 min. Smoke-tested.
 - **Top-bar glyph**: original tile mosaic (owner picked B of three drafts); the old two-switch glyph copied the reference.
 To do:
-1. **Tune to the macOS reference** (Control Center photo in the ticket and `dropbox`): stronger edge lens and the visible warped ring ~15% in; rim hot-spots at top and bottom; dark smoky body; verify with a grid test image and with the real wallpaper.
+1. **Tune to the reference** (the photo in the ticket): stronger edge lens and the visible warped ring ~15% in; rim hot-spots at top and bottom; dark smoky body; verify with a grid test image and with the real wallpaper.
 2. **Backdrop-adaptive tint**: DONE (smoky on dark, warm grey veil on bright, text stays white). Still to do: per-pane text colour sampling for very bright wallpapers; warm refraction tint like the light reference.
-3. **Slider look**: thin track and thin fill DONE; still to do: Display slider (no tile yet), end icons, and the AirDrop-style round button on the Sound tile.
+3. **Slider look**: thin track and thin fill DONE; still to do: Display slider (no tile yet), end icons, and the round button on the Sound tile.
 4. **Menus**: DONE for refraction mode: `parchaos-session` `_glassBehind()` puts a `GlassPane` under each menu's content (follows it per frame, fades with it, 14 px corners); the third-party menu glass is switched off in the preset. To do: left-align menus to their button like the reference, per-item hover pill on glass, popovers (weather, calendar) check, Classic style unchanged.
 5. **Dock**: DONE (`parchaos-session` `_hookDockGlass`: one `GlassPane` under `dashtodockContainer`, follows `dash-background` per frame; third-party dock glass off in the preset). **Notifications and OSD**: DONE (`parchaos-session` `_follow()`: a `GlassPane` under the notification banner and the OSD window; the OSD window itself still shows its dark theme background, clear it if the owner wants it lighter). **`parchaos-glass-effects` RETIRED (2026-10-01)**: package directory removed, `parchaos-glass` obsoletes it, `parchaos-theme-sync` keeps only the Classic-turns-refraction-off rule and the dock-blur toggle. (Original note: retire `parchaos-glass-effects`: nothing it draws is used any more with the preset (all surfaces are ours), so remove the package, its Requires in `parchaos-desktop`, the preset code in `parchaos-theme-sync` and the `liquid-glass` uuid references; keep its MIT credit in `parchaos-glass/NOTICE`.
 6. **GNOME 51 / Fedora 45**: re-check `Clutter.ShaderEffect`, `global.stage.context`, clone sources; extensions already declare 51.
@@ -76,7 +75,7 @@ To do: (a) DROPPED: the owner never asked for menu-bar placement; controls go in
 
 ### 4.2a Pixel measurements of the owner's edit-mode reference (2026-10-01)
 
-Reference files ([private-dropbox]): `edit controls.png` and the later `Screenshot 2026-09-30 at 9.33...PM.png` (light, green meadow wallpaper; better for glass measurements). Both are 2684 px wide Retina captures (1342 logical px); the owner says the images are crops, so absolute positions of the windows mean nothing (the picker is centred on screen).
+Reference files (private): `edit controls.png` and the later `Screenshot 2026-09-30 at 9.33...PM.png` (light, green meadow wallpaper; better for glass measurements). Both are 2684 px wide high-DPI captures (1342 logical px); the owner says the images are crops, so absolute positions of the windows mean nothing (the picker is centred on screen).
 
 Method (repeat it, do not eyeball): Pillow/numpy/scipy in a scratch venv (`python3 -m venv imgv && imgv/bin/pip install pillow numpy scipy`), compare the nested-shell screenshot (`scripts/devshot/run.sh`, plan: open Control Center, click Edit Controls) against the reference with `ffmpeg ... hstack`, and measure patches either side of the picker's edge.
 
@@ -89,7 +88,7 @@ Measured on the picker (ParchaOS values in brackets):
 - Picker rows: sidebar rows use coloured app-style icons ~38 px with 17 px labels; selected row is a light rounded highlight; gallery tiles are glass (blurred scenery visible through them, bright rim) [DONE 1.0.0-42: one GlassPane per gallery tile, explicit `set_size` (a pane's natural size is the desktop clone, never let it expand), params blur 14, tint .14, dim .62, disp 20, z 60; they sample the desktop, not the picker's frost, so the shader blur stands in for it; check GPU cost with many tiles], labels under them; headings are small bold grey with a divider line above; "Done" is a blue pill bottom right.
 
 ### 4.3 Menu bar menus (ticket #135)
-Done: logo, app, File/Edit/View/Go/Window/Help with shortcuts, Recent Items, Force Quit. To do: apps' own menus (D-Bus menu export, like the reference's Bookmarks/Mail/Tools), Sort By / Open With submenus, Services; open-item capsule polish; shortcut symbols for all items; Quick Look wiring.
+Done: logo, app, File/Edit/View/Go/Window/Help with shortcuts, Recent Items, Force Quit. To do: apps' own menus (D-Bus menu export, like the reference's Bookmarks/Mail/Tools), Sort By / Open With submenus, Services; open-item capsule polish; shortcut symbols for all items; Quick Preview wiring.
 
 ### 4.4 Dock (ticket #131)
 Done: notification count follows its icon under magnification (patch 0007, untested with a real notification). To do: verify with a real notification; running dot and badge together; glass dock via `GlassPane`.
@@ -120,9 +119,9 @@ Shipped: `/var/lib/parchaos/session-updated` marker (`%transfiletriggerin` in `p
 
 ### 4.7 New reference material (2026-10-01)
 
-- `Screen Recording 2026-10-01 at 6.02.27 PM.mov` (macOS Settings > Appearance): a Liquid Glass slider, Clear (very transparent glass, little tint) to Tinted (darker, more opaque, more frost), with a live preview. New ticket "Glass transparency slider in Settings"; maps onto GlassPane `tint`/`dim`/`bgblur`.
+- `Screen Recording 2026-10-01 at 6.02.27 PM.mov` (the reference's Appearance pane): a glass slider, Clear (very transparent glass, little tint) to Tinted (darker, more opaque, more frost), with a live preview. New ticket "Glass transparency slider in Settings"; maps onto GlassPane `tint`/`dim`/`bgblur`.
 - "What's New" for major updates: owner wants it as its own feature, separate from the glass work (the card in the Edit Controls picker is only a placeholder). New ticket "What's New window for major updates"; the owner's reference capture for it had not arrived in the dropbox yet (only the slider recording did).
 
 ### 4.8 What's New reference (ticket 5biF6utu7ZtlEvs1yo0v)
 
-Reference: dropbox `Screen Recording 2026-10-01 at 5.59.44 PM.mov` (macOS 27 Tips, "What's New", 10 slides). Summary: one dark window; toolbar = traffic lights, sidebar toggle pill, back/forward pill, Home, title "What's New" (+ "n of 10" inside a tip), search at the right; welcome slide with headline and a large glass version badge; feature slides with a media panel on top and title + description below, chevrons bottom left/right; last slide "Explore more tips" with cards. Full measurements and the ParchaOS plan are in the ticket comment. Not started; separate from the glass work, so the "What's New" card in the Edit Controls picker stays a small placeholder.
+Reference: a private screen recording (the reference's tips app, "What's New", 10 slides). Summary: one dark window; toolbar = traffic lights, sidebar toggle pill, back/forward pill, Home, title "What's New" (+ "n of 10" inside a tip), search at the right; welcome slide with headline and a large glass version badge; feature slides with a media panel on top and title + description below, chevrons bottom left/right; last slide "Explore more tips" with cards. Full measurements and the ParchaOS plan are in the ticket comment. Not started; separate from the glass work, so the "What's New" card in the Edit Controls picker stays a small placeholder.

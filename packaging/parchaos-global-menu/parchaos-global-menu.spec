@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        32%{?dist}
+Release:        33%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -107,6 +107,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2.1.0-33
+- Look-alike audit: the File menu item is Quick Preview (was named after another company's feature); internal shortcut id renamed to match.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2.1.0-32
 - Ticket #173: the menu-bar weather opens a popover: place and temperature, condition and the day's range, a warning row, the next five hours (the chance of rain where the forecast gives one, else the rainfall), up to two other places, then Open Weather and the data credit. Parcha Sky supplies the data (`parchaos-sky --snapshot`, refreshed every 15 minutes and when opened); without it GWeather fills the top. The panel icon turns into a warning triangle while an alert is active.
 

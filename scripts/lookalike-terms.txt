@@ -1,0 +1,34 @@
+# Look-alike audit, part 1 (names and words). Read by scripts/lookalike-check.py.
+#
+# Marks and product or feature names that belong to someone else. Naming them as the name of something
+# ParchaOS ships is a trademark and confusion risk; stating a fact about them (credits, legal notices,
+# "an Apple-silicon Mac") is fine and goes in scripts/lookalike-allow.txt with a reason.
+#
+# Format:   level  <tab-or-spaces>  regular expression (case-insensitive, matched on whole lines)
+#   deny    a hit that is not in the allow-list fails the check
+#   review  a hit is listed (and counted) but does not fail; the owner reviews these at each audit
+#
+# Keep this list reviewed by the owner. Add a term when a new product or feature name turns up.
+
+# --- Apple marks and product names
+deny    \bmac ?os\b|\bos ?x\b|\bmacos\b
+deny    \b(iphone|ipad|ipados|ios|imac|macbook|airpods|airtag|apple ?tv|apple ?watch|homepod)\b
+deny    \bapple\b
+deny    \b(icloud|itunes|imessage|facetime|airdrop|airplay|handoff|carplay)\b
+deny    \b(siri|spotlight|launchpad|mission control|time machine|quick look|stage manager|dynamic island)\b
+deny    \b(finder|safari|garageband|keynote|imovie)\b
+deny    \b(liquid glass|aqua)\b
+deny    \b(sequoia|sonoma|ventura|monterey|big sur|catalina|mojave|tahoe)\b
+deny    \b(sf pro|sf symbols|san francisco font|retina)\b
+deny    \b(sidecar|universal control|continuity camera)\b
+# --- Other well-known marks that sit close to what ParchaOS ships
+deny    \b(windows 1[01]|microsoft edge|onedrive|cortana)\b
+deny    \b(chromeos|chrome os|google drive|android auto)\b
+
+# --- Generic words that Apple also uses; listed for the owner's review, never a failure
+review  \bcontrol cent(er|re)\b
+review  \bnotification cent(er|re)\b
+review  \bdock\b
+review  \bgenie\b|\bmagic lamp\b
+review  \bmacs?\b
+review  \b(menu bar|menubar)\b
