@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        45%{?dist}
+Release:        46%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-46
+- Ticket #135: original top-bar glyph (a mosaic of the panel's own tiles: a wide tile over a round and a square one), replacing the two-switch glyph that copied the reference desktop. Chosen by the owner from three drafts.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-45
 - Ticket #135: tile corners traced on the owner's reference and fitted: sliders curve over their whole half-height (superellipse, n 2.5), 2x2 tiles have a 50 px continuous corner (n 3.1); our outline is within 0.4 px of the reference. The resize handle and its hit area follow the same curve.
 
