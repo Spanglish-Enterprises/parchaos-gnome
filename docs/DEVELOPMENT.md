@@ -124,6 +124,14 @@ project's own real hardware more than once.
   [glass-and-controls-spec.md](glass-and-controls-spec.md).
 - `parchaos-cloud`'s replacement (see above).
 
+## What's New (each release)
+
+`packaging/parchaos-whatsnew/files/whatsnew.json` is the list of changes the What's New window shows once
+after a major update (ticket #170). For each release that users should hear about: change `version` (the
+window opens again for anyone who has not seen that version), rewrite `entries` (title, plain description,
+a symbolic icon name, and the `_es` Spanish text for each), and bump the package. Keep entries short and
+about what the user can now do. Never mention another company's products.
+
 ## Release image gate
 
 `engine/build-iso.sh` runs `scripts/check-image.sh` on the finished

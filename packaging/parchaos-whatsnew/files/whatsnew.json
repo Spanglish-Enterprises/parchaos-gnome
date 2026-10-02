@@ -1,0 +1,51 @@
+{
+  "version": "2026.10",
+  "title": "What's new in ParchaOS",
+  "title_es": "Novedades de ParchaOS",
+  "intro": "Here is what changed since the last big update.",
+  "intro_es": "Esto es lo que cambió desde la última actualización grande.",
+  "entries": [
+    {
+      "icon": "weather-few-clouds-symbolic",
+      "title": "Parcha Sky, a new weather app",
+      "title_es": "Parcha Sky, una nueva app del tiempo",
+      "text": "A living sky that follows the real weather where you are: rain in the next hour from radar, hurricanes, alerts, the best time to go outside, and Parchi, who dresses for the weather.",
+      "text_es": "Un cielo vivo que sigue el tiempo real donde estás: la lluvia de la próxima hora según el radar, huracanes, alertas, la mejor hora para salir, y Parchi, que se viste según el tiempo."
+    },
+    {
+      "icon": "weather-showers-symbolic",
+      "title": "The weather in the menu bar",
+      "title_es": "El tiempo en la barra de menús",
+      "text": "Click the temperature to see the next five hours, any warning and two other places, and open Parcha Sky from there.",
+      "text_es": "Toca la temperatura para ver las próximas cinco horas, cualquier aviso y otros dos lugares, y abre Parcha Sky desde ahí."
+    },
+    {
+      "icon": "applications-graphics-symbolic",
+      "title": "Choose how clear the glass is",
+      "title_es": "Elige qué tan transparente es el cristal",
+      "text": "In Settings, Appearance, slide from Clear to Tinted and watch the whole desktop follow. Reset puts it back.",
+      "text_es": "En Ajustes, Apariencia, desliza de Transparente a Tintado y mira cómo todo el escritorio te sigue. Restablecer lo deja como estaba."
+    },
+    {
+      "icon": "view-grid-symbolic",
+      "title": "Control Center, your way",
+      "title_es": "El Centro de control, a tu manera",
+      "text": "Edit Controls lets you add, remove, resize and rearrange tiles. It suggests the controls you use most, and that learning stays on your computer.",
+      "text_es": "Editar controles te deja añadir, quitar, cambiar de tamaño y mover mosaicos. Sugiere los que más usas, y lo que aprende se queda en tu computadora."
+    },
+    {
+      "icon": "preferences-desktop-theme-symbolic",
+      "title": "A look that is all ours",
+      "title_es": "Un aspecto totalmente nuestro",
+      "text": "New shapes for Control Center, the weather popover, the file manager and its tags, and a new icon set made for ParchaOS.",
+      "text_es": "Formas nuevas para el Centro de control, la ventana del tiempo, el administrador de archivos y sus etiquetas, y un juego de iconos nuevo hecho para ParchaOS."
+    },
+    {
+      "icon": "computer-symbolic",
+      "title": "ParchaOS on ARM",
+      "title_es": "ParchaOS en ARM",
+      "text": "There is now an ARM64 image for virtual machines on ARM computers, built from the same packages.",
+      "text_es": "Ahora hay una imagen ARM64 para máquinas virtuales en computadoras ARM, hecha con los mismos paquetes."
+    }
+  ]
+}

@@ -62,6 +62,9 @@ PROFILE_REPO_PACKAGES=(
     parchaos-welcome
     # Keeps new kernels in the boot menu (packaging/parchaos-boot/).
     parchaos-boot
+    # What's New: what changed in this version, shown once after a major update
+    # (packaging/parchaos-whatsnew/, ticket #170).
+    parchaos-whatsnew
     # Parcha Sky, the weather app, with Parchi (packaging/parchaos-sky/,
     # ticket #192). Replaces GNOME Weather on the ISO.
     parchaos-sky

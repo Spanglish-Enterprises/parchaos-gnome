@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=What's New
+Name[es]=Novedades
+Comment=See what changed in this version of ParchaOS
+Comment[es]=Mira qué cambió en esta versión de ParchaOS
+Exec=parchaos-whatsnew
+Icon=parchaos-logo
+Categories=GNOME;GTK;Utility;
+Keywords=news;changes;update;novedades;
+StartupNotify=true

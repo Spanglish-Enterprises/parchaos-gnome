@@ -1298,11 +1298,16 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             const apps = Shell.AppSystem.get_default();
             (apps.lookup_app('org.gnome.Software.desktop') ?? apps.lookup_app('gnome-software.desktop'))?.activate();
         };
+        const openWhatsNew = () => {
+            const apps = Shell.AppSystem.get_default();
+            apps.lookup_app('org.parchaos.WhatsNew.desktop')?.activate();
+        };
         const name = GLib.get_real_name();
         this._logOut = powerAction('Log out now? Any unsaved work will be lost.',
             'gnome-session-quit --logout --no-prompt');
         const systemEntries = [
             { label: 'About ParchaOS', icon: 'computer-symbolic', run: () => this._showAboutDialog() },
+            { label: 'What\u2019s New', icon: 'starred-symbolic', run: openWhatsNew },
             SEPARATOR,
             { label: 'System Settings\u2026', icon: 'emblem-system-symbolic', run: openSystemSettings, updates: true },
             { label: 'Parcha Store', icon: 'system-software-install-symbolic', run: openStore },

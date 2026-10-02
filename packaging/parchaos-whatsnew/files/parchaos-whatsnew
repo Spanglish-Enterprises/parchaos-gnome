@@ -1,0 +1,201 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS What's New: one scrolling list of what changed in this version, shown once after a major
+# update and any time from the logo menu. It is ParchaOS's own design: a greeting, then a card per
+# change with a short title and a plain description (no slideshow).
+#
+#   parchaos-whatsnew            open the window
+#   parchaos-whatsnew --if-new   open it only if this version has not been shown yet (autostart)
+#
+# The content is a JSON file shipped with each release (/usr/share/parchaos/whatsnew/whatsnew.json):
+#   {"version": "2026.10", "title": "...", "title_es": "...", "intro": "...", "intro_es": "...",
+#    "entries": [{"title": "...", "title_es": "...", "text": "...", "text_es": "...", "icon": "name"}]}
+# What has been shown, and whether to show it after updates, is kept in
+# ~/.local/state/parchaos/whatsnew.json.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import json
+import os
+import sys
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+gi.require_version('Gdk', '4.0')
+gi.require_version('GdkPixbuf', '2.0')
+from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
+
+gettext.bindtextdomain('parchaos-whatsnew', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-whatsnew')
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.WhatsNew'
+CONTENT_FILE = os.environ.get('PARCHA_WHATSNEW_CONTENT', '/usr/share/parchaos/whatsnew/whatsnew.json')
+STATE_DIR = os.environ.get('PARCHA_WHATSNEW_STATE', os.path.join(GLib.get_user_state_dir(), 'parchaos'))
+STATE_FILE = os.path.join(STATE_DIR, 'whatsnew.json')
+WELCOME_DONE = os.path.join(STATE_DIR, 'welcome-done')
+GREETERS = ['/usr/share/parchaos-sky/parchi-waving.svgz', '/usr/share/parchaos-sky/parchi-front.svgz']
+
+
+def language():
+    """'es' for any Spanish locale, else ''. The content file carries its own translations."""
+    for name in GLib.get_language_names():
+        if name.startswith('es'):
+            return 'es'
+    return ''
+
+
+def pick(item, key, lang):
+    """The text for a key in the user's language, falling back to the English one."""
+    return (item.get(f'{key}_{lang}') if lang else None) or item.get(key, '')
+
+
+def load_content(path=CONTENT_FILE):
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not data.get('version') or not isinstance(data.get('entries'), list):
+        return None
+    return data
+
+
+def load_state(path=STATE_FILE):
+    try:
+        with open(path, encoding='utf-8') as f:
+            state = json.load(f)
+        if isinstance(state, dict):
+            return {'seen': str(state.get('seen', '')), 'auto': bool(state.get('auto', True))}
+    except (OSError, ValueError):
+        pass
+    return {'seen': '', 'auto': True}
+
+
+def save_state(state, path=STATE_FILE):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(state, f)
+    os.replace(tmp, path)
+
+
+def live_session():
+    try:
+        with open('/proc/cmdline') as f:
+            return 'rd.live.image' in f.read().split()
+    except OSError:
+        return False
+
+
+def should_show(content, state, welcome_done):
+    """Whether the autostart run opens the window: a new version, the user has not turned it off, and
+    the first-login welcome is already behind them (a new account has nothing to compare against)."""
+    return bool(content) and state['auto'] and state['seen'] != content['version'] and welcome_done
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app, content, state):
+        super().__init__(application=app, title=_("What's new"), default_width=540, default_height=700)
+        self.content, self.state = content, state
+        lang = language()
+
+        view = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        header.set_title_widget(Adw.WindowTitle(title=_("What's new"), subtitle=content['version']))
+        view.add_top_bar(header)
+
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, margin_top=12, margin_bottom=24,
+                       margin_start=18, margin_end=18)
+        greet = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER)
+        art = next((p for p in GREETERS if os.path.exists(p)), None)
+        if art:
+            try:   # drawn at twice the size so it stays sharp on a high-resolution screen
+                texture = Gdk.Texture.new_for_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_size(art, 300, 260))
+                pic = Gtk.Picture.new_for_paintable(texture)
+                pic.set_content_fit(Gtk.ContentFit.CONTAIN)
+                pic.set_size_request(150, 130)
+                greet.append(pic)
+            except GLib.Error:
+                pass
+        title = Gtk.Label(label=pick(content, 'title', lang) or _("What's new in ParchaOS"), wrap=True,
+                          justify=Gtk.Justification.CENTER)
+        title.add_css_class('title-1')
+        greet.append(title)
+        intro = pick(content, 'intro', lang)
+        if intro:
+            sub = Gtk.Label(label=intro, wrap=True, justify=Gtk.Justification.CENTER)
+            sub.add_css_class('dim-label')
+            greet.append(sub)
+        page.append(greet)
+
+        group = Adw.PreferencesGroup()
+        for entry in content['entries']:
+            row = Adw.ActionRow(title=pick(entry, 'title', lang), subtitle=pick(entry, 'text', lang),
+                                title_lines=0, subtitle_lines=0)
+            icon = Gtk.Image(icon_name=entry.get('icon') or 'starred-symbolic', pixel_size=28)
+            icon.add_css_class('accent')
+            row.add_prefix(icon)
+            group.add(row)
+        page.append(group)
+
+        footer = Adw.PreferencesGroup()
+        self.auto_row = Adw.SwitchRow(title=_('Show this after major updates'), active=state['auto'])
+        self.auto_row.connect('notify::active', self._on_auto)
+        footer.add(self.auto_row)
+        page.append(footer)
+        done = Gtk.Button(label=_('Done'), halign=Gtk.Align.CENTER)
+        done.add_css_class('suggested-action')
+        done.add_css_class('pill')
+        done.connect('clicked', lambda *_a: self.close())
+        page.append(done)
+
+        scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True)
+        clamp = Adw.Clamp(maximum_size=560, child=page)
+        scroller.set_child(clamp)
+        view.set_content(scroller)
+        self.set_content(view)
+        self.connect('close-request', self._on_close)
+
+    def _on_auto(self, row, _pspec):
+        self.state['auto'] = row.get_active()
+        save_state(self.state)
+
+    def _on_close(self, *_a):
+        self.state['seen'] = self.content['version']   # shown once, whichever way it is closed
+        save_state(self.state)
+        return False
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        self.only_if_new = False
+
+    def do_command_line(self, cmd):
+        self.only_if_new = '--if-new' in cmd.get_arguments()[1:]
+        self.activate()
+        return 0
+
+    def do_activate(self):
+        content, state = load_content(), load_state()
+        if content is None:
+            return
+        if self.only_if_new:
+            if live_session():
+                return
+            if not should_show(content, state, os.path.exists(WELCOME_DONE)):
+                if state['seen'] != content['version'] and not os.path.exists(WELCOME_DONE):
+                    # a new account: nothing has changed for them, so note this version as seen
+                    state['seen'] = content['version']
+                    save_state(state)
+                return
+        win = self.props.active_window or Window(self, content, state)
+        win.present()
+
+
+if __name__ == '__main__':
+    sys.exit(App().run(sys.argv))

@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        34%{?dist}
+Release:        35%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -107,6 +107,9 @@ glib-compile-schemas "$DEST/schemas"
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2.1.0-35
+- Ticket #170: the logo menu has a What's New item that opens the What's New window.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2.1.0-34
 - Look-alike audit: the weather popover has its own layout: place and conditions at the left, temperature and a day-range bar at the right, a warning banner, one small card per hour, two cards for other places.
 

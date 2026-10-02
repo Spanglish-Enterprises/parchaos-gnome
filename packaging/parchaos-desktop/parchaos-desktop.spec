@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        75%{?dist}
+Release:        76%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -139,6 +139,7 @@ Requires:       parchaos-updates
 Requires:       parchaos-welcome
 Requires:       parchaos-boot
 Requires:       parchaos-sky
+Requires:       parchaos-whatsnew
 Requires:       parchaos-desktop-schemas = %{version}-%{release}
 
 # TMOG is no longer part of ParchaOS; remove the launcher on update.
@@ -274,6 +275,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-76
+- Ticket #170: Require parchaos-whatsnew (what changed in this version, once after a major update).
+
 * Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-75
 - Ticket #171: schema key glass-clarity (0 Clear .. 1 Tinted, default 0.35).
 
