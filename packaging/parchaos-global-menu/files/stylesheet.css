@@ -76,7 +76,8 @@
     font-size: 13px;
 }
 
-/* The weather popover (ticket #173) */
+/* The weather popover (ticket #173): ParchaOS's own layout, with small cards for the hours and the
+ * other places, a range bar, and a banner for a warning. */
 .parchaos-weather-pop-item {
     padding: 0;
 }
@@ -85,10 +86,11 @@
     width: 340px;
     padding: 6px 4px 4px 4px;
     color: #ffffff;
+    spacing: 10px;
 }
 
 .parchaos-weather-head {
-    padding: 4px 0 10px 0;
+    padding: 4px 2px 2px 2px;
 }
 
 .parchaos-weather-place {
@@ -100,48 +102,65 @@
     margin-left: 6px;
 }
 
-.parchaos-weather-big {
-    font-size: 42px;
-    font-weight: 300;
-    line-height: 1;
+.parchaos-weather-condrow {
+    spacing: 6px;
+    margin-top: 4px;
 }
 
 .parchaos-weather-cond {
     font-size: 14px;
-    font-weight: bold;
-    margin-top: 2px;
+}
+
+.parchaos-weather-big {
+    font-size: 44px;
+    font-weight: 300;
+    line-height: 1;
 }
 
 .parchaos-weather-range {
-    font-size: 13px;
-    margin-top: 2px;
+    spacing: 6px;
+    margin-top: 4px;
 }
 
-.parchaos-weather-rule {
-    height: 1px;
-    background-color: rgba(255, 255, 255, 0.22);
-    margin: 0;
+.parchaos-weather-range-end {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .parchaos-weather-alert {
-    spacing: 12px;
-    padding: 12px 2px;
+    spacing: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background-color: rgba(220, 90, 60, 0.35);
 }
 
 .parchaos-weather-alert-text {
-    font-size: 15px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .parchaos-weather-hours {
-    padding: 14px 0 12px 0;
-}
-
-.parchaos-weather-hour {
     spacing: 6px;
 }
 
+.parchaos-weather-hour {
+    spacing: 4px;
+    padding: 8px 2px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.parchaos-weather-hour.now {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
 .parchaos-weather-hour-name {
-    font-size: 14px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.parchaos-weather-hour-temp {
+    font-size: 15px;
     font-weight: bold;
 }
 
@@ -151,29 +170,24 @@
     min-height: 14px;
 }
 
-.parchaos-weather-hour-temp {
-    font-size: 15px;
-    font-weight: bold;
+.parchaos-weather-others {
+    spacing: 8px;
 }
 
 .parchaos-weather-other {
-    spacing: 10px;
-    padding: 8px 2px;
-}
-
-.parchaos-weather-other-icon {
-    margin-right: 34px;
+    spacing: 8px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.07);
 }
 
 .parchaos-weather-other-name {
-    font-size: 16px;
+    font-size: 13px;
 }
 
 .parchaos-weather-other-temp {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
-    min-width: 36px;
-    text-align: right;
 }
 
 .parchaos-weather-open {

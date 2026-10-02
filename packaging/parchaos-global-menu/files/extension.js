@@ -608,71 +608,95 @@ const WeatherIndicator = GObject.registerClass({
     _buildPopover(d) {
         this._pop.destroy_all_children();
         const label = (text, cls, extra = {}) => new St.Label({ text, style_class: cls, ...extra });
-        const rule = () => this._pop.add_child(new St.Widget({ style_class: 'parchaos-weather-rule' }));
 
-        // place + temperature on the left, condition and the day's range on the right
+        // Header: the place and conditions on the left, the temperature and the day's range on the right.
         const head = new St.BoxLayout({ style_class: 'parchaos-weather-head' });
-        const left = new St.BoxLayout({ vertical: true, x_expand: true });
+        const left = new St.BoxLayout({ vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
         const place = new St.BoxLayout();
         place.add_child(label(d.place, 'parchaos-weather-place', { y_align: Clutter.ActorAlign.CENTER }));
         place.add_child(new St.Icon({ icon_name: 'find-location-symbolic', icon_size: 12,
             style_class: 'parchaos-weather-locator', y_align: Clutter.ActorAlign.CENTER }));
         left.add_child(place);
-        left.add_child(label(this._deg(d.temp, d.imperial), 'parchaos-weather-big'));
+        const cond = new St.BoxLayout({ style_class: 'parchaos-weather-condrow' });
+        cond.add_child(new St.Icon({ icon_name: d.icon, icon_size: 20, y_align: Clutter.ActorAlign.CENTER }));
+        cond.add_child(label(d.cond, 'parchaos-weather-cond', { y_align: Clutter.ActorAlign.CENTER }));
+        left.add_child(cond);
         head.add_child(left);
+
         const right = new St.BoxLayout({ vertical: true, x_align: Clutter.ActorAlign.END });
-        right.add_child(new St.Icon({ icon_name: d.icon, icon_size: 28, x_align: Clutter.ActorAlign.END }));
-        right.add_child(label(d.cond, 'parchaos-weather-cond', { x_align: Clutter.ActorAlign.END }));
-        right.add_child(label(`H:${this._deg(d.hi, d.imperial)} L:${this._deg(d.lo, d.imperial)}`,
-            'parchaos-weather-range', { x_align: Clutter.ActorAlign.END }));
+        right.add_child(label(this._deg(d.temp, d.imperial), 'parchaos-weather-big', { x_align: Clutter.ActorAlign.END }));
+        // a small bar of the day's range with a dot where it is now
+        const bar = new St.BoxLayout({ style_class: 'parchaos-weather-range' });
+        bar.add_child(label(this._deg(d.lo, d.imperial), 'parchaos-weather-range-end', { y_align: Clutter.ActorAlign.CENTER }));
+        const span = Math.max(0.1, (d.hi ?? 0) - (d.lo ?? 0));
+        const at = Math.min(1, Math.max(0, ((d.temp ?? d.lo ?? 0) - (d.lo ?? 0)) / span));
+        // drawn in one piece: a track with a dot where the temperature is now
+        const track = new St.DrawingArea({ width: 64, height: 10, y_align: Clutter.ActorAlign.CENTER });
+        track.connect('repaint', area => {
+            const cr = area.get_context();
+            cr.setSourceRGBA(1, 1, 1, 0.25);
+            cr.setLineWidth(4);
+            cr.setLineCap(1);
+            cr.moveTo(3, 5);
+            cr.lineTo(61, 5);
+            cr.stroke();
+            cr.setSourceRGBA(1, 1, 1, 1);
+            cr.arc(4 + 56 * at, 5, 4, 0, 2 * Math.PI);
+            cr.fill();
+            cr.$dispose();
+        });
+        bar.add_child(track);
+        bar.add_child(label(this._deg(d.hi, d.imperial), 'parchaos-weather-range-end', { y_align: Clutter.ActorAlign.CENTER }));
+        right.add_child(bar);
         head.add_child(right);
         this._pop.add_child(head);
 
+        // A warning, as a banner of its own
         if (d.alert) {
-            rule();
             const row = new St.BoxLayout({ style_class: 'parchaos-weather-alert' });
             row.add_child(new St.Icon({ icon_name: 'dialog-warning-symbolic', icon_size: 16 }));
             row.add_child(label(d.alert, 'parchaos-weather-alert-text', { y_align: Clutter.ActorAlign.CENTER }));
             this._pop.add_child(row);
         }
 
+        // The next five hours, each in its own small card
         if (d.hours?.length) {
-            rule();
             const hours = new St.BoxLayout({ style_class: 'parchaos-weather-hours' });
-            for (const h of d.hours) {
+            d.hours.forEach((h, i) => {
                 const col = new St.BoxLayout({ vertical: true, x_expand: true,
-                    style_class: 'parchaos-weather-hour' });
+                    style_class: 'parchaos-weather-hour' + (i === 0 ? ' now' : '') });
                 const when = GLib.DateTime.new_from_unix_local(h.time);
                 col.add_child(label(when.format(d.imperial ? '%-I %p' : '%H:%M'), 'parchaos-weather-hour-name',
                     { x_align: Clutter.ActorAlign.CENTER }));
-                col.add_child(new St.Icon({ icon_name: h.icon, icon_size: 28, x_align: Clutter.ActorAlign.CENTER }));
+                col.add_child(new St.Icon({ icon_name: h.icon, icon_size: 24, x_align: Clutter.ActorAlign.CENTER }));
+                col.add_child(label(this._deg(h.temp, d.imperial), 'parchaos-weather-hour-temp',
+                    { x_align: Clutter.ActorAlign.CENTER }));
                 // the chance of rain when the forecast gives one, else how much is coming
                 let rain = '';
                 if (h.pop !== null && h.pop !== undefined && h.pop >= 20)
                     rain = `${Math.round(h.pop)}%`;
                 else if ((h.precip ?? 0) >= (d.imperial ? 0.25 : 0.2))   // a hundredth of an inch
-                    rain = d.imperial ? `${(h.precip / 25.4).toFixed(2).replace(/^0/, '')}″` : `${h.precip.toFixed(1)} mm`;
+                    rain = d.imperial ? `${(h.precip / 25.4).toFixed(2).replace(/^0/, '')}\u2033` : `${h.precip.toFixed(1)} mm`;
                 col.add_child(label(rain, 'parchaos-weather-rain', { x_align: Clutter.ActorAlign.CENTER }));
-                col.add_child(label(this._deg(h.temp, d.imperial), 'parchaos-weather-hour-temp',
-                    { x_align: Clutter.ActorAlign.CENTER }));
                 hours.add_child(col);
-            }
+            });
             this._pop.add_child(hours);
         }
 
+        // Other places: a small card each, side by side
         if (d.others?.length) {
-            rule();
+            const others = new St.BoxLayout({ style_class: 'parchaos-weather-others' });
             for (const o of d.others) {
-                const row = new St.BoxLayout({ style_class: 'parchaos-weather-other' });
-                row.add_child(label(o.name, 'parchaos-weather-other-name',
-                    { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
-                row.add_child(new St.Icon({ icon_name: o.icon, icon_size: 26, style_class: 'parchaos-weather-other-icon' }));
-                row.add_child(label(this._deg(o.temp, d.imperial), 'parchaos-weather-other-temp',
-                    { y_align: Clutter.ActorAlign.CENTER }));
-                this._pop.add_child(row);
+                const card = new St.BoxLayout({ x_expand: true, style_class: 'parchaos-weather-other' });
+                card.add_child(new St.Icon({ icon_name: o.icon, icon_size: 20, style_class: 'parchaos-weather-other-icon' }));
+                const text = new St.BoxLayout({ vertical: true, x_expand: true });
+                text.add_child(label(o.name, 'parchaos-weather-other-name'));
+                text.add_child(label(this._deg(o.temp, d.imperial), 'parchaos-weather-other-temp'));
+                card.add_child(text);
+                others.add_child(card);
             }
+            this._pop.add_child(others);
         }
-        rule();
     }
 
     _startGeolocation() {

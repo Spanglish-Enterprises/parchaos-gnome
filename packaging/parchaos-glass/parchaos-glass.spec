@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-14
+- Look-alike audit: the default glass tint is a soft plum (the ParchaOS palette) instead of neutral smoke.
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-13
 - Look-alike audit: a comment no longer names another company's product.
 

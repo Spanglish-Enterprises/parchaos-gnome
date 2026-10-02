@@ -230,7 +230,7 @@ void main() {
 
 export const GLASS_DEFAULTS = {
     radius: 34, cn: 2.0, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
-    blur: 8.0, tint: 0.3, tintc: [0.07, 0.07, 0.08], bright: 1.0, contrast: 1.0, sat: 1.2,
+    blur: 8.0, tint: 0.3, tintc: [0.10, 0.07, 0.15], bright: 1.0, contrast: 1.0, sat: 1.2,
     rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, hair: 0.0, spec: 0.0, shin: 42, sheen: 0.0,
     dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
 };

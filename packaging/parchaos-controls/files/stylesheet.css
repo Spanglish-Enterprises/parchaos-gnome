@@ -61,7 +61,7 @@
 }
 
 .parchaos-controls-circle {
-  border-radius: 999px;
+  border-radius: 22px;
   padding: 0;
   background-color: rgba(255, 255, 255, 0.16);
   transition-duration: 120ms;
@@ -259,7 +259,7 @@
  * Switched-on circles turn solid white with a coloured glyph. */
 .parchaos-controls-panel.parchaos-style-glass {
   padding: 14px;
-  border-radius: 34px;
+  border-radius: 28px;
   background-color: rgba(26, 26, 26, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45),
@@ -268,7 +268,7 @@
 }
 
 .parchaos-style-glass .parchaos-controls-tile {
-  border-radius: 30px;
+  border-radius: 22px;
   background-gradient-direction: none;
   background-color: rgba(153, 153, 153, 0.17);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -577,7 +577,7 @@ StWidget:drop {
 }
 
 .parchaos-controls-placeholder {
-  border-radius: 999px;
+  border-radius: 22px;
   background-color: rgba(255, 255, 255, 0.07);
 }
 
@@ -594,7 +594,7 @@ StWidget:drop {
 }
 
 .parchaos-controls-gallery-item.round {
-  border-radius: 999px;
+  border-radius: 22px;
   padding: 0;
 }
 
@@ -721,24 +721,24 @@ StWidget:drop {
  * measured continuous corner (tileShape in extension.js); St can only draw circular corners,
  * so this is the closest circle, for hover and focus fills. */
 .parchaos-style-glass .parchaos-controls-tile.parchaos-controls-block {
-  border-radius: 30px;
+  border-radius: 22px;
 }
 
-/* The "recently" pill above the tiles (Weather recently / Screenshot taken), measured on the
- * owner's reference: about 23 px tall, bold 13 px label, a blue round icon. */
+/* The recent-activity chip above the tiles (Weather recently / Screenshot taken): ParchaOS's own
+ * look, a small left-aligned rounded rectangle with a violet square icon. */
 .parchaos-controls-recent {
   margin-bottom: 8px;
-  padding: 3px 12px 3px 4px;
-  border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 3px 10px 3px 4px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.10);
+  border: none;
   color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .parchaos-controls-recent:hover {
-  background-color: rgba(255, 255, 255, 0.24);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .parchaos-controls-recent-box {
@@ -748,12 +748,12 @@ StWidget:drop {
 .parchaos-controls-recent-icon {
   icon-size: 10px;
   padding: 4px;
-  border-radius: 999px;
-  background-color: #2f7cf6;
+  border-radius: 6px;
+  background-color: #7a5af5;
   color: #ffffff;
 }
 
-/* The reference (light appearance) keeps the same grey glass and white text. */
+/* The light appearance keeps the same grey glass and white text. */
 .parchaos-light .parchaos-controls-recent {
   color: #ffffff;
 }
@@ -923,7 +923,7 @@ StWidget:drop {
 }
 
 .parchaos-controls-picker .parchaos-controls-gallery-item.round {
-  border-radius: 999px;
+  border-radius: 22px;
 }
 
 .parchaos-controls-picker .parchaos-controls-gallery-item.wide {

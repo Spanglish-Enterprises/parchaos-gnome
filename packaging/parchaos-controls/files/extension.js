@@ -327,14 +327,12 @@ function showInFiles(file) {
         });
 }
 
-// Tile corners, traced on the owner's reference (9.33 PM screenshot, hairline fitted per pixel):
-// they are superellipse quadrants (|x|^n + |y|^n = r^n), not circular arcs on flat edges. The
-// Display slider (4x1) curves over its whole half-height with n = 2.5 (fit 1.0 device px RMS);
-// the 2x2 tile's corner reaches 50 px with n = 3.1 (0.82 px RMS). 1x1 and 2x1 tiles are
-// circles and capsules (n = 2).
-const CORNER_MAX = 50;
-// How far the resize handle's box reaches past the tile's corner.
-const HANDLE_OUT = 5;
+// Tile corners: ParchaOS's own shape, a plain rounded square with one radius for every tile (a
+// small button is a rounded square, a wide one a rounded rectangle), not a circle or a capsule.
+const TILE_RADIUS = 22;
+// The resize grip: three dots on a diagonal in the tile's bottom-right corner, in a small box.
+const HANDLE_SIZE = 26;
+const HANDLE_OUT = -4;   // the box sits a little inside the tile's corner
 
 function isBlockTile(item) {
     return item.rows > 1 || item.cols > 2;
@@ -342,32 +340,19 @@ function isBlockTile(item) {
 
 function tileShape(item) {
     const short = Math.min(item.cols, item.rows) * CELL + (Math.min(item.cols, item.rows) - 1) * GAP;
-    if (!isBlockTile(item))
-        return {r: short / 2, n: 2};
-    const r = Math.min(short / 2, CORNER_MAX);
-    return {r, n: r >= CORNER_MAX ? 3.1 : 2.5};
+    return {r: Math.min(short / 2, TILE_RADIUS), n: 2};
 }
 
-// A point on the corner curve at angle a (0 = along the right edge, pi/2 = along the bottom),
-// at distance r from the corner's centre in the curve's own norm.
-function cornerPoint(r, n, a) {
-    const c = Math.cos(a), sn = Math.sin(a);
-    return [r * Math.sign(c) * Math.abs(c) ** (2 / n), r * Math.sign(sn) * Math.abs(sn) ** (2 / n)];
-}
-
-// True when a stage point is on (or near) the resize stroke, not just in its box: the box covers
-// a big part of a round button, where a press should move the tile instead.
+// True when a stage point is on the resize grip's box (a press elsewhere on a tile moves the tile).
 function onResizeStroke(item, x, y) {
     const handle = item.resizeHandle;
     if (!handle?.visible || !handle.mapped)
         return false;
     const [ok, lx, ly] = handle.transform_stage_point(x, y);
-    if (!ok || lx < 0 || ly < 0)
+    if (!ok)
         return false;
-    const {r, n} = tileShape(item);
-    const dx = Math.abs(lx - HANDLE_OUT), dy = Math.abs(ly - HANDLE_OUT);
-    const dist = (dx ** n + dy ** n) ** (1 / n);
-    return Math.abs(dist - (r + 1)) <= 10;
+    const [w, h] = handle.get_size();
+    return lx >= 0 && ly >= 0 && lx <= w && ly <= h;
 }
 const PAD = 12;
 
@@ -750,7 +735,7 @@ const ControlsPanel = GObject.registerClass({
         this._recentPill = new St.Button({
             style_class: 'parchaos-controls-recent',
             child: box,
-            x_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.START,
             can_focus: true,
             accessible_name: text,
         });
@@ -791,25 +776,16 @@ const ControlsPanel = GObject.registerClass({
             reactive: true,
             visible: false,
         });
-        // The stroke sits on the tile's own corner curve (concentric with it), so the box is
-        // the corner square plus a little room for the stroke outside the tile.
+        // Three dots on a diagonal, tucked into the corner.
         handle.set_translation(HANDLE_OUT, HANDLE_OUT, 0);
         handle.connect('repaint', area => {
             const cr = area.get_context();
-            const {r, n} = tileShape(item);
-            cr.setLineCap(1);
-            cr.setLineJoin(1);
-            cr.setLineWidth(6.5);
-            cr.setSourceRGBA(1, 1, 1, 0.95);
-            // Follows the tile's own corner curve, just outside the outline.
-            for (let i = 0; i <= 24; i++) {
-                const [px, py] = cornerPoint(r + 1, n, Math.PI * (0.09 + 0.32 * i / 24));
-                if (i === 0)
-                    cr.moveTo(HANDLE_OUT + px, HANDLE_OUT + py);
-                else
-                    cr.lineTo(HANDLE_OUT + px, HANDLE_OUT + py);
+            const [w, h] = area.get_surface_size();
+            cr.setSourceRGBA(1, 1, 1, 0.9);
+            for (let i = 0; i < 3; i++) {
+                cr.arc(w - 6 - i * 6, h - 18 + i * 6, 2.2, 0, 2 * Math.PI);
+                cr.fill();
             }
-            cr.stroke();
             cr.$dispose();
         });
         item.resizeHandle = handle;
@@ -997,8 +973,7 @@ const ControlsPanel = GObject.registerClass({
                 item.widget.add_style_class_name('parchaos-controls-block');
             else
                 item.widget.remove_style_class_name('parchaos-controls-block');
-            const hs = tileShape(item).r + 2 * HANDLE_OUT;
-            item.resizeHandle?.set_size(hs, hs);
+            item.resizeHandle?.set_size(HANDLE_SIZE, HANDLE_SIZE);
             item.resizeHandle?.queue_repaint();
             item.badge.visible = this._editing;
             item.resizeHandle.visible = this._editing && item.sizes.length > 1;
@@ -1133,11 +1108,11 @@ const ControlsPanel = GObject.registerClass({
             pane.set_position(x - lx, y - ly);
             pane.set_size(pw, ph);
             pane.show();
-            // hair: the reference tiles keep a crisp bright outline even over a bright sky
+            // hair: a soft outline so a tile stays readable over a bright sky
             // band: on a small round button the default 26 px bezel covers almost the whole face and
             // pulls the backdrop across it; the reference's buttons are clear in the middle.
             const shape = tileShape(item);
-            pane.set({radius: Math.min(shape.r, Math.min(pw, ph) / 2), cn: shape.n, hair: 0.38, band: Math.min(26, Math.min(pw, ph) * 0.26)});
+            pane.set({radius: Math.min(shape.r, Math.min(pw, ph) / 2), cn: shape.n, hair: 0.2, band: Math.min(26, Math.min(pw, ph) * 0.26)});
         }
     }
 
@@ -1804,7 +1779,7 @@ class ControlsPicker extends St.BoxLayout {
         const shape = new St.BoxLayout({
             style_class: 'parchaos-controls-gallery-item' + (round ? ' round' : '') + (cols > 1 && rows === 1 ? ' wide' : '') + (rows > 1 ? ' tall' : ''),
             style: `width: ${w}px; height: ${h}px; min-width: ${w}px; min-height: ${h}px;` +
-                (round ? '' : ` border-radius: ${Math.min(h / 2, CORNER_MAX) * 0.6}px;`),
+                ` border-radius: ${Math.min(h / 2, TILE_RADIUS)}px;`,
             x_align: Clutter.ActorAlign.CENTER,
             reactive: !forDrag,
         });
@@ -1829,8 +1804,8 @@ class ControlsPicker extends St.BoxLayout {
             // As in the reference, a gallery tile is glass too (our pane, behind the tile's content).
             const stack = new St.Widget({layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER});
             const pane = new GlassPane({});
-            const r = round ? h / 2 : Math.min(h / 2, CORNER_MAX);
-            pane.set({radius: r, cn: round ? 2 : 3.1, hair: 0.38, blur: 14, tint: 0.14, dim: 0.62, disp: 20, z: 60,
+            const r = Math.min(h / 2, TILE_RADIUS);
+            pane.set({radius: r, cn: 2, hair: 0.2, blur: 14, tint: 0.14, dim: 0.62, disp: 20, z: 60,
                 band: Math.min(26, Math.min(w, h) * 0.26)});
             pane.set_size(w, h);
             stack.set_size(w, h);

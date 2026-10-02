@@ -115,7 +115,7 @@ export default class SmokeTest extends Extension {
                 };
                 walk(weatherButton._pop);
                 weatherButton.menu.close();
-                const want = ['Haslet', '86°', 'Cloudy', 'H:86° L:77°', 'Flood Watch', '35%', '45%',
+                const want = ['Haslet', '86°', 'Cloudy', '77°', 'Flood Watch', '35%', '45%',
                     'San Juan', 'New York', '89°', '71°'];
                 const missing = want.filter(w => !labels.includes(w));
                 if (missing.length)
