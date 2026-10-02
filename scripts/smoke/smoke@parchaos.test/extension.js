@@ -165,6 +165,60 @@ export default class SmokeTest extends Extension {
             });
         }
 
+        // Suggestions learn from use, privately: a used control that is not in the panel leads
+        // Suggestions; the history file is the user's only (0600) and holds control names,
+        // scores and times only; turning learning off deletes it.
+        if (controlsButton) {
+            await this._check('controls suggestions learn from use', async () => {
+                const desktop = new Gio.Settings({schema_id: 'org.parchaos.desktop'});
+                const file = Gio.File.new_for_path(`${GLib.get_user_data_dir()}/parchaos/controls-usage.json`);
+                desktop.set_strv('controls-hidden', ['lock', 'night-light', 'screenshot']);
+                try {
+                    const shot = Gio.File.new_for_path(`${GLib.get_home_dir()}/smoke-learn.png`);
+                    shot.replace_contents(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), null, false, 0, null);
+                    Main.screenshotUI.emit('screenshot-taken', shot);
+                    await sleep(6500);
+                    if (!file.query_exists(null))
+                        throw new Error('no usage file after a screenshot');
+                    const info = file.query_info('unix::mode', 0, null);
+                    const mode = info.get_attribute_uint32('unix::mode') & 0o777;
+                    if (mode !== 0o600)
+                        throw new Error(`usage file mode is ${mode.toString(8)}, not 600`);
+                    const data = JSON.parse(new TextDecoder().decode(file.load_contents(null)[1]));
+                    const keys = JSON.stringify(Object.keys(data).sort()) + JSON.stringify(Object.keys(data.controls));
+                    if (keys !== '["controls","version"]["screenshot"]')
+                        throw new Error(`usage file holds more than expected: ${keys}`);
+                    if (JSON.stringify(Object.keys(data.controls.screenshot).sort()) !== '["last","score"]')
+                        throw new Error('a usage entry holds more than a score and a time');
+
+                    controlsButton.menu.open();
+                    await sleep(600);
+                    controlsButton._panel._setEditing(true);
+                    await sleep(1200);
+                    const picker = controlsButton._picker;
+                    if (!picker)
+                        throw new Error('edit mode did not open the picker');
+                    const firstTile = picker._gallery.get_children()
+                        .find(c => c.get_children?.()[0]?._controlItem)?.get_children()[0];
+                    const first = firstTile?._controlItem?.id;
+                    controlsButton._panel.finishEditing();
+                    await sleep(600);
+                    controlsButton.menu.close();
+                    await sleep(300);
+                    if (first !== 'screenshot')
+                        throw new Error(`the first suggestion is ${first}, not the used control`);
+
+                    desktop.set_boolean('learn-usage', false);
+                    await sleep(500);
+                    if (file.query_exists(null))
+                        throw new Error('turning learning off left the usage file');
+                } finally {
+                    desktop.reset('learn-usage');
+                    desktop.reset('controls-hidden');
+                }
+            });
+        }
+
         const launcher = ext('parchaos-launcher@parchaos.org')?.stateObj;
         if (launcher) {
             await this._check('launcher open, folder, close', async () => {

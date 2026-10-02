@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        49%{?dist}
+Release:        50%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-50
+- Ticket #148: Suggestions learn from use, privately. Control Center counts a control when it is tapped or slid, when a screenshot is taken and when Settings is opened (automatic switches such as sunset dark mode, scheduled Do Not Disturb or idle lock are not counted). Only control names with a fading score (half-life 14 days) and a time are kept, in ~/.local/share/parchaos/controls-usage.json, readable by the user only. Suggestions list the used controls that are not in the panel first, then the other missing ones; the fixed handful only while there is no history. Turning learn-usage off or pressing Forget in Settings deletes the record (the extension drops its copy too).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-49
 - Ticket #148: the What's New card is hidden for the first release (owner); the code stays, behind SHOW_WHATS_NEW, for a later one.
 

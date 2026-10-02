@@ -82,6 +82,16 @@
       <summary>Tile sizes in Parcha Controls</summary>
       <description>Sizes chosen with Edit Controls, as "id=COLUMNSxROWS" entries. Tiles not listed keep their default size.</description>
     </key>
+    <key name="learn-usage" type="b">
+      <default>true</default>
+      <summary>Learn from how the controls are used</summary>
+      <description>
+        Control Center keeps a small private record of which of its controls
+        are used and when (control names, a fading score and a time; nothing
+        else), stored only in the user's own data folder, to suggest the
+        controls used most. Turning this off deletes the record.
+      </description>
+    </key>
     <key name="launcher-order" type="as">
       <default>[]</default>
       <summary>Launcher arrangement</summary>

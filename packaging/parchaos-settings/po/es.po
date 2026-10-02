@@ -552,3 +552,24 @@ msgstr "%s puede volver a usar la red. Reiníciala para que se aplique."
 #, python-format
 msgid "Could not change it: %s"
 msgstr "No se pudo cambiar: %s"
+
+msgid "Suggestions"
+msgstr "Sugerencias"
+
+msgid "ParchaOS can learn which controls you use, to suggest them when you edit Control Center. It keeps only the names of the controls and when they were used, on this computer. Nothing is sent anywhere."
+msgstr "ParchaOS puede aprender qué controles usas para sugerírtelos cuando edites el Centro de control. Solo guarda los nombres de los controles y cuándo se usaron, en esta computadora. No se envía nada a ningún sitio."
+
+msgid "Learn from how I use Control Center"
+msgstr "Aprender de cómo uso el Centro de control"
+
+msgid "Forget what was learned"
+msgstr "Olvidar lo aprendido"
+
+msgid "Suggestions start over from the defaults."
+msgstr "Las sugerencias vuelven a empezar desde las predeterminadas."
+
+msgid "Forget"
+msgstr "Olvidar"
+
+msgid "Forgotten"
+msgstr "Olvidado"

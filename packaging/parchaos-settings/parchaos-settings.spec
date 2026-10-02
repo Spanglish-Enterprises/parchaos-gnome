@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -27,7 +27,7 @@ BuildRequires:  desktop-file-utils
 BuildRequires:  gettext
 BuildRequires:  systemd-rpm-macros
 
-Requires:       parchaos-desktop-schemas >= 2026.09.23-33
+Requires:       parchaos-desktop-schemas >= 2026.09.23-73
 Requires:       python3-gobject
 Requires:       gtk4
 Requires:       libadwaita
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-28
+- Ticket #148: Privacy page gets a Suggestions group: "Learn from how I use Control Center" (on by default) and "Forget what was learned". Turning learning off deletes the record. Spanish translations included.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-27
 - Ticket #135: the Refractive glass switch is shown when ParchaOS's own glass (parchaos-glass) is installed.
 

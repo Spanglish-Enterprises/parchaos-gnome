@@ -660,6 +660,7 @@ class Window(Adw.ApplicationWindow):
     def _privacy_page(self):
         page = Adw.PreferencesPage(title=_('Privacy'),
                                    icon_name='preferences-system-privacy-symbolic')
+        page.add(self._learning_group())
         self._net_group = Adw.PreferencesGroup(
             title=_('Network access'),
             description=_('Turn a switch off to keep that app off the network. '
@@ -686,6 +687,47 @@ class Window(Adw.ApplicationWindow):
             self._net_placeholder.set_title(_('Could not list apps'))
             self._net_placeholder.set_subtitle(err.message)
         return page
+
+    # Control Center learns which controls are used, to suggest them in Edit Controls. Only
+    # control names, a fading score and a time are kept, in a file only you can read; turning
+    # learning off or pressing Forget deletes it.
+    USAGE_FILE = os.path.join(GLib.get_user_data_dir(), 'parchaos', 'controls-usage.json')
+
+    def _learning_group(self):
+        group = Adw.PreferencesGroup(
+            title=_('Suggestions'),
+            description=_('ParchaOS can learn which controls you use, to suggest them when you edit '
+                          'Control Center. It keeps only the names of the controls and when they were '
+                          'used, on this computer. Nothing is sent anywhere.'))
+        row = Adw.SwitchRow(title=_('Learn from how I use Control Center'))
+        settings = self._desktop_settings()
+        if settings is None or not settings.props.settings_schema.has_key('learn-usage'):
+            row.set_sensitive(False)
+        else:
+            settings.bind('learn-usage', row, 'active', Gio.SettingsBindFlags.DEFAULT)
+            row.connect('notify::active', lambda r, _p: None if r.get_active() else self._forget_usage())
+            self._learn_settings = settings
+        group.add(row)
+        forget = Adw.ActionRow(title=_('Forget what was learned'),
+                               subtitle=_('Suggestions start over from the defaults.'))
+        button = Gtk.Button(label=_('Forget'), valign=Gtk.Align.CENTER)
+        button.add_css_class('destructive-action')
+        button.connect('clicked', lambda _b: self._forget_usage(button))
+        forget.add_suffix(button)
+        group.add(forget)
+        return group
+
+    def _forget_usage(self, button=None):
+        try:
+            os.remove(self.USAGE_FILE)
+        except FileNotFoundError:
+            pass
+        except OSError as err:
+            print(f'parchaos-settings: could not delete {self.USAGE_FILE}: {err}', file=sys.stderr)
+            return
+        if button is not None:
+            button.set_label(_('Forgotten'))
+            button.set_sensitive(False)
 
     # What each Flatpak app may use (ticket #160): its files, devices and
     # network. Each switch is Flatpak's own override, so turning it back on

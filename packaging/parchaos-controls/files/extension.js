@@ -90,6 +90,167 @@ function runMotion(actor, opening, onDone) {
     timeline.start();
 }
 
+// Learning which controls are used, for Edit Controls' Suggestions. Private by design: it keeps
+// only control ids, each with a fading score and the time of its last use, in a file only the
+// user can read (~/.local/share/parchaos/controls-usage.json). It learns only from actions that
+// are clearly the user's (a tap or slide on a control, a screenshot taken, opening the app a
+// control stands for); automatic switches (sunset dark mode, scheduled Do Not Disturb, idle
+// lock) are not counted. The learn-usage setting turns it off, and turning it off deletes the file.
+const USAGE_HALF_LIFE_DAYS = 14;
+const USAGE_APPS = {
+    'org.gnome.Settings.desktop': 'settings',
+    'org.parchaos.Settings.desktop': 'settings',
+};
+
+class UsageLearner {
+    constructor() {
+        this._file = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_data_dir(), 'parchaos', 'controls-usage.json']));
+        this._data = {version: 1, controls: {}};
+        this._saveId = 0;
+        this._recent = new Map();
+        this._settings = styleSettings();
+        this._enabled = !!this._settings?.settings_schema.has_key('learn-usage') &&
+            this._settings.get_boolean('learn-usage');
+        this._enabledId = this._settings?.settings_schema.has_key('learn-usage')
+            ? this._settings.connect('changed::learn-usage', () => {
+                this._enabled = this._settings.get_boolean('learn-usage');
+                if (!this._enabled)
+                    this.forget();
+            }) : 0;
+        if (this._enabled)
+            this._load();
+        // "Forget" in Settings deletes the file: drop what is in memory too, or it would be
+        // written back.
+        this._monitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._monitor.connect('changed', (_m, _f, _o, event) => {
+            if (event === Gio.FileMonitorEvent.DELETED)
+                this._clearMemory();
+        });
+        this._shotId = Main.screenshotUI.connect('screenshot-taken', () => this.record('screenshot'));
+        this._appsId = Shell.AppSystem.get_default().connect('app-state-changed', (_s, app) => {
+            const id = USAGE_APPS[app.get_id()];
+            if (id && app.state === Shell.AppState.STARTING)
+                this.record(id);
+        });
+    }
+
+    _load() {
+        try {
+            const [, bytes] = this._file.load_contents(null);
+            const data = JSON.parse(new TextDecoder().decode(bytes));
+            if (data?.version === 1 && typeof data.controls === 'object')
+                this._data = data;
+        } catch (e) {
+            // no history yet
+        }
+    }
+
+    _save() {
+        if (this._saveId)
+            return;
+        // Written a few seconds after a change, so a burst of slider moves is one write.
+        this._saveId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
+            this._saveId = 0;
+            this._write();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _write() {
+        if (!this._enabled)
+            return;
+        try {
+            this._file.get_parent().make_directory_with_parents(null);
+        } catch (e) {
+            // already there
+        }
+        try {
+            const bytes = new TextEncoder().encode(JSON.stringify(this._data));
+            // PRIVATE: created readable by the user only
+            this._file.replace_contents(bytes, null, false, Gio.FileCreateFlags.PRIVATE | Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        } catch (e) {
+            logError(e, 'parchaos-controls: usage');
+        }
+    }
+
+    // One use of a control. A tap that also changes a setting counts once.
+    record(id) {
+        if (!this._enabled || !id)
+            return;
+        const now = Date.now() / 1000;
+        if (now - (this._recent.get(id) ?? 0) < 2)
+            return;
+        this._recent.set(id, now);
+        const c = this._data.controls[id] ?? {score: 0, last: now};
+        c.score = this._decayed(c, now) + 1;
+        c.last = now;
+        this._data.controls[id] = c;
+        this._save();
+    }
+
+    _decayed(c, now) {
+        const days = Math.max(0, now - c.last) / 86400;
+        return c.score * 0.5 ** (days / USAGE_HALF_LIFE_DAYS);
+    }
+
+    score(id) {
+        const c = this._data.controls[id];
+        return c ? this._decayed(c, Date.now() / 1000) : 0;
+    }
+
+    get hasHistory() {
+        return Object.keys(this._data.controls).length > 0;
+    }
+
+    _clearMemory() {
+        this._data = {version: 1, controls: {}};
+        this._recent.clear();
+        if (this._saveId)
+            GLib.source_remove(this._saveId);
+        this._saveId = 0;
+    }
+
+    forget() {
+        this._clearMemory();
+        try {
+            this._file.delete(null);
+        } catch (e) {
+            // nothing to delete
+        }
+    }
+
+    destroy() {
+        if (this._saveId) {
+            GLib.source_remove(this._saveId);
+            this._saveId = 0;
+            this._write();
+        }
+        if (this._enabledId)
+            this._settings.disconnect(this._enabledId);
+        this._monitor?.cancel();
+        Main.screenshotUI.disconnect(this._shotId);
+        Shell.AppSystem.get_default().disconnect(this._appsId);
+    }
+}
+
+let usageLearner = null;
+
+// Suggestions in Edit Controls: controls not in the panel that are used, most used first; then
+// the other controls not in the panel; a fixed handful only while there is no history at all.
+function rankSuggestions(items, limit = 6) {
+    const score = id => usageLearner?.score(id) ?? 0;
+    const missing = items.filter(i => i.hidden);
+    const used = missing.filter(i => score(i.id) > 0).sort((a, b) => score(b.id) - score(a.id));
+    const unused = missing.filter(i => score(i.id) === 0);
+    let picks = [...used, ...unused];
+    if (!usageLearner?.hasHistory) {
+        const handy = ['screenshot', 'lock', 'night-light', 'focus', 'dark-mode', 'settings']
+            .map(id => items.find(i => i.id === id)).filter(Boolean);
+        picks = [...new Set([...picks, ...handy])];
+    }
+    return picks.slice(0, limit);
+}
+
 // The "recently" pill above the tiles (owner's reference): the app that last asked for the
 // location ("Weather recently", opens the app) or the last screenshot ("Screenshot taken",
 // shows it in the file browser). An entry stays this long.
@@ -656,6 +817,13 @@ const ControlsPanel = GObject.registerClass({
         item.widget.add_child(handle);
         item.widget.set_pivot_point(0.5, 0.5);
         this._attachDrag(item);
+        // A tap or slide on the control (not while editing) teaches Suggestions what is used.
+        item.widget.connect('captured-event', (_w, event) => {
+            const type = event.type();
+            if (!this._editing && (type === Clutter.EventType.BUTTON_RELEASE || type === Clutter.EventType.TOUCH_END))
+                usageLearner?.record(item.id);
+            return Clutter.EVENT_PROPAGATE;
+        });
     }
 
     // The tile under a point, for dragging and dropping.
@@ -1585,11 +1753,8 @@ class ControlsPicker extends St.BoxLayout {
         if (!this._category && !this._query) {
             if (SHOW_WHATS_NEW)
                 this._gallery.add_child(this._whatsNew());
-            // Suggestions: controls not in the panel yet, else a few handy ones.
-            const missing = shown.filter(i => i.hidden);
-            const handy = ['screenshot', 'lock', 'night-light', 'focus', 'dark-mode', 'settings']
-                .map(id => shown.find(i => i.id === id)).filter(Boolean);
-            const picks = [...new Set([...missing, ...handy])].slice(0, 6);
+            // Suggestions learn from use (rankSuggestions).
+            const picks = rankSuggestions(shown);
             if (picks.length) {
                 this._gallery.add_child(this._heading('Suggestions', true));
                 this._flow(this._gallery, picks);
@@ -2131,6 +2296,7 @@ export default class ParchaControlsExtension extends Extension {
     enable() {
         this._exportShellBus();
         recentActivity = new RecentActivity();
+        usageLearner = new UsageLearner();
         this._injections = new InjectionManager();
         this._waitId = 0;
         // Quick Settings builds its indicators asynchronously at startup.
@@ -2225,6 +2391,8 @@ export default class ParchaControlsExtension extends Extension {
         this._teardown();
         recentActivity?.destroy();
         recentActivity = null;
+        usageLearner?.destroy();
+        usageLearner = null;
         this._injections?.clear();
         this._injections = null;
         this._qs = null;
