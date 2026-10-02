@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        47%{?dist}
+Release:        48%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -27,7 +27,7 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
-Requires:       parchaos-glass >= 1.0.0-9
+Requires:       parchaos-glass >= 1.0.0-10
 # The Screenshot app (ticket #130) replaces the old standalone one, which
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-48
+- Ticket #148: Edit Controls picker rebuilt after the owner's reference, measured: a 244 px sidebar with the search field and categories with app-style icons, a gallery that lists every control by category (What's New card with a small picture, Suggestions with the controls not yet in the panel first, a section per category; 65 px tiles with names under them), and a footer with the hint and Done. Controls already in Control Center are listed too: dragging one moves it, clicking one lights it up in the panel. The window is 55% x 88% of the screen, placed in the room left of Control Center so they never overlap, and moves by dragging its background. Control Center shows two spare rows of empty slots while editing.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-47
 - Ticket #135: Control Center opens and closes like the owner's recording (measured frame by frame at 60 fps): a 287 ms fade in place on a fitted curve while a slight blur clears, and a 219 ms fade out that blurs a little. No slide or zoom. Follows the system's reduce-animation setting.
 

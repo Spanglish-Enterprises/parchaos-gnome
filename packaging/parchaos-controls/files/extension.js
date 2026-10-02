@@ -842,7 +842,8 @@ const ControlsPanel = GObject.registerClass({
         }
         // Empty round slots show where more controls can go.
         if (this._editing) {
-            for (let r = 0; r <= lastRow + 1; r++) {
+            // Two spare rows, as in the reference.
+            for (let r = 0; r <= lastRow + 2; r++) {
                 for (let c = 0; c < 4; c++) {
                     if (!isFree(c, r, 1, 1))
                         continue;
@@ -1007,6 +1008,19 @@ const ControlsPanel = GObject.registerClass({
 
     finishEditing() {
         this._setEditing(false);
+    }
+
+    // Every control, for the picker (it lists those in the panel too, as the reference does).
+    allItems() {
+        return this._ordered();
+    }
+
+    // Briefly lights up a control's tile, to show where it is.
+    flash(item) {
+        const w = item.widget;
+        w.remove_transition('opacity');
+        w.opacity = 90;
+        w.ease({opacity: 255, duration: 450, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
     }
 
     // The controls not shown in the panel, for the picker.
@@ -1358,16 +1372,22 @@ const ControlsPanel = GObject.registerClass({
 
 
 // ---------------------------------------------------------------------
-// The picker beside the panel in edit mode (ticket #148): a search box, the
-// categories of controls, a gallery of the controls that are not in the
-// panel, and Done. Clicking a control puts it back in the panel.
+// The picker beside the panel in edit mode (ticket #148), laid out after the owner's reference
+// (edit controls.png, 9.33 PM), measured in logical px: a 244 px sidebar (search field, then
+// categories with app-style icons, 46 px rows), a gallery of every control by category (What's
+// New card, Suggestions, one section per category; 65 px cells, 11 px gaps, names under the
+// tiles), and a footer with the hint and Done. Controls already in the panel are listed too
+// (as in the reference); dragging one moves it, clicking one shows where it is.
 // ---------------------------------------------------------------------
+const GALLERY_CELL = 65;
+const GALLERY_GAP = 11;
+
 const ControlsPicker = GObject.registerClass(
 class ControlsPicker extends St.BoxLayout {
     _init(panel) {
         super._init({
             style_class: 'parchaos-controls-panel parchaos-controls-picker',
-            orientation: Clutter.Orientation.VERTICAL,
+            orientation: Clutter.Orientation.HORIZONTAL,
             reactive: true,
         });
         this._panel = panel;
@@ -1377,49 +1397,60 @@ class ControlsPicker extends St.BoxLayout {
         if (panel.has_style_class_name('parchaos-light'))
             this.add_style_class_name('parchaos-light');
 
-        // Grab this strip to move the window around.
-        this.grip = new St.Bin({
-            style_class: 'parchaos-controls-grip',
-            x_align: Clutter.ActorAlign.CENTER,
+        // Sidebar: search, then the categories.
+        this._sidebar = new St.BoxLayout({
+            style_class: 'parchaos-controls-picker-sidebar',
+            orientation: Clutter.Orientation.VERTICAL,
             reactive: true,
-            child: new St.Widget({style_class: 'parchaos-controls-grip-pill'}),
         });
-        this.add_child(this.grip);
-
         this._search = new St.Entry({
             style_class: 'parchaos-controls-search',
             hint_text: 'Search Controls',
             can_focus: true,
+            primary_icon: new St.Icon({icon_name: 'edit-find-symbolic', style_class: 'parchaos-controls-search-icon'}),
         });
         this._search.clutter_text.connect('text-changed', () => {
             this._query = this._search.get_text().trim().toLowerCase();
             this._refresh();
         });
-        this.add_child(this._search);
-
-        const body = new St.BoxLayout({style_class: 'parchaos-controls-picker-body', x_expand: true, y_expand: true});
+        this._sidebar.add_child(this._search);
         this._categories = new St.BoxLayout({
             style_class: 'parchaos-controls-categories',
             orientation: Clutter.Orientation.VERTICAL,
+            reactive: true,
+        });
+        this._sidebar.add_child(new St.ScrollView({
+            child: this._categories,
+            y_expand: true,
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.EXTERNAL,
+        }));
+        this.add_child(this._sidebar);
+
+        // Gallery and footer.
+        const main = new St.BoxLayout({
+            style_class: 'parchaos-controls-picker-main',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_expand: true,
         });
         this._gallery = new St.BoxLayout({
             style_class: 'parchaos-controls-gallery',
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
         });
-        body.add_child(this._categories);
-        body.add_child(new St.ScrollView({
+        main.add_child(new St.ScrollView({
             child: this._gallery,
             x_expand: true,
             y_expand: true,
-            overlay_scrollbars: true,
+            // scrolls, but shows no bar (as in the reference)
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.EXTERNAL,
             style_class: 'parchaos-controls-gallery-scroll',
         }));
-        this.add_child(body);
-
-        const footer = new St.BoxLayout({style_class: 'parchaos-controls-picker-footer'});
+        const footer = new St.BoxLayout({style_class: 'parchaos-controls-picker-footer', reactive: true});
         footer.add_child(new St.Label({
-            text: 'Drag a control to place it in Control Center, or click it.',
+            text: 'Drag a control to place it in Control Center.',
             style_class: 'parchaos-controls-picker-hint',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
@@ -1427,9 +1458,18 @@ class ControlsPicker extends St.BoxLayout {
         const done = new St.Button({style_class: 'parchaos-controls-done', label: 'Done', can_focus: true});
         done.connect('clicked', () => this._panel.finishEditing());
         footer.add_child(done);
-        this.add_child(footer);
+        main.add_child(footer);
+        this.add_child(main);
+        this._footer = footer;
 
+        // The window moves when its background is dragged (sidebar, footer, the window itself).
+        this.grip = this;
         panel.connect('items-changed', () => this._refresh());
+    }
+
+    // True for the parts of the window that move it when dragged.
+    isMoveArea(actor) {
+        return actor === this || actor === this._sidebar || actor === this._categories || actor === this._footer;
     }
 
     focusSearch() {
@@ -1453,111 +1493,175 @@ class ControlsPicker extends St.BoxLayout {
         return null;
     }
 
-    _refresh() {
-        const available = this._panel.availableItems();
-        const names = [...new Set(available.map(i => i.category))];
-        this._categories.destroy_all_children();
-        const addCategory = (label, value) => {
-            const [iconName, colour] = CATEGORY_ICONS[label] ?? CATEGORY_ICONS.Other;
-            const line = new St.BoxLayout({style: 'spacing: 10px;', x_align: Clutter.ActorAlign.START, x_expand: true});
-            const chip = new St.Bin({
-                style_class: 'parchaos-controls-category-chip',
-                style: `background-color: ${colour};`,
-                child: new St.Icon({icon_name: iconName, icon_size: 13}),
-            });
-            line.add_child(chip);
-            line.add_child(new St.Label({text: label, y_align: Clutter.ActorAlign.CENTER}));
-            const b = new St.Button({
-                style_class: 'parchaos-controls-category',
-                child: line,
-                x_align: Clutter.ActorAlign.FILL,
-                can_focus: true,
-            });
-            if (this._category === value)
-                b.add_style_pseudo_class('active');
-            b.connect('clicked', () => {
-                this._category = value;
-                this._refresh();
-            });
-            this._categories.add_child(b);
+    _categoryRow(label, value) {
+        const [iconName, colour] = CATEGORY_ICONS[label] ?? CATEGORY_ICONS.Other;
+        const line = new St.BoxLayout({style_class: 'parchaos-controls-category-line', x_expand: true});
+        // App-style icon: a dark rounded square with the category's coloured glyph.
+        line.add_child(new St.Bin({
+            style_class: 'parchaos-controls-category-chip',
+            child: new St.Icon({icon_name: iconName, icon_size: 15, style: `color: ${colour};`}),
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        line.add_child(new St.Label({text: label, y_align: Clutter.ActorAlign.CENTER}));
+        const b = new St.Button({
+            style_class: 'parchaos-controls-category',
+            child: line,
+            x_align: Clutter.ActorAlign.FILL,
+            can_focus: true,
+        });
+        if (this._category === value)
+            b.add_style_pseudo_class('checked');
+        b.connect('clicked', () => {
+            this._category = value;
+            this._refresh();
+        });
+        return b;
+    }
+
+    // What's New: a short note and a small picture of a screen with Control Center on it.
+    _whatsNew() {
+        const card = new St.BoxLayout({style_class: 'parchaos-controls-whatsnew'});
+        const text = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        text.add_child(new St.Label({text: "What's New", style_class: 'parchaos-controls-whatsnew-title'}));
+        const blurb = new St.Label({
+            text: 'Control Center is yours to arrange. Resize and reorder controls so the ones you use most are a click away. Connections can be icon-only, wide or tall.',
+            style_class: 'parchaos-controls-whatsnew-text',
+        });
+        blurb.clutter_text.line_wrap = true;
+        blurb.clutter_text.ellipsize = 0;
+        text.add_child(blurb);
+        card.add_child(text);
+
+        const screen = new St.Widget({style_class: 'parchaos-controls-whatsnew-screen', layout_manager: new Clutter.FixedLayout()});
+        // 196 x 124 as in the reference; smaller when the picker is narrow, so the text keeps room.
+        const k = (this.layoutWidth || 733) < 640 ? 0.72 : 1;
+        screen.set_size(Math.round(196 * k), Math.round(124 * k));
+        // menu bar, a column of tiles at the right, and the dock
+        const at = (actor, x, y, w, h) => {
+            actor.set_position(Math.round(x * k), Math.round(y * k));
+            actor.set_size(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)));
         };
-        addCategory('All Controls', null);
+        const bar = new St.Widget({style_class: 'parchaos-controls-whatsnew-bar'});
+        at(bar, 6, 5, 60, 3);
+        screen.add_child(bar);
+        const tiles = [[150, 14, 18, 10], [170, 14, 18, 10], [150, 27, 38, 10], [150, 40, 18, 18], [170, 40, 18, 18], [150, 61, 38, 8], [150, 72, 38, 8]];
+        for (const [x, y, w, h] of tiles) {
+            const t = new St.Widget({style_class: 'parchaos-controls-whatsnew-tile'});
+            at(t, x, y, w, h);
+            screen.add_child(t);
+        }
+        const dock = new St.Widget({style_class: 'parchaos-controls-whatsnew-dock'});
+        at(dock, 60, 110, 120, 8);
+        screen.add_child(dock);
+        card.add_child(screen);
+        return card;
+    }
+
+    _heading(text, first = false) {
+        return new St.Label({text, style_class: 'parchaos-controls-gallery-heading' + (first ? ' first' : '')});
+    }
+
+    _refresh() {
+        const all = this._panel.allItems();
+        const names = [...new Set(all.map(i => i.category))];
+        this._categories.destroy_all_children();
+        this._categories.add_child(this._categoryRow('All Controls', null));
         for (const name of names)
-            addCategory(name, name);
+            this._categories.add_child(this._categoryRow(name, name));
 
         this._gallery.destroy_all_children();
-        const shown = available.filter(i =>
+        const shown = all.filter(i =>
             (!this._category || i.category === this._category) &&
             (!this._query || i.name.toLowerCase().includes(this._query) ||
                 i.category.toLowerCase().includes(this._query)));
-        if (available.length === 0 || shown.length === 0) {
-            this._gallery.add_child(new St.Label({
-                text: available.length === 0 ? 'Everything is already in Control Center.' : 'No controls match.',
-                style_class: 'parchaos-controls-picker-hint',
-            }));
+        if (shown.length === 0) {
+            this._gallery.add_child(new St.Label({text: 'No controls match.', style_class: 'parchaos-controls-picker-hint'}));
             return;
         }
+        let first = true;
         if (!this._category && !this._query) {
-            const card = new St.BoxLayout({style_class: 'parchaos-controls-whatsnew', orientation: Clutter.Orientation.VERTICAL});
-            card.add_child(new St.Label({text: "What's New", style_class: 'parchaos-controls-whatsnew-title'}));
-            const blurb = new St.Label({
-                text: 'Connections can be icon-only, wide or tall. Drag a corner to resize.',
-                style_class: 'parchaos-controls-picker-hint',
-            });
-            blurb.clutter_text.line_wrap = true;
-            blurb.clutter_text.ellipsize = 0;
-            card.add_child(blurb);
-            this._gallery.add_child(card);
-            const picks = ['wifi', 'bluetooth', 'focus', 'screenshot', 'lock', 'night-light']
-                .map(id => shown.find(i => i.id === id)).filter(Boolean).slice(0, 4);
+            this._gallery.add_child(this._whatsNew());
+            // Suggestions: controls not in the panel yet, else a few handy ones.
+            const missing = shown.filter(i => i.hidden);
+            const handy = ['screenshot', 'lock', 'night-light', 'focus', 'dark-mode', 'settings']
+                .map(id => shown.find(i => i.id === id)).filter(Boolean);
+            const picks = [...new Set([...missing, ...handy])].slice(0, 6);
             if (picks.length) {
-                this._gallery.add_child(new St.Label({text: 'Suggestions', style_class: 'parchaos-controls-gallery-heading'}));
+                this._gallery.add_child(this._heading('Suggestions', true));
                 this._flow(this._gallery, picks);
+                first = false;
             }
         }
         for (const category of [...new Set(shown.map(i => i.category))]) {
-            this._gallery.add_child(new St.Label({text: category, style_class: 'parchaos-controls-gallery-heading'}));
+            this._gallery.add_child(this._heading(category, first));
+            first = false;
             this._flow(this._gallery, shown.filter(i => i.category === category));
         }
     }
 
-    // Lay tiles out in rows that wrap at the gallery width.
+    // Lay tiles out in rows that wrap at the gallery width; each tile takes its cells plus room
+    // for its name.
     _flow(parent, items) {
-        const budget = Math.max(232, (this.get_width() || 560) - 330);
+        // layoutWidth is set by the owner before the picker is shown (it may not be on stage yet)
+        const budget = Math.max(GALLERY_CELL * 2, (this.layoutWidth || 700) - 244 - 2 * 17);
         let row = null, used = 0;
         for (const item of items) {
-            const w = item.defaultSize[0] * 54 + (item.defaultSize[0] - 1) * 8 + 12;
+            const [cols] = item.defaultSize;
+            const w = cols * GALLERY_CELL + (cols - 1) * GALLERY_GAP;
             if (!row || used + w > budget) {
-                row = new St.BoxLayout({style: 'spacing: 12px; margin-bottom: 10px;', y_expand: false, x_align: Clutter.ActorAlign.START});
+                row = new St.BoxLayout({style_class: 'parchaos-controls-gallery-row', x_align: Clutter.ActorAlign.START});
                 parent.add_child(row);
                 used = 0;
             }
             row.add_child(this._tile(item));
-            used += w;
+            used += w + GALLERY_GAP + 12;
         }
     }
 
-    // A control at the size it has in the panel, with its name under it.
+    // A control at the size it has in the panel, its name under it (wide tiles also show the
+    // name inside, as in the reference).
     _tile(item, forDrag = false) {
         const [cols, rows] = item.defaultSize;
-        const w = cols * 54 + (cols - 1) * 8;
-        const h = rows * 54 + (rows - 1) * 8;
-        const holder = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, reactive: !forDrag});
+        const w = cols * GALLERY_CELL + (cols - 1) * GALLERY_GAP;
+        const h = rows * GALLERY_CELL + (rows - 1) * GALLERY_GAP;
+        const holder = new St.BoxLayout({
+            style_class: 'parchaos-controls-gallery-cell',
+            orientation: Clutter.Orientation.VERTICAL,
+            reactive: !forDrag,
+        });
         holder._controlItem = item;
+        const round = rows === 1;
         const shape = new St.BoxLayout({
-            style_class: 'parchaos-controls-gallery-item' + (cols === 1 && rows === 1 ? ' round' : ''),
-            style: `width: ${w}px; height: ${h}px; min-width: ${w}px; min-height: ${h}px;`,
+            style_class: 'parchaos-controls-gallery-item' + (round ? ' round' : '') + (cols > 1 && rows === 1 ? ' wide' : '') + (rows > 1 ? ' tall' : ''),
+            style: `width: ${w}px; height: ${h}px; min-width: ${w}px; min-height: ${h}px;` +
+                (round ? '' : ` border-radius: ${Math.min(h / 2, CORNER_MAX) * 0.6}px;`),
             x_align: Clutter.ActorAlign.CENTER,
             reactive: !forDrag,
         });
-        shape.add_child(new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon', x_expand: true, y_align: Clutter.ActorAlign.CENTER}));
-        if (cols > 1)
-            shape.add_child(new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-inline', y_align: Clutter.ActorAlign.CENTER, x_expand: true}));
+        if (rows > 1) {
+            // tall tiles: the glyph sits in the top-left corner
+            shape.orientation = Clutter.Orientation.VERTICAL;
+            shape.add_child(new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon', x_align: Clutter.ActorAlign.START}));
+        } else if (cols > 1) {
+            const disc = new St.Bin({
+                style_class: 'parchaos-controls-gallery-disc',
+                child: new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon'}),
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            shape.add_child(disc);
+            const inline = new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-inline', y_align: Clutter.ActorAlign.CENTER, x_expand: true});
+            inline.clutter_text.line_wrap = true;
+            shape.add_child(inline);
+        } else {
+            shape.add_child(new St.Icon({icon_name: item.icon, style_class: 'parchaos-controls-gallery-icon', x_expand: true, y_align: Clutter.ActorAlign.CENTER}));
+        }
         if (this.glass && !forDrag) {
             // As in the reference, a gallery tile is glass too (our pane, behind the tile's content).
             const stack = new St.Widget({layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER});
             const pane = new GlassPane({});
-            pane.set({radius: Math.min(36, Math.min(w, h) / 2), blur: 14, tint: 0.14, dim: 0.62, disp: 20, z: 60});
+            const r = round ? h / 2 : Math.min(h / 2, CORNER_MAX);
+            pane.set({radius: r, cn: round ? 2 : 3.1, hair: 0.38, blur: 14, tint: 0.14, dim: 0.62, disp: 20, z: 60,
+                band: Math.min(26, Math.min(w, h) * 0.26)});
             pane.set_size(w, h);
             stack.set_size(w, h);
             stack.add_child(pane);
@@ -1566,8 +1670,18 @@ class ControlsPicker extends St.BoxLayout {
         } else {
             holder.add_child(shape);
         }
-        if (cols === 1)
-            holder.add_child(new St.Label({text: item.name, style_class: 'parchaos-controls-gallery-label', x_align: Clutter.ActorAlign.CENTER}));
+        if (!forDrag) {
+            const label = new St.Label({
+                text: item.name,
+                style_class: 'parchaos-controls-gallery-label',
+                x_align: Clutter.ActorAlign.CENTER,
+                style: `max-width: ${Math.max(w, GALLERY_CELL + 14)}px;`,
+            });
+            label.clutter_text.line_wrap = true;
+            label.clutter_text.ellipsize = 0;
+            label.clutter_text.set_line_alignment(1);
+            holder.add_child(label);
+        }
         return holder;
     }
 
@@ -1721,8 +1835,11 @@ class ControlsButton extends PanelMenu.Button {
 
         const picker = new ControlsPicker(panel);
         picker.glass = glassOn;
+        // 55% x 88% of the screen, as measured on the reference.
+        const pickerSize = [Math.min(900, Math.round(monitor.width * 0.55)), Math.round(monitor.height * 0.88)];
+        picker.layoutWidth = pickerSize[0];
+        picker.set_size(...pickerSize);
         overlay.add_child(picker);
-        picker.open();
         overlay.set_child_above_sibling(panel, picker);
         // Glass behind both windows in edit mode too (as in the reference):
         // one pane each, following them as they move or resize.
@@ -1730,7 +1847,7 @@ class ControlsButton extends PanelMenu.Button {
             const layer = new Clutter.Actor();
             overlay.insert_child_below(layer, null);
             panel.useGlass(layer);
-            const panes = [[picker, 30]].map(([actor, radius]) => {
+            const panes = [[picker, 18]].map(([actor, radius]) => {
                 const pane = new GlassPane({});
                 pane.set({radius, disp: 8, blur: 0, bgblur: 24, pad: 90, tint: 0.3, dim: 0.44, z: 30});
                 layer.add_child(pane);
@@ -1754,14 +1871,20 @@ class ControlsButton extends PanelMenu.Button {
             overlay.connect('destroy', () => global.stage.disconnect(frame));
             follow();
         }
-        // Front and centre, and it can be moved by its top strip.
-        picker.set_size(Math.min(820, Math.round(monitor.width * 0.52)), Math.round(monitor.height * 0.84));
+        // Centred in the room left of Control Center, so the two never overlap (on a narrow
+        // screen it shrinks to fit); it can be moved by dragging its background.
         const place = () => {
-            const [pw, ph] = picker.get_size();
-            picker.set_position(Math.round((monitor.width - pw) / 2), Math.round((monitor.height - ph) / 2));
+            const panelLeft = px - monitor.x;
+            const room = panelLeft - 24;
+            let [pw, ph] = picker.get_size();
+            if (pw > room - 32) {
+                pw = Math.max(520, room - 32);
+                picker.layoutWidth = pw;
+                picker.set_size(pw, ph);
+            }
+            const x = Math.max(16, Math.round((room - pw) / 2));
+            picker.set_position(x, Math.round((monitor.height - ph) / 2));
         };
-        place();
-
         this._editOverlay = overlay;
         this._picker = picker;
         const finish = () => {
@@ -1789,7 +1912,7 @@ class ControlsButton extends PanelMenu.Button {
             const [x, y] = event.get_coords();
             const hit = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y);
             if (type === Clutter.EventType.BUTTON_PRESS && event.get_button() === 1) {
-                if (within(hit, picker.grip)) {
+                if (picker.isMoveArea(hit)) {
                     const [px0, py0] = picker.get_position();
                     drag = {kind: 'window', x, y, px0, py0};
                     return Clutter.EVENT_STOP;
@@ -1837,8 +1960,12 @@ class ControlsButton extends PanelMenu.Button {
                     panel.endResize(done.state);
                 if (done.kind === 'item') {
                     done.copy?.destroy();
-                    if (!done.moved)
-                        panel.addItem(done.item);
+                    if (!done.moved) {
+                        if (done.item.hidden)
+                            panel.addItem(done.item);
+                        else
+                            panel.flash(done.item);
+                    }
                     else if (inside(panel, x, y))
                         panel.addItem(done.item, panel._itemAt(x, y) ?? null);
                 }
@@ -1860,6 +1987,9 @@ class ControlsButton extends PanelMenu.Button {
 
         Main.uiGroup.add_child(overlay);
         Main.uiGroup.set_child_above_sibling(overlay, null);
+        // Filled once it is on stage (its gallery tiles carry glass panes that need the stage).
+        place();
+        picker.open();
         this._grab = Main.pushModal(overlay, {actionMode: Shell.ActionMode.POPUP});
         picker.focusSearch();
         // The menu has done its job; its panel now lives on the overlay.

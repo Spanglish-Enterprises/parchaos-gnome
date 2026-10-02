@@ -303,6 +303,10 @@ class GlassPane extends St.Widget {
 
     // Place the clone so the part of the desktop under the pane (plus padding) shows in it.
     _sync() {
+        // Off stage there is nothing to line up with (and sizing would ask for a theme too
+        // early); the pane syncs when it is mapped.
+        if (!this.get_stage())
+            return;
         const p = this._p;
         const pad = p.pad;
         const [w, h] = this.get_size();
