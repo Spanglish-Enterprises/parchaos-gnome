@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.3-2
+- Look-alike audit: a new app icon, a passion-fruit sun with rays on a violet-to-rose dusk, in place of a sun behind a cloud on a blue-orange sky that was too close to a well-known weather app's icon. It is a placeholder until an artist draws the final one.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.3-1
 - Ticket #173: `parchaos-sky --snapshot LAT LON NAME` prints the data for the menu-bar weather popover as JSON (current weather, the day's range, the first US weather alert, the next five hours, two other saved places), from the same forecast cache as the app. Hourly entries borrow the six-hour rain chance MET Norway publishes where there is one.
 

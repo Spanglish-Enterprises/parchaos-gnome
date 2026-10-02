@@ -1,23 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Parcha Sky: original icon for ParchaOS. A dusk sky with a warm sun behind a soft cloud. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Parcha Sky icon (placeholder): a passion-fruit sun on a dusk sky, drawn in code. Made with AI help, so its
+       copyright is uncertain; a human artist is to replace it (see the Parchi artwork ticket). -->
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3a5fb8"/>
-      <stop offset="0.62" stop-color="#7f8fd6"/>
-      <stop offset="1" stop-color="#f4a36c"/>
+    <linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b2f9e"/>
+      <stop offset="0.55" stop-color="#9a4fa8"/>
+      <stop offset="1" stop-color="#f0786a"/>
     </linearGradient>
-    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#fff6d8"/>
-      <stop offset="0.7" stop-color="#ffc85a"/>
-      <stop offset="1" stop-color="#ffb347"/>
+    <radialGradient id="pulp" cx="0.45" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#ffe27a"/>
+      <stop offset="1" stop-color="#f0a52e"/>
     </radialGradient>
-    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#e3e8f5"/>
-    </linearGradient>
   </defs>
-  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#sky)"/>
-  <circle cx="78" cy="50" r="22" fill="url(#sun)"/>
-  <path d="M30 92c-9 0-15-6-15-14 0-8 6-14 14-14 2-11 11-19 23-19 10 0 18 6 21 15 2-1 4-1 6-1 10 0 17 7 17 16s-7 17-17 17z" fill="url(#cloud)"/>
-  <rect x="8" y="8" width="112" height="112" rx="30" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#dusk)"/>
+  <g stroke="#ffd98a" stroke-width="4.5" stroke-linecap="round" opacity="0.95">
+    <line x1="100.7" y1="73.8" x2="109.4" y2="76.2"/><line x1="90.9" y1="90.9" x2="95.1" y2="95.1"/><line x1="73.8" y1="100.7" x2="76.2" y2="109.4"/><line x1="54.2" y1="100.7" x2="52.6" y2="106.5"/><line x1="37.1" y1="90.9" x2="30.8" y2="97.2"/><line x1="27.3" y1="73.8" x2="21.5" y2="75.4"/><line x1="27.3" y1="54.2" x2="18.6" y2="51.8"/><line x1="37.1" y1="37.1" x2="32.9" y2="32.9"/><line x1="54.2" y1="27.3" x2="51.8" y2="18.6"/><line x1="73.8" y1="27.3" x2="75.4" y2="21.5"/><line x1="90.9" y1="37.1" x2="97.2" y2="30.8"/><line x1="100.7" y1="54.2" x2="106.5" y2="52.6"/>
+  </g>
+  <circle cx="64" cy="64" r="30" fill="#9b2f5c"/>
+  <circle cx="64" cy="64" r="26.5" fill="#f6cbd2"/>
+  <circle cx="64" cy="64" r="23" fill="url(#pulp)"/>
+  <g fill="#4a2a1a">
+    <ellipse cx="64.0" cy="52.5" rx="2.7" ry="4.2" transform="rotate(0 64.0 52.5)"/><ellipse cx="73.0" cy="56.8" rx="2.7" ry="4.2" transform="rotate(51 73.0 56.8)"/><ellipse cx="75.2" cy="66.6" rx="2.7" ry="4.2" transform="rotate(103 75.2 66.6)"/><ellipse cx="69.0" cy="74.4" rx="2.7" ry="4.2" transform="rotate(154 69.0 74.4)"/><ellipse cx="59.0" cy="74.4" rx="2.7" ry="4.2" transform="rotate(206 59.0 74.4)"/><ellipse cx="52.8" cy="66.6" rx="2.7" ry="4.2" transform="rotate(257 52.8 66.6)"/><ellipse cx="55.0" cy="56.8" rx="2.7" ry="4.2" transform="rotate(309 55.0 56.8)"/>
+    <ellipse cx="64" cy="64" rx="2.7" ry="4.2"/>
+  </g>
 </svg>
