@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.2-3
+- Ticket #192: the sunny pose fills its panel whole (towel and drink in view) over a sky of its own colour instead of a faded circle.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.2-2
 - Ticket #192: Parchi moves out of the header into the Heads-up card: the pose for the weather on the left, the day's one-line story and the heads-up on the right. Each pose fills its panel (scenes framed on Parchi with the circle faded into the scene's own sky; the others in front of a painted sky to match). The header is just the place, temperature and conditions, centred. With Parchi off, the Heads-up card and the header line are as before.
 

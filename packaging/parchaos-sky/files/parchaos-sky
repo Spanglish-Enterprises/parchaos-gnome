@@ -1456,11 +1456,15 @@ PARCHI_SCENE = {'sunny': (546, 388, 366), 'night': (275, 274, 274), 'snowy': (48
                 'foggy': (507, 505, 501), 'sunset': (470, 508, 466)}
 # Where to look, and how many art pixels span the panel, when the circle's centre is not the
 # best framing (Parchi lounges low in the sunny scene).
-PARCHI_FRAME = {'sunny': (560, 600, 760)}
+# The sunny scene spills past its circle (towel, shell), so it is shown whole, unfaded, over a
+# sky of its own colour.
+PARCHI_FRAME = {'sunny': (560, 640, 700)}
+UNFADED = {'sunny'}
 SCENE_POSES = set(PARCHI_SCENE)
 # The rest stand in front of a sky painted to match (top colour, bottom colour).
 PARCHI_SKY = {
     'front': ((0.47, 0.71, 0.94), (0.82, 0.91, 0.98)),
+    'sunny': ((0.70, 0.84, 0.92), (0.80, 0.90, 0.95)),
     'waving': ((0.47, 0.71, 0.94), (0.82, 0.91, 0.98)),
     'rain': ((0.45, 0.53, 0.64), (0.71, 0.77, 0.83)),
     'cloudy': ((0.53, 0.73, 0.91), (0.84, 0.91, 0.96)),
@@ -1518,7 +1522,7 @@ class ParchiArt:
             cr = cairo.Context(surf)
             viewport = Rsvg.Rectangle()
             viewport.x, viewport.y, viewport.width, viewport.height = ox, oy, aw * k, ah * k
-            if pose in PARCHI_SCENE:
+            if pose in PARCHI_SCENE and pose not in UNFADED:
                 layer = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w * scale), int(h * scale))
                 layer.set_device_scale(scale, scale)
                 lc = cairo.Context(layer)
