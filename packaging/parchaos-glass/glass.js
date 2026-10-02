@@ -10,6 +10,7 @@
 // Clutter.Clone of the desktop instead of capturing the whole screen.
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -234,6 +235,58 @@ export const GLASS_DEFAULTS = {
     dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
 };
 
+// ---- Clear to Tinted (ticket #171) ------------------------------------------------------------
+// One setting (org.parchaos.desktop glass-clarity, 0 = Clear .. 1 = Tinted) changes how every
+// glass pane looks, live. Each pane keeps the look it was designed with; the setting scales its
+// tint, how much it darkens a bright backdrop, and its blur. The default value leaves them as designed.
+export const CLARITY_DEFAULT = 0.35;
+
+// 1 at the default; `clear` at 0 and `tinted` at 1, in straight lines between.
+function clarityScale(c, clear, tinted) {
+    if (c <= CLARITY_DEFAULT)
+        return clear + (1 - clear) * (c / CLARITY_DEFAULT);
+    return 1 + (tinted - 1) * ((c - CLARITY_DEFAULT) / (1 - CLARITY_DEFAULT));
+}
+
+export function clarityAdjust(p, c) {
+    const out = Object.assign({}, p);
+    out.tint = Math.min(0.92, p.tint * clarityScale(c, 0.2, 2.4));
+    out.dim = Math.max(0.3, 1 - (1 - p.dim) * clarityScale(c, 0.0, 1.5));
+    out.blur = p.blur * clarityScale(c, 0.55, 1.6);
+    out.bgblur = p.bgblur * clarityScale(c, 0.7, 1.4);
+    return out;
+}
+
+const _panes = new Set();
+let _clarity = CLARITY_DEFAULT;
+let _clarityId = 0;
+let _claritySettings = null;
+
+function readClarity() {
+    try {
+        const v = _claritySettings.get_double('glass-clarity');
+        _clarity = Math.min(1, Math.max(0, v));
+    } catch (e) {
+        _clarity = CLARITY_DEFAULT;
+    }
+}
+
+function watchClarity() {
+    if (_claritySettings)
+        return;
+    const source = Gio.SettingsSchemaSource.get_default();
+    const schema = source?.lookup('org.parchaos.desktop', true);
+    if (!schema || !schema.has_key('glass-clarity'))
+        return;
+    _claritySettings = new Gio.Settings({settings_schema: schema});
+    readClarity();
+    _clarityId = _claritySettings.connect('changed::glass-clarity', () => {
+        readClarity();
+        for (const pane of _panes)
+            pane._sync();
+    });
+}
+
 function floatValue(v) {
     const value = new GObject.Value();
     value.init(GObject.TYPE_FLOAT);
@@ -246,6 +299,8 @@ class GlassPane extends St.Widget {
     _init(params = {}) {
         super._init({reactive: false});
         this._p = Object.assign({}, GLASS_DEFAULTS, params);
+        watchClarity();
+        _panes.add(this);
         this._inner = new Clutter.Actor();
         // The wallpaper and the windows above it, both as the desktop shows them.
         this._clone = new Clutter.Clone({source: Main.layoutManager._backgroundGroup});
@@ -269,6 +324,7 @@ class GlassPane extends St.Widget {
             this._sync();
         });
         this.connect('destroy', () => {
+            _panes.delete(this);
             this._unwatch();
             if (this._retry)
                 GLib.source_remove(this._retry);
@@ -310,7 +366,7 @@ class GlassPane extends St.Widget {
         // early); the pane syncs when it is mapped.
         if (!this.get_stage())
             return;
-        const p = this._p;
+        const p = clarityAdjust(this._p, _clarity);
         const pad = p.pad;
         const [w, h] = this.get_size();
         if (w <= 0 || h <= 0)

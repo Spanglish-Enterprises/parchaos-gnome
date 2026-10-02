@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-12
+- Ticket #171: every glass pane follows the org.parchaos.desktop glass-clarity setting (0 Clear .. 1 Tinted), live: it scales the pane's tint, how much it darkens a bright backdrop and its blur. The default value leaves every pane as designed.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-11
 - A pane draws nothing until it has been placed and clipped once: an unplaced copy of the desktop showed for one frame as a full-screen blurred flash when Edit Controls opened (caught on a screen recording of the nested shell).
 

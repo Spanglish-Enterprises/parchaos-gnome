@@ -67,6 +67,16 @@
         Off by default; it needs more graphics power.
       </description>
     </key>
+    <key name="glass-clarity" type="d">
+      <range min="0.0" max="1.0"/>
+      <default>0.35</default>
+      <summary>How clear or tinted the glass is</summary>
+      <description>
+        0 is Clear: very transparent glass with little tint. 1 is Tinted: darker,
+        more opaque, more frosted glass. The default keeps the glass as designed.
+        Applies to Parcha Controls, menus, the dock and the pickers (ticket #171).
+      </description>
+    </key>
     <key name="controls-order" type="as">
       <default>[]</default>
       <summary>Order of the tiles in Parcha Controls</summary>

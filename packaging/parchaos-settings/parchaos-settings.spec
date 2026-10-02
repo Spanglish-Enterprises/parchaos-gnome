@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        28%{?dist}
+Release:        29%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-29
+- Ticket #171: Appearance > Glass clarity: a slider from Clear to Tinted with a live preview of glass buttons over a photo-like scene, and Reset. The desktop follows as you drag. Spanish translation.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-28
 - Ticket #148: Privacy page gets a Suggestions group: "Learn from how I use Control Center" (on by default) and "Forget what was learned". Turning learning off deletes the record. Spanish translations included.
 

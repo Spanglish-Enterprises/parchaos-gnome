@@ -105,6 +105,118 @@ def keyboard_style():
         return None
 
 
+class GlassPreview(Gtk.DrawingArea):
+    """A small scene (sky, hills, text) with glass buttons over it. The buttons' tint, darkening and
+    frosting follow the clarity, the same way parchaos-glass scales them on the real desktop: clear
+    shows the text behind almost untouched, tinted is darker, more opaque and frosted."""
+
+    DEFAULT = 0.35   # parchaos-glass CLARITY_DEFAULT
+
+    def __init__(self):
+        super().__init__(content_height=170, hexpand=True)
+        self.clarity = self.DEFAULT
+        self.set_draw_func(self._draw)
+        self.update_property([Gtk.AccessibleProperty.LABEL], [_('Preview of the glass')])
+
+    def set_clarity(self, value):
+        self.clarity = max(0.0, min(1.0, value))
+        self.queue_draw()
+
+    @classmethod
+    def _scale(cls, c, clear, tinted):
+        if c <= cls.DEFAULT:
+            return clear + (1 - clear) * (c / cls.DEFAULT)
+        return 1 + (tinted - 1) * ((c - cls.DEFAULT) / (1 - cls.DEFAULT))
+
+    @staticmethod
+    def _round_rect(cr, x, y, w, h, r):
+        r = min(r, w / 2, h / 2)
+        cr.new_sub_path()
+        cr.arc(x + w - r, y + r, r, -1.5708, 0)
+        cr.arc(x + w - r, y + h - r, r, 0, 1.5708)
+        cr.arc(x + r, y + h - r, r, 1.5708, 3.1416)
+        cr.arc(x + r, y + r, r, 3.1416, 4.7124)
+        cr.close_path()
+
+    def _scene(self, cr, w, h):
+        import cairo
+        sky = cairo.LinearGradient(0, 0, 0, h)
+        sky.add_color_stop_rgb(0, 0.30, 0.55, 0.85)
+        sky.add_color_stop_rgb(0.62, 0.98, 0.80, 0.62)
+        sky.add_color_stop_rgb(1, 0.95, 0.60, 0.45)
+        cr.set_source(sky)
+        cr.paint()
+        sun = cairo.RadialGradient(w * 0.74, h * 0.46, 2, w * 0.74, h * 0.46, h * 0.5)
+        sun.add_color_stop_rgba(0, 1, 0.97, 0.80, 0.95)
+        sun.add_color_stop_rgba(1, 1, 0.9, 0.7, 0)
+        cr.set_source(sun)
+        cr.paint()
+        for base, col, amp in ((0.78, (0.20, 0.30, 0.32), 0.10), (0.88, (0.10, 0.20, 0.22), 0.07)):
+            cr.move_to(0, h)
+            for i in range(0, 21):
+                x = w * i / 20
+                cr.line_to(x, h * (base + amp * (0.5 - 0.5 * __import__('math').cos(i * 1.3 + base * 9))))
+            cr.line_to(w, h)
+            cr.close_path()
+            cr.set_source_rgb(*col)
+            cr.fill()
+        # something to read behind the glass: a headline and a few lines
+        cr.set_source_rgba(1, 1, 1, 0.95)
+        cr.set_line_cap(1)
+        cr.set_line_width(7)
+        cr.move_to(w * 0.07, h * 0.30)
+        cr.line_to(w * 0.62, h * 0.30)
+        cr.stroke()
+        cr.set_line_width(4)
+        for i, frac in enumerate((0.50, 0.44, 0.56)):
+            cr.move_to(w * 0.07, h * (0.43 + 0.08 * i))
+            cr.line_to(w * (0.07 + frac), h * (0.43 + 0.08 * i))
+            cr.stroke()
+
+    def _draw(self, _area, cr, w, h):
+        import cairo
+        c = self.clarity
+        dark = Adw.StyleManager.get_default().get_dark()
+        cr.save()
+        self._round_rect(cr, 0, 0, w, h, 16)
+        cr.clip()
+        self._scene(cr, w, h)
+        # glass buttons across the top and bottom, like a toolbar over a photo
+        tint = min(0.92, 0.30 * self._scale(c, 0.2, 2.4))
+        darken = 0.32 * self._scale(c, 0.0, 1.5)
+        see = max(0.0, 1.0 - 0.9 * (c / 1.0)) ** 1.2   # how much of the scene shows through
+        bh = 38
+        for (bx, by, bw) in ((14, 14, 44), (w / 2 - 70, 14, 140), (w - 58, 14, 44),
+                             (14, h - bh - 14, 110), (w - 124, h - bh - 14, 110)):
+            cr.save()
+            self._round_rect(cr, bx, by, bw, bh, bh / 2)
+            cr.clip_preserve()
+            # frosting: tinted glass hides what is behind it
+            if see < 1.0:
+                cr.set_source_rgba(0.95, 0.88, 0.80, (1.0 - see) * 0.55)
+                cr.fill_preserve()
+            cr.set_source_rgba(0.07, 0.07, 0.08, min(0.92, tint + darken))
+            cr.fill_preserve()
+            cr.restore()
+            # the lens edge: a hairline and a brighter rim along the top
+            self._round_rect(cr, bx + 0.5, by + 0.5, bw - 1, bh - 1, bh / 2)
+            cr.set_source_rgba(1, 1, 1, 0.35)
+            cr.set_line_width(1)
+            cr.stroke()
+            self._round_rect(cr, bx + 2, by + 1.5, bw - 4, bh / 2, bh / 4)
+            cr.set_source_rgba(1, 1, 1, 0.10)
+            cr.fill()
+            cr.set_source_rgba(1, 1, 1, 0.95)
+            cr.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            cr.set_font_size(13)
+        cr.restore()
+        # a soft outline so the preview reads against the page
+        self._round_rect(cr, 0.5, 0.5, w - 1, h - 1, 16)
+        cr.set_source_rgba(0, 0, 0, 0.25 if dark else 0.12)
+        cr.set_line_width(1)
+        cr.stroke()
+
+
 class Window(Adw.ApplicationWindow):
     # A sidebar of sections beside the page of the chosen section, the layout
     # GNOME's own Settings uses. It folds to a single column in a narrow window.
@@ -471,12 +583,59 @@ class Window(Adw.ApplicationWindow):
             check.connect('toggled', self._on_style_toggled, value)
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        if 'glass-clarity' in schema.list_keys():
+            page.add(self._glass_clarity_group())
         if 'glass-effects' in schema.list_keys() and os.path.isdir(
                 '/usr/share/parchaos-glass'):
             page.add(self._glass_effects_group())
         if 'folder-colour' in schema.list_keys():
             page.add(self._folder_colour_group())
         return page
+
+    # How clear or tinted the glass is, with a preview that follows the slider (ticket #171).
+    def _glass_clarity_group(self):
+        group = Adw.PreferencesGroup(
+            title=_('Glass clarity'),
+            description=_('From very clear to dark and frosted. The whole desktop follows the slider as you drag it.'))
+        preview = GlassPreview()
+        preview.set_margin_bottom(6)
+        group.add(preview)
+
+        ends = Gtk.Box(spacing=12)
+        clear = Gtk.Label(label=_('Clear'), xalign=0, css_classes=['dim-label'])
+        tinted = Gtk.Label(label=_('Tinted'), xalign=1, css_classes=['dim-label'])
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01)
+        scale.set_draw_value(False)
+        scale.set_hexpand(True)
+        scale.set_tooltip_text(_('Glass clarity'))
+        scale.update_property([Gtk.AccessibleProperty.LABEL], [_('Glass clarity')])
+        ends.append(clear)
+        ends.append(scale)
+        ends.append(tinted)
+        group.add(ends)
+
+        def from_setting(*_a):
+            value = self._desktop.get_double('glass-clarity')
+            preview.set_clarity(value)
+            if abs(scale.get_value() - value) > 0.001:
+                scale.handler_block_by_func(to_setting)
+                scale.set_value(value)
+                scale.handler_unblock_by_func(to_setting)
+
+        def to_setting(sc):
+            value = round(sc.get_value(), 2)
+            preview.set_clarity(value)
+            if abs(self._desktop.get_double('glass-clarity') - value) > 0.001:
+                self._desktop.set_double('glass-clarity', value)
+
+        scale.connect('value-changed', to_setting)
+        self._desktop.connect('changed::glass-clarity', from_setting)
+        from_setting()
+
+        reset = Gtk.Button(label=_('Reset'), halign=Gtk.Align.END, margin_top=6, css_classes=['flat'])
+        reset.connect('clicked', lambda *_a: self._desktop.reset('glass-clarity'))
+        group.add(reset)
+        return group
 
     # Glass is the style; refraction is an extra on top of it (ticket #20):
     # turning Glass on offers refraction, turning Glass off turns refraction
