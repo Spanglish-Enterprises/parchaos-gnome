@@ -1,0 +1,11 @@
+{"imperial": true, "place": "Haslet", "temp": 30.0, "icon": "weather-overcast-symbolic", "cond": "Cloudy",
+ "hi": 30.0, "lo": 25.0, "alert": "Flood Watch",
+ "hours": [
+  {"time": 1790967600, "icon": "weather-windy-symbolic", "temp": 30.0, "pop": null, "precip": 0.0},
+  {"time": 1790971200, "icon": "weather-windy-symbolic", "temp": 30.0, "pop": null, "precip": 0.0},
+  {"time": 1790974800, "icon": "weather-windy-symbolic", "temp": 29.4, "pop": null, "precip": 0.0},
+  {"time": 1790978400, "icon": "weather-showers-scattered-symbolic", "temp": 28.9, "pop": 35, "precip": 0.4},
+  {"time": 1790982000, "icon": "weather-showers-scattered-symbolic", "temp": 27.8, "pop": 45, "precip": 0.6}],
+ "others": [
+  {"name": "San Juan", "icon": "weather-few-clouds-symbolic", "temp": 31.7},
+  {"name": "New York", "icon": "weather-overcast-symbolic", "temp": 21.7}]}

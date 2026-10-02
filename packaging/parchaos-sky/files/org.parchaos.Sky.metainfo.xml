@@ -67,6 +67,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.3.3" date="2026-10-02">
+      <description>
+        <p>Feeds the new weather popover in the menu bar.</p>
+      </description>
+    </release>
     <release version="0.3.2" date="2026-10-02">
       <description>
         <p>Parchi has new looks for fog, sunsets, cold days, snow and starry nights, and waves hello on nice days.</p>

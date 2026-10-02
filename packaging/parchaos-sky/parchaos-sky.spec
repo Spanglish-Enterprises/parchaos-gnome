@@ -9,8 +9,8 @@
 # ==============================================================================
 
 Name:           parchaos-sky
-Version:        0.3.2
-Release:        5%{?dist}
+Version:        0.3.3
+Release:        1%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -88,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.3-1
+- Ticket #173: `parchaos-sky --snapshot LAT LON NAME` prints the data for the menu-bar weather popover as JSON (current weather, the day's range, the first US weather alert, the next five hours, two other saved places), from the same forecast cache as the app. Hourly entries borrow the six-hour rain chance MET Norway publishes where there is one.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.2-5
 - Ticket #192: the hourly forecast card is only as tall as its strip (no empty band above the time slider), so the radar moves up beside the heads-up.
 

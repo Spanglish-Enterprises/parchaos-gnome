@@ -504,23 +504,175 @@ const WeatherIndicator = GObject.registerClass({
         this._cancellable = new Gio.Cancellable();
         this._updateTimerId = 0;
 
-        // Clicking shows where the forecast comes from (MET Norway's data
-        // is CC BY 4.0 and needs attribution) and opens the Weather app.
+        // The popover: the place and temperature, an alert, the next five hours and
+        // up to two other places (ticket #173), then "Open Weather". The data credit
+        // stays (MET Norway's data is CC BY 4.0 and needs attribution).
+        this._pop = new St.BoxLayout({
+            vertical: true,
+            style_class: 'parchaos-weather-pop',
+        });
+        const content = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
+        content.add_style_class_name('parchaos-weather-pop-item');
+        content.add_child(this._pop);
+        this.menu.addMenuItem(content);
         const openItem = new PopupMenu.PopupMenuItem('Open Weather');
+        openItem.add_style_class_name('parchaos-weather-open');
         openItem.connect('activate', () => this._openWeatherApp());
         this.menu.addMenuItem(openItem);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         const creditItem = new PopupMenu.PopupMenuItem('Weather data: MET Norway', { reactive: false });
         creditItem.add_style_class_name('parchaos-weather-credit');
         this.menu.addMenuItem(creditItem);
+        this._data = null;
+        this._snapshotBusy = false;
+        this.menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                this._refreshSnapshot();
+        });
         this.connect('destroy', () => this._onDestroy());
 
-        this._startGeolocation();
+        const fixture = GLib.getenv('PARCHAOS_WEATHER_FIXTURE');   // tests: a fixed snapshot
+        if (fixture) {
+            this._useFixture(fixture);
+        } else {
+            const place = GLib.getenv('PARCHAOS_WEATHER_PLACE');   // tests: "lat,lon" instead of Geoclue
+            if (place)
+                this._setPlace(...place.split(',').map(Number));
+            else
+                this._startGeolocation();
+            this._updateTimerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 900, () => {
+                this._weatherInfo?.update();
+                this._refreshSnapshot();
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
+    }
 
-        this._updateTimerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1800, () => {
-            this._weatherInfo?.update();
-            return GLib.SOURCE_CONTINUE;
-        });
+    _useFixture(path) {
+        try {
+            const [ok, bytes] = GLib.file_get_contents(path);
+            if (ok)
+                this._applyData(JSON.parse(new TextDecoder().decode(bytes)));
+        } catch (e) {
+            console.error('[ParchaOSGlobalMenu] Bad weather fixture:', e);
+        }
+    }
+
+    // Parcha Sky prints the popover's data (it shares the app's forecast cache and
+    // adds alerts and the other places); GWeather alone fills the top when the app
+    // is not installed.
+    _refreshSnapshot() {
+        if (GLib.getenv('PARCHAOS_WEATHER_FIXTURE') || this._snapshotBusy || !this._location)
+            return;
+        this._snapshotBusy = true;
+        try {
+            const proc = Gio.Subprocess.new(
+                ['parchaos-sky', '--snapshot', String(this._location.lat), String(this._location.lon),
+                    this._location.name],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+            proc.communicate_utf8_async(null, this._cancellable, (p, res) => {
+                this._snapshotBusy = false;
+                try {
+                    const [, out] = p.communicate_utf8_finish(res);
+                    const data = JSON.parse(out);
+                    if (!data.error)
+                        this._applyData(data);
+                } catch (e) {
+                    // cancelled, or no usable answer: keep what is shown
+                }
+            });
+        } catch (e) {
+            this._snapshotBusy = false;   // parchaos-sky is not installed
+        }
+    }
+
+    _applyData(data) {
+        this._data = data;
+        this._conditionIcon.icon_name = data.alert ? 'dialog-warning-symbolic' : data.icon;
+        this._label.set_text(this._fmtTemp(data.temp, data.imperial));
+        this.visible = true;
+        this._buildPopover(data);
+    }
+
+    _fmtTemp(c, imperial) {
+        if (c === null || c === undefined)
+            return '–';
+        return imperial ? `${Math.round(c * 9 / 5 + 32)}°F` : `${Math.round(c)}°C`;
+    }
+
+    _deg(c, imperial) {
+        if (c === null || c === undefined)
+            return '–';
+        return `${Math.round(imperial ? c * 9 / 5 + 32 : c)}°`;
+    }
+
+    _buildPopover(d) {
+        this._pop.destroy_all_children();
+        const label = (text, cls, extra = {}) => new St.Label({ text, style_class: cls, ...extra });
+        const rule = () => this._pop.add_child(new St.Widget({ style_class: 'parchaos-weather-rule' }));
+
+        // place + temperature on the left, condition and the day's range on the right
+        const head = new St.BoxLayout({ style_class: 'parchaos-weather-head' });
+        const left = new St.BoxLayout({ vertical: true, x_expand: true });
+        const place = new St.BoxLayout();
+        place.add_child(label(d.place, 'parchaos-weather-place', { y_align: Clutter.ActorAlign.CENTER }));
+        place.add_child(new St.Icon({ icon_name: 'find-location-symbolic', icon_size: 12,
+            style_class: 'parchaos-weather-locator', y_align: Clutter.ActorAlign.CENTER }));
+        left.add_child(place);
+        left.add_child(label(this._deg(d.temp, d.imperial), 'parchaos-weather-big'));
+        head.add_child(left);
+        const right = new St.BoxLayout({ vertical: true, x_align: Clutter.ActorAlign.END });
+        right.add_child(new St.Icon({ icon_name: d.icon, icon_size: 28, x_align: Clutter.ActorAlign.END }));
+        right.add_child(label(d.cond, 'parchaos-weather-cond', { x_align: Clutter.ActorAlign.END }));
+        right.add_child(label(`H:${this._deg(d.hi, d.imperial)} L:${this._deg(d.lo, d.imperial)}`,
+            'parchaos-weather-range', { x_align: Clutter.ActorAlign.END }));
+        head.add_child(right);
+        this._pop.add_child(head);
+
+        if (d.alert) {
+            rule();
+            const row = new St.BoxLayout({ style_class: 'parchaos-weather-alert' });
+            row.add_child(new St.Icon({ icon_name: 'dialog-warning-symbolic', icon_size: 16 }));
+            row.add_child(label(d.alert, 'parchaos-weather-alert-text', { y_align: Clutter.ActorAlign.CENTER }));
+            this._pop.add_child(row);
+        }
+
+        if (d.hours?.length) {
+            rule();
+            const hours = new St.BoxLayout({ style_class: 'parchaos-weather-hours' });
+            for (const h of d.hours) {
+                const col = new St.BoxLayout({ vertical: true, x_expand: true,
+                    style_class: 'parchaos-weather-hour' });
+                const when = GLib.DateTime.new_from_unix_local(h.time);
+                col.add_child(label(when.format(d.imperial ? '%-I %p' : '%H:%M'), 'parchaos-weather-hour-name',
+                    { x_align: Clutter.ActorAlign.CENTER }));
+                col.add_child(new St.Icon({ icon_name: h.icon, icon_size: 28, x_align: Clutter.ActorAlign.CENTER }));
+                // the chance of rain when the forecast gives one, else how much is coming
+                let rain = '';
+                if (h.pop !== null && h.pop !== undefined && h.pop >= 20)
+                    rain = `${Math.round(h.pop)}%`;
+                else if ((h.precip ?? 0) >= (d.imperial ? 0.25 : 0.2))   // a hundredth of an inch
+                    rain = d.imperial ? `${(h.precip / 25.4).toFixed(2).replace(/^0/, '')}″` : `${h.precip.toFixed(1)} mm`;
+                col.add_child(label(rain, 'parchaos-weather-rain', { x_align: Clutter.ActorAlign.CENTER }));
+                col.add_child(label(this._deg(h.temp, d.imperial), 'parchaos-weather-hour-temp',
+                    { x_align: Clutter.ActorAlign.CENTER }));
+                hours.add_child(col);
+            }
+            this._pop.add_child(hours);
+        }
+
+        if (d.others?.length) {
+            rule();
+            for (const o of d.others) {
+                const row = new St.BoxLayout({ style_class: 'parchaos-weather-other' });
+                row.add_child(label(o.name, 'parchaos-weather-other-name',
+                    { x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
+                row.add_child(new St.Icon({ icon_name: o.icon, icon_size: 26, style_class: 'parchaos-weather-other-icon' }));
+                row.add_child(label(this._deg(o.temp, d.imperial), 'parchaos-weather-other-temp',
+                    { y_align: Clutter.ActorAlign.CENTER }));
+                this._pop.add_child(row);
+            }
+        }
+        rule();
     }
 
     _startGeolocation() {
@@ -553,13 +705,23 @@ const WeatherIndicator = GObject.registerClass({
 
     _onLocationUpdated() {
         const geoclueLocation = this._geoclueSimple?.get_location();
+        if (geoclueLocation)
+            this._setPlace(geoclueLocation.latitude, geoclueLocation.longitude);
+    }
+
+    _setPlace(latitude, longitude) {
         const world = GWeather.Location.get_world();
-        if (!geoclueLocation || !world)
+        if (!world)
             return;
 
-        const location = world.find_nearest_city(geoclueLocation.latitude, geoclueLocation.longitude);
+        const location = world.find_nearest_city(latitude, longitude);
         if (!location)
             return;
+        this._location = {
+            lat: latitude,
+            lon: longitude,
+            name: location.get_city_name() || location.get_name(),
+        };
 
         if (this._weatherInfo && this._weatherUpdatedId)
             this._weatherInfo.disconnect(this._weatherUpdatedId);
@@ -577,9 +739,26 @@ const WeatherIndicator = GObject.registerClass({
     _onWeatherUpdated() {
         if (!this._weatherInfo?.is_valid())
             return;
-        this._conditionIcon.icon_name = this._weatherInfo.get_symbolic_icon_name();
-        this._label.set_text(this._weatherInfo.get_temp_summary());
-        this.visible = true;
+        // The snapshot (when Parcha Sky is installed) fills the whole popover; until it
+        // arrives, or without it, GWeather's own reading fills the top.
+        if (!this._data) {
+            this._conditionIcon.icon_name = this._weatherInfo.get_symbolic_icon_name();
+            this._label.set_text(this._weatherInfo.get_temp_summary());
+            this.visible = true;
+            this._buildBasicPopover();
+        }
+        this._refreshSnapshot();
+    }
+
+    _buildBasicPopover() {
+        this._pop.destroy_all_children();
+        const head = new St.BoxLayout({ style_class: 'parchaos-weather-head' });
+        const left = new St.BoxLayout({ vertical: true, x_expand: true });
+        left.add_child(new St.Label({ text: this._location?.name ?? this._weatherInfo.get_location_name(),
+            style_class: 'parchaos-weather-place' }));
+        left.add_child(new St.Label({ text: this._weatherInfo.get_temp_summary(), style_class: 'parchaos-weather-big' }));
+        head.add_child(left);
+        this._pop.add_child(head);
     }
 
     _openWeatherApp() {

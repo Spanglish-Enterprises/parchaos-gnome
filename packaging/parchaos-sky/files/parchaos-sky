@@ -50,7 +50,7 @@ def day_name(d, short=False):
     return _((DAYS_SHORT if short else DAYS)[d.weekday()])
 
 APP_ID = 'org.parchaos.Sky'
-VERSION = '0.3.2'
+VERSION = '0.3.3'
 USER_AGENT = f'ParchaOS-Sky/{VERSION} (+https://www.parchaos.org/support)'
 MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.2f}&lon={lon:.2f}'
 NWS_ALERTS_URL = 'https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}'
@@ -234,8 +234,11 @@ class Forecast:
                 'uv': d.get('ultraviolet_index_clear_sky'),
                 'symbol': nxt.get('summary', {}).get('symbol_code', ''),
                 'precip': precip,
-                'pop': details.get('probability_of_precipitation'),
-                'thunder_p': details.get('probability_of_thunder'),
+                # MET gives the chances on its six-hour blocks; an hourly entry borrows its block's
+                'pop': details.get('probability_of_precipitation',
+                                   n6.get('details', {}).get('probability_of_precipitation')),
+                'thunder_p': details.get('probability_of_thunder',
+                                         n6.get('details', {}).get('probability_of_thunder')),
                 'hourly': bool(n1),
             })
 
@@ -289,6 +292,12 @@ class Forecast:
                 if not w:
                     return 'stops', h['time'].astimezone()
         return None, None
+
+
+def in_nws_area(lat, lon):
+    """The US National Weather Service covers the US and its territories (Puerto Rico included)."""
+    return (24 <= lat <= 72 and -180 <= lon <= -64) or (17 <= lat <= 19 and -68 <= lon <= -64) or \
+           (18 <= lat <= 23 and -161 <= lon <= -154) or (13 <= lat <= 21 and 144 <= lon <= 146)
 
 
 class WeatherService(GObject.Object):
@@ -355,10 +364,7 @@ class WeatherService(GObject.Object):
         self.emit('forecast', Forecast(data, lat, lon))
 
     def _fetch_alerts(self, lat, lon):
-        # The US National Weather Service covers the US and its territories (Puerto Rico included).
-        in_us = (24 <= lat <= 72 and -180 <= lon <= -64) or (17 <= lat <= 19 and -68 <= lon <= -64) or \
-                (18 <= lat <= 23 and -161 <= lon <= -154) or (13 <= lat <= 21 and 144 <= lon <= 146)
-        if not in_us:
+        if not in_nws_area(lat, lon):
             self.emit('alerts', [])
             return
         msg = Soup.Message.new('GET', NWS_ALERTS_URL.format(lat=lat, lon=lon))
@@ -3300,6 +3306,81 @@ class SkyWindow(Adw.ApplicationWindow):
         about.present(self)
 
 
+# ---------------------------------------------------------------------------------------------
+# Snapshot for the menu-bar popover (#173): `parchaos-sky --snapshot LAT LON NAME` prints JSON.
+# It shares Parcha Sky's forecast cache, so the app and the popover never fetch twice.
+# ---------------------------------------------------------------------------------------------
+
+def _http_json(url, headers=None, timeout=15):
+    import urllib.request
+    req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r), r.headers
+
+
+def snapshot_forecast(lat, lon):
+    """A Forecast from the shared cache, fetching from MET Norway when it has expired."""
+    lat, lon = round(lat, 2), round(lon, 2)
+    path = os.path.join(CACHE_DIR, f'met-{lat:.2f},{lon:.2f}.json')
+    cached = load_json(path, None)
+    if cached and cached.get('data') and time.time() < cached.get('expires', 0):
+        return Forecast(cached['data'], lat, lon)
+    try:
+        data, headers = _http_json(MET_URL.format(lat=lat, lon=lon))
+    except (OSError, ValueError):
+        return Forecast(cached['data'], lat, lon) if cached and cached.get('data') else None
+    try:
+        exp = datetime.strptime(headers.get('Expires', ''), '%a, %d %b %Y %H:%M:%S GMT').replace(
+            tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        exp = time.time() + REFRESH_SECONDS
+    save_json(path, {'data': data, 'expires': exp, 'last_modified': headers.get('Last-Modified')})
+    return Forecast(data, lat, lon)
+
+
+def snapshot_alert(lat, lon):
+    if not in_nws_area(lat, lon):
+        return None
+    try:
+        data, _h = _http_json(NWS_ALERTS_URL.format(lat=lat, lon=lon), {'Accept': 'application/geo+json'})
+    except (OSError, ValueError):
+        return None
+    events = [f.get('properties', {}).get('event', '') for f in data.get('features', [])]
+    return next((e for e in events if e), None)
+
+
+def snapshot(lat, lon, name):
+    fc = snapshot_forecast(lat, lon)
+    if not fc or not fc.now():
+        return {'error': 'no forecast'}
+    now = fc.now()
+    utc_now = datetime.now(timezone.utc)
+    night = sun_elevation(lat, lon, utc_now) < -2
+    icon, cond, _thunder = symbol_info(now['symbol'], night)
+    days = fc.days(1)
+    out = {'imperial': uses_imperial(), 'place': name, 'temp': now['temp'], 'icon': icon, 'cond': cond,
+           'hi': days[0]['hi'] if days else None, 'lo': days[0]['lo'] if days else None,
+           'alert': snapshot_alert(lat, lon), 'hours': [], 'others': []}
+    for h in [h for h in fc.next_hours(8) if h['time'] >= utc_now - timedelta(minutes=30)][:5]:
+        hicon, _words, _t = symbol_info(h['symbol'], sun_elevation(lat, lon, h['time']) < -2)
+        out['hours'].append({'time': int(h['time'].timestamp()), 'icon': hicon, 'temp': h['temp'],
+                             'pop': h['pop'], 'precip': h['precip']})
+    # up to two of the places saved in Parcha Sky (or GNOME Weather), other than this one
+    saved = load_json(PLACES_FILE, None)
+    if saved is None:
+        saved = SkyWindow._gnome_weather_places(None)
+    for p in saved:
+        if len(out['others']) == 2:
+            break
+        if abs(p['lat'] - lat) < 0.3 and abs(p['lon'] - lon) < 0.3:
+            continue
+        other = snapshot_forecast(p['lat'], p['lon'])
+        if other and other.now():
+            oicon, _w, _t = symbol_info(other.now()['symbol'], sun_elevation(p['lat'], p['lon'], utc_now) < -2)
+            out['others'].append({'name': p['name'], 'icon': oicon, 'temp': other.now()['temp']})
+    return out
+
+
 class SkyApp(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
@@ -3333,4 +3414,10 @@ if __name__ == '__main__':
         locale.setlocale(locale.LC_ALL, '')
     except locale.Error:
         pass
+    if len(sys.argv) >= 5 and sys.argv[1] == '--snapshot':
+        try:
+            print(json.dumps(snapshot(float(sys.argv[2]), float(sys.argv[3]), sys.argv[4])))
+        except Exception as err:   # the popover just shows what it has
+            print(json.dumps({'error': str(err)}))
+        sys.exit(0)
     sys.exit(SkyApp().run(sys.argv))

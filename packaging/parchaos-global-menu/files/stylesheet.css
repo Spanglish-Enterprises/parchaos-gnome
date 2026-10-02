@@ -76,6 +76,111 @@
     font-size: 13px;
 }
 
+/* The weather popover (ticket #173) */
+.parchaos-weather-pop-item {
+    padding: 0;
+}
+
+.parchaos-weather-pop {
+    width: 340px;
+    padding: 6px 4px 4px 4px;
+    color: #ffffff;
+}
+
+.parchaos-weather-head {
+    padding: 4px 0 10px 0;
+}
+
+.parchaos-weather-place {
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.parchaos-weather-locator {
+    margin-left: 6px;
+}
+
+.parchaos-weather-big {
+    font-size: 42px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.parchaos-weather-cond {
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.parchaos-weather-range {
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.parchaos-weather-rule {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.22);
+    margin: 0;
+}
+
+.parchaos-weather-alert {
+    spacing: 12px;
+    padding: 12px 2px;
+}
+
+.parchaos-weather-alert-text {
+    font-size: 15px;
+}
+
+.parchaos-weather-hours {
+    padding: 14px 0 12px 0;
+}
+
+.parchaos-weather-hour {
+    spacing: 6px;
+}
+
+.parchaos-weather-hour-name {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.parchaos-weather-rain {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.62);
+    min-height: 14px;
+}
+
+.parchaos-weather-hour-temp {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.parchaos-weather-other {
+    spacing: 10px;
+    padding: 8px 2px;
+}
+
+.parchaos-weather-other-icon {
+    margin-right: 34px;
+}
+
+.parchaos-weather-other-name {
+    font-size: 16px;
+}
+
+.parchaos-weather-other-temp {
+    font-size: 14px;
+    font-weight: bold;
+    min-width: 36px;
+    text-align: right;
+}
+
+.parchaos-weather-open {
+    font-size: 15px;
+    margin-top: 2px;
+}
+
 .parchaos-confirm-dialog-label,
 .parchaos-about-box {
     padding: 12px 16px;

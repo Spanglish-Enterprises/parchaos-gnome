@@ -60,6 +60,8 @@ export GSETTINGS_SCHEMA_DIR=$WORK/schemas
 
 SMOKE_UUIDS=$(IFS=,; echo "${uuids[*]}")
 export SMOKE_UUIDS
+# The menu-bar weather popover fills from this fixed snapshot instead of Geoclue and the network
+export PARCHAOS_WEATHER_FIXTURE="$(cd "$(dirname "$0")" && pwd)/smoke/fixtures/weather-popover.json"
 enabled=$(printf "'%s', " "smoke@parchaos.test" "${uuids[@]}")
 
 dbus-run-session -- bash -c "

@@ -9,6 +9,7 @@ import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -91,6 +92,36 @@ export default class SmokeTest extends Extension {
                     Main.panel.closeQuickSettings();
                     await sleep(300);
                 }
+            });
+        }
+
+        // The weather popover (#173): filled from a fixed snapshot, it shows the place and
+        // temperature, the alert, five hours (the chance of rain where there is one) and two
+        // other places, then "Open Weather".
+        const weatherButton = Main.panel.statusArea['parchaos-weather'];
+        if (weatherButton) {
+            await this._check('weather popover fills from a fixture', async () => {
+                if (!weatherButton.visible)
+                    throw new Error('the weather indicator stayed hidden with data');
+                if (weatherButton._label.text !== '86°F')
+                    throw new Error(`panel label was ${JSON.stringify(weatherButton._label.text)}`);
+                weatherButton.menu.open();
+                await sleep(500);
+                const labels = [];
+                const walk = a => {
+                    if (a instanceof St.Label)
+                        labels.push(a.text);
+                    a.get_children?.().forEach(walk);
+                };
+                walk(weatherButton._pop);
+                weatherButton.menu.close();
+                const want = ['Haslet', '86°', 'Cloudy', 'H:86° L:77°', 'Flood Watch', '35%', '45%',
+                    'San Juan', 'New York', '89°', '71°'];
+                const missing = want.filter(w => !labels.includes(w));
+                if (missing.length)
+                    throw new Error(`popover is missing ${JSON.stringify(missing)} (has ${JSON.stringify(labels)})`);
+                if (labels.filter(t => /^\d{1,2} [AP]M$/.test(t)).length !== 5)
+                    throw new Error('expected five hourly columns');
             });
         }
 
