@@ -14,6 +14,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Graphene from 'gi://Graphene';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 
@@ -37,6 +38,58 @@ try {
 
 const CELL = 72;
 const GAP = 10;
+// Opening and closing Control Center, measured frame by frame on the owner's 60 fps recording
+// (10.25 PM, 2026-10-01): the whole panel fades in place (no slide, no zoom, no stagger) while a
+// slight blur clears; closing is a shorter fade that blurs a little on the way out. Curves are
+// cubic-bezier fits of the measured fade (0.008 and 0.005 RMS); blur is the fitted gaussian
+// sigma at the start (open) or end (close), in logical px.
+const OPEN_MOTION = {duration: 287, c1: [0.35, 0.27], c2: [0.21, 1.0], sigma: 2};
+const CLOSE_MOTION = {duration: 219, c1: [0.27, 0.66], c2: [0.32, 1.0], sigma: 1.5};
+
+// Runs one transition on the popup: opacity follows the curve, and the blur is strongest where
+// the panel is faintest (sigma x (1 - progress) opening, sigma x progress closing).
+function runMotion(actor, opening, onDone) {
+    const m = opening ? OPEN_MOTION : CLOSE_MOTION;
+    actor._parchaosMotion?.stop();
+    actor._parchaosMotion = null;
+    const settings = St.Settings.get();
+    if (!settings.enable_animations) {
+        actor.opacity = opening ? 255 : 0;
+        onDone();
+        return;
+    }
+    let blur = actor.get_effect('parchaos-motion-blur');
+    if (!blur) {
+        blur = new Shell.BlurEffect({mode: Shell.BlurMode.ACTOR, brightness: 1.0});
+        actor.add_effect_with_name('parchaos-motion-blur', blur);
+    }
+    const timeline = new Clutter.Timeline({
+        actor,
+        duration: Math.round(m.duration * settings.slow_down_factor),
+    });
+    timeline.set_progress_mode(Clutter.AnimationMode.CUBIC_BEZIER);
+    timeline.set_cubic_bezier_progress(
+        new Graphene.Point({x: m.c1[0], y: m.c1[1]}), new Graphene.Point({x: m.c2[0], y: m.c2[1]}));
+    const apply = p => {
+        const shown = opening ? p : 1 - p;
+        actor.opacity = Math.round(255 * shown);
+        // Shell.BlurEffect's radius is twice the gaussian sigma.
+        const radius = 2 * m.sigma * (1 - shown);
+        blur.radius = Math.round(radius);
+        blur.enabled = radius >= 0.5;
+    };
+    apply(0);
+    timeline.connect('new-frame', () => apply(timeline.get_progress()));
+    timeline.connect('completed', () => {
+        apply(1);
+        blur.enabled = false;
+        actor._parchaosMotion = null;
+        onDone();
+    });
+    actor._parchaosMotion = timeline;
+    timeline.start();
+}
+
 // The "recently" pill above the tiles (owner's reference): the app that last asked for the
 // location ("Weather recently", opens the app) or the last screenshot ("Screenshot taken",
 // shows it in the file browser). An entry stays this long.
@@ -1540,6 +1593,42 @@ class ControlsButton extends PanelMenu.Button {
         });
 
         this.menu.actor.add_style_class_name('parchaos-controls-popup');
+        // Control Center has its own transition (runMotion), in place of the stock slide or the
+        // short fade other menus get.
+        const pointer = this.menu._boxPointer;
+        pointer.open = (animate, onComplete) => {
+            pointer.remove_all_transitions();
+            pointer.translation_x = pointer.translation_y = 0;
+            pointer.scale_x = pointer.scale_y = 1;
+            pointer._muteKeys = false;
+            pointer.show();
+            const done = () => {
+                pointer._muteInput = false;
+                onComplete?.();
+            };
+            if (!animate) {
+                pointer.opacity = 255;
+                done();
+            } else {
+                runMotion(pointer, true, done);
+            }
+        };
+        pointer.close = (animate, onComplete) => {
+            if (!pointer.visible)
+                return;
+            pointer._muteInput = true;
+            pointer._muteKeys = true;
+            pointer.remove_all_transitions();
+            const done = () => {
+                pointer.hide();
+                pointer.opacity = 0;
+                onComplete?.();
+            };
+            if (!animate)
+                done();
+            else
+                runMotion(pointer, false, done);
+        };
         // PopupMenu won't open an empty menu, so keep a holder in it and
         // fill it each time it opens.
         this._holder = new St.Bin();

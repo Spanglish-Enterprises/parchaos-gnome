@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
-// type "text", combo ["KEY_A",...], log, screenshotTaken "name". Test tool only; never run against a real session.
+// type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N. Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const OUT = GLib.getenv('DEVSHOT_OUT');
 const wait = ms => new Promise(r => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => { r(); return GLib.SOURCE_REMOVE; }));
 async function shot(name) {
+    log(`DEVSHOT shot ${name} at ${GLib.get_monotonic_time()}`);
     const f = Gio.File.new_for_path(`${OUT}/${name}.png`);
     const s = f.replace(null, false, 0, null);
     const sh = new Shell.Screenshot();
@@ -29,6 +31,8 @@ export default class X extends Extension {
             for (const step of plan) {
                 if (step.wait) await wait(step.wait);
                 else if (step.shot) await shot(step.shot);
+                // Slows every shell animation down (the shell's own slow-down factor), to photograph a transition.
+                else if (step.slowdown) St.Settings.get().slow_down_factor = step.slowdown;
                 // Saves a screenshot and announces it as the capture tool does ("screenshot-taken").
                 else if (step.screenshotTaken) {
                     await shot(step.screenshotTaken);
@@ -36,7 +40,10 @@ export default class X extends Extension {
                 }
                 else if (step.move) dev.notify_absolute_motion(t(), step.move[0], step.move[1]);
                 else if (step.press) dev.notify_button(t(), step.press, Clutter.ButtonState.PRESSED);
-                else if (step.release) dev.notify_button(t(), step.release, Clutter.ButtonState.RELEASED);
+                else if (step.release) {
+                    dev.notify_button(t(), step.release, Clutter.ButtonState.RELEASED);
+                    log(`DEVSHOT release at ${GLib.get_monotonic_time()}`);
+                }
                 else if (step.drag) {
                     const [x0, y0, x1, y1] = step.drag;
                     dev.notify_absolute_motion(t(), x0, y0); await wait(200);

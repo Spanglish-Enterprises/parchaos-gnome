@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        46%{?dist}
+Release:        47%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-47
+- Ticket #135: Control Center opens and closes like the owner's recording (measured frame by frame at 60 fps): a 287 ms fade in place on a fitted curve while a slight blur clears, and a 219 ms fade out that blurs a little. No slide or zoom. Follows the system's reduce-animation setting.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-46
 - Ticket #135: original top-bar glyph (a mosaic of the panel's own tiles: a wide tile over a round and a square one), replacing the two-switch glyph that copied the reference desktop. Chosen by the owner from three drafts.
 
