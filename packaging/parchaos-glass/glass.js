@@ -20,7 +20,8 @@ uniform sampler2D tex;
 uniform float u_w;          // pane width, px
 uniform float u_h;          // pane height, px
 uniform float u_pad;        // room around the pane in the texture (refraction reach and shadow)
-uniform float u_radius;     // corner radius
+uniform float u_radius;     // corner radius (how far the corner curve reaches along each edge)
+uniform float u_cn;         // corner curve exponent: 2 = circular, higher = continuous (squircle) corner
 uniform float u_band;       // width of the curved bezel, px
 uniform float u_falloff;    // how the lens builds towards the rim
 uniform float u_n;          // bezel profile shape (superellipse exponent)
@@ -51,16 +52,29 @@ uniform float u_aor;        // inner shadow reach, px
 uniform float u_shr;        // drop shadow radius, px
 uniform float u_shi;        // drop shadow strength
 
+// Rounded rectangle whose corners are superellipse quadrants (|x|^n + |y|^n = r^n): n = 2 is
+// the circular corner, n ~ 2.5-3 the reference's continuous corner that eases into the edge.
+// Exact distance for n = 2, a close approximation near the outline otherwise.
+float cornerLen(vec2 q) {
+    float n = max(u_cn, 2.0);
+    if (n < 2.001)
+        return length(q);
+    return pow(pow(q.x, n) + pow(q.y, n), 1.0 / n);
+}
+
 float sdRoundRect(vec2 p, vec2 b, float r) {
     vec2 d = abs(p) - b + vec2(r);
-    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r;
+    return min(max(d.x, d.y), 0.0) + cornerLen(max(d, 0.0)) - r;
 }
 
 vec2 sdDir(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + vec2(r);
     if (max(q.x, q.y) < 0.0)
         return (q.x > q.y) ? vec2(sign(p.x), 0.0) : vec2(0.0, sign(p.y));
-    return sign(p) * normalize(max(q, vec2(0.0)) + vec2(1e-6));
+    // the outline's normal: the gradient of the corner's norm
+    vec2 m = max(q, vec2(0.0)) + vec2(1e-6);
+    float n = max(u_cn, 2.0);
+    return sign(p) * normalize(pow(m, vec2(n - 1.0)));
 }
 
 // superellipse bezel: h = H (1 - (1 - t)^n)^(1/n), t: edge 0 -> inner end 1
@@ -214,7 +228,7 @@ void main() {
 `;
 
 export const GLASS_DEFAULTS = {
-    radius: 34, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
+    radius: 34, cn: 2.0, band: 26, falloff: 1.7, n: 3.2, z: 96, ior: 2.4, disp: 46, chroma: 1.6,
     blur: 8.0, tint: 0.3, tintc: [0.07, 0.07, 0.08], bright: 1.0, contrast: 1.0, sat: 1.2,
     rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, hair: 0.0, spec: 0.0, shin: 42, sheen: 0.0,
     dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
@@ -324,7 +338,7 @@ class GlassPane extends St.Widget {
         tex.set_int(0);
         this._effect.set_uniform_value('tex', tex);
         f('u_w', w); f('u_h', h); f('u_pad', pad);
-        f('u_radius', p.radius); f('u_band', p.band); f('u_falloff', p.falloff); f('u_n', p.n); f('u_z', p.z);
+        f('u_radius', p.radius); f('u_cn', p.cn); f('u_band', p.band); f('u_falloff', p.falloff); f('u_n', p.n); f('u_z', p.z);
         f('u_ior', p.ior); f('u_disp', p.disp); f('u_chroma', p.chroma); f('u_blur', p.blur);
         f('u_tint', p.tint); f('u_dim', p.dim); f('u_bright', p.bright); f('u_contrast', p.contrast); f('u_sat', p.sat);
         f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow); f('u_hair', p.hair);

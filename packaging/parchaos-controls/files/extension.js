@@ -112,9 +112,12 @@ function showInFiles(file) {
         });
 }
 
-// Corner radius of the bigger tiles (sliders 4x1, 2x2 tiles), measured on the owner's reference
-// (about a third of a row). 1x1 and 2x1 tiles are full capsules.
-const BLOCK_RADIUS = 18;
+// Tile corners, traced on the owner's reference (9.33 PM screenshot, hairline fitted per pixel):
+// they are superellipse quadrants (|x|^n + |y|^n = r^n), not circular arcs on flat edges. The
+// Display slider (4x1) curves over its whole half-height with n = 2.5 (fit 1.0 device px RMS);
+// the 2x2 tile's corner reaches 50 px with n = 3.1 (0.82 px RMS). 1x1 and 2x1 tiles are
+// circles and capsules (n = 2).
+const CORNER_MAX = 50;
 // How far the resize handle's box reaches past the tile's corner.
 const HANDLE_OUT = 5;
 
@@ -122,8 +125,19 @@ function isBlockTile(item) {
     return item.rows > 1 || item.cols > 2;
 }
 
-function tileRadius(item) {
-    return isBlockTile(item) ? BLOCK_RADIUS : CELL / 2;
+function tileShape(item) {
+    const short = Math.min(item.cols, item.rows) * CELL + (Math.min(item.cols, item.rows) - 1) * GAP;
+    if (!isBlockTile(item))
+        return {r: short / 2, n: 2};
+    const r = Math.min(short / 2, CORNER_MAX);
+    return {r, n: r >= CORNER_MAX ? 3.1 : 2.5};
+}
+
+// A point on the corner curve at angle a (0 = along the right edge, pi/2 = along the bottom),
+// at distance r from the corner's centre in the curve's own norm.
+function cornerPoint(r, n, a) {
+    const c = Math.cos(a), sn = Math.sin(a);
+    return [r * Math.sign(c) * Math.abs(c) ** (2 / n), r * Math.sign(sn) * Math.abs(sn) ** (2 / n)];
 }
 
 // True when a stage point is on (or near) the resize stroke, not just in its box: the box covers
@@ -133,10 +147,12 @@ function onResizeStroke(item, x, y) {
     if (!handle?.visible || !handle.mapped)
         return false;
     const [ok, lx, ly] = handle.transform_stage_point(x, y);
-    if (!ok)
+    if (!ok || lx < 0 || ly < 0)
         return false;
-    const dist = Math.hypot(lx - HANDLE_OUT, ly - HANDLE_OUT);
-    return lx >= 0 && ly >= 0 && Math.abs(dist - (tileRadius(item) + 1)) <= 10;
+    const {r, n} = tileShape(item);
+    const dx = Math.abs(lx - HANDLE_OUT), dy = Math.abs(ly - HANDLE_OUT);
+    const dist = (dx ** n + dy ** n) ** (1 / n);
+    return Math.abs(dist - (r + 1)) <= 10;
 }
 const PAD = 12;
 
@@ -565,11 +581,19 @@ const ControlsPanel = GObject.registerClass({
         handle.set_translation(HANDLE_OUT, HANDLE_OUT, 0);
         handle.connect('repaint', area => {
             const cr = area.get_context();
-            const r = tileRadius(item);
+            const {r, n} = tileShape(item);
             cr.setLineCap(1);
+            cr.setLineJoin(1);
             cr.setLineWidth(6.5);
             cr.setSourceRGBA(1, 1, 1, 0.95);
-            cr.arc(HANDLE_OUT, HANDLE_OUT, r + 1, Math.PI * 0.09, Math.PI * 0.41);
+            // Follows the tile's own corner curve, just outside the outline.
+            for (let i = 0; i <= 24; i++) {
+                const [px, py] = cornerPoint(r + 1, n, Math.PI * (0.09 + 0.32 * i / 24));
+                if (i === 0)
+                    cr.moveTo(HANDLE_OUT + px, HANDLE_OUT + py);
+                else
+                    cr.lineTo(HANDLE_OUT + px, HANDLE_OUT + py);
+            }
             cr.stroke();
             cr.$dispose();
         });
@@ -751,7 +775,7 @@ const ControlsPanel = GObject.registerClass({
                 item.widget.add_style_class_name('parchaos-controls-block');
             else
                 item.widget.remove_style_class_name('parchaos-controls-block');
-            const hs = tileRadius(item) + 2 * HANDLE_OUT;
+            const hs = tileShape(item).r + 2 * HANDLE_OUT;
             item.resizeHandle?.set_size(hs, hs);
             item.resizeHandle?.queue_repaint();
             item.badge.visible = this._editing;
@@ -889,7 +913,8 @@ const ControlsPanel = GObject.registerClass({
             // hair: the reference tiles keep a crisp bright outline even over a bright sky
             // band: on a small round button the default 26 px bezel covers almost the whole face and
             // pulls the backdrop across it; the reference's buttons are clear in the middle.
-            pane.set({radius: Math.min(tileRadius(item), Math.min(pw, ph) / 2), hair: 0.38, band: Math.min(26, Math.min(pw, ph) * 0.26)});
+            const shape = tileShape(item);
+            pane.set({radius: Math.min(shape.r, Math.min(pw, ph) / 2), cn: shape.n, hair: 0.38, band: Math.min(26, Math.min(pw, ph) * 0.26)});
         }
     }
 

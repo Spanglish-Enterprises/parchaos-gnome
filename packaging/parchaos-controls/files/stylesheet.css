@@ -717,10 +717,11 @@ StWidget:drop {
   box-shadow: none;
 }
 
-/* Sliders (4x1) and 2x2 tiles are rounded rectangles, not capsules (owner's reference);
- * the radius matches BLOCK_RADIUS in extension.js. */
+/* Sliders (4x1) and 2x2 tiles are not capsules (owner's reference). Their glass pane draws the
+ * measured continuous corner (tileShape in extension.js); St can only draw circular corners,
+ * so this is the closest circle, for hover and focus fills. */
 .parchaos-style-glass .parchaos-controls-tile.parchaos-controls-block {
-  border-radius: 18px;
+  border-radius: 30px;
 }
 
 /* The "recently" pill above the tiles (Weather recently / Screenshot taken), measured on the

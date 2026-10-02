@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        44%{?dist}
+Release:        45%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -27,7 +27,7 @@ Source90:       LICENSE
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 48
-Requires:       parchaos-glass >= 1.0.0-8
+Requires:       parchaos-glass >= 1.0.0-9
 # The Screenshot app (ticket #130) replaces the old standalone one, which
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-45
+- Ticket #135: tile corners traced on the owner's reference and fitted: sliders curve over their whole half-height (superellipse, n 2.5), 2x2 tiles have a 50 px continuous corner (n 3.1); our outline is within 0.4 px of the reference. The resize handle and its hit area follow the same curve.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-44
 - Ticket #135: a small pill above the tiles, as in the reference: "<App> recently" after an app was granted the location (opens the app), "Screenshot taken" after a screenshot (shows it in the file browser). An entry lasts 15 minutes.
 

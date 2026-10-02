@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-9
+- Ticket #135: new option cn, the corner curve exponent (2 = circular corners as before; higher = continuous corners that ease into the edges, as in the reference).
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-8
 - Ticket #135: the backdrop blur no longer leaves sharp ghost copies of lines behind the pane (24 gaussian-weighted taps on a per-pixel turned spiral instead of 12 fixed ones); colour fringing is only computed where the lens bends. New option hair: a crisp 1 px outline along the whole edge.
 
