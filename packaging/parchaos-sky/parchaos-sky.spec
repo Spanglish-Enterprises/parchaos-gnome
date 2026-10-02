@@ -9,8 +9,8 @@
 # ==============================================================================
 
 Name:           parchaos-sky
-Version:        0.3.1
-Release:        2%{?dist}
+Version:        0.3.2
+Release:        1%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -22,12 +22,17 @@ Source3:        parchaos-sky-map.json.gz
 Source4:        org.parchaos.Sky.metainfo.xml
 Source5:        es.po
 Source6:        parchi-front.svgz
-Source7:        parchi-sunny.svgz
-Source8:        parchi-rain.svgz
-Source9:        parchi-cloudy.svgz
-Source10:       parchi-storm.svgz
-Source11:       parchi-snow.svgz
-Source12:       parchi-windy.svgz
+Source7:        parchi-waving.svgz
+Source8:        parchi-sunny.svgz
+Source9:        parchi-sunset.svgz
+Source10:       parchi-rain.svgz
+Source11:       parchi-cloudy.svgz
+Source12:       parchi-foggy.svgz
+Source13:       parchi-storm.svgz
+Source14:       parchi-snowy.svgz
+Source15:       parchi-cold.svgz
+Source16:       parchi-windy.svgz
+Source17:       parchi-night.svgz
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -64,7 +69,7 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Sky
 install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
 install -Dm0644 %{SOURCE3} %{buildroot}%{_datadir}/parchaos-sky/parchaos-sky-map.json.gz
 install -Dm0644 %{SOURCE4} %{buildroot}%{_metainfodir}/org.parchaos.Sky.metainfo.xml
-install -m0644 %{SOURCE6} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} %{SOURCE11} %{SOURCE12} %{buildroot}%{_datadir}/parchaos-sky/
+install -m0644 %{SOURCE6} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17} %{buildroot}%{_datadir}/parchaos-sky/
 # Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
 install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
 msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo %{SOURCE5}
@@ -83,6 +88,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.2-1
+- Ticket #192: six more poses from the owner's second character kit: waving (happy), night (gazing at the moon), cold (beanie, scarf, shivering), snowy (parka), foggy, sunset (sunglasses, beach drink). New moods for fog and for a clear sunset; the round scenes stay level and breathe; the cold pose shivers; eyelids take the face's own colour.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.1-2
 - Ticket #192: the place and temperature sit dead centre; Parchi keeps them company off to one side instead of sharing the centre.
 

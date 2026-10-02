@@ -50,7 +50,7 @@ def day_name(d, short=False):
     return _((DAYS_SHORT if short else DAYS)[d.weekday()])
 
 APP_ID = 'org.parchaos.Sky'
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 USER_AGENT = f'ParchaOS-Sky/{VERSION} (+https://www.parchaos.org/support)'
 MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.2f}&lon={lon:.2f}'
 NWS_ALERTS_URL = 'https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}'
@@ -1403,8 +1403,8 @@ def draw_parchi(cr, w, h, pose='happy', t=0.0, animate=True):
     cr.restore()
 
 
-def mood_for(hour, sun, feels=None):
-    """Which pose fits this hour."""
+def mood_for(hour, sun, feels=None, setting=False):
+    """Which pose fits this hour. setting: the sun is on its way down."""
     sym = hour.get('symbol') or ''
     if 'thunder' in sym or (hour.get('thunder_p') or 0) >= 30:
         return 'storm'
@@ -1412,12 +1412,16 @@ def mood_for(hour, sun, feels=None):
         return 'snow'
     if (hour.get('precip') or 0) >= 0.1 or 'rain' in sym:
         return 'rain'
+    if 'fog' in sym:
+        return 'fog'
     if (hour.get('gust') or hour.get('wind') or 0) >= 11:
         return 'windy'
     if hour.get('temp') is not None and hour['temp'] <= 5:
         return 'cold'
     if sun < -2:
         return 'night'
+    if setting and sun < 8 and (hour.get('clouds') or 0) < 60:
+        return 'sunset'
     if (hour.get('clouds') or 0) < 35:
         return 'sunny'
     if (hour.get('clouds') or 0) < 80:
@@ -1435,11 +1439,18 @@ PARCHI_ART = {
     'rain': ((786, 997), ((255, 499, 42, 40), (425, 499, 42, 40))),
     'cloudy': ((884, 843), ((316, 412, 38, 36), (474, 412, 36, 36))),
     'storm': ((894, 1001), ((266, 600, 40, 36), (424, 600, 40, 36))),
-    'snow': ((860, 983), ((343, 581, 42, 44), (513, 575, 40, 42))),
     'windy': ((956, 713), ()),           # already squinting into the wind
+    'waving': ((758, 686), ((313, 227, 47, 45), (515, 227, 49, 45))),
+    'night': ((551, 550), ((226, 277, 26, 22), (329, 283, 24, 23))),  # gazing at the moon
+    'cold': ((619, 581), ((189, 252, 29, 28), (297, 250, 28, 28))),
+    'snowy': ((964, 1022), ((408, 531, 34, 34), (549, 531, 34, 34))),
+    'foggy': ((1012, 1015), ((406, 560, 36, 37), (566, 567, 41, 40))),
+    'sunset': ((939, 1014), ()),  # sunglasses again
 }
-POSE_ART = {'sunny': 'sunny', 'rain': 'rain', 'cloudy': 'cloudy', 'storm': 'storm', 'snow': 'snow',
-            'cold': 'snow', 'windy': 'windy'}   # anything else (happy, neutral, night): front
+POSE_ART = {'happy': 'waving', 'sunny': 'sunny', 'rain': 'rain', 'cloudy': 'cloudy', 'storm': 'storm',
+            'snow': 'snowy', 'cold': 'cold', 'windy': 'windy', 'night': 'night', 'fog': 'foggy',
+            'sunset': 'sunset'}   # anything else (neutral): front
+SCENE_POSES = {'sunny', 'night', 'snowy', 'foggy', 'sunset'}   # drawn on a round backdrop
 
 
 class ParchiArt:
@@ -1490,7 +1501,7 @@ class ParchiArt:
 
     @staticmethod
     def _pulp(surf, scale, eyes):
-        """The skin colour around the eyes, for the eyelids: the median of a ring of samples."""
+        """The face colour around the eyes, for the eyelids: the median of a ring of samples."""
         if not eyes:
             return None
         data, stride = surf.get_data(), surf.get_stride()
@@ -1502,7 +1513,7 @@ class ParchiArt:
                 x, y = int((cx + math.cos(a) * rx * 1.35) * scale), int((cy + math.sin(a) * ry * 1.35) * scale)
                 if 0 <= x < sw and 0 <= y < sh:
                     b, g, r, al = data[y * stride + x * 4:y * stride + x * 4 + 4]
-                    if al > 200 and r > 150 and g > 90 and b < 120:   # golden pulp, not a seed or the rim
+                    if al > 200 and r + g + b > 330 and min(r, g, b) < 225:   # face, not a seed or the eye white
                         samples.append((r, g, b))
         if not samples:
             return (0.95, 0.72, 0.25)
@@ -1521,6 +1532,12 @@ def parchi_motion(pose, t):
         return (0, math.sin(t * 1.1) * 1.0, math.sin(t * 0.9) * 0.012, True)
     if pose == 'cloudy':     # floating with the cloud
         return (math.sin(t * 0.7) * 1.5, math.sin(t * 1.4) * 2.5, 0, False)
+    if pose == 'cold':       # shivering
+        return (math.sin(t * 38) * 0.6 * (math.sin(t * 0.8) > 0.3), 0, 0, True)
+    if pose == 'waving':     # a cheerful bounce
+        return (0, -abs(math.sin(t * 2.4)) * 2.6, math.sin(t * 1.2) * 0.02, True)
+    if pose in SCENE_POSES:  # round scenes stay level and just breathe
+        return (0, math.sin(t * 1.0) * 1.2, 0, False)
     return (0, -abs(math.sin(t * 1.9)) * 2.2, math.sin(t * 0.95) * 0.015, True)
 
 
@@ -1605,25 +1622,15 @@ class Parchita(Gtk.DrawingArea):
         cr.set_source_surface(surf, 0, 0)
         cr.paint()
         eyes = [(ox + x * k, oy + y * k, rx * k, ry * k) for x, y, rx, ry in PARCHI_ART[pose][1]]
-        if eyes and pulp:
-            shut = 0.55 if self.mood == 'night' else 0.0
-            if animate:
-                shut = max(shut, parchi_lids(t, self.seed))
+        if eyes and pulp and animate:
+            shut = parchi_lids(t, self.seed)
             if shut > 0.02:
                 draw_lids(cr, eyes, shut, pulp)
         cr.restore()
-        if self.mood == 'night':   # drifting z's
-            cr.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-            for i in range(3):
-                f = ((t * 0.35 + i / 3) % 1.0) if animate else (i / 3)
-                cr.set_font_size(9 + 6 * f)
-                cr.set_source_rgba(1, 1, 1, 0.85 * (1 - f) + 0.1)
-                cr.move_to(w * 0.72 + f * 14 + math.sin(f * 6) * 2, h * 0.32 - f * 30)
-                cr.show_text('z')
 
 
-def parchita_mood(hour, sun):
-    return mood_for(hour, sun)
+def parchita_mood(hour, sun, setting=False):
+    return mood_for(hour, sun, setting=setting)
 
 
 
@@ -2693,7 +2700,9 @@ class SkyWindow(Adw.ApplicationWindow):
         row.set_center_widget(text)
         if self.prefs.get('playful', True) and self.prefs.get('parchita', True):
             self.parchita = Parchita()
-            self.parchita.set_mood(parchita_mood(h, sun))
+            when = h['time'] if self.scrub else datetime.now(timezone.utc)
+            setting = sun_elevation(fc.lat, fc.lon, when + timedelta(minutes=30)) < sun
+            self.parchita.set_mood(parchita_mood(h, sun, setting))
             self.parchita.set_tooltip_text(_('Parchi'))
             self.parchita.set_halign(Gtk.Align.START)
             self.parchita.set_valign(Gtk.Align.END)
@@ -3199,15 +3208,16 @@ class SkyApp(Adw.Application):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         if os.environ.get('PARCHA_SKY_PARCHITA_SHEET'):  # tests: every mood side by side
-            win = Adw.ApplicationWindow(application=self, default_width=1180, default_height=230)
-            box = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
-            for mood in ('happy', 'sunny', 'rain', 'cloudy', 'storm', 'snow', 'windy', 'night'):
+            win = Adw.ApplicationWindow(application=self, default_width=1100, default_height=440)
+            box = Gtk.Grid(column_spacing=24, row_spacing=12, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+            for i, mood in enumerate(('happy', 'neutral', 'sunny', 'sunset', 'rain', 'cloudy',
+                                      'fog', 'storm', 'snow', 'cold', 'windy', 'night')):
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
                 p = Parchita()
                 p.set_mood(mood)
                 col.append(p)
                 col.append(Gtk.Label(label=mood))
-                box.append(col)
+                box.attach(col, i % 6, i // 6, 1, 1)
             win.set_content(box)
             win.present()
             return
