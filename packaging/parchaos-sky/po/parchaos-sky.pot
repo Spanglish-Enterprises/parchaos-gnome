@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-sky\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-10-02 09:09-0500\n"
+"POT-Creation-Date: 2026-10-02 09:20-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,7 +71,7 @@ msgstr ""
 msgid "Sat"
 msgstr ""
 
-#: files/parchaos-sky:44 files/parchaos-sky:2570
+#: files/parchaos-sky:44 files/parchaos-sky:2921
 msgid "Sun"
 msgstr ""
 
@@ -100,7 +100,7 @@ msgstr ""
 msgid "Light rain"
 msgstr ""
 
-#: files/parchaos-sky:177 files/parchaos-sky:733 files/parchaos-sky:1468
+#: files/parchaos-sky:177 files/parchaos-sky:733 files/parchaos-sky:1819
 msgid "Rain"
 msgstr ""
 
@@ -320,487 +320,487 @@ msgstr ""
 msgid "Post-tropical cyclone"
 msgstr ""
 
-#: files/parchaos-sky:1265
+#: files/parchaos-sky:1616
 #, python-brace-format
 msgid "Drizzle starting in about {mins} min"
 msgstr ""
 
-#: files/parchaos-sky:1267
+#: files/parchaos-sky:1618
 #, python-brace-format
 msgid "Rain starting in about {mins} min"
 msgstr ""
 
-#: files/parchaos-sky:1269
+#: files/parchaos-sky:1620
 #, python-brace-format
 msgid "Drizzle ending in about {mins} min"
 msgstr ""
 
-#: files/parchaos-sky:1270
+#: files/parchaos-sky:1621
 #, python-brace-format
 msgid "Rain ending in about {mins} min"
 msgstr ""
 
-#: files/parchaos-sky:1272
+#: files/parchaos-sky:1623
 msgid "Drizzle for the next hour"
 msgstr ""
 
-#: files/parchaos-sky:1273
+#: files/parchaos-sky:1624
 msgid "Rain for the next hour"
 msgstr ""
 
-#: files/parchaos-sky:1274
+#: files/parchaos-sky:1625
 msgid "No rain in the next hour"
 msgstr ""
 
-#: files/parchaos-sky:1402
+#: files/parchaos-sky:1753
 #, python-brace-format
 msgid "Rain starting around {when_txt}."
 msgstr ""
 
-#: files/parchaos-sky:1404
+#: files/parchaos-sky:1755
 #, python-brace-format
 msgid "Rain stopping around {when_txt}."
 msgstr ""
 
-#: files/parchaos-sky:1407
+#: files/parchaos-sky:1758
 msgid "Thunder about. Good time for indoors."
 msgstr ""
 
-#: files/parchaos-sky:1409
+#: files/parchaos-sky:1760
 #, python-brace-format
 msgid "Dry for now, rain rolls in around {when_txt}. Keep the umbrella close."
 msgstr ""
 
-#: files/parchaos-sky:1411
+#: files/parchaos-sky:1762
 #, python-brace-format
 msgid "Wet out there, but it clears up around {when_txt}."
 msgstr ""
 
-#: files/parchaos-sky:1413
+#: files/parchaos-sky:1764
 msgid "Proper hot. Water, shade, no rushing."
 msgstr ""
 
-#: files/parchaos-sky:1415
+#: files/parchaos-sky:1766
 msgid "Properly cold. Layers on."
 msgstr ""
 
-#: files/parchaos-sky:1417
+#: files/parchaos-sky:1768
 msgid "Sticky out there. The air has weight to it."
 msgstr ""
 
-#: files/parchaos-sky:1419
+#: files/parchaos-sky:1770
 msgid "Clear skies. A good one to be outside."
 msgstr ""
 
-#: files/parchaos-sky:1421
+#: files/parchaos-sky:1772
 msgid "Grey and quiet. Coffee weather."
 msgstr ""
 
-#: files/parchaos-sky:1422
+#: files/parchaos-sky:1773
 #, python-brace-format
 msgid "{cond}, {temp_text}. Nothing dramatic."
 msgstr ""
 
-#: files/parchaos-sky:1467
+#: files/parchaos-sky:1818
 msgid "Temperature"
 msgstr ""
 
-#: files/parchaos-sky:1469 files/parchaos-sky:2557
+#: files/parchaos-sky:1820 files/parchaos-sky:2908
 msgid "Wind"
 msgstr ""
 
-#: files/parchaos-sky:1470 files/parchaos-sky:2560
+#: files/parchaos-sky:1821 files/parchaos-sky:2911
 msgid "Comfort"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "N"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "NE"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "E"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "SE"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "S"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "SW"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "W"
 msgstr ""
 
-#: files/parchaos-sky:1490
+#: files/parchaos-sky:1841
 msgid "NW"
 msgstr ""
 
 #. tests
-#: files/parchaos-sky:1637 files/parchaos-sky:2649 files/parchaos-sky:2662
+#: files/parchaos-sky:1988 files/parchaos-sky:3000 files/parchaos-sky:3013
 msgid "Parcha Sky"
 msgstr ""
 
-#: files/parchaos-sky:1673
+#: files/parchaos-sky:2024
 msgid "Places"
 msgstr ""
 
-#: files/parchaos-sky:1676
+#: files/parchaos-sky:2027
 msgid "Refresh"
 msgstr ""
 
-#: files/parchaos-sky:1702
+#: files/parchaos-sky:2053
 msgid "Finding the sky over you..."
 msgstr ""
 
-#: files/parchaos-sky:1785
+#: files/parchaos-sky:2136
 msgid "Add a place to see its weather."
 msgstr ""
 
-#: files/parchaos-sky:1787
+#: files/parchaos-sky:2138
 msgid "Finding where you are..."
 msgstr ""
 
-#: files/parchaos-sky:1795
+#: files/parchaos-sky:2146
 msgid "Here"
 msgstr ""
 
-#: files/parchaos-sky:1799
+#: files/parchaos-sky:2150
 msgid "Location is off. Add a place with the list button."
 msgstr ""
 
-#: files/parchaos-sky:1805
+#: files/parchaos-sky:2156
 msgid "Add a city"
 msgstr ""
 
-#: files/parchaos-sky:1821
+#: files/parchaos-sky:2172
 msgid "Remove"
 msgstr ""
 
-#: files/parchaos-sky:1848
+#: files/parchaos-sky:2199
 #, python-format
 msgid "No city called \"%s\""
 msgstr ""
 
-#: files/parchaos-sky:1876
+#: files/parchaos-sky:2227
 msgid "Couldn't reach the weather service."
 msgstr ""
 
 #. Heads-up
-#: files/parchaos-sky:2085
+#: files/parchaos-sky:2436
 msgid "Heads-up"
 msgstr ""
 
-#: files/parchaos-sky:2125
+#: files/parchaos-sky:2476
 msgid ""
 "Weather data: MET Norway (CC BY 4.0). Alerts and storms: US National Weather "
 "Service and National Hurricane Center. Radar: LibreWXR (NOAA MRMS and other "
 "public radar networks, CC BY 4.0). Map: Natural Earth."
 msgstr ""
 
-#: files/parchaos-sky:2149
+#: files/parchaos-sky:2500
 #, python-brace-format
 msgid "{when} · back to now"
 msgstr ""
 
-#: files/parchaos-sky:2161
+#: files/parchaos-sky:2512
 #, python-brace-format
 msgid "H:{high}  L:{low}"
 msgstr ""
 
-#: files/parchaos-sky:2163
+#: files/parchaos-sky:2514
 #, python-brace-format
 msgid "Feels like {temp}"
 msgstr ""
 
-#: files/parchaos-sky:2170
-msgid "Parchita (preview)"
+#: files/parchaos-sky:2521
+msgid "Parchi"
 msgstr ""
 
-#: files/parchaos-sky:2207
+#: files/parchaos-sky:2558
 msgid "Next 48 hours"
 msgstr ""
 
-#: files/parchaos-sky:2207
+#: files/parchaos-sky:2558
 #, python-format
 msgid "Rain (%s), next 48 hours"
 msgstr ""
 
-#: files/parchaos-sky:2208
+#: files/parchaos-sky:2559
 msgid "Wind, next 48 hours"
 msgstr ""
 
-#: files/parchaos-sky:2209
+#: files/parchaos-sky:2560
 msgid "Comfort, next 48 hours"
 msgstr ""
 
-#: files/parchaos-sky:2222
+#: files/parchaos-sky:2573
 msgid "Now"
 msgstr ""
 
-#: files/parchaos-sky:2258
+#: files/parchaos-sky:2609
 msgid "Play the next 24 hours"
 msgstr ""
 
-#: files/parchaos-sky:2271
+#: files/parchaos-sky:2622
 msgid "White: dew point · gold: feels like"
 msgstr ""
 
-#: files/parchaos-sky:2274
+#: files/parchaos-sky:2625
 msgid "White: wind · blue: gusts. Arrows show where it blows."
 msgstr ""
 
-#: files/parchaos-sky:2280
+#: files/parchaos-sky:2631
 #, python-format
 msgid "%d days"
 msgstr ""
 
-#: files/parchaos-sky:2300
+#: files/parchaos-sky:2651
 msgid "Today"
 msgstr ""
 
-#: files/parchaos-sky:2310
+#: files/parchaos-sky:2661
 msgid "gusts "
 msgstr ""
 
-#: files/parchaos-sky:2314
+#: files/parchaos-sky:2665
 msgid "UV "
 msgstr ""
 
-#: files/parchaos-sky:2328
+#: files/parchaos-sky:2679
 msgid "Next hour"
 msgstr ""
 
-#: files/parchaos-sky:2348
+#: files/parchaos-sky:2699
 msgid "From radar, at this spot · now to +60 min"
 msgstr ""
 
-#: files/parchaos-sky:2353
+#: files/parchaos-sky:2704
 msgid "Radar"
 msgstr ""
 
-#: files/parchaos-sky:2358
+#: files/parchaos-sky:2709
 msgid "Play"
 msgstr ""
 
-#: files/parchaos-sky:2368
+#: files/parchaos-sky:2719
 msgid "Forecast · "
 msgstr ""
 
-#: files/parchaos-sky:2413
+#: files/parchaos-sky:2764
 msgid "Best time to be outside"
 msgstr ""
 
-#: files/parchaos-sky:2419
+#: files/parchaos-sky:2770
 msgid "Tomorrow "
 msgstr ""
 
-#: files/parchaos-sky:2421
+#: files/parchaos-sky:2772
 #, python-brace-format
 msgid "Dry, {temp}–{temp2}, light wind"
 msgstr ""
 
-#: files/parchaos-sky:2424
+#: files/parchaos-sky:2775
 msgid "No great window in the next 24 hours"
 msgstr ""
 
-#: files/parchaos-sky:2427
+#: files/parchaos-sky:2778
 #, python-brace-format
 msgid "My comfort range: {temp}–{temp2}"
 msgstr ""
 
-#: files/parchaos-sky:2445
+#: files/parchaos-sky:2796
 msgid "From"
 msgstr ""
 
-#: files/parchaos-sky:2445
+#: files/parchaos-sky:2796
 msgid "To"
 msgstr ""
 
-#: files/parchaos-sky:2451
+#: files/parchaos-sky:2802
 msgid "Save"
 msgstr ""
 
-#: files/parchaos-sky:2466
+#: files/parchaos-sky:2817
 msgid "Tropics"
 msgstr ""
 
-#: files/parchaos-sky:2477
+#: files/parchaos-sky:2828
 msgid "No active storms. Hurricane season runs through November 30."
 msgstr ""
 
-#: files/parchaos-sky:2487
+#: files/parchaos-sky:2838
 #, python-brace-format
 msgid "{wind} winds · {far} {direction} of here"
 msgstr ""
 
-#: files/parchaos-sky:2490
+#: files/parchaos-sky:2841
 msgid "National Hurricane Center"
 msgstr ""
 
-#: files/parchaos-sky:2499 files/parchaos-sky:2514
+#: files/parchaos-sky:2850 files/parchaos-sky:2865
 msgid "Trips"
 msgstr ""
 
-#: files/parchaos-sky:2500
+#: files/parchaos-sky:2851
 msgid ""
 "See the weather where your calendar says you are going? Parcha Sky reads "
 "your calendar on this computer only."
 msgstr ""
 
-#: files/parchaos-sky:2502
+#: files/parchaos-sky:2853
 msgid "Turn on"
 msgstr ""
 
-#: files/parchaos-sky:2504
+#: files/parchaos-sky:2855
 msgid "No thanks"
 msgstr ""
 
-#: files/parchaos-sky:2529
+#: files/parchaos-sky:2880
 msgid "Beyond the forecast range for now"
 msgstr ""
 
-#: files/parchaos-sky:2556
+#: files/parchaos-sky:2907
 msgid "gusts"
 msgstr ""
 
-#: files/parchaos-sky:2558
+#: files/parchaos-sky:2909
 #, python-format
 msgid "From the %s"
 msgstr ""
 
-#: files/parchaos-sky:2561
+#: files/parchaos-sky:2912
 #, python-brace-format
 msgid "Dew point {temp} · humidity {number}%"
 msgstr ""
 
-#: files/parchaos-sky:2564
+#: files/parchaos-sky:2915
 msgid "Low"
 msgstr ""
 
-#: files/parchaos-sky:2564
+#: files/parchaos-sky:2915
 msgid "Moderate"
 msgstr ""
 
-#: files/parchaos-sky:2564
+#: files/parchaos-sky:2915
 msgid "High"
 msgstr ""
 
-#: files/parchaos-sky:2564
+#: files/parchaos-sky:2915
 msgid "Very high"
 msgstr ""
 
-#: files/parchaos-sky:2565
+#: files/parchaos-sky:2916
 msgid "UV index"
 msgstr ""
 
-#: files/parchaos-sky:2565
+#: files/parchaos-sky:2916
 msgid " · sunscreen"
 msgstr ""
 
-#: files/parchaos-sky:2571
+#: files/parchaos-sky:2922
 #, python-brace-format
 msgid "{hours}h {minutes}m of daylight"
 msgstr ""
 
-#: files/parchaos-sky:2577
+#: files/parchaos-sky:2928
 msgid "Rising"
 msgstr ""
 
-#: files/parchaos-sky:2577
+#: files/parchaos-sky:2928
 msgid "Falling"
 msgstr ""
 
-#: files/parchaos-sky:2577
+#: files/parchaos-sky:2928
 msgid "Steady"
 msgstr ""
 
-#: files/parchaos-sky:2578
+#: files/parchaos-sky:2929
 msgid "Pressure"
 msgstr ""
 
-#: files/parchaos-sky:2580
+#: files/parchaos-sky:2931
 msgid "New moon"
 msgstr ""
 
-#: files/parchaos-sky:2580
+#: files/parchaos-sky:2931
 msgid "Waxing crescent"
 msgstr ""
 
-#: files/parchaos-sky:2580
+#: files/parchaos-sky:2931
 msgid "First quarter"
 msgstr ""
 
-#: files/parchaos-sky:2581
+#: files/parchaos-sky:2932
 msgid "Waxing gibbous"
 msgstr ""
 
-#: files/parchaos-sky:2581
+#: files/parchaos-sky:2932
 msgid "Full moon"
 msgstr ""
 
-#: files/parchaos-sky:2581
+#: files/parchaos-sky:2932
 msgid "Waning gibbous"
 msgstr ""
 
-#: files/parchaos-sky:2582
+#: files/parchaos-sky:2933
 msgid "Last quarter"
 msgstr ""
 
-#: files/parchaos-sky:2582
+#: files/parchaos-sky:2933
 msgid "Waning crescent"
 msgstr ""
 
-#: files/parchaos-sky:2583
+#: files/parchaos-sky:2934
 msgid "Moon"
 msgstr ""
 
-#: files/parchaos-sky:2584
+#: files/parchaos-sky:2935
 #, python-format
 msgid "%d%% lit"
 msgstr ""
 
-#: files/parchaos-sky:2616
+#: files/parchaos-sky:2967
 msgid "Playful summaries"
 msgstr ""
 
-#: files/parchaos-sky:2617
-msgid "Show Parchita (preview)"
+#: files/parchaos-sky:2968
+msgid "Show Parchi"
 msgstr ""
 
-#: files/parchaos-sky:2618
+#: files/parchaos-sky:2969
 msgid "Fahrenheit and mph"
 msgstr ""
 
-#: files/parchaos-sky:2619
+#: files/parchaos-sky:2970
 msgid "Weather for my trips"
 msgstr ""
 
-#: files/parchaos-sky:2620
+#: files/parchaos-sky:2971
 msgid "Coquí nights (Puerto Rico)"
 msgstr ""
 
-#: files/parchaos-sky:2621
+#: files/parchaos-sky:2972
 msgid "About Parcha Sky"
 msgstr ""
 
-#: files/parchaos-sky:2629
+#: files/parchaos-sky:2980
 msgid "Menu"
 msgstr ""
 
-#: files/parchaos-sky:2652
+#: files/parchaos-sky:3003
 msgid "The sky outside, right now."
 msgstr ""
 
-#: files/parchaos-sky:2653
+#: files/parchaos-sky:3004
 msgid "Weather data"
 msgstr ""

@@ -963,141 +963,492 @@ def coqui_wav():
 
 
 # ---------------------------------------------------------------------------------------------
-# Parchita: the Parcha Sky character (PREVIEW, waiting for the owner's approval of the design).
-# Half a passion fruit with a face, dressed for the weather. Original drawing, logo-safe: no
-# bite, no stem and leaf.
-# ---------------------------------------------------------------------------------------------
+# Parchi the Parchita: Parcha Sky's character, drawn with Cairo after the owner's character kit
+# (2026-10-02). Half a passion fruit: maroon rind, pink inner rim, golden pulp with seeds that
+# radiate from the middle, big brown eyes, pink cheeks, stubby limbs. Original drawing code.
+
+RIND = (0.42, 0.17, 0.27)
+RIND_LIGHT = (0.56, 0.25, 0.37)
+RIM = (0.93, 0.74, 0.76)
+PULP_IN = (0.99, 0.83, 0.30)
+PULP_OUT = (0.93, 0.66, 0.16)
+SEED = (0.30, 0.20, 0.10)
+SAC = (1.0, 0.92, 0.58)
+LIMB = (0.45, 0.20, 0.27)
+CHEEK = (0.95, 0.52, 0.58)
+INK = (0.17, 0.10, 0.08)
+
+_SEEDS = None
+
+
+def _seeds():
+    global _SEEDS
+    if _SEEDS is None:
+        rnd = random.Random(5)
+        out = []
+        for ring, count, rad in ((0, 6, 0.26), (1, 11, 0.53), (2, 15, 0.79)):
+            for k in range(count):
+                a = (k + rnd.random() * 0.4) / count * 2 * math.pi + ring * 0.3
+                r = rad + rnd.uniform(-0.04, 0.04)
+                out.append((a, r, 0.85 + rnd.random() * 0.3))
+        _SEEDS = out
+    return _SEEDS
+
+
+def _ellipse(cr, x, y, rx, ry, angle=0.0):
+    cr.save()
+    cr.translate(x, y)
+    cr.rotate(angle)
+    cr.scale(rx, ry)
+    cr.arc(0, 0, 1, 0, 2 * math.pi)
+    cr.restore()
+
+
+def _rgb(cr, c, a=1.0):
+    cr.set_source_rgba(c[0], c[1], c[2], a)
+
+
+def _limb(cr, x0, y0, x1, y1, width, colour=LIMB):
+    cr.set_line_cap(1)
+    cr.set_line_width(width)
+    _rgb(cr, colour)
+    cr.move_to(x0, y0)
+    cr.line_to(x1, y1)
+    cr.stroke()
+
+
+def _cloud(cr, cx, cy, s, alpha=1.0):
+    import cairo
+    for dx, dy, r in ((-0.55, 0.1, 0.42), (-0.15, -0.18, 0.5), (0.35, -0.05, 0.45), (0.7, 0.18, 0.32), (0.05, 0.22, 0.45)):
+        g = cairo.RadialGradient(cx + dx * s, cy + dy * s - r * s * 0.3, 0, cx + dx * s, cy + dy * s, r * s)
+        g.add_color_stop_rgba(0, 1, 1, 1, alpha)
+        g.add_color_stop_rgba(1, 0.86, 0.89, 0.94, alpha)
+        cr.set_source(g)
+        cr.arc(cx + dx * s, cy + dy * s, r * s, 0, 2 * math.pi)
+        cr.fill()
+
+
+def _face(cr, cx, cy, r, expr, glasses=False):
+    ey = cy - r * 0.06
+    ex = r * 0.34
+    er = r * 0.22
+    if glasses:
+        _rgb(cr, (0.08, 0.08, 0.1))
+        for sx in (-1, 1):
+            _ellipse(cr, cx + sx * ex, ey, er * 1.35, er * 1.0)
+            cr.fill()
+        cr.set_line_width(r * 0.05)
+        cr.move_to(cx - ex + er, ey - er * 0.3)
+        cr.line_to(cx + ex - er, ey - er * 0.3)
+        cr.stroke()
+        cr.set_source_rgba(1, 1, 1, 0.35)
+        for sx in (-1, 1):
+            _ellipse(cr, cx + sx * ex - er * 0.5, ey - er * 0.4, er * 0.35, er * 0.2, -0.4)
+            cr.fill()
+    else:
+        for sx in (-1, 1):
+            x = cx + sx * ex
+            if expr == 'sleepy':
+                _rgb(cr, (1, 1, 1))
+                _ellipse(cr, x, ey + er * 0.2, er, er * 0.55)
+                cr.fill()
+                _rgb(cr, (0.45, 0.28, 0.12))
+                _ellipse(cr, x, ey + er * 0.35, er * 0.6, er * 0.4)
+                cr.fill()
+                # heavy lid
+                _rgb(cr, PULP_OUT)
+                cr.rectangle(x - er * 1.1, ey - er * 1.1, er * 2.2, er * 1.2)
+                cr.fill()
+                _rgb(cr, INK)
+                cr.set_line_width(r * 0.04)
+                cr.move_to(x - er, ey + er * 0.08)
+                cr.line_to(x + er, ey + er * 0.08)
+                cr.stroke()
+                continue
+            squint = expr == 'windy'
+            if squint:
+                _rgb(cr, INK)
+                cr.set_line_width(r * 0.05)
+                cr.move_to(x - er * 0.8, ey - er * 0.5 * sx * 0 - er * 0.4)
+                cr.line_to(x + er * 0.6 * sx, ey)
+                cr.line_to(x - er * 0.8, ey + er * 0.4)
+                cr.stroke()
+                continue
+            _rgb(cr, (1, 1, 1))
+            _ellipse(cr, x, ey, er, er * 1.1)
+            cr.fill()
+            _rgb(cr, INK, 0.6)
+            cr.set_line_width(r * 0.02)
+            _ellipse(cr, x, ey, er, er * 1.1)
+            cr.stroke()
+            iris = 0.72 if expr != 'surprised' else 0.55
+            _rgb(cr, (0.47, 0.29, 0.12))
+            _ellipse(cr, x, ey + er * 0.12, er * iris, er * iris * 1.05)
+            cr.fill()
+            _rgb(cr, INK)
+            _ellipse(cr, x, ey + er * 0.15, er * iris * 0.55, er * iris * 0.58)
+            cr.fill()
+            _rgb(cr, (1, 1, 1))
+            _ellipse(cr, x - er * 0.25, ey - er * 0.2, er * 0.24, er * 0.24)
+            cr.fill()
+            _ellipse(cr, x + er * 0.2, ey + er * 0.35, er * 0.1, er * 0.1)
+            cr.fill()
+        # brows
+        _rgb(cr, INK)
+        cr.set_line_width(r * 0.045)
+        for sx in (-1, 1):
+            x = cx + sx * ex
+            by = ey - er * 1.45
+            if expr in ('concerned', 'sad', 'storm'):
+                cr.move_to(x - sx * er * 0.8, by + er * 0.35)
+                cr.line_to(x + sx * er * 0.7, by - er * 0.15)
+            elif expr == 'surprised':
+                cr.arc(x, by + er * 0.1, er * 0.75, math.pi * 1.15, math.pi * 1.85)
+            elif expr != 'sleepy':
+                cr.set_line_width(r * 0.032)
+                cr.move_to(x - er * 0.62, by + er * 0.18)
+                cr.curve_to(x - er * 0.25, by - er * 0.22, x + er * 0.25, by - er * 0.22, x + er * 0.62, by + er * 0.18)
+            cr.stroke()
+    # cheeks
+    _rgb(cr, CHEEK, 0.7)
+    for sx in (-1, 1):
+        _ellipse(cr, cx + sx * r * 0.52, cy + r * 0.18, r * 0.13, r * 0.08)
+        cr.fill()
+    # mouth
+    my = cy + r * 0.30
+    _rgb(cr, INK)
+    cr.set_line_width(r * 0.045)
+    if expr in ('happy', 'sunny'):
+        cr.move_to(cx - r * 0.24, my - r * 0.04)
+        cr.curve_to(cx - r * 0.17, my + r * 0.26, cx + r * 0.17, my + r * 0.26, cx + r * 0.24, my - r * 0.04)
+        cr.close_path()
+        _rgb(cr, (0.55, 0.12, 0.16))
+        cr.fill_preserve()
+        _rgb(cr, INK)
+        cr.stroke()
+        _rgb(cr, (0.95, 0.45, 0.5))
+        _ellipse(cr, cx, my + r * 0.1, r * 0.08, r * 0.04)
+        cr.fill()
+    elif expr in ('concerned', 'storm'):
+        cr.move_to(cx - r * 0.13, my + r * 0.06)
+        cr.curve_to(cx - r * 0.05, my - r * 0.03, cx + r * 0.05, my - r * 0.03, cx + r * 0.13, my + r * 0.06)
+        cr.stroke()
+    elif expr == 'sad':
+        cr.move_to(cx - r * 0.15, my + r * 0.08)
+        cr.curve_to(cx - r * 0.06, my - r * 0.06, cx + r * 0.06, my - r * 0.06, cx + r * 0.15, my + r * 0.08)
+        cr.stroke()
+    elif expr in ('surprised', 'sleepy'):
+        _rgb(cr, (0.55, 0.12, 0.16))
+        _ellipse(cr, cx, my + r * 0.03, r * (0.08 if expr == 'sleepy' else 0.1), r * (0.07 if expr == 'sleepy' else 0.12))
+        cr.fill()
+    elif expr == 'windy':
+        cr.move_to(cx - r * 0.16, my + r * 0.02)
+        for k in range(4):
+            cr.line_to(cx - r * 0.16 + (k + 1) * r * 0.08, my + (r * 0.06 if k % 2 == 0 else -r * 0.02))
+        cr.stroke()
+    else:  # neutral / calm
+        cr.move_to(cx - r * 0.13, my)
+        cr.curve_to(cx - r * 0.05, my + r * 0.08, cx + r * 0.05, my + r * 0.08, cx + r * 0.13, my)
+        cr.stroke()
+
+
+def _fruit(cr, cx, cy, r, face_clear=True):
+    import cairo
+    # rind
+    g = cairo.RadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r * 1.05)
+    g.add_color_stop_rgb(0, *RIND_LIGHT)
+    g.add_color_stop_rgb(1, *RIND)
+    cr.set_source(g)
+    cr.arc(cx, cy, r, 0, 2 * math.pi)
+    cr.fill()
+    # pink inner rim
+    _rgb(cr, RIM)
+    cr.arc(cx, cy, r * 0.84, 0, 2 * math.pi)
+    cr.fill()
+    # pulp
+    p = r * 0.77
+    g = cairo.RadialGradient(cx, cy, p * 0.1, cx, cy, p)
+    g.add_color_stop_rgb(0, *PULP_IN)
+    g.add_color_stop_rgb(1, *PULP_OUT)
+    cr.set_source(g)
+    cr.arc(cx, cy, p, 0, 2 * math.pi)
+    cr.fill()
+    # seeds in their sacs, pointing to the middle
+    for a, rr, size in _seeds():
+        x, y = cx + math.cos(a) * rr * p, cy + math.sin(a) * rr * p
+        if face_clear and (abs(y - (cy - r * 0.06)) < r * 0.26 and abs(abs(x - cx) - r * 0.34) < r * 0.24
+                           or abs(y - (cy + r * 0.34)) < r * 0.14 and abs(x - cx) < r * 0.28):
+            continue
+        _rgb(cr, SAC, 0.75)
+        _ellipse(cr, x, y, p * 0.105 * size, p * 0.165 * size, a + math.pi / 2)
+        cr.fill()
+        _rgb(cr, SEED)
+        _ellipse(cr, x, y, p * 0.05 * size, p * 0.095 * size, a + math.pi / 2)
+        cr.fill()
+    # soft shine
+    cr.set_source_rgba(1, 1, 1, 0.12)
+    _ellipse(cr, cx - p * 0.35, cy - p * 0.45, p * 0.35, p * 0.18, -0.5)
+    cr.fill()
+
+
+def draw_parchi(cr, w, h, pose='happy', t=0.0, animate=True):
+    """pose: happy, neutral, sunny, rain, cloudy, storm, snow, windy, night, hot, cold, sad, surprised."""
+    import cairo
+    s = min(w / 120, h / 130)
+    cr.save()
+    cr.translate((w - 120 * s) / 2, (h - 130 * s) / 2)
+    cr.scale(s, s)
+    bob = math.sin(t * 2.2) * 2 if animate else 0
+    lean = 0.0
+    if pose == 'windy':
+        lean = -0.12 + (math.sin(t * 5) * 0.03 if animate else 0)
+    cx, cy, r = 60, 60 + bob, 41
+    expr = {'sunny': 'sunny', 'hot': 'sunny', 'rain': 'happy', 'cloudy': 'happy', 'storm': 'storm',
+            'snow': 'happy', 'cold': 'happy', 'windy': 'windy', 'night': 'sleepy'}.get(pose, pose)
+
+    # shadow
+    if pose != 'cloudy':
+        cr.set_source_rgba(0, 0, 0, 0.18)
+        _ellipse(cr, 60, 122, 30, 5)
+        cr.fill()
+
+    cr.save()
+    cr.translate(cx, cy + r)
+    cr.rotate(lean)
+    cr.translate(-cx, -(cy + r))
+
+    cloud_front = pose == 'cloudy'
+    # legs and feet
+    if pose != 'cloudy':
+        for sx in (-1, 1):
+            _limb(cr, cx + sx * 13, cy + r - 6, cx + sx * 14, 116, 10)
+            foot = (0.98, 0.82, 0.18) if pose == 'rain' else ((0.85, 0.25, 0.25) if pose in ('snow', 'cold') else LIMB)
+            _rgb(cr, foot)
+            _ellipse(cr, cx + sx * 17, 119, 10 if pose == 'rain' else 9, 5.5)
+            cr.fill()
+    else:
+        pass
+    # raincoat behind the fruit (hood and coat)
+    if pose == 'rain':
+        _rgb(cr, (0.98, 0.80, 0.16))
+        cr.arc(cx, cy, r * 1.14, 0, 2 * math.pi)  # hood
+        cr.fill()
+        cr.move_to(cx - r * 0.75, cy + r * 0.6)  # coat
+        cr.curve_to(cx - r * 1.05, cy + r * 1.0, cx - r * 1.1, cy + r * 1.25, cx - r * 1.0, cy + r * 1.32)
+        cr.line_to(cx + r * 1.0, cy + r * 1.32)
+        cr.curve_to(cx + r * 1.1, cy + r * 1.25, cx + r * 1.05, cy + r * 1.0, cx + r * 0.75, cy + r * 0.6)
+        cr.close_path()
+        cr.fill()
+        _rgb(cr, (0.85, 0.66, 0.10))
+        cr.set_line_width(1.5)
+        cr.move_to(cx, cy + r * 0.95)
+        cr.line_to(cx, cy + r * 1.32)
+        cr.stroke()
+    # arms
+    wave = math.sin(t * 4) * 0.15 if animate else 0
+    if pose in ('happy', 'neutral'):
+        _limb(cr, cx - r * 0.95, cy + 8, cx - r * 1.22, cy + 20, 9)
+        _limb(cr, cx + r * 0.95, cy + 4, cx + r * 1.27 + wave * 10, cy - 12, 9)
+        _rgb(cr, LIMB)
+        cr.arc(cx + r * 1.3 + wave * 10, cy - 15, 6, 0, 2 * math.pi)
+        cr.fill()
+    elif pose in ('sunny', 'hot'):
+        _limb(cr, cx - r * 0.95, cy + 10, cx - r * 1.25, cy + 24, 9)
+        _limb(cr, cx + r * 0.95, cy + 8, cx + r * 1.3, cy + 2, 9)
+        # a drink with a straw and a little umbrella
+        dx, dy = cx + r * 1.38, cy - 6
+        _rgb(cr, (0.62, 0.38, 0.18))
+        cr.rectangle(dx - 5, dy, 10, 13)
+        cr.fill()
+        _rgb(cr, (0.6, 0.85, 0.35))
+        cr.rectangle(dx - 5, dy, 10, 3)
+        cr.fill()
+        cr.set_line_width(1.4)
+        _rgb(cr, (0.95, 0.4, 0.4))
+        cr.move_to(dx + 2, dy)
+        cr.line_to(dx + 6, dy - 10)
+        cr.stroke()
+        _rgb(cr, (0.2, 0.75, 0.75))
+        cr.move_to(dx - 4, dy - 6)
+        cr.curve_to(dx - 2, dy - 13, dx + 6, dy - 13, dx + 8, dy - 6)
+        cr.close_path()
+        cr.fill()
+    elif pose == 'storm':
+        _limb(cr, cx - r * 0.9, cy + 6, cx - r * 0.35, cy + 22, 9)
+        _limb(cr, cx + r * 0.9, cy + 6, cx + r * 0.35, cy + 22, 9)
+    elif pose == 'windy':
+        _limb(cr, cx - r * 0.9, cy + 8, cx - r * 1.25, cy + 2, 9)
+        _limb(cr, cx + r * 0.9, cy + 6, cx + r * 1.3, cy - 4, 9)
+    elif pose not in ('rain', 'cloudy'):
+        _limb(cr, cx - r * 0.95, cy + 8, cx - r * 1.22, cy + 20, 9)
+        _limb(cr, cx + r * 0.95, cy + 8, cx + r * 1.22, cy + 20, 9)
+
+    _fruit(cr, cx, cy, r)
+    _face(cr, cx, cy, r, expr, glasses=pose in ('sunny', 'hot'))
+    if cloud_front:
+        _cloud(cr, cx - 2, cy + r * 1.0, 46)
+        for sx in (-1, 1):  # legs dangling over the front of the cloud
+            _limb(cr, cx + sx * 10, cy + r * 0.82, cx + sx * 15, cy + r * 1.28, 8)
+            _rgb(cr, LIMB)
+            _ellipse(cr, cx + sx * 17, cy + r * 1.32, 7, 4.5)
+            cr.fill()
+
+    if pose == 'rain':
+        # hood edge framing the face
+        _rgb(cr, (0.90, 0.70, 0.12))
+        cr.set_line_width(2)
+        cr.arc(cx, cy, r * 1.0, 0, 2 * math.pi)
+        cr.stroke()
+        # coat sleeve and the leaf umbrella
+        _limb(cr, cx + r * 0.95, cy + 10, cx + r * 1.25, cy - 2, 7, (0.98, 0.80, 0.16))
+        sway = math.sin(t * 2.5) * 0.08 if animate else 0
+        cr.save()
+        cr.translate(cx + r * 1.28, cy - 2)
+        cr.rotate(-0.35 + sway)
+        _rgb(cr, (0.36, 0.52, 0.22))
+        cr.set_line_width(2)
+        cr.move_to(0, 0)
+        cr.line_to(0, -44)
+        cr.stroke()
+        _rgb(cr, (0.40, 0.68, 0.28))
+        cr.move_to(-30, -40)
+        cr.curve_to(-22, -66, 22, -66, 30, -40)
+        cr.curve_to(14, -46, -14, -46, -30, -40)
+        cr.fill()
+        _rgb(cr, (0.30, 0.52, 0.20))
+        cr.set_line_width(1.2)
+        cr.move_to(0, -44)
+        cr.line_to(0, -60)
+        cr.stroke()
+        cr.restore()
+    elif pose == 'storm':
+        # headphones
+        _rgb(cr, (0.22, 0.22, 0.25))
+        cr.set_line_width(5)
+        cr.arc(cx, cy, r * 1.08, math.pi * 1.05, math.pi * 1.95)
+        cr.stroke()
+        for sx in (-1, 1):
+            _ellipse(cr, cx + sx * r * 1.02, cy + 2, 7, 11)
+            cr.fill()
+    elif pose in ('snow', 'cold'):
+        # beanie with a pompom
+        _rgb(cr, (0.80, 0.22, 0.24))
+        cr.arc(cx, cy - r * 0.15, r * 0.9, math.pi * 1.08, math.pi * 1.92)
+        cr.close_path()
+        cr.fill()
+        _rgb(cr, (0.95, 0.92, 0.88))
+        cr.rectangle(cx - r * 0.86, cy - r * 0.62, r * 1.72, 7)
+        cr.fill()
+        cr.arc(cx, cy - r * 1.07, 6, 0, 2 * math.pi)
+        cr.fill()
+        # scarf around the lower front, a tail hanging down
+        _rgb(cr, (0.82, 0.24, 0.26))
+        cr.set_line_width(9)
+        cr.set_line_cap(1)
+        cr.arc(cx, cy - r * 0.35, r * 1.15, math.pi * 0.28, math.pi * 0.72)
+        cr.stroke()
+        cr.move_to(cx + r * 0.42, cy + r * 0.72)
+        cr.line_to(cx + r * 0.62, cy + r * 1.22)
+        cr.stroke()
+        _rgb(cr, (0.95, 0.92, 0.88))
+        cr.set_line_width(1.5)
+        for k in range(3):
+            cr.move_to(cx + r * 0.53 + k * 3, cy + r * 1.2)
+            cr.line_to(cx + r * 0.55 + k * 3, cy + r * 1.3)
+            cr.stroke()
+    elif pose == 'windy':
+        # a leafy branch blowing in the wind
+        cr.save()
+        cr.translate(cx + r * 1.32, cy - 4)
+        flutter = math.sin(t * 7) * 0.08 if animate else 0
+        cr.rotate(0.5 + flutter)
+        _rgb(cr, (0.45, 0.32, 0.2))
+        cr.set_line_width(2)
+        cr.move_to(0, 0)
+        cr.line_to(0, -40)
+        cr.stroke()
+        for k, (ly, side) in enumerate(((-12, -1), (-20, 1), (-28, -1), (-36, 1), (-42, 0))):
+            _rgb(cr, (0.40, 0.66, 0.28))
+            _ellipse(cr, side * 6, ly, 3.5, 7, side * 0.6)
+            cr.fill()
+        cr.restore()
+        # wind lines
+        cr.set_source_rgba(0.7, 0.8, 0.9, 0.8)
+        cr.set_line_width(2)
+        for k, yy in enumerate((cy - 20, cy, cy + 20)):
+            x0 = 2 + ((t * 40 + k * 15) % 20 if animate else 0)
+            cr.move_to(x0, yy)
+            cr.curve_to(x0 + 8, yy - 4, x0 + 14, yy + 4, x0 + 22, yy)
+            cr.stroke()
+    elif pose == 'night':
+        # a soft nightcap
+        _rgb(cr, (0.36, 0.42, 0.78))
+        cr.move_to(cx - r * 0.8, cy - r * 0.55)
+        cr.curve_to(cx - r * 0.3, cy - r * 1.55, cx + r * 0.6, cy - r * 1.5, cx + r * 1.15, cy - r * 1.05)
+        cr.curve_to(cx + r * 0.6, cy - r * 1.0, cx + r * 0.5, cy - r * 0.8, cx + r * 0.8, cy - r * 0.55)
+        cr.close_path()
+        cr.fill()
+        _rgb(cr, (0.95, 0.92, 0.88))
+        cr.arc(cx + r * 1.15, cy - r * 1.05, 4, 0, 2 * math.pi)
+        cr.fill()
+        # z z
+        cr.set_source_rgba(1, 1, 1, 0.85 if animate else 0.85)
+        cr.select_font_face('Sans', 0, 1)
+        cr.set_font_size(9)
+        cr.move_to(cx + r * 0.9, cy - r * 0.2 - (t * 6 % 8 if animate else 0))
+        cr.show_text('z')
+    cr.restore()
+    cr.restore()
+
+
+def mood_for(hour, sun, feels=None):
+    """Which pose fits this hour."""
+    sym = hour.get('symbol') or ''
+    if 'thunder' in sym or (hour.get('thunder_p') or 0) >= 30:
+        return 'storm'
+    if 'snow' in sym or 'sleet' in sym:
+        return 'snow'
+    if (hour.get('precip') or 0) >= 0.1 or 'rain' in sym:
+        return 'rain'
+    if (hour.get('gust') or hour.get('wind') or 0) >= 11:
+        return 'windy'
+    if hour.get('temp') is not None and hour['temp'] <= 5:
+        return 'cold'
+    if sun < -2:
+        return 'night'
+    if (hour.get('clouds') or 0) < 35:
+        return 'sunny'
+    if (hour.get('clouds') or 0) < 80:
+        return 'cloudy'
+    return 'neutral'
+
 
 class Parchita(Gtk.DrawingArea):
+    """Parchi on screen: the pose follows the weather, with a gentle bob."""
+
     def __init__(self):
-        super().__init__(content_width=92, content_height=92, valign=Gtk.Align.CENTER)
-        self.mood = 'sunny'
+        super().__init__(content_width=110, content_height=120, valign=Gtk.Align.CENTER)
+        self.mood = 'happy'
         self.t0 = time.monotonic()
         self.set_draw_func(self._draw)
-        self.add_tick_callback(lambda *_: (self.queue_draw(), GLib.SOURCE_CONTINUE)[1])
+        self.add_tick_callback(self._tick)
+
+    def _tick(self, *_a):
+        if Gtk.Settings.get_default().props.gtk_enable_animations:
+            self.queue_draw()
+        return GLib.SOURCE_CONTINUE
 
     def set_mood(self, mood):
         self.mood = mood
         self.queue_draw()
 
     def _draw(self, area, cr, w, h):
-        t = time.monotonic() - self.t0
-        bob = math.sin(t * 2.0) * 2.5 if Gtk.Settings.get_default().props.gtk_enable_animations else 0
-        cx, cy, r = w / 2, h / 2 + 6 + bob, 30
-        m = self.mood
-        # rind and pulp
-        cr.arc(cx, cy, r, 0, 2 * math.pi)
-        cr.set_source_rgb(0.40, 0.18, 0.45)
-        cr.fill()
-        cr.arc(cx, cy, r - 5, 0, 2 * math.pi)
-        cr.set_source_rgb(0.98, 0.76, 0.22)
-        cr.fill()
-        # seeds around the edge of the pulp
-        cr.set_source_rgba(0.25, 0.16, 0.10, 0.85)
-        for k in range(14):
-            a = k / 14 * 2 * math.pi + 0.2
-            rr = r - 10 + (k % 2) * 3
-            sx, sy = cx + math.cos(a) * rr, cy + math.sin(a) * rr
-            if sy < cy - 4 and abs(sx - cx) < 14:
-                continue  # keep the face clear
-            cr.arc(sx, sy, 1.6, 0, 2 * math.pi)
-            cr.fill()
-        # face
-        cr.set_source_rgb(0.18, 0.1, 0.12)
-        eye_y = cy - 4
-        if m == 'night':
-            for ex in (cx - 8, cx + 8):
-                cr.move_to(ex - 4, eye_y)
-                cr.curve_to(ex - 2, eye_y + 3, ex + 2, eye_y + 3, ex + 4, eye_y)
-                cr.set_line_width(2)
-                cr.stroke()
-        elif m == 'storm':
-            for ex in (cx - 8, cx + 8):
-                cr.arc(ex, eye_y, 3.6, 0, 2 * math.pi)
-                cr.fill()
-        else:
-            for ex in (cx - 8, cx + 8):
-                cr.arc(ex, eye_y, 2.6, 0, 2 * math.pi)
-                cr.fill()
-        cr.set_line_width(2.2)
-        if m == 'storm':
-            cr.arc(cx, cy + 8, 3.2, 0, 2 * math.pi)  # "oh!"
-            cr.stroke()
-        else:
-            cr.arc(cx, cy + 4, 7, 0.2 * math.pi, 0.8 * math.pi)
-            cr.stroke()
-        # cheeks
-        cr.set_source_rgba(0.95, 0.45, 0.45, 0.45)
-        for ex in (cx - 15, cx + 15):
-            cr.arc(ex, cy + 3, 3.5, 0, 2 * math.pi)
-            cr.fill()
-        # accessories
-        if m == 'sunny':
-            cr.set_source_rgb(0.1, 0.1, 0.14)
-            for ex in (cx - 9, cx + 9):
-                cr.rectangle(ex - 6.5, eye_y - 4, 13, 7.5)
-                cr.fill()
-            cr.rectangle(cx - 3, eye_y - 2, 6, 1.8)
-            cr.fill()
-        elif m == 'rain':
-            # umbrella held above
-            ux, uy = cx + 14, cy - r - 2
-            cr.set_source_rgb(0.24, 0.55, 0.95)
-            cr.move_to(ux - 24, uy)
-            cr.curve_to(ux - 20, uy - 20, ux + 20, uy - 20, ux + 24, uy)
-            for k in range(3):
-                x0 = ux + 24 - k * 16
-                cr.curve_to(x0 - 4, uy - 5, x0 - 12, uy - 5, x0 - 16, uy)
-            cr.close_path()
-            cr.fill()
-            cr.set_source_rgb(0.3, 0.3, 0.3)
-            cr.set_line_width(1.6)
-            cr.move_to(ux, uy)
-            cr.line_to(ux, cy - 8)
-            cr.stroke()
-        elif m == 'cold':
-            cr.set_source_rgb(0.85, 0.22, 0.28)
-            cr.rectangle(cx - r + 4, cy + 14, 2 * r - 8, 7)
-            cr.fill()
-            cr.rectangle(cx + 10, cy + 14, 7, 18)
-            cr.fill()
-        elif m == 'night':
-            cr.set_source_rgb(0.42, 0.55, 0.95)
-            cr.move_to(cx - 18, cy - r + 6)
-            cr.line_to(cx + 4, cy - r - 18)
-            cr.line_to(cx + 18, cy - r + 6)
-            cr.close_path()
-            cr.fill()
-            cr.set_source_rgb(1, 1, 1)
-            cr.arc(cx + 4, cy - r - 18, 3, 0, 2 * math.pi)
-            cr.fill()
-        elif m == 'storm':
-            cr.set_source_rgb(1.0, 0.85, 0.2)
-            bx, by = cx + 22, cy - r - 6
-            cr.move_to(bx, by)
-            cr.line_to(bx - 6, by + 12)
-            cr.line_to(bx, by + 12)
-            cr.line_to(bx - 5, by + 24)
-            cr.line_to(bx + 7, by + 8)
-            cr.line_to(bx + 1, by + 8)
-            cr.line_to(bx + 5, by)
-            cr.close_path()
-            cr.fill()
+        animate = Gtk.Settings.get_default().props.gtk_enable_animations
+        draw_parchi(cr, w, h, self.mood, time.monotonic() - self.t0, animate)
 
 
 def parchita_mood(hour, sun):
-    sym = hour['symbol'] or ''
-    if 'thunder' in sym or (hour['thunder_p'] or 0) >= 30:
-        return 'storm'
-    if hour['precip'] >= 0.1 or 'rain' in sym:
-        return 'rain'
-    if hour['temp'] is not None and hour['temp'] <= 5:
-        return 'cold'
-    if sun < -2:
-        return 'night'
-    if (hour['clouds'] or 0) < 40:
-        return 'sunny'
-    return 'calm'
+    return mood_for(hour, sun)
 
 
 
@@ -2167,7 +2518,7 @@ class SkyWindow(Adw.ApplicationWindow):
         if self.prefs.get('playful', True) and self.prefs.get('parchita', True):
             self.parchita = Parchita()
             self.parchita.set_mood(parchita_mood(h, sun))
-            self.parchita.set_tooltip_text(_('Parchita (preview)'))
+            self.parchita.set_tooltip_text(_('Parchi'))
             row.append(self.parchita)
         box.append(row)
         if not self.scrub:
@@ -2614,7 +2965,7 @@ class SkyWindow(Adw.ApplicationWindow):
     def _main_menu(self):
         menu = Gio.Menu()
         menu.append(_('Playful summaries'), 'win.playful')
-        menu.append(_('Show Parchita (preview)'), 'win.parchita')
+        menu.append(_('Show Parchi'), 'win.parchita')
         menu.append(_('Fahrenheit and mph'), 'win.imperial')
         menu.append(_('Weather for my trips'), 'win.trips')
         menu.append(_('Coquí nights (Puerto Rico)'), 'win.coqui')

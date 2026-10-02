@@ -10,7 +10,7 @@
 
 Name:           parchaos-sky
 Version:        0.3.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
 License:        GPL-3.0-or-later
@@ -73,6 +73,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.S
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.0-2
+- Ticket #192: the character is Parchi the Parchita, redrawn after the owner's character kit: maroon rind, pink rim, golden pulp with radiating seeds, big eyes, stubby limbs; poses for sunny (sunglasses, drink), rain (hooded raincoat, leaf umbrella, boots), partly cloudy (sitting in a cloud), storm (headphones), snow and cold (beanie, scarf), wind (leafy branch, squinting), night (nightcap); expressions happy, neutral, concerned, surprised, sleepy, sad.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.3.0-1
 - Ticket #192: next hour reads drizzle as well as rain from the radar (graded none / drizzle / rain); every string goes through gettext (po/parchaos-sky.pot, Spanish in po/es.po, day names translated in-app so they work without a system language pack); AppStream metainfo with screenshots; the hourly strip keeps the scrubbed hour in view; drizzle bars visible; placeholders named for translators.
 
