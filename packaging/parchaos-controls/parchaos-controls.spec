@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        48%{?dist}
+Release:        49%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Thu Oct 01 2026 ParchaOS packaging - 1.0.0-49
+- Ticket #148: the What's New card is hidden for the first release (owner); the code stays, behind SHOW_WHATS_NEW, for a later one.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-48
 - Ticket #148: Edit Controls picker rebuilt after the owner's reference, measured: a 244 px sidebar with the search field and categories with app-style icons, a gallery that lists every control by category (What's New card with a small picture, Suggestions with the controls not yet in the panel first, a section per category; 65 px tiles with names under them), and a footer with the hint and Done. Controls already in Control Center are listed too: dragging one moves it, clicking one lights it up in the panel. The window is 55% x 88% of the screen, placed in the room left of Control Center so they never overlap, and moves by dragging its background. Control Center shows two spare rows of empty slots while editing.
 

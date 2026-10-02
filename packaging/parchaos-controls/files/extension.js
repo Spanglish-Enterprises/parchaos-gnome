@@ -1380,6 +1380,9 @@ const ControlsPanel = GObject.registerClass({
 // (as in the reference); dragging one moves it, clicking one shows where it is.
 // ---------------------------------------------------------------------
 const GALLERY_CELL = 65;
+// The What's New card is kept for a later release: the first release has nothing to call new
+// (owner, 2026-10-01). Set to true to show it above Suggestions again.
+const SHOW_WHATS_NEW = false;
 const GALLERY_GAP = 11;
 
 const ControlsPicker = GObject.registerClass(
@@ -1580,7 +1583,8 @@ class ControlsPicker extends St.BoxLayout {
         }
         let first = true;
         if (!this._category && !this._query) {
-            this._gallery.add_child(this._whatsNew());
+            if (SHOW_WHATS_NEW)
+                this._gallery.add_child(this._whatsNew());
             // Suggestions: controls not in the panel yet, else a few handy ones.
             const missing = shown.filter(i => i.hidden);
             const handy = ['screenshot', 'lock', 'night-light', 'focus', 'dark-mode', 'settings']
