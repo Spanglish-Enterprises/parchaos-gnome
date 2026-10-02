@@ -36,3 +36,9 @@ headerbar box.parcher-history-buttons button:hover,
 headerbar windowhandle box.parcher-history-buttons button:hover {
   background-color: alpha(currentColor, 0.15);
 }
+
+/* The folder title ("Home" with the parents menu) is a plain rounded rectangle, not a pill. */
+headerbar menubutton.folder-title > button,
+headerbar windowhandle menubutton.folder-title > button {
+  border-radius: 8px;
+}

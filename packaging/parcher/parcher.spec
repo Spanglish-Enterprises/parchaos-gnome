@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        34%{?dist}
+Release:        35%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -338,6 +338,9 @@ grep -q 'GTK_STYLE_PROVIDER_PRIORITY_USER + 1);' src/nautilus-application.c
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-35
+- The folder title (with its parents menu) is a rounded rectangle; the GTK theme had made it a pill.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-34
 - Parcher's stylesheet loads one step above the GTK theme's per-user stylesheet, which had the same priority and put the capsules back on a real desktop. The back/forward box has no background of its own.
 
