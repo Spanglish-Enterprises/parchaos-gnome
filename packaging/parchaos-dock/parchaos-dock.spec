@@ -65,7 +65,7 @@
 
 Name:           parchaos-dock
 Version:        106
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        Parcha Dock — ParchaOS's fork of the Dash-to-Dock GNOME Shell extension
 
 License:        GPL-2.0-only
@@ -145,6 +145,14 @@ grep -q '"name": "Parcha Dock"' metadata.json
 grep -q 'Michele Gaio (Dash to Dock)' metadata.json
 grep -q '"url": "https://parchaos.org"' metadata.json
 ! grep -qi 'macos' metadata.json
+# Text that users or developers read must not name another company's desktop
+# (look-alike audit): a settings label, a schema description and a few comments.
+sed -i 's/ (macOS preview)/ (preview)/' Settings.ui
+sed -i 's/ hover like in macOS</ hover</' schemas/org.gnome.shell.extensions.dash-to-dock.gschema.xml
+sed -i 's#Animate ejection: macOS style spring pop#Animate ejection: spring pop#' appIcons.js
+sed -i 's#in the corner like macOS#in the corner#' dash.js
+sed -i 's#// macOS style bounce:#// Bounce:#' docking.js
+! grep -qi 'macos' Settings.ui schemas/org.gnome.shell.extensions.dash-to-dock.gschema.xml
 
 %build
 make _build
@@ -194,6 +202,9 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/dashtodock.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 106-18
+- Look-alike audit: the settings label, the magnification schema text and a few code comments no longer name another company's desktop.
+
 * Thu Oct 01 2026 ParchaOS packaging - 106-17
 - Ticket #131: the red notification count follows its icon while the dock magnifies (it stayed put before).
 

@@ -58,3 +58,10 @@ profiles/parchaos/packages.list             | finder | fact: comment naming the 
 # --- history written in the public repository: decide whether to clean or remove (#102)
 SESSION_LOG.md                              | *     | debt: a session log in the public repo that narrates reference work; clean or move to the private vault
 documents/*                                 | *     | debt: a session summary in the public repo that narrates reference work; clean or move to the private vault
+
+# --- what a built image ships (the --image scan)
+image/usr/share/doc/parchaos/LEGAL.md        | apple | fact: the non-affiliation notice
+image/usr/share/doc/parchaos-gtk-theme/README.md | * | upstream: the third-party theme's own README, shipped with its licence so the credit stays
+image/usr/share/doc/parchaos-icon-theme/README.md | * | upstream: the third-party icon theme's own README, shipped with its licence so the credit stays
+image/usr/share/locale/*/LC_MESSAGES/nautilus.mo | * | upstream: GNOME's translations and Launchpad (Canonical's code host) export notes, unchanged
+image/usr/share/gnome-shell/extensions/parcha-dock@parchaos.org/appIconIndicators.js | launchpad | fact: a URL on Canonical's Launchpad code host, not another company's product
