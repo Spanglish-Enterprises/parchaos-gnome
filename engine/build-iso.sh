@@ -51,6 +51,7 @@ SKIP_BRANDING=0       # skip Phase 5 (repo+PROFILE_REPO_PACKAGES) and Phase 5.5
                       # baseline" checkpoint: it doesn't need the profile's
                       # COPR to exist yet (Phase 2), just packages.list.
 ISO_VERSION="$(date +%Y.%m.%d)"
+ARCH="$(uname -m)"    # x86_64 or aarch64 (ticket #167); another arch builds under qemu-user
 
 usage() {
     cat <<EOF
@@ -76,6 +77,9 @@ Usage: $(basename "$0") [options]
                          base only (doesn't need the profile's COPR to
                          exist yet)
   --version <ver>        ISO filename version tag (default: today's date)
+  --arch <arch>          x86_64 or aarch64 (default: this machine's). Building
+                         for another architecture needs qemu-user-static
+                         (binfmt with the F flag) on the build host
   -h, --help             Show this help
 EOF
 }
@@ -104,6 +108,7 @@ while [ $# -gt 0 ]; do
         --i-accept-nvidia-redistribution) ACCEPT_NVIDIA=1; shift ;;
         --skip-branding) SKIP_BRANDING=1; shift ;;
         --version|-v) ISO_VERSION="$2"; shift 2 ;;
+        --arch) ARCH="$2"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
@@ -123,6 +128,31 @@ fi
 for bin in dnf mksquashfs xorriso grub2-mkstandalone rpm2cpio; do
     command -v "$bin" >/dev/null 2>&1 || { echo "Missing required tool: $bin" >&2; exit 1; }
 done
+
+# ---- Architecture (ticket #167) ----------------------------------------------------
+# x86_64 boots by UEFI (shim + gcdx64) and BIOS (grub2-mkrescue); aarch64 is
+# UEFI only (shimaa64 + gcdaa64). Building for the other architecture runs
+# the target's own binaries (rpm scriptlets, dracut) under qemu-user, which
+# needs the kernel's binfmt entry with the F flag so it works inside the
+# installroot and the nspawn container.
+case "$ARCH" in
+    x86_64) EFI_ARCH=x64; SERIAL_CONSOLE=ttyS0; SQUASHFS_BCJ=(-Xbcj x86) ;;
+    aarch64) EFI_ARCH=aa64; SERIAL_CONSOLE=ttyAMA0; SQUASHFS_BCJ=() ;;
+    *) echo "Unsupported --arch: $ARCH (x86_64 or aarch64)" >&2; exit 1 ;;
+esac
+EFI_ARCH_UPPER="$(echo "$EFI_ARCH" | tr '[:lower:]' '[:upper:]')"
+FORCEARCH=()
+if [ "$ARCH" != "$(uname -m)" ]; then
+    if ! grep -qs '^flags:.*F' "/proc/sys/fs/binfmt_misc/qemu-$ARCH"; then
+        echo "ERROR: building for $ARCH on $(uname -m) needs qemu-user-static for $ARCH" >&2
+        echo "       registered with binfmt's F flag (dnf install qemu-user-static-$ARCH)." >&2
+        exit 1
+    fi
+    FORCEARCH=(--forcearch="$ARCH")
+fi
+# x86_64 keeps its historical directory names so existing caches are reused.
+ARCH_SUFFIX=""
+[ "$ARCH" = x86_64 ] || ARCH_SUFFIX="-$ARCH"
 
 # ---- Phase 1: load the profile ------------------------------------------------
 PROFILE_DIR="$REPO_ROOT/profiles/$PROFILE"
@@ -155,7 +185,7 @@ menuentry "Start $PROFILE_DISPLAY_NAME in basic graphics mode" {
 }
 menuentry "Troubleshooting: start with kernel messages" {
     set gfxpayload=keep
-    linux (\$root)/boot/vmlinuz $base console=tty0 console=ttyS0,115200n8
+    linux (\$root)/boot/vmlinuz $base console=tty0 console=$SERIAL_CONSOLE,115200n8
     initrd (\$root)/boot/initramfs.img
 }
 MENU
@@ -169,9 +199,9 @@ BRANCH="${BRANCH:-${PROFILE_FEDORA_RELEASE:-44}}"
 : "${PROFILE_SESSION:=wayland}"   # "wayland" or "x11" — see the project's development notes
 
 BUILD_DIR="$REPO_ROOT/build"
-BASE_CACHE="$BUILD_DIR/base-cache-$BRANCH"
-ROOTFS_TARGET="$BUILD_DIR/rootfs-$PROFILE-$BRANCH"
-ISO_WORKDIR="$BUILD_DIR/iso-$PROFILE-$BRANCH"
+BASE_CACHE="$BUILD_DIR/base-cache-$BRANCH$ARCH_SUFFIX"
+ROOTFS_TARGET="$BUILD_DIR/rootfs-$PROFILE-$BRANCH$ARCH_SUFFIX"
+ISO_WORKDIR="$BUILD_DIR/iso-$PROFILE-$BRANCH$ARCH_SUFFIX"
 mkdir -p "$BUILD_DIR"
 
 if [ "$NVIDIA" -eq 1 ] && [ "$ACCEPT_NVIDIA" -eq 0 ]; then
@@ -179,7 +209,7 @@ if [ "$NVIDIA" -eq 1 ] && [ "$ACCEPT_NVIDIA" -eq 0 ]; then
     echo "       Pass --i-accept-nvidia-redistribution to build one for private use." >&2
     exit 1
 fi
-echo "=== ParchaOS build: profile=$PROFILE branch=$BRANCH nvidia=$NVIDIA local=$LOCAL ==="
+echo "=== ParchaOS build: profile=$PROFILE branch=$BRANCH arch=$ARCH nvidia=$NVIDIA local=$LOCAL ==="
 
 # ---- Phase 2: base cache (dnf --installroot bootstrap) ------------------------
 # Mirrors the Debian engine's mmdebstrap step: a minimal Fedora rootfs shared
@@ -198,7 +228,9 @@ if [ ! -f "$BASE_MARKER" ] || [ "$(cat "$BASE_MARKER" 2>/dev/null)" != "$PKGLIST
     echo "--- Bootstrapping base cache for Fedora $BRANCH ---"
     rm -rf "$BASE_CACHE"
     mkdir -p "$BASE_CACHE"
-    mapfile -t base_packages < <(grep -vE '^\s*(#|$)' "$PROFILE_DIR/packages.list")
+    # "x86_64: pkg" / "aarch64: pkg" lines are for that architecture only.
+    mapfile -t base_packages < <(grep -vE '^\s*(#|$)' "$PROFILE_DIR/packages.list" \
+        | awk -v arch="$ARCH" '/^[a-z0-9_]+:/ { split($0, a, ":"); if (a[1] == arch) { sub(/^[^:]*:[ \t]*/, ""); print } ; next } { print }')
 
     # TICKET #68: repos used to come from --use-host-config, i.e. whatever
     # the build host happened to have in /etc/yum.repos.d leaked into every
@@ -247,6 +279,7 @@ REPO
     dnf -y \
         --installroot="$BASE_CACHE" \
         --releasever="$BRANCH" \
+        "${FORCEARCH[@]}" \
         --setopt=reposdir="$BASE_CACHE/etc/yum.repos.d" \
         --setopt=install_weak_deps=False \
         --setopt=keepcache=True \
@@ -460,7 +493,7 @@ echo "Compressing rootfs as SquashFS (this is the slow part)..."
 # The x86 BCJ filter and 1 MiB blocks compress binaries noticeably
 # better than plain xz defaults.
 mksquashfs "$ROOTFS_TARGET" "$ISO_WORKDIR/LiveOS/squashfs.img" \
-    -comp xz -Xbcj x86 -b 1M -e boot -noappend
+    -comp xz "${SQUASHFS_BCJ[@]}" -b 1M -e boot -noappend
 
 cp "$ROOTFS_TARGET/boot/vmlinuz-$KERNEL_VER" "$ISO_WORKDIR/boot/vmlinuz"
 cp "$ROOTFS_TARGET/boot/initramfs-$KERNEL_VER.img" "$ISO_WORKDIR/boot/initramfs.img"
@@ -494,9 +527,12 @@ SECUREBOOT_DIR="$PROFILE_DIR/ploader/secureboot"
 # profile shipping its own copies under ploader/ (ticket #55).
 # (Fedora 44 installs them under /usr/lib/efi/<package>/<version>/; older
 # releases put them straight on /boot/efi.)
-ROOTFS_EFI_DIR="$(dirname "$(find "$ROOTFS_TARGET/usr/lib/efi/shim" -name shimx64.efi 2>/dev/null | sort -V | tail -1)")"
-[ -f "$ROOTFS_EFI_DIR/shimx64.efi" ] || ROOTFS_EFI_DIR="$ROOTFS_TARGET/boot/efi/EFI/fedora"
-if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx64.efi" ]; then
+ROOTFS_EFI_DIR="$(dirname "$(find "$ROOTFS_TARGET/usr/lib/efi/shim" -name "shim$EFI_ARCH.efi" 2>/dev/null | sort -V | tail -1)")"
+[ -f "$ROOTFS_EFI_DIR/shim$EFI_ARCH.efi" ] || ROOTFS_EFI_DIR="$ROOTFS_TARGET/boot/efi/EFI/fedora"
+# Ploader (and the signed copies under ploader/secureboot) exist for x86_64 only.
+PLOADER_EFI="$PROFILE_DIR/ploader/ploader_x64.efi"
+[ "$ARCH" = x86_64 ] || PLOADER_EFI="/nonexistent"
+if [ -f "$PLOADER_EFI" ] || [ -f "$ROOTFS_EFI_DIR/shim$EFI_ARCH.efi" ]; then
     HAVE_UEFI=1
     echo "Building UEFI boot image..."
     mkdir -p "$ISO_WORKDIR/EFI/BOOT"
@@ -540,7 +576,7 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx6
     MOK_KEY="${PLOADER_MOK_KEY:-$REAL_HOME/pearos-mok/pearos-mok.key}"
     MOK_CERT="${PLOADER_MOK_CERT:-$REAL_HOME/pearos-mok/pearos-mok.crt}"
     SIGNED_PLOADER="$SECUREBOOT_DIR/ploader_x64_signed.efi"
-    if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] && command -v sbsign >/dev/null 2>&1 \
+    if [ -f "$PLOADER_EFI" ] && command -v sbsign >/dev/null 2>&1 \
        && [ -f "$MOK_KEY" ] && [ -f "$MOK_CERT" ]; then
         echo "MOK signing key found ($MOK_KEY) — re-signing Ploader fresh for this build."
         SIGNED_PLOADER="$BUILD_DIR/ploader_x64_signed.efi"
@@ -564,19 +600,19 @@ if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ] || [ -f "$ROOTFS_EFI_DIR/shimx6
     # re-integration as a branded front-end once this real boot path is
     # solid — shipping a working UEFI boot took priority over Ploader's
     # branding under the "ship today" call, see the project's development notes.
-    UEFI_GRUB_EFI="$(find "$ROOTFS_TARGET/usr/lib/efi/grub2" -name gcdx64.efi 2>/dev/null | head -1)"
-    if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi" ]; then
-        UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcdx64.efi"
+    UEFI_GRUB_EFI="$(find "$ROOTFS_TARGET/usr/lib/efi/grub2" -name "gcd$EFI_ARCH.efi" 2>/dev/null | head -1)"
+    if [ -z "$UEFI_GRUB_EFI" ] && [ -f "$ROOTFS_TARGET/boot/efi/EFI/fedora/gcd$EFI_ARCH.efi" ]; then
+        UEFI_GRUB_EFI="$ROOTFS_TARGET/boot/efi/EFI/fedora/gcd$EFI_ARCH.efi"
     fi
-    SHIM_EFI="$SECUREBOOT_DIR/shimx64.efi"
-    [ -f "$SHIM_EFI" ] || SHIM_EFI="$ROOTFS_EFI_DIR/shimx64.efi"
-    MM_EFI="$SECUREBOOT_DIR/mmx64.efi"
-    [ -f "$MM_EFI" ] || MM_EFI="$ROOTFS_EFI_DIR/mmx64.efi"
+    SHIM_EFI="$SECUREBOOT_DIR/shim$EFI_ARCH.efi"
+    [ -f "$SHIM_EFI" ] || SHIM_EFI="$ROOTFS_EFI_DIR/shim$EFI_ARCH.efi"
+    MM_EFI="$SECUREBOOT_DIR/mm$EFI_ARCH.efi"
+    [ -f "$MM_EFI" ] || MM_EFI="$ROOTFS_EFI_DIR/mm$EFI_ARCH.efi"
     if [ -f "$SHIM_EFI" ] && [ -f "$MM_EFI" ] && [ -n "$UEFI_GRUB_EFI" ]; then
-        echo "Chaining shim -> Fedora's real grub2-efi-x64-cdboot (gcdx64.efi) for UEFI kernel boot."
-        mcopy -i "$EFIBOOT_IMG" "$SHIM_EFI" ::/EFI/BOOT/BOOTX64.EFI
-        mcopy -i "$EFIBOOT_IMG" "$MM_EFI" ::/EFI/BOOT/mmx64.efi
-        mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" ::/EFI/BOOT/grubx64.efi
+        echo "Chaining shim -> Fedora's real grub2-efi-$EFI_ARCH-cdboot (gcd$EFI_ARCH.efi) for UEFI kernel boot."
+        mcopy -i "$EFIBOOT_IMG" "$SHIM_EFI" "::/EFI/BOOT/BOOT$EFI_ARCH_UPPER.EFI"
+        mcopy -i "$EFIBOOT_IMG" "$MM_EFI" "::/EFI/BOOT/mm$EFI_ARCH.efi"
+        mcopy -i "$EFIBOOT_IMG" "$UEFI_GRUB_EFI" "::/EFI/BOOT/grub$EFI_ARCH.efi"
         # gcdx64.efi's own prefix/config search targets the OUTER ISO9660
         # filesystem it was booted from (i.e. (cd0) as GRUB itself sees it),
         # NOT the small efiboot.img FAT image shim loaded it out of — real
@@ -605,16 +641,16 @@ EOF
             cp "$ROOTFS_TARGET/boot/grub2/fonts/unicode.pf2" "$ISO_WORKDIR/EFI/BOOT/fonts/unicode.pf2"
         fi
     else
-        if [ -f "$PROFILE_DIR/ploader/ploader_x64.efi" ]; then
+        if [ -f "$PLOADER_EFI" ]; then
             echo "WARNING: shim/mmx64/grub2-efi-x64-cdboot not all found — shipping unsigned Ploader as BOOTX64.EFI (no real UEFI kernel-boot path, cosmetic menu only)." >&2
             mcopy -i "$EFIBOOT_IMG" "$PROFILE_DIR/ploader/ploader_x64.efi" ::/EFI/BOOT/BOOTX64.EFI
         else
-            echo "ERROR: no signed shim, MokManager or grub2-efi-x64-cdboot in the target; can't build UEFI boot." >&2
+            echo "ERROR: no signed shim, MokManager or grub2-efi-$EFI_ARCH-cdboot in the target; can't build UEFI boot." >&2
             exit 1
         fi
     fi
 else
-    echo "WARNING: $PROFILE_DIR/ploader/ploader_x64.efi not built yet (Phase 4) — building without Ploader's branded UEFI boot." >&2
+    echo "WARNING: no shim$EFI_ARCH.efi in the target and no Ploader — building without UEFI boot." >&2
 fi
 
 # --- BIOS boot: grub2-mkrescue, not a hand-rolled grub2-mkstandalone +
@@ -676,6 +712,21 @@ fi
 # local VGA console/screendump path still gets something too. This
 # needs a matching `--serial0 socket` device added to the VM
 # to actually capture it — see the project's development notes.
+ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-$ARCH.iso"
+if [ "$ARCH" != x86_64 ]; then
+    # No BIOS on aarch64: the ISO boots by UEFI only, from efiboot.img.
+    if [ "$HAVE_UEFI" != "1" ]; then
+        echo "ERROR: $ARCH boots by UEFI only, and the UEFI boot image could not be built." >&2
+        exit 1
+    fi
+    xorriso -as mkisofs \
+        -iso-level 3 -full-iso9660-filenames \
+        -volid "$PROFILE_ISO_LABEL" \
+        -e EFI/efiboot.img -no-emul-boot \
+        -isohybrid-gpt-basdat \
+        -output "$BUILD_DIR/$ISO_NAME" \
+        "$ISO_WORKDIR"
+else
 echo "Writing grub.cfg for grub2-mkrescue ---"
 mkdir -p "$ISO_WORKDIR/boot/grub"
 cat > "$ISO_WORKDIR/boot/grub/grub.cfg" <<EOF
@@ -692,7 +743,6 @@ $(live_menu_entries)
 EOF
 
 echo "Running grub2-mkrescue..."
-ISO_NAME="$PROFILE_ISO_PREFIX-$BRANCH-$ISO_VERSION-x86_64.iso"
 STAGING_ISO="$BUILD_DIR/.staging-$ISO_NAME"
 grub2-mkrescue -o "$STAGING_ISO" -volid "$PROFILE_ISO_LABEL" "$ISO_WORKDIR"
 
@@ -741,6 +791,7 @@ if [ "$HAVE_UEFI" = "1" ]; then
 else
     mv "$STAGING_ISO" "$BUILD_DIR/$ISO_NAME"
 fi
+fi   # x86_64 (BIOS + UEFI)
 
 sha256sum "$BUILD_DIR/$ISO_NAME" > "$BUILD_DIR/$ISO_NAME.sha256"
 [ -f "$PACKAGES_TSV" ] && mv -f "$PACKAGES_TSV" "$BUILD_DIR/$ISO_NAME.packages.tsv"

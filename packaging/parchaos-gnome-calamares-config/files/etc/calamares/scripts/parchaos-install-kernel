@@ -71,6 +71,13 @@ mkdir -p /boot/grub2
 # target's /boot/efi both came up completely empty, no /EFI directory
 # at all, and grub2-mkconfig then failed with "grub.cfg.new: No such
 # file or directory" since /boot/efi/EFI/fedora was never created.
+# EFI file names carry the architecture: shimx64.efi on x86_64, shimaa64.efi
+# on aarch64 (ticket #167), and the fallback loader is BOOTX64.EFI/BOOTAA64.EFI.
+case "$(uname -m)" in
+    aarch64) EFI_ARCH=aa64 ;;
+    *) EFI_ARCH=x64 ;;
+esac
+EFI_ARCH_UPPER="$(echo "$EFI_ARCH" | tr '[:lower:]' '[:upper:]')"
 GRUB_EFI_SRC="$(find /usr/lib/efi/grub2 -maxdepth 3 -name fedora -type d 2>/dev/null | head -1)"
 SHIM_EFI_SRC="$(find /usr/lib/efi/shim -maxdepth 3 -name fedora -type d 2>/dev/null | head -1)"
 if [ -n "$GRUB_EFI_SRC" ] && [ -n "$SHIM_EFI_SRC" ]; then
@@ -86,11 +93,11 @@ if [ -n "$GRUB_EFI_SRC" ] && [ -n "$SHIM_EFI_SRC" ]; then
     mkdir -p /boot/efi/EFI/fedora /boot/efi/EFI/BOOT
     cp -r "$GRUB_EFI_SRC/." /boot/efi/EFI/fedora/
     cp -r "$SHIM_EFI_SRC/." /boot/efi/EFI/fedora/
-    cp -r /boot/efi/EFI/fedora/shimx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
-    [ -f /boot/efi/EFI/fedora/mmx64.efi ] && cp -r /boot/efi/EFI/fedora/mmx64.efi /boot/efi/EFI/BOOT/mmx64.efi
-    [ -f /boot/efi/EFI/fedora/fbx64.efi ] && cp -r /boot/efi/EFI/fedora/fbx64.efi /boot/efi/EFI/BOOT/fbx64.efi
+    cp -r "/boot/efi/EFI/fedora/shim$EFI_ARCH.efi" "/boot/efi/EFI/BOOT/BOOT$EFI_ARCH_UPPER.EFI"
+    [ -f "/boot/efi/EFI/fedora/mm$EFI_ARCH.efi" ] && cp -r "/boot/efi/EFI/fedora/mm$EFI_ARCH.efi" "/boot/efi/EFI/BOOT/mm$EFI_ARCH.efi"
+    [ -f "/boot/efi/EFI/fedora/fb$EFI_ARCH.efi" ] && cp -r "/boot/efi/EFI/fedora/fb$EFI_ARCH.efi" "/boot/efi/EFI/BOOT/fb$EFI_ARCH.efi"
 else
-    echo "parchaos-install-kernel: grub2-efi-x64/shim-x64 master EFI files not found under /usr/lib/efi -- ESP not populated, UEFI boot will not work" >&2
+    echo "parchaos-install-kernel: grub2-efi-$EFI_ARCH/shim-$EFI_ARCH master EFI files not found under /usr/lib/efi -- ESP not populated, UEFI boot will not work" >&2
 fi
 
 KVER=$(rpm -q --qf '%{version}-%{release}.%{arch}\n' kernel-core | tail -1)

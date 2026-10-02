@@ -54,7 +54,12 @@ else
     ESP_DISK="${ESP_PART%$ESP_PARTNUM}"
 fi
 
-efibootmgr -c -w -L "ParchaOS" -d "$ESP_DISK" -p "$ESP_PARTNUM" -l '\EFI\fedora\shimx64.efi' >/dev/null
+# shimx64.efi on x86_64, shimaa64.efi on aarch64 (ticket #167)
+case "$(uname -m)" in
+    aarch64) SHIM='\EFI\fedora\shimaa64.efi' ;;
+    *) SHIM='\EFI\fedora\shimx64.efi' ;;
+esac
+efibootmgr -c -w -L "ParchaOS" -d "$ESP_DISK" -p "$ESP_PARTNUM" -l "$SHIM" >/dev/null
 
 # Real bug found via a real installed system on actual hardware
 # (2026-09-24): after a full install (dual-boot disk, pre-existing

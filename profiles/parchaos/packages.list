@@ -177,7 +177,7 @@ dracut-live
 # mode instead of the real amdgpu/radeonsi path.
 mesa-dri-drivers
 mesa-vulkan-drivers
-microcode_ctl
+x86_64: microcode_ctl
 # Real bug found via a real disk-install test on actual hardware
 # (2026-09-23): parchaos-gnome-calamares-config's parchaos-install-kernel
 # script populates the installed system's ESP from grub2-efi-x64's own
@@ -190,11 +190,18 @@ microcode_ctl
 # working installed system. Also present, latent, in the KDE (pearos)
 # profile's own packages.list -- not yet confirmed whether it's been hit
 # there too.
-grub2-efi-x64
-grub2-pc-modules
-grub2-efi-x64-cdboot
-grub2-efi-x64-modules
-shim-x64
+# Bootloaders per architecture ("arch: package" lines are installed only
+# for that --arch, ticket #167): x86_64 boots by UEFI and BIOS, aarch64 by
+# UEFI only.
+x86_64: grub2-efi-x64
+x86_64: grub2-pc-modules
+x86_64: grub2-efi-x64-cdboot
+x86_64: grub2-efi-x64-modules
+x86_64: shim-x64
+aarch64: grub2-efi-aa64
+aarch64: grub2-efi-aa64-cdboot
+aarch64: grub2-efi-aa64-modules
+aarch64: shim-aa64
 mokutil
 sudo
 passwd
