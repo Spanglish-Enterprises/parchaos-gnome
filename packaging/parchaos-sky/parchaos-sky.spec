@@ -9,7 +9,7 @@
 # ==============================================================================
 
 Name:           parchaos-sky
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
@@ -19,10 +19,14 @@ Source0:        parchaos-sky
 Source1:        org.parchaos.Sky.desktop
 Source2:        org.parchaos.Sky.svg
 Source3:        parchaos-sky-map.json.gz
+Source4:        org.parchaos.Sky.metainfo.xml
+Source5:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
 BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
+BuildRequires:  libappstream-glib
 
 Requires:       python3-gobject
 Requires:       gtk4
@@ -50,9 +54,14 @@ install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-sky
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desktop
 install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
 install -Dm0644 %{SOURCE3} %{buildroot}%{_datadir}/parchaos-sky/parchaos-sky-map.json.gz
+install -Dm0644 %{SOURCE4} %{buildroot}%{_metainfodir}/org.parchaos.Sky.metainfo.xml
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo %{SOURCE5}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desktop
+appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/org.parchaos.Sky.metainfo.xml
 
 %files
 %license LICENSE
@@ -60,8 +69,13 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desk
 %{_datadir}/applications/org.parchaos.Sky.desktop
 %{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
 %{_datadir}/parchaos-sky/
+%{_metainfodir}/org.parchaos.Sky.metainfo.xml
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-sky.mo
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.3.0-1
+- Ticket #192: next hour reads drizzle as well as rain from the radar (graded none / drizzle / rain); every string goes through gettext (po/parchaos-sky.pot, Spanish in po/es.po, day names translated in-app so they work without a system language pack); AppStream metainfo with screenshots; the hourly strip keeps the scrubbed hour in view; drizzle bars visible; placeholders named for translators.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.2.0-1
 - Ticket #192: lenses (temperature, rain, wind, comfort), heads-up for the next 48 hours, time scrubber and 24-hour time-lapse of the sky, best time to be outside with your own comfort range, comfort in plain words, two columns on wide windows, trips from your calendar (opt-in, local), hurricane season card (US National Hurricane Center), coquí nights in Puerto Rico (opt-in, synthesised), Parchita character (preview), radar map (LibreWXR, CC BY 4.0 data) over a Natural Earth map, next-hour rain from the radar nowcast. Puerto Rico uses Fahrenheit and mph.
 

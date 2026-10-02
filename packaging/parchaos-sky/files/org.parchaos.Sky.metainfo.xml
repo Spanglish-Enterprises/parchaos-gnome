@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>org.parchaos.Sky</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Parcha Sky</name>
+  <summary>The sky outside, right now</summary>
+  <developer id="org.parchaos">
+    <name>Spanglish Enterprises LLC</name>
+  </developer>
+  <description>
+    <p>
+      Parcha Sky shows the weather as the sky outside right now. The window follows the real sun,
+      moon, clouds, wind, rain and snow for your place, and the forecast sits on frosted glass
+      cards on top of it.
+    </p>
+    <ul>
+      <li>Next hour: rain or drizzle starting or ending at your exact spot, from radar</li>
+      <li>Heads-up: rain windows, gusts, heat, freezing nights and big changes in the next two days, in plain words</li>
+      <li>Time scrubber: drag through the next 48 hours and the sky plays forward, or watch the next day as a time-lapse</li>
+      <li>Lenses for temperature, rain, wind and comfort</li>
+      <li>Best time to be outside, using your own comfort range</li>
+      <li>Radar map, official alerts in the US and Puerto Rico, and hurricane season tracking</li>
+      <li>Weather for trips in your calendar, read only on your computer and only if you turn it on</li>
+      <li>English and Spanish, with playful or plain summaries</li>
+    </ul>
+    <p>
+      No account and no tracking. Only rough coordinates are sent to the weather services.
+      Weather data from MET Norway, alerts and storms from the US National Weather Service and
+      National Hurricane Center, radar from LibreWXR, map from Natural Earth.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.parchaos.Sky.desktop</launchable>
+  <url type="homepage">https://www.parchaos.org</url>
+  <url type="bugtracker">https://www.parchaos.org/support</url>
+  <url type="vcs-browser">https://github.com/Spanglish-Enterprises/parchaos-gnome</url>
+  <translation type="gettext">parchaos-sky</translation>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <internet>always</internet>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <branding>
+    <color type="primary" scheme_preference="light">#7f8fd6</color>
+    <color type="primary" scheme_preference="dark">#3a5fb8</color>
+  </branding>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The sky outside right now, with the next hour from radar</caption>
+      <image>https://raw.githubusercontent.com/Spanglish-Enterprises/parchaos-gnome/main/packaging/parchaos-sky/screenshots/main.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Hourly forecast, radar map and hurricane tracking</caption>
+      <image>https://raw.githubusercontent.com/Spanglish-Enterprises/parchaos-gnome/main/packaging/parchaos-sky/screenshots/radar.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>In Spanish, for San Juan</caption>
+      <image>https://raw.githubusercontent.com/Spanglish-Enterprises/parchaos-gnome/main/packaging/parchaos-sky/screenshots/spanish.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>A rainy day</caption>
+      <image>https://raw.githubusercontent.com/Spanglish-Enterprises/parchaos-gnome/main/packaging/parchaos-sky/screenshots/rain.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.3.0" date="2026-10-02">
+      <description>
+        <p>Next-hour rain and drizzle from radar, radar map, translations through gettext, and many fixes.</p>
+      </description>
+    </release>
+    <release version="0.2.0" date="2026-10-02">
+      <description>
+        <p>Lenses, heads-up, time scrubber, best time outside, trips, tropics and Parchita (preview).</p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-10-02">
+      <description>
+        <p>First version: the living sky with forecasts on glass cards.</p>
+      </description>
+    </release>
+  </releases>
+</component>

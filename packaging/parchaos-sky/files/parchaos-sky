@@ -32,8 +32,23 @@ gettext.bindtextdomain('parchaos-sky', os.environ.get('PARCHAOS_LOCALEDIR', '/us
 gettext.textdomain('parchaos-sky')
 _ = gettext.gettext
 
+
+def N_(text):
+    # marks a string for translation where it is defined; _() translates it where it is shown
+    return text
+
+
+# Day names through our own translations, so they are right even without the system's language
+# pack (Flatpak, minimal installs).
+DAYS = [N_('Monday'), N_('Tuesday'), N_('Wednesday'), N_('Thursday'), N_('Friday'), N_('Saturday'), N_('Sunday')]
+DAYS_SHORT = [N_('Mon'), N_('Tue'), N_('Wed'), N_('Thu'), N_('Fri'), N_('Sat'), N_('Sun')]
+
+
+def day_name(d, short=False):
+    return _((DAYS_SHORT if short else DAYS)[d.weekday()])
+
 APP_ID = 'org.parchaos.Sky'
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 USER_AGENT = f'ParchaOS-Sky/{VERSION} (+https://www.parchaos.org/support)'
 MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.2f}&lon={lon:.2f}'
 NWS_ALERTS_URL = 'https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}'
@@ -99,11 +114,6 @@ def uses_imperial():
     return any(loc.startswith(p) for p in ('en_US', 'es_US', 'es_PR', 'en_PR', 'en_LR', 'my_MM'))
 
 
-def spanish():
-    lang = os.environ.get('LANGUAGE') or os.environ.get('LC_MESSAGES') or os.environ.get('LANG') or ''
-    return lang.startswith('es')
-
-
 # ---------------------------------------------------------------------------------------------
 # The sun: height above the horizon, sunrise and sunset (NOAA's simplified algorithm)
 # ---------------------------------------------------------------------------------------------
@@ -157,24 +167,24 @@ def moon_phase(when_utc):
 # ---------------------------------------------------------------------------------------------
 
 SYMBOLS = {
-    # MET symbol code (without _day/_night/_polartwilight) -> (icon, English, Spanish)
-    'clearsky': ('weather-clear', 'Clear', 'Despejado'),
-    'fair': ('weather-few-clouds', 'Mostly clear', 'Mayormente despejado'),
-    'partlycloudy': ('weather-few-clouds', 'Partly cloudy', 'Parcialmente nublado'),
-    'cloudy': ('weather-overcast', 'Cloudy', 'Nublado'),
-    'fog': ('weather-fog', 'Fog', 'Niebla'),
-    'lightrain': ('weather-showers-scattered', 'Light rain', 'Lluvia ligera'),
-    'rain': ('weather-showers', 'Rain', 'Lluvia'),
-    'heavyrain': ('weather-showers', 'Heavy rain', 'Lluvia fuerte'),
-    'lightrainshowers': ('weather-showers-scattered', 'Light showers', 'Chubascos ligeros'),
-    'rainshowers': ('weather-showers-scattered', 'Showers', 'Chubascos'),
-    'heavyrainshowers': ('weather-showers', 'Heavy showers', 'Aguaceros'),
-    'lightsleet': ('weather-snow', 'Light sleet', 'Aguanieve ligera'),
-    'sleet': ('weather-snow', 'Sleet', 'Aguanieve'),
-    'heavysleet': ('weather-snow', 'Heavy sleet', 'Aguanieve fuerte'),
-    'lightsnow': ('weather-snow', 'Light snow', 'Nieve ligera'),
-    'snow': ('weather-snow', 'Snow', 'Nieve'),
-    'heavysnow': ('weather-snow', 'Heavy snow', 'Nevada fuerte'),
+    # MET symbol code (without _day/_night/_polartwilight) -> (icon, name)
+    'clearsky': ('weather-clear', N_('Clear')),
+    'fair': ('weather-few-clouds', N_('Mostly clear')),
+    'partlycloudy': ('weather-few-clouds', N_('Partly cloudy')),
+    'cloudy': ('weather-overcast', N_('Cloudy')),
+    'fog': ('weather-fog', N_('Fog')),
+    'lightrain': ('weather-showers-scattered', N_('Light rain')),
+    'rain': ('weather-showers', N_('Rain')),
+    'heavyrain': ('weather-showers', N_('Heavy rain')),
+    'lightrainshowers': ('weather-showers-scattered', N_('Light showers')),
+    'rainshowers': ('weather-showers-scattered', N_('Showers')),
+    'heavyrainshowers': ('weather-showers', N_('Heavy showers')),
+    'lightsleet': ('weather-snow', N_('Light sleet')),
+    'sleet': ('weather-snow', N_('Sleet')),
+    'heavysleet': ('weather-snow', N_('Heavy sleet')),
+    'lightsnow': ('weather-snow', N_('Light snow')),
+    'snow': ('weather-snow', N_('Snow')),
+    'heavysnow': ('weather-snow', N_('Heavy snow')),
 }
 
 
@@ -182,14 +192,13 @@ def symbol_info(code, night=False):
     base = (code or 'cloudy').split('_')[0]
     thunder = base.endswith('andthunder')
     base = base.replace('andthunder', '')
-    for suffix in ('showers',):
-        pass
-    icon, en, es = SYMBOLS.get(base, ('weather-overcast', base, base))
+    icon, en = SYMBOLS.get(base, ('weather-overcast', base))
+    words = _(en)
     if thunder:
-        icon, en, es = 'weather-storm', en + ' and thunder', es + ' con tormenta'
+        icon, words = 'weather-storm', _('{words} and thunder').format(words=words)
     if night and icon in ('weather-clear', 'weather-few-clouds'):
         icon += '-night'
-    return icon + '-symbolic', (es if spanish() else en), thunder
+    return icon + '-symbolic', words, thunder
 
 
 class Forecast:
@@ -648,10 +657,6 @@ def sky_state_for(fc, hour):
 # Making sense of the numbers: feels-like, comfort, heads-up, the best time to go out
 # ---------------------------------------------------------------------------------------------
 
-def T(en, es):
-    return es if spanish() else en
-
-
 def feels_like(h):
     t, rh, wind = h.get('temp'), h.get('humidity'), h.get('wind') or 0
     if t is None:
@@ -672,9 +677,9 @@ def comfort_words(dew):
     """How the air feels, from the dew point (degrees C)."""
     if dew is None:
         return ''
-    scale = [(10, T('Dry and crisp', 'Seco y fresco')), (13, T('Comfortable', 'Agradable')),
-             (16, T('Pleasant', 'Placentero')), (18, T('A little humid', 'Algo húmedo')),
-             (21, T('Humid', 'Húmedo')), (24, T('Sticky', 'Pegajoso')), (99, T('Oppressive', 'Bochorno pesado'))]
+    scale = [(10, _('Dry and crisp')), (13, _('Comfortable')),
+             (16, _('Pleasant')), (18, _('A little humid')),
+             (21, _('Humid')), (24, _('Sticky')), (99, _('Oppressive'))]
     for limit, words in scale:
         if dew < limit:
             return words
@@ -682,27 +687,23 @@ def comfort_words(dew):
 
 
 def day_part(dt):
+    """'this afternoon', 'tomorrow morning', 'Saturday evening'... as whole phrases, so each
+    language can word them its own way."""
     h = dt.hour
-    if h < 6:
-        part = T('overnight', 'de madrugada')
-    elif h < 12:
-        part = T('morning', 'en la mañana')
-    elif h < 17:
-        part = T('afternoon', 'en la tarde')
-    elif h < 21:
-        part = T('evening', 'al atardecer')
-    else:
-        part = T('tonight', 'en la noche')
+    part = 'night' if h < 6 else 'morning' if h < 12 else 'afternoon' if h < 17 else 'evening' if h < 21 else 'tonight'
     today = datetime.now().date()
-    if dt.date() == today and not spanish():
-        return {'morning': 'this morning', 'afternoon': 'this afternoon', 'evening': 'this evening'}.get(part, part)
     if dt.date() == today:
-        day = 'hoy' if h < 21 else ''
-    elif dt.date() == today + timedelta(days=1):
-        day = T('tomorrow', 'mañana')
-    else:
-        day = dt.strftime('%A')
-    return f'{day} {part}'.strip() if not (spanish() and day == 'mañana' and part == 'en la mañana') else 'mañana temprano'
+        return {'night': _('overnight'), 'morning': _('this morning'),
+                'afternoon': _('this afternoon'), 'evening': _('this evening'),
+                'tonight': _('tonight')}[part]
+    if dt.date() == today + timedelta(days=1):
+        return {'night': _('overnight into tomorrow'), 'morning': _('tomorrow morning'),
+                'afternoon': _('tomorrow afternoon'), 'evening': _('tomorrow evening'),
+                'tonight': _('tomorrow night')}[part]
+    day = day_name(dt)
+    return {'night': _('{day} overnight').format(day=day), 'morning': _('{day} morning').format(day=day),
+            'afternoon': _('{day} afternoon').format(day=day), 'evening': _('{day} evening').format(day=day),
+            'tonight': _('{day} night').format(day=day)}[part]
 
 
 def heads_up(fc, imp):
@@ -727,40 +728,35 @@ def heads_up(fc, imp):
         start = hours[a]['time'].astimezone()
         end = hours[b]['time'].astimezone() + timedelta(hours=1)
         peak = max(h['precip'] for h in hours[a:b + 1])
-        heavy = T('heavy ', 'fuerte ') if peak >= 4 else ''
+        heavy = _('heavy ') if peak >= 4 else ''
         thunder = any('thunder' in (h['symbol'] or '') or (h['thunder_p'] or 0) >= 30 for h in hours[a:b + 1])
-        what = T('Storms', 'Tormentas') if thunder else T('Heavy rain' if heavy else 'Rain', f'Lluvia {heavy}'.strip())
+        what = _('Storms') if thunder else (_('Heavy rain') if heavy else _('Rain'))
         out.append(('weather-storm-symbolic' if thunder else 'weather-showers-symbolic',
                     f'{what} {day_part(start)}, {fmt_hour(start)}–{fmt_hour(end)}'))
     # Gusts
     gusty = [h for h in hours if (h['gust'] or h['wind'] or 0) >= 14]
     if gusty:
         g = max(gusty, key=lambda h: h['gust'] or h['wind'])
-        out.append(('weather-windy-symbolic', T(f'Gusty {day_part(g["time"].astimezone())}, up to {fmt_wind(g["gust"] or g["wind"], imp)}',
-                                                 f'Ráfagas {day_part(g["time"].astimezone())}, hasta {fmt_wind(g["gust"] or g["wind"], imp)}')))
+        out.append(('weather-windy-symbolic', _('Gusty {when}, up to {wind}').format(when=day_part(g["time"].astimezone()), wind=fmt_wind(g["gust"] or g["wind"], imp))))
     # Heat and cold
     hottest = max(hours, key=lambda h: feels_like(h) or -99) if hours else None
     if hottest and (feels_like(hottest) or 0) >= 38:
-        out.append(('temperature-symbolic', T(f'Heat {day_part(hottest["time"].astimezone())}: feels like {fmt_temp(feels_like(hottest), imp)}',
-                                               f'Calor {day_part(hottest["time"].astimezone())}: se siente como {fmt_temp(feels_like(hottest), imp)}')))
+        out.append(('temperature-symbolic', _('Heat {when}: feels like {temp}').format(when=day_part(hottest["time"].astimezone()), temp=fmt_temp(feels_like(hottest), imp))))
     coldest = min(hours, key=lambda h: h['temp'] if h['temp'] is not None else 99) if hours else None
     if coldest and coldest['temp'] is not None and coldest['temp'] <= 0:
-        out.append(('weather-snow-symbolic', T(f'Freezing {day_part(coldest["time"].astimezone())}, down to {fmt_temp(coldest["temp"], imp)}',
-                                                f'Bajo cero {day_part(coldest["time"].astimezone())}, hasta {fmt_temp(coldest["temp"], imp)}')))
+        out.append(('weather-snow-symbolic', _('Freezing {when}, down to {temp}').format(when=day_part(coldest["time"].astimezone()), temp=fmt_temp(coldest["temp"], imp))))
     # Big change between days
     days = fc.days(3)
     if len(days) >= 2:
         d0, d1 = days[0], days[1]
         diff = d1['hi'] - d0['hi']
-        name = T('Tomorrow', 'Mañana') if d1['date'] == datetime.now().date() + timedelta(days=1) else d1['date'].strftime('%A')
+        name = _('Tomorrow') if d1['date'] == datetime.now().date() + timedelta(days=1) else day_name(d1['date']).capitalize()
         if diff <= -6:
-            out.append(('weather-few-clouds-symbolic', T(f'{name} turns cooler, about {abs(round(diff * (1.8 if imp else 1)))}° below today',
-                                                          f'{name} refresca, unos {abs(round(diff * (1.8 if imp else 1)))}° menos que hoy')))
+            out.append(('weather-few-clouds-symbolic', _('{name} turns cooler, about {number}° below today').format(name=name, number=abs(round(diff * (1.8 if imp else 1))))))
         elif diff >= 6:
-            out.append(('weather-clear-symbolic', T(f'{name} warms up, about {round(diff * (1.8 if imp else 1))}° above today',
-                                                     f'{name} sube la temperatura, unos {round(diff * (1.8 if imp else 1))}° más que hoy')))
+            out.append(('weather-clear-symbolic', _('{name} warms up, about {number}° above today').format(name=name, number=round(diff * (1.8 if imp else 1)))))
     if not out:
-        out.append(('weather-clear-symbolic', T('Quiet weather for the next two days.', 'Tiempo tranquilo los próximos dos días.')))
+        out.append(('weather-clear-symbolic', _('Quiet weather for the next two days.')))
     return out[:4]
 
 
@@ -795,10 +791,10 @@ def best_window(fc, prefs):
 # ---------------------------------------------------------------------------------------------
 
 NHC_URL = 'https://www.nhc.noaa.gov/CurrentStorms.json'
-STORM_KINDS = {'HU': ('Hurricane', 'Huracán'), 'TS': ('Tropical storm', 'Tormenta tropical'),
-               'TD': ('Tropical depression', 'Depresión tropical'), 'STS': ('Subtropical storm', 'Tormenta subtropical'),
-               'SD': ('Subtropical depression', 'Depresión subtropical'),
-               'PTC': ('Potential tropical cyclone', 'Posible ciclón tropical'), 'PC': ('Post-tropical cyclone', 'Ciclón postropical')}
+STORM_KINDS = {'HU': N_('Hurricane'), 'TS': N_('Tropical storm'),
+               'TD': N_('Tropical depression'), 'STS': N_('Subtropical storm'),
+               'SD': N_('Subtropical depression'),
+               'PTC': N_('Potential tropical cyclone'), 'PC': N_('Post-tropical cyclone')}
 
 
 def in_hurricane_country(lat, lon):
@@ -1149,7 +1145,7 @@ def merc(lat, lon, world):
 
 
 def dbz_to_mm(dbz):
-    if dbz < 10:
+    if dbz < 13:
         return 0.0
     return (10 ** (dbz / 10) / 200) ** (1 / 1.6)  # Marshall-Palmer
 
@@ -1252,21 +1248,30 @@ class RadarService(GObject.Object):
 
 
 def next_hour_text(steps):
-    """('starts'|'stops'|'dry'|'wet', minutes, words) from [(time, is_forecast, dBZ)]."""
+    """('starts'|'stops'|'dry'|'wet', minutes, words) from [(time, is_forecast, dBZ)].
+    Below 13 dBZ nothing reaches the ground worth mentioning; 13-18 is drizzle (about 0.2-0.5 mm/h);
+    18 and up is rain."""
     if not steps:
         return None
     now = time.time()
-    wet = [(t, d >= 18) for t, _f, d in steps]
+    wet = [(t, d >= 13) for t, _f, d in steps]
+    peak = max(d for _t, _f, d in steps)
+    drizzle = peak < 18
     first_wet = wet[0][1]
     for t, w in wet[1:]:
         if w != first_wet:
             mins = max(5, int(round((t - now) / 60 / 5)) * 5)
+            if w and drizzle:
+                return 'starts', mins, _('Drizzle starting in about {mins} min').format(mins=mins)
             if w:
-                return 'starts', mins, T(f'Rain starting in about {mins} min', f'Lluvia en unos {mins} min')
-            return 'stops', mins, T(f'Rain ending in about {mins} min', f'La lluvia para en unos {mins} min')
+                return 'starts', mins, _('Rain starting in about {mins} min').format(mins=mins)
+            if drizzle:
+                return 'stops', mins, _('Drizzle ending in about {mins} min').format(mins=mins)
+            return 'stops', mins, _('Rain ending in about {mins} min').format(mins=mins)
     if first_wet:
-        return 'wet', 0, T('Rain for the next hour', 'Lluvia durante la próxima hora')
-    return 'dry', 0, T('No rain in the next hour', 'Sin lluvia en la próxima hora')
+        return 'wet', 0, (_('Drizzle for the next hour') if drizzle
+                          else _('Rain for the next hour'))
+    return 'dry', 0, _('No rain in the next hour')
 
 
 class RadarMap(Gtk.DrawingArea):
@@ -1387,7 +1392,6 @@ def summary_line(fc, playful, temp_text):
     now = fc.now()
     if not now:
         return ''
-    es = spanish()
     hot = (feels_like(now) or 0) >= 32
     cold = now['temp'] is not None and now['temp'] <= 3
     kind, when = fc.rain_soon()
@@ -1395,29 +1399,27 @@ def summary_line(fc, playful, temp_text):
     _icon, cond, thunder = symbol_info(now['symbol'])
     if not playful:
         if kind == 'starts':
-            return (f'Lluvia a partir de las {when_txt}.' if es else f'Rain starting around {when_txt}.')
+            return _('Rain starting around {when_txt}.').format(when_txt=when_txt)
         if kind == 'stops':
-            return (f'La lluvia para hacia las {when_txt}.' if es else f'Rain stopping around {when_txt}.')
+            return _('Rain stopping around {when_txt}.').format(when_txt=when_txt)
         return f'{cond}, {temp_text}.'
     if thunder:
-        return 'Truenos por ahí. Mejor adentro un rato.' if es else 'Thunder about. Good time for indoors.'
+        return _('Thunder about. Good time for indoors.')
     if kind == 'starts':
-        return (f'Seco por ahora; el aguacero llega como a las {when_txt}. Paraguas a mano.' if es
-                else f'Dry for now, rain rolls in around {when_txt}. Keep the umbrella close.')
+        return _('Dry for now, rain rolls in around {when_txt}. Keep the umbrella close.').format(when_txt=when_txt)
     if kind == 'stops':
-        return (f'Llueve, pero escampa como a las {when_txt}.' if es
-                else f'Wet out there, but it clears up around {when_txt}.')
+        return _('Wet out there, but it clears up around {when_txt}.').format(when_txt=when_txt)
     if hot:
-        return 'Calorón. Agua, sombra y nada de prisa.' if es else 'Proper hot. Water, shade, no rushing.'
+        return _('Proper hot. Water, shade, no rushing.')
     if cold:
-        return 'Frío de verdad. Abrígate bien.' if es else 'Properly cold. Layers on.'
+        return _('Properly cold. Layers on.')
     if (now['dew'] or 0) >= 21:
-        return 'Pegajoso afuera. El aire se siente pesado.' if es else 'Sticky out there. The air has weight to it.'
+        return _('Sticky out there. The air has weight to it.')
     if now['clouds'] < 25:
-        return 'Cielo limpio. Buen día para estar afuera.' if es else 'Clear skies. A good one to be outside.'
+        return _('Clear skies. A good one to be outside.')
     if now['clouds'] > 85:
-        return 'Gris y tranquilo. Día de café.' if es else 'Grey and quiet. Coffee weather.'
-    return f'{cond}, {temp_text}. Nada fuera de lo normal.' if es else f'{cond}, {temp_text}. Nothing dramatic.'
+        return _('Grey and quiet. Coffee weather.')
+    return _('{cond}, {temp_text}. Nothing dramatic.').format(cond=cond, temp_text=temp_text)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1462,10 +1464,10 @@ CSS = b"""
 .sky-row-text { font-size: 14px; }
 """
 
-LENSES = [('temp', 'temperature-symbolic', ('Temperature', 'Temperatura')),
-          ('rain', 'weather-showers-symbolic', ('Rain', 'Lluvia')),
-          ('wind', 'weather-windy-symbolic', ('Wind', 'Viento')),
-          ('comfort', 'weather-few-clouds-symbolic', ('Comfort', 'Confort'))]
+LENSES = [('temp', 'temperature-symbolic', N_('Temperature')),
+          ('rain', 'weather-showers-symbolic', N_('Rain')),
+          ('wind', 'weather-windy-symbolic', N_('Wind')),
+          ('comfort', 'weather-few-clouds-symbolic', N_('Comfort'))]
 
 ARROWS = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘']  # where the wind blows *to*, from its "from" direction
 
@@ -1485,8 +1487,7 @@ def fmt_rain(mm, imperial):
 
 
 def compass(deg):
-    names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] if not spanish() else \
-        ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO']
+    names = [_('N'), _('NE'), _('E'), _('SE'), _('S'), _('SW'), _('W'), _('NW')]
     return names[int((deg % 360) / 45 + 0.5) % 8]
 
 
@@ -2081,7 +2082,7 @@ class SkyWindow(Adw.ApplicationWindow):
             self.content.append(box)
 
         # Heads-up
-        card = self._card(T('Heads-up', 'Atento'))
+        card = self._card(_('Heads-up'))
         for icon, text in heads_up(fc, imp):
             row = Gtk.Box(spacing=10)
             row.append(Gtk.Image(icon_name=icon, pixel_size=18))
@@ -2144,8 +2145,8 @@ class SkyWindow(Adw.ApplicationWindow):
         text.append(self._label(place, 'sky-place'))
         if self.scrub:
             local = h['time'].astimezone()
-            when = local.strftime('%a ') + fmt_hour(local)
-            back = Gtk.Button(child=self._label(T(f'{when} · back to now', f'{when} · volver a ahora'), 'sky-when'),
+            when = day_name(local, short=True).capitalize() + ' ' + fmt_hour(local)
+            back = Gtk.Button(child=self._label(_('{when} · back to now').format(when=when), 'sky-when'),
                               halign=Gtk.Align.CENTER)
             back.add_css_class('flat')
             back.connect('clicked', lambda *_: self._select(0))
@@ -2157,16 +2158,16 @@ class SkyWindow(Adw.ApplicationWindow):
         fl = feels_like(h)
         bits = []
         if today and not self.scrub:
-            bits.append(_('H:%s  L:%s') % (fmt_temp(today['hi'], imp), fmt_temp(today['lo'], imp)))
+            bits.append(_('H:{high}  L:{low}').format(high=fmt_temp(today['hi'], imp), low=fmt_temp(today['lo'], imp)))
         if fl is not None and abs(fl - (h['temp'] or 0)) >= 1.5:
-            bits.append(T(f'Feels like {fmt_temp(fl, imp)}', f'Se siente como {fmt_temp(fl, imp)}'))
+            bits.append(_('Feels like {temp}').format(temp=fmt_temp(fl, imp)))
         if bits:
             text.append(self._label('   '.join(bits), 'sky-cond', 'sky-dim'))
         row.append(text)
         if self.prefs.get('playful', True) and self.prefs.get('parchita', True):
             self.parchita = Parchita()
             self.parchita.set_mood(parchita_mood(h, sun))
-            self.parchita.set_tooltip_text(T('Parchita (preview)', 'Parchita (vista previa)'))
+            self.parchita.set_tooltip_text(_('Parchita (preview)'))
             row.append(self.parchita)
         box.append(row)
         if not self.scrub:
@@ -2181,10 +2182,10 @@ class SkyWindow(Adw.ApplicationWindow):
         bar = Gtk.Box(spacing=2, halign=Gtk.Align.CENTER)
         bar.add_css_class('sky-lenses')
         first = None
-        for key, icon, (en, es) in LENSES:
+        for key, icon, en in LENSES:
             content = Gtk.Box(spacing=6)
             content.append(Gtk.Image(icon_name=icon, pixel_size=14))
-            content.append(Gtk.Label(label=es if spanish() else en))
+            content.append(Gtk.Label(label=_(en)))
             b = Gtk.ToggleButton(child=content, active=(key == self.lens))
             if first:
                 b.set_group(first)
@@ -2203,9 +2204,9 @@ class SkyWindow(Adw.ApplicationWindow):
 
     def _hourly_card(self, fc, imp):
         hours = self._hours()
-        titles = {'temp': T('Next 48 hours', 'Próximas 48 horas'), 'rain': T('Rain (%s), next 48 hours', 'Lluvia (%s), próximas 48 horas') % ('in' if imp else 'mm'),
-                  'wind': T('Wind, next 48 hours', 'Viento, próximas 48 horas'),
-                  'comfort': T('Comfort, next 48 hours', 'Confort, próximas 48 horas')}
+        titles = {'temp': _('Next 48 hours'), 'rain': _('Rain (%s), next 48 hours') % ('in' if imp else 'mm'),
+                  'wind': _('Wind, next 48 hours'),
+                  'comfort': _('Comfort, next 48 hours')}
         card = self._card(titles[self.lens])
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cols = Gtk.Box(spacing=0)
@@ -2218,7 +2219,7 @@ class SkyWindow(Adw.ApplicationWindow):
             col.add_css_class('sky-hour')
             if i == self.scrub:
                 col.add_css_class('selected')
-            col.append(self._label(T('Now', 'Ahora') if i == 0 else fmt_hour(local), 'sky-small'))
+            col.append(self._label(_('Now') if i == 0 else fmt_hour(local), 'sky-small'))
             col.append(Gtk.Image(icon_name=ic, pixel_size=22))
             if self.lens == 'temp':
                 col.append(self._label(fmt_temp(h['temp'], imp), 'sky-hour-temp'))
@@ -2247,13 +2248,14 @@ class SkyWindow(Adw.ApplicationWindow):
         sc.set_size_request(-1, 190)
         self.hour_scroll = sc
         # scroll to the chosen hour once the strip knows its size
-        sc.get_hadjustment().connect('changed', lambda *_: self._scroll_to_hour())
+        # (after GTK has finished sizing it; a value set while it sizes is reset to 0)
+        sc.get_hadjustment().connect('changed', lambda *_: GLib.idle_add(lambda: (self._scroll_to_hour(), False)[1]))
         card.append(sc)
 
         # The time scrubber: drag through the next two days and the sky follows.
         scrub = Gtk.Box(spacing=10)
         play = Gtk.Button(icon_name='media-playback-start-symbolic',
-                          tooltip_text=T('Play the next 24 hours', 'Ver las próximas 24 horas'))
+                          tooltip_text=_('Play the next 24 hours'))
         play.add_css_class('sky-play')
         play.connect('clicked', self._toggle_play)
         scrub.append(play)
@@ -2266,17 +2268,16 @@ class SkyWindow(Adw.ApplicationWindow):
         scrub.append(self.scale)
         card.append(scrub)
         if self.lens == 'comfort':
-            card.append(self._label(T('White: dew point · gold: feels like', 'Blanco: punto de rocío · dorado: sensación'),
+            card.append(self._label(_('White: dew point · gold: feels like'),
                                     'sky-small', 'sky-dim', xalign=0))
         elif self.lens == 'wind':
-            card.append(self._label(T('White: wind · blue: gusts. Arrows show where it blows.',
-                                      'Blanco: viento · azul: ráfagas. Las flechas indican hacia dónde sopla.'),
+            card.append(self._label(_('White: wind · blue: gusts. Arrows show where it blows.'),
                                     'sky-small', 'sky-dim', xalign=0))
         return card
 
     def _days_card(self, fc, imp):
         days = fc.days(10)
-        card = self._card(T('%d days', '%d días') % len(days))
+        card = self._card(_('%d days') % len(days))
         if not days:
             return card
         grid = Gtk.Grid(column_spacing=14, row_spacing=10)
@@ -2296,7 +2297,7 @@ class SkyWindow(Adw.ApplicationWindow):
         else:
             lo_all, hi_all = min(d['lo'] for d in days), max(d['hi'] for d in days)
         for r, d in enumerate(days):
-            name = T('Today', 'Hoy') if d['date'] == datetime.now().date() else d['date'].strftime('%a')
+            name = _('Today') if d['date'] == datetime.now().date() else day_name(d['date'], short=True).capitalize()
             grid.attach(self._label(name, 'sky-day', xalign=0, width_chars=6), 0, r, 1, 1)
             ic, _c, _t = symbol_info(d['symbol'])
             grid.attach(Gtk.Image(icon_name=ic, pixel_size=22), 1, r, 1, 1)
@@ -2306,11 +2307,11 @@ class SkyWindow(Adw.ApplicationWindow):
                 bar = RangeBar(0, d['precip'], lo_all, hi_all, 'rain')
             elif self.lens == 'wind':
                 a = self._label(fmt_wind(d['wind_max'], imp), 'sky-day', 'sky-dim', width_chars=7, xalign=1)
-                b = self._label(T('gusts ', 'ráf. ') + fmt_wind(d['gust_max'], imp), 'sky-day', width_chars=12, xalign=0)
+                b = self._label(_('gusts ') + fmt_wind(d['gust_max'], imp), 'sky-day', width_chars=12, xalign=0)
                 bar = RangeBar(0, d['gust_max'], lo_all, hi_all, 'wind')
             elif self.lens == 'comfort':
                 a = self._label(comfort_words(d['dew_max']), 'sky-small', 'sky-dim', width_chars=13, xalign=1)
-                b = self._label(T('UV ', 'UV ') + str(round(d['uv_max'])), 'sky-day', width_chars=5, xalign=0)
+                b = self._label(_('UV ') + str(round(d['uv_max'])), 'sky-day', width_chars=5, xalign=0)
                 bar = RangeBar(lo_all, d['dew_max'], lo_all, hi_all, 'comfort')
             else:
                 a = self._label(fmt_temp(d['lo'], imp), 'sky-day', 'sky-dim', width_chars=4, xalign=1)
@@ -2324,7 +2325,7 @@ class SkyWindow(Adw.ApplicationWindow):
 
     def _next_hour_card(self, nh):
         kind, mins, words = nh
-        card = self._card(T('Next hour', 'Próxima hora'))
+        card = self._card(_('Next hour'))
         row = Gtk.Box(spacing=10)
         row.append(Gtk.Image(icon_name='weather-showers-symbolic' if kind != 'dry' else 'weather-clear-symbolic', pixel_size=22))
         row.append(self._label(words, 'sky-mid', xalign=0, hexpand=True))
@@ -2335,25 +2336,26 @@ class SkyWindow(Adw.ApplicationWindow):
         def draw(area, cr, w, h):
             n = len(steps)
             for i, (_t, fut, d) in enumerate(steps):
-                mm = dbz_to_mm(d)
-                bh = min(1.0, mm / 6) * (h - 6) + (2 if mm > 0 else 0)
+                mm = dbz_to_mm(d) if d >= 13 else 0
+                # square-root scale: drizzle still shows, a downpour fills the bar
+                bh = (min(1.0, math.sqrt(mm / 10)) * (h - 8) + 4) if mm > 0 else 0
                 x = i * w / n + 3
                 cr.set_source_rgba(0.55, 0.78, 1.0, 0.9 if mm > 0 else 0.25)
                 cr.rectangle(x, h - bh - 2, w / n - 6, max(2, bh))
                 cr.fill()
         bars.set_draw_func(draw)
         card.append(bars)
-        card.append(self._label(T('From radar, at this spot · now to +60 min', 'Según el radar, en este punto · de ahora a +60 min'),
+        card.append(self._label(_('From radar, at this spot · now to +60 min'),
                                 'sky-small', 'sky-dim', xalign=0))
         return card
 
     def _radar_card(self, fc):
-        card = self._card(T('Radar', 'Radar'))
+        card = self._card(_('Radar'))
         p = self.places[self.index]
         self.radar_map = RadarMap(self, self.radar, p['lat'], p['lon'], self.radar_z)
         card.append(self.radar_map)
         bar = Gtk.Box(spacing=8)
-        play = Gtk.Button(icon_name='media-playback-start-symbolic', tooltip_text=T('Play', 'Reproducir'))
+        play = Gtk.Button(icon_name='media-playback-start-symbolic', tooltip_text=_('Play'))
         play.add_css_class('sky-play')
         when = self._label('', 'sky-small', xalign=0, hexpand=True)
 
@@ -2363,7 +2365,7 @@ class SkyWindow(Adw.ApplicationWindow):
                 return
             t, _p, fut = frames[min(self.radar_map.index, len(frames) - 1)]
             stamp = fmt_hour(datetime.fromtimestamp(t))
-            when.set_label((T('Forecast · ', 'Pronóstico · ') if fut else '') + stamp)
+            when.set_label((_('Forecast · ') if fut else '') + stamp)
         show_label()
 
         def step():
@@ -2408,23 +2410,21 @@ class SkyWindow(Adw.ApplicationWindow):
         return card
 
     def _best_card(self, fc, imp):
-        card = self._card(T('Best time to be outside', 'Mejor momento para salir'))
+        card = self._card(_('Best time to be outside'))
         bw = best_window(fc, self.prefs)
         if bw:
             start, end, hours = bw
             temps = [feels_like(h) for h in hours]
             when = f'{fmt_hour(start)}–{fmt_hour(end)}'
-            day = '' if start.date() == datetime.now().date() else T('Tomorrow ', 'Mañana ')
+            day = '' if start.date() == datetime.now().date() else _('Tomorrow ')
             card.append(self._label(day + when, 'sky-big', xalign=0))
-            card.append(self._label(T(f'Dry, {fmt_temp(min(temps), imp)}–{fmt_temp(max(temps), imp)}, light wind',
-                                      f'Seco, {fmt_temp(min(temps), imp)}–{fmt_temp(max(temps), imp)}, poco viento'),
+            card.append(self._label(_('Dry, {temp}–{temp2}, light wind').format(temp=fmt_temp(min(temps), imp), temp2=fmt_temp(max(temps), imp)),
                                     'sky-small', 'sky-dim', xalign=0, wrap=True))
         else:
-            card.append(self._label(T('No great window in the next 24 hours', 'No hay un buen rato en las próximas 24 horas'),
+            card.append(self._label(_('No great window in the next 24 hours'),
                                     'sky-mid', xalign=0, wrap=True))
         lo, hi = self.prefs.get('comfort_lo', 16.0), self.prefs.get('comfort_hi', 29.0)
-        edit = Gtk.MenuButton(child=self._label(T(f'My comfort range: {fmt_temp(lo, imp)}–{fmt_temp(hi, imp)}',
-                                                  f'Mi rango cómodo: {fmt_temp(lo, imp)}–{fmt_temp(hi, imp)}'), 'sky-small'),
+        edit = Gtk.MenuButton(child=self._label(_('My comfort range: {temp}–{temp2}').format(temp=fmt_temp(lo, imp), temp2=fmt_temp(hi, imp)), 'sky-small'),
                               halign=Gtk.Align.START)
         edit.add_css_class('sky-pill-menu')
         edit.set_popover(self._comfort_popover())
@@ -2442,13 +2442,13 @@ class SkyWindow(Adw.ApplicationWindow):
         def from_user(v):
             return (v - 32) * 5 / 9 if imp else v
         spins = []
-        for r, (key, label, default) in enumerate((('comfort_lo', T('From', 'Desde'), 16.0), ('comfort_hi', T('To', 'Hasta'), 29.0))):
+        for r, (key, label, default) in enumerate((('comfort_lo', _('From'), 16.0), ('comfort_hi', _('To'), 29.0))):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, r, 1, 1)
             spin = Gtk.SpinButton.new_with_range(-20 if not imp else 0, 45 if not imp else 115, 1)
             spin.set_value(round(to_user(self.prefs.get(key, default))))
             grid.attach(spin, 1, r, 1, 1)
             spins.append((key, spin))
-        done = Gtk.Button(label=T('Save', 'Guardar'))
+        done = Gtk.Button(label=_('Save'))
         done.add_css_class('suggested-action')
 
         def save(*_):
@@ -2463,7 +2463,7 @@ class SkyWindow(Adw.ApplicationWindow):
         return pop
 
     def _tropics_card(self, fc, imp):
-        card = self._card(T('Tropics', 'Trópico'))
+        card = self._card(_('Tropics'))
         storms = []
         for s in self.storms or []:
             try:
@@ -2474,23 +2474,20 @@ class SkyWindow(Adw.ApplicationWindow):
             storms.append((dist, s, lat, lon))
         storms.sort(key=lambda x: x[0])
         if not storms:
-            card.append(self._label(T('No active storms. Hurricane season runs through November 30.',
-                                      'No hay tormentas activas. La temporada de huracanes sigue hasta el 30 de noviembre.'),
+            card.append(self._label(_('No active storms. Hurricane season runs through November 30.'),
                                     'sky-row-text', xalign=0, wrap=True))
         for dist, s, lat, lon in storms[:3]:
-            kind = STORM_KINDS.get(s.get('classification', ''), (s.get('classification', ''),) * 2)
-            kind = kind[1] if spanish() else kind[0]
+            kind = _(STORM_KINDS.get(s.get('classification', ''), s.get('classification', '')))
             kt = float(s.get('intensity') or 0)
             wind = fmt_wind(kt * 0.514444, imp)
             far = f"{round(dist * 0.621371):,} mi" if imp else f'{round(dist):,} km'
             near = dist < 800
             row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             row.append(self._label(f"{'⚠ ' if near else ''}{kind} {s.get('name', '')}", 'sky-mid', xalign=0))
-            row.append(self._label(T(f'{wind} winds · {far} {compass(bearing(fc.lat, fc.lon, lat, lon))} of here',
-                                     f'Vientos de {wind} · a {far} al {compass(bearing(fc.lat, fc.lon, lat, lon))}'),
+            row.append(self._label(_('{wind} winds · {far} {direction} of here').format(wind=wind, far=far, direction=compass(bearing(fc.lat, fc.lon, lat, lon))),
                                    'sky-small', 'sky-dim', xalign=0, wrap=True))
             card.append(row)
-        link = Gtk.LinkButton(uri='https://www.nhc.noaa.gov', label=T('National Hurricane Center', 'Centro Nacional de Huracanes'),
+        link = Gtk.LinkButton(uri='https://www.nhc.noaa.gov', label=_('National Hurricane Center'),
                               halign=Gtk.Align.START)
         card.append(link)
         return card
@@ -2499,15 +2496,12 @@ class SkyWindow(Adw.ApplicationWindow):
         if not self.prefs.get('trips'):
             if self.prefs.get('trips_asked'):
                 return None
-            card = self._card(T('Trips', 'Viajes'))
-            card.append(self._label(T('See the weather where your calendar says you are going? Parcha Sky reads your '
-                                      'calendar on this computer only.',
-                                      '¿Ver el tiempo donde dice tu calendario que vas? Parcha Sky lee tu calendario solo '
-                                      'en esta computadora.'), 'sky-row-text', xalign=0, wrap=True))
+            card = self._card(_('Trips'))
+            card.append(self._label(_('See the weather where your calendar says you are going? Parcha Sky reads your calendar on this computer only.'), 'sky-row-text', xalign=0, wrap=True))
             row = Gtk.Box(spacing=8)
-            yes = Gtk.Button(label=T('Turn on', 'Activar'))
+            yes = Gtk.Button(label=_('Turn on'))
             yes.add_css_class('sky-pill-button')
-            no = Gtk.Button(label=T('No thanks', 'No, gracias'))
+            no = Gtk.Button(label=_('No thanks'))
             no.add_css_class('sky-pill-button')
             yes.connect('clicked', lambda *_: self._set_trips(True))
             no.connect('clicked', lambda *_: self._set_trips(False))
@@ -2517,7 +2511,7 @@ class SkyWindow(Adw.ApplicationWindow):
             return card
         if not self.trips:
             return None
-        card = self._card(T('Trips', 'Viajes'))
+        card = self._card(_('Trips'))
         for when, place, summary in self.trips[:3]:
             key = (round(place['lat'], 2), round(place['lon'], 2))
             tfc = self.trip_forecasts.get(key)
@@ -2527,12 +2521,12 @@ class SkyWindow(Adw.ApplicationWindow):
                 ic, cond, _t = symbol_info(day['symbol'])
                 row.append(Gtk.Image(icon_name=ic, pixel_size=22))
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            box.append(self._label(f"{place['name']} · {when.strftime('%a %-d')}", 'sky-mid', xalign=0))
+            box.append(self._label(f"{place['name']} · {day_name(when, short=True).capitalize()} {when.day}", 'sky-mid', xalign=0))
             detail = summary or ''
             if day:
                 detail = f"{fmt_temp(day['hi'], imp)} / {fmt_temp(day['lo'], imp)} · {cond}" + (f' · {summary}' if summary else '')
             elif tfc:
-                detail = T('Beyond the forecast range for now', 'Aún fuera del rango del pronóstico')
+                detail = _('Beyond the forecast range for now')
             box.append(self._label(detail, 'sky-small', 'sky-dim', xalign=0, wrap=True))
             row.append(box)
             card.append(row)
@@ -2559,36 +2553,35 @@ class SkyWindow(Adw.ApplicationWindow):
 
     def _details(self, fc, now, imp):
         out = []
-        gust = f" · {T('gusts', 'ráfagas')} {fmt_wind(now['gust'], imp)}" if now.get('gust') else ''
-        out.append((T('Wind', 'Viento'), f"{arrow(now['wind_from'] or 0)} {fmt_wind(now['wind'], imp)}",
-                    T('From the %s', 'Del %s') % compass(now['wind_from'] or 0) + gust))
+        gust = f" · {_('gusts')} {fmt_wind(now['gust'], imp)}" if now.get('gust') else ''
+        out.append((_('Wind'), f"{arrow(now['wind_from'] or 0)} {fmt_wind(now['wind'], imp)}",
+                    _('From the %s') % compass(now['wind_from'] or 0) + gust))
         if now.get('dew') is not None:
-            out.append((T('Comfort', 'Confort'), comfort_words(now['dew']),
-                        T(f"Dew point {fmt_temp(now['dew'], imp)} · humidity {round(now['humidity'] or 0)}%",
-                          f"Punto de rocío {fmt_temp(now['dew'], imp)} · humedad {round(now['humidity'] or 0)}%")))
+            out.append((_('Comfort'), comfort_words(now['dew']),
+                        _('Dew point {temp} · humidity {number}%').format(temp=fmt_temp(now['dew'], imp), number=round(now['humidity'] or 0))))
         if now.get('uv') is not None:
             uv = now['uv']
-            level = T('Low', 'Bajo') if uv < 3 else T('Moderate', 'Moderado') if uv < 6 else T('High', 'Alto') if uv < 8 else T('Very high', 'Muy alto')
-            out.append((T('UV index', 'Índice UV'), f'{round(uv)}', level + (T(' · sunscreen', ' · bloqueador') if uv >= 6 else '')))
+            level = _('Low') if uv < 3 else _('Moderate') if uv < 6 else _('High') if uv < 8 else _('Very high')
+            out.append((_('UV index'), f'{round(uv)}', level + (_(' · sunscreen') if uv >= 6 else '')))
         times = sun_times(fc.lat, fc.lon, datetime.now(timezone.utc))
         if times:
             rise, sset = (t.astimezone() for t in times)
             length = sset - rise
-            out.append((T('Sun', 'Sol'), f"↑ {fmt_hour(rise)}", f"↓ {fmt_hour(sset)} · "
-                        + T('%dh %dm of daylight', '%d h %d min de luz') % (length.seconds // 3600, length.seconds % 3600 // 60)))
+            out.append((_('Sun'), f"↑ {fmt_hour(rise)}", f"↓ {fmt_hour(sset)} · "
+                        + _('{hours}h {minutes}m of daylight').format(hours=length.seconds // 3600, minutes=length.seconds % 3600 // 60)))
         if now.get('pressure') is not None:
             later = [h for h in fc.hours if h['time'] > now['time'] + timedelta(hours=2)]
             trend = ''
             if later and later[0]['pressure'] is not None:
                 diff = later[0]['pressure'] - now['pressure']
-                trend = T('Rising', 'Subiendo') if diff > 0.8 else T('Falling', 'Bajando') if diff < -0.8 else T('Steady', 'Estable')
-            out.append((T('Pressure', 'Presión'), f"{round(now['pressure'])} hPa", trend))
+                trend = _('Rising') if diff > 0.8 else _('Falling') if diff < -0.8 else _('Steady')
+            out.append((_('Pressure'), f"{round(now['pressure'])} hPa", trend))
         phase = moon_phase(datetime.now(timezone.utc))
-        names = [T('New moon', 'Luna nueva'), T('Waxing crescent', 'Creciente'), T('First quarter', 'Cuarto creciente'),
-                 T('Waxing gibbous', 'Gibosa creciente'), T('Full moon', 'Luna llena'), T('Waning gibbous', 'Gibosa menguante'),
-                 T('Last quarter', 'Cuarto menguante'), T('Waning crescent', 'Menguante')]
-        out.append((T('Moon', 'Luna'), names[int(phase * 8 + 0.5) % 8],
-                    T('%d%% lit', '%d%% iluminada') % round((1 - math.cos(2 * math.pi * phase)) / 2 * 100)))
+        names = [_('New moon'), _('Waxing crescent'), _('First quarter'),
+                 _('Waxing gibbous'), _('Full moon'), _('Waning gibbous'),
+                 _('Last quarter'), _('Waning crescent')]
+        out.append((_('Moon'), names[int(phase * 8 + 0.5) % 8],
+                    _('%d%% lit') % round((1 - math.cos(2 * math.pi * phase)) / 2 * 100)))
         return out
 
     # -- coquí nights -----------------------------------------------------------------------------
@@ -2620,12 +2613,12 @@ class SkyWindow(Adw.ApplicationWindow):
 
     def _main_menu(self):
         menu = Gio.Menu()
-        menu.append(T('Playful summaries', 'Resúmenes con chispa'), 'win.playful')
-        menu.append(T('Show Parchita (preview)', 'Mostrar a Parchita (vista previa)'), 'win.parchita')
-        menu.append(T('Fahrenheit and mph', 'Fahrenheit y mph'), 'win.imperial')
-        menu.append(T('Weather for my trips', 'El tiempo de mis viajes'), 'win.trips')
-        menu.append(T('Coquí nights (Puerto Rico)', 'Noches de coquí (Puerto Rico)'), 'win.coqui')
-        menu.append(T('About Parcha Sky', 'Acerca de Parcha Sky'), 'win.about')
+        menu.append(_('Playful summaries'), 'win.playful')
+        menu.append(_('Show Parchita (preview)'), 'win.parchita')
+        menu.append(_('Fahrenheit and mph'), 'win.imperial')
+        menu.append(_('Weather for my trips'), 'win.trips')
+        menu.append(_('Coquí nights (Puerto Rico)'), 'win.coqui')
+        menu.append(_('About Parcha Sky'), 'win.about')
         for key, default in (('playful', True), ('parchita', True), ('imperial', self.imperial), ('trips', False), ('coqui', False)):
             act = Gio.SimpleAction.new_stateful(key, None, GLib.Variant('b', self.prefs.get(key, default)))
             act.connect('change-state', self._toggle(key))
@@ -2656,8 +2649,8 @@ class SkyWindow(Adw.ApplicationWindow):
         about = Adw.AboutDialog(application_name=_('Parcha Sky'), application_icon=APP_ID, version=VERSION,
                                 developer_name='Spanglish Enterprises LLC', license_type=Gtk.License.GPL_3_0,
                                 website='https://www.parchaos.org',
-                                comments=T('The sky outside, right now.', 'El cielo de afuera, ahora mismo.'))
-        about.add_credit_section(T('Weather data', 'Datos del tiempo'),
+                                comments=_('The sky outside, right now.'))
+        about.add_credit_section(_('Weather data'),
                                  ['MET Norway https://api.met.no', 'US National Weather Service https://www.weather.gov',
                                   'National Hurricane Center https://www.nhc.noaa.gov'])
         about.present(self)
