@@ -166,6 +166,31 @@ Rules for any script that runs a shell or a settings tool in a private bus:
   `dconf-service` holds a stale copy of the file; restarting it (it restarts on
   demand) fixes that.
 
+## ARM64 (aarch64) — ticket #167
+
+Packages: the COPR builds `fedora-44-aarch64` as well as x86_64. Almost
+everything is noarch; the two arch-dependent packages build natively
+(`parcher`) or take the matching upstream binary (`parchaos-keyboard-remap`
+uses xremap's own `aarch64` release). A new package that ships a prebuilt
+binary needs one per architecture, or `ExclusiveArch` and a note here.
+
+Image: `engine/build-iso.sh --profile parchaos --arch aarch64` builds a
+UEFI-only ISO (no BIOS on ARM): `shimaa64.efi` -> `gcdaa64.efi`, loaded as
+`EFI/BOOT/BOOTAA64.EFI`, serial console `ttyAMA0`, caches and rootfs in
+`build/*-aarch64`. `packages.list` lines of the form `x86_64: pkg` or
+`aarch64: pkg` are installed for that architecture only (bootloaders,
+microcode). The installer's EFI scripts pick x64/aa64 names at run time.
+
+On an x86_64 build host the target's binaries (rpm scriptlets, dracut,
+the nspawn steps) run under qemu-user: install `qemu-user-static-aarch64`,
+which registers binfmt with the F flag; the engine checks for it. Expect
+the emulated build to take a few times longer than a native one.
+
+Boot test without ARM hardware: `qemu-system-aarch64-core` and
+`edk2-aarch64` on the build host, `-M virt -cpu max` with
+`QEMU_EFI-pflash.raw`, a virtio GPU and the ISO on a virtio/SCSI CD.
+No hardware promises yet: virtual machines first.
+
 ## Release size limit
 
 GitHub rejects release assets of 2 GiB (2,147,483,648 bytes) or more, and
