@@ -87,8 +87,12 @@ else
     echo "skipped (needs gcc and glib2-devel)"
 fi
 
-echo "== file-type icon mapping =="
-python3 -B packaging/parchaos-icon-theme/parchaos-icons/mime-map.py --self-test || fail mime-map
+echo "== icon theme builds from ParchaOS's own drawings =="
+icon_tmp=$(mktemp -d)
+cp packaging/parchaos-icon-theme/parchaos-icons/*.svg "$icon_tmp"/
+cp packaging/parchaos-icon-theme/parchaos-launcher-symbolic.svg "$icon_tmp"/
+python3 -B packaging/parchaos-icon-theme/parchaos-icons/build-theme.py "$icon_tmp/out" ParchaOS "$icon_tmp" || fail icon-theme
+rm -rf "$icon_tmp"
 
 echo "== GNOME Shell extension JavaScript syntax =="
 # GNOME Shell loads extensions as ES modules, which are strict mode (`interface`,

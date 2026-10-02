@@ -42,9 +42,9 @@ appropriate.
 
 - **The ParchaOS logo** is original artwork, (c) Spanglish Enterprises
   LLC, licensed CC BY-SA 4.0.
-- **Themes:** the GTK and icon themes are based on MacTahoe by
-  vinceliuice (https://github.com/vinceliuice), with ParchaOS's own icons
-  and changes.
+- **Themes:** the GTK theme is based on MacTahoe by vinceliuice
+  (https://github.com/vinceliuice), with ParchaOS's own changes. The icon
+  theme is ParchaOS's own drawings over GNOME's Adwaita icons.
 - **Parcha Dock** is based on Pulsar Dock by Inled (Pulsar OS), a fork of
   Dash to Dock by Michele Gaio and contributors.
 - **Parcher** is based on the Pulsar OS file manager by Inled, a
