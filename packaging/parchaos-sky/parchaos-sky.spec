@@ -9,7 +9,7 @@
 # ==============================================================================
 
 Name:           parchaos-sky
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Parcha Sky, the ParchaOS weather app
 
@@ -18,6 +18,7 @@ URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-sky
 Source1:        org.parchaos.Sky.desktop
 Source2:        org.parchaos.Sky.svg
+Source3:        parchaos-sky-map.json.gz
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -48,6 +49,7 @@ cp -p %{SOURCE90} .
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-sky
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desktop
 install -Dm0644 %{SOURCE2} %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
+install -Dm0644 %{SOURCE3} %{buildroot}%{_datadir}/parchaos-sky/parchaos-sky-map.json.gz
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desktop
@@ -57,7 +59,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Sky.desk
 %{_bindir}/parchaos-sky
 %{_datadir}/applications/org.parchaos.Sky.desktop
 %{_datadir}/icons/hicolor/scalable/apps/org.parchaos.Sky.svg
+%{_datadir}/parchaos-sky/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 0.2.0-1
+- Ticket #192: lenses (temperature, rain, wind, comfort), heads-up for the next 48 hours, time scrubber and 24-hour time-lapse of the sky, best time to be outside with your own comfort range, comfort in plain words, two columns on wide windows, trips from your calendar (opt-in, local), hurricane season card (US National Hurricane Center), coquí nights in Puerto Rico (opt-in, synthesised), Parchita character (preview), radar map (LibreWXR, CC BY 4.0 data) over a Natural Earth map, next-hour rain from the radar nowcast. Puerto Rico uses Fahrenheit and mph.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.1.0-1
 - Ticket #192: first version of Parcha Sky. Living sky from real data (sun elevation and day position, stars and moon phase, clouds drifting with the wind, rain and snow by intensity, fog, thunder flashes), frosted glass cards over it (solid in Classic), now / alerts / 24 hours / 10 days / wind, UV, humidity, sun, pressure, moon; MET Norway data with attribution and its Expires caching, US NWS alerts; places from GNOME Weather, GeoClue or an offline city search; playful or plain summaries; English and Spanish; units follow the locale.
