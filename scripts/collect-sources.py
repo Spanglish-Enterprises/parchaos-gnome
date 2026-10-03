@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""collect-sources.py <rootfs> <outdir> [--prefix NAME] [--no-download]
+"""collect-sources.py <rootfs> [<rootfs> ...] <outdir> [--prefix NAME] [--no-download]
 
 Collects the complete corresponding source for an ISO: the exact source
 RPM (SRPM) of every installed package, as recorded in the rootfs's RPM
-database (%{SOURCERPM}).
+database (%{SOURCERPM}). Given several rootfs (the x86_64 and aarch64
+images of one release), it collects the union, so one set of archives
+covers every ISO of the release.
 
 - Fedora builds come from Koji (kojipkgs.fedoraproject.org), which keeps
   every build, so older releases stay available after mirrors move on.
@@ -26,7 +28,6 @@ import urllib.request
 
 COPR_OWNER = "alexgalicea"
 COPR_PROJECT = "parchaos-gnome"
-COPR_CHROOT = "fedora-44-x86_64"   # set from the rootfs's own architecture in main()
 COPR_API = "https://copr.fedorainfracloud.org/api_3"
 KOJI = "https://kojipkgs.fedoraproject.org/packages"
 PART_LIMIT = int(1.9 * 1024 ** 3)
@@ -61,26 +62,26 @@ def urlopen(url, tries=3):
                 raise
 
 
-def copr_url(name, version, release):
+def copr_url(name, version, release, chroot):
     query = (f"{COPR_API}/build/list?ownername={COPR_OWNER}&projectname={COPR_PROJECT}"
              f"&packagename={name}&limit=200")
     with urlopen(query) as r:
         builds = json.load(r)["items"]
     for b in builds:
         pkg = b.get("source_package") or {}
-        if COPR_CHROOT not in (b.get("chroots") or [COPR_CHROOT]):
+        if chroot not in (b.get("chroots") or [chroot]):
             continue
         if b["state"] == "succeeded" and pkg.get("version") == f"{version}-{release}".rsplit(".fc", 1)[0] \
                 or pkg.get("version") == f"{version}-{release}":
             return (f"https://download.copr.fedorainfracloud.org/results/{COPR_OWNER}/{COPR_PROJECT}/"
-                    f"{COPR_CHROOT}/{b['id']:08d}-{name}/{name}-{version}-{release}.src.rpm")
+                    f"{chroot}/{b['id']:08d}-{name}/{name}-{version}-{release}.src.rpm")
     return None
 
 
-def source_url(srpm, vendor):
+def source_url(srpm, vendor, chroot):
     name, version, release = split_nvr(srpm)
     if vendor.startswith("Fedora Copr"):
-        return copr_url(name, version, release)
+        return copr_url(name, version, release, chroot)
     return f"{KOJI}/{name}/{version}/{release}/src/{srpm}"
 
 
@@ -110,27 +111,30 @@ def main():
         prefix = argv[i + 1]
         del argv[i:i + 2]
     args = [a for a in argv if not a.startswith("--")]
-    if len(args) != 2:
+    if len(args) < 2:
         sys.exit(__doc__)
-    rootfs, outdir = args
+    *rootfses, outdir = args
+    rootfses = [os.path.abspath(r) for r in rootfses]  # rpm --root needs an absolute path
     listing_only = "--no-download" in sys.argv
 
-    # The image's architecture picks the COPR chroot (x86_64 or aarch64, ticket #167):
-    # a build may exist in one chroot only.
-    global COPR_CHROOT
-    arch = subprocess.run(["rpm", "--root", rootfs, "-q", "--qf", "%{ARCH}\n", "kernel-core"],
-                          capture_output=True, text=True).stdout.split()
-    if arch:
-        COPR_CHROOT = f"fedora-44-{arch[-1]}"
-    print(f"COPR chroot: {COPR_CHROOT}")
-    srpms = installed_sources(rootfs)
-    print(f"{len(srpms)} source packages")
+    # Each image's architecture picks its COPR chroot (x86_64 or aarch64, ticket #167):
+    # a build may exist in one chroot only. An SRPM in both images is fetched once.
+    srpms = {}
+    for rootfs in rootfses:
+        arch = subprocess.run(["rpm", "--root", rootfs, "-q", "--qf", "%{ARCH}\n", "kernel-core"],
+                              capture_output=True, text=True).stdout.split()
+        chroot = f"fedora-44-{arch[-1] if arch else 'x86_64'}"
+        found = installed_sources(rootfs)
+        print(f"{rootfs}: COPR chroot {chroot}, {len(found)} source packages")
+        for srpm, vendor in found.items():
+            srpms.setdefault(srpm, (vendor, chroot))
+    print(f"{len(srpms)} source packages in all")
     srpm_dir = os.path.join(outdir, "srpms")
     os.makedirs(srpm_dir, exist_ok=True)
 
     missing = []
-    for srpm, vendor in sorted(srpms.items()):
-        url = source_url(srpm, vendor)
+    for srpm, (vendor, chroot) in sorted(srpms.items()):
+        url = source_url(srpm, vendor, chroot)
         if url is None:
             missing.append(f"{srpm} (no COPR build found)")
             continue

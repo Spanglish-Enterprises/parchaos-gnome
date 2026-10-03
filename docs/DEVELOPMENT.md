@@ -244,6 +244,12 @@ after the ISO build:
 
     scripts/collect-sources.py build/rootfs-parchaos-44 build/sources --prefix <iso-name>
 
+A release with both an x86_64 and an aarch64 ISO publishes one set of source
+archives for both: pass both rootfs (`... rootfs-x86 rootfs-aarch64 outdir`)
+and the script collects their union, fetching each SRPM once. `rpm --root`
+only needs the image's RPM database (`usr/lib/sysimage/rpm`), so it can run
+on any Fedora machine with that directory copied over.
+
 It reads each installed package's source RPM from the rootfs, downloads
 Fedora's from Koji (which keeps every build) and ParchaOS's from the
 matching COPR build, and writes `<iso-name>-sources-NN.tar` archives
