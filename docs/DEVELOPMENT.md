@@ -199,6 +199,12 @@ Boot test without ARM hardware: `qemu-system-aarch64-core` and
 `QEMU_EFI-pflash.raw`, a virtio GPU and the ISO on a virtio/SCSI CD.
 No hardware promises yet: virtual machines first.
 
+Under TCG the live session's first automatic login fails: GNOME Shell takes longer than
+systemd's 60-second start limit (`org.gnome.Shell@user.service: start operation timed out`),
+so GDM shows the login screen. Clicking Live System User then works. This is the emulator's
+speed, not the image: `/etc/gdm/custom.conf` has `AutomaticLoginEnable=True` (checked on
+2026.10.02). Hardware-virtualised ARM VMs (UTM, Parallels) run at native speed.
+
 ## Look-alike audit: the release and revenue gate
 
 Names, assets and look are checked so ParchaOS does not copy another company's marks or distinctive
