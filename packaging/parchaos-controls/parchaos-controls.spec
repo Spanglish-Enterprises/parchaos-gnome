@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        53%{?dist}
+Release:        54%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -66,6 +66,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Scr
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 1.0.0-54
+- The top-bar glyph follows Control Center's new tile shape: one wide and two square rounded rectangles (it still showed a capsule and a circle from the old tiles).
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-53
 - Look-alike audit: ParchaOS's own look for Control Center: tiles are rounded squares and rectangles with one radius (no circles or capsules), the resize handle is a three-dot grip in the corner, the recent-activity chip is a small left-aligned rounded rectangle with a violet icon, tile outlines are softer, empty slots match the tile shape.
 
