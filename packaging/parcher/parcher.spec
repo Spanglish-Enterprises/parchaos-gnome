@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        35%{?dist}
+Release:        36%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -260,6 +260,14 @@ grep -q '© 1999-2026 The Nautilus Authors' src/nautilus-window.c
 # provider's.
 sed -i 's/_("iCloud & Cloud Drives")/_("Cloud Drives")/' src/gtk/nautilusgtkplacessidebar.c
 grep -q '_("Cloud Drives")' src/gtk/nautilusgtkplacessidebar.c
+# The cloud rows call the cloud tool by its old name (pulsar-cloud), which does not exist on
+# ParchaOS, so "Add Account" and opening a drive did nothing; the tool is parchaos-cloud. The add
+# row's label is shortened so it fits the sidebar (it sits under the "Cloud Drives" heading).
+sed -i -e 's/pulsar-cloud/parchaos-cloud/g' \
+    -e 's/_("Add Cloud Account…")/_("Add Account…")/g' \
+    src/gtk/nautilusgtkplacessidebar.c
+! grep -q 'pulsar-cloud' src/gtk/nautilusgtkplacessidebar.c
+grep -q '"parchaos-cloud choose"' src/gtk/nautilusgtkplacessidebar.c
 
 # Neutralize and remove third-party vendor references from embedded CSS, UI and C sources (ticket #109,
 # naming policy; look-alike audit). One pass over every CSS, UI and C file, so a comment, a CSS class name or
@@ -338,6 +346,9 @@ grep -q 'GTK_STYLE_PROVIDER_PRIORITY_USER + 1);' src/nautilus-application.c
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Oct 02 2026 ParchaOS packaging - 48.7-36
+- The Cloud Drives rows call parchaos-cloud (they called the old pulsar-cloud name, which does not exist, so adding an account or opening a drive did nothing) and use its icon; the add row reads "Add Account…" so it is not clipped in the sidebar.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-35
 - The folder title (with its parents menu) is a rounded rectangle; the GTK theme had made it a pill.
 
