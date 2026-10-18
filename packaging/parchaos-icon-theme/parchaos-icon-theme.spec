@@ -13,7 +13,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        23%{?dist}
+Release:        24%{?dist}
 Summary:        ParchaOS icon theme (original drawings over Adwaita)
 
 License:        CC-BY-SA-4.0
@@ -178,11 +178,41 @@ for theme in %{buildroot}%{_datadir}/icons/ParchaOS-*-*; do
     gtk-update-icon-cache -f -q "$theme"
 done
 
+# Up to -21, much of ParchaOS-dark and ParchaOS-light was symlinks to
+# directories in ParchaOS (apps -> ../ParchaOS/apps, ...). Since -23 each theme
+# is built with real directories there, and RPM cannot replace a symlink with a
+# directory on upgrade ("file ... conflicts with file from package ..."), so
+# remove those links first. Lua, not shell: %%pretrans runs before any shell
+# may be installed (Fedora's directory-replacement guideline).
+%pretrans -p <lua>
+local function unlink_dir_links(dir)
+  for _, name in ipairs(posix.dir(dir) or {}) do
+    if name ~= "." and name ~= ".." then
+      local p = dir .. "/" .. name
+      local st = posix.stat(p)
+      if st and st.type == "link" then
+        if posix.dir(p) then os.remove(p) end
+      elseif st and st.type == "directory" then
+        unlink_dir_links(p)
+      end
+    end
+  end
+end
+for _, theme in ipairs({"ParchaOS-dark", "ParchaOS-light"}) do
+  unlink_dir_links("%{_datadir}/icons/" .. theme)
+end
+
 %files
 %license LICENSE-ARTWORK
 %{_datadir}/icons/*
 
 %changelog
+* Sat Oct 17 2026 ParchaOS packaging - 2026.09.23-24
+- Fix upgrades from -21 and earlier failing with "file ... conflicts with file
+  from package parchaos-icon-theme-...-21": the dark and light themes used to
+  be directory symlinks into ParchaOS and are real directories since -23. A
+  %%pretrans scriptlet removes the old links first.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-23
 - Look-alike audit: the theme no longer installs any third-party icon artwork. It is built from ParchaOS's own drawings only (build-theme.py, theme-skeleton.tsv, index-sections.ini), over Adwaita and hicolor, so every other icon is GNOME's own. The three theme names (ParchaOS, -dark, -light) hold the same set. The licence is the artwork licence (CC-BY-SA-4.0).
 
