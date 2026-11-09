@@ -47,7 +47,7 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf -y install dnf-plugins-core rsync squashfs-tools xorriso \
-              grub2-tools grub2-pc-modules grub2-efi-x64-modules dosfstools mtools systemd-container git
+              grub2-tools grub2-tools-extra grub2-pc-modules grub2-efi-x64-modules dosfstools mtools systemd-container git
 
       - name: Build ISO
         run: |
