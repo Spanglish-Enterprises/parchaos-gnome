@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Ctrl+Alt+Space opens Parcha Assistant (ticket #122). A system-wide dconf default, so every user
+# starts with it; changing or removing the shortcut in Settings > Keyboard overrides it per user.
+
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/parchaos-assistant/']
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/parchaos-assistant]
+name='Parcha Assistant'
+command='parchaos-assistant'
+binding='<Control><Alt>space'

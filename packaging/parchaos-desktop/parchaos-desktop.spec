@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        79%{?dist}
+Release:        80%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -145,6 +145,7 @@ Recommends:     parchaos-gaming
 Recommends:     parchaos-dev-tools
 Recommends:     parchaos-image-search
 Recommends:     parchaos-android
+Recommends:     parchaos-assistant
 
 # TMOG is no longer part of ParchaOS; remove the launcher on update.
 Obsoletes:      parchaos-tmog < 1.0.0-3
@@ -279,6 +280,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-80
+- Ticket #122: Recommends parchaos-assistant (Parcha Assistant, Ctrl+Alt+Space).
+
 * Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-79
 - Ticket #117: Recommends parchaos-android (Android Apps, opt-in Waydroid setup).
 

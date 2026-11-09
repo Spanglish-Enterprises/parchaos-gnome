@@ -1,0 +1,198 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-assistant package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-assistant\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 20:09-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-assistant:73
+msgid "Parcha Assistant: Anthropic API key"
+msgstr ""
+
+#. noqa: BLE001 - no service, no package: say how to fix it
+#: files/parchaos-assistant:122 files/parchaos-assistant:296
+msgid ""
+"Ollama is not running. Install it with: sudo dnf install ollama, then: sudo "
+"systemctl enable --now ollama"
+msgstr ""
+
+#: files/parchaos-assistant:124
+#, python-format
+msgid "The local model could not answer: %s"
+msgstr ""
+
+#: files/parchaos-assistant:161
+msgid "(Claude declined to answer this.)"
+msgstr ""
+
+#: files/parchaos-assistant:163
+msgid "(The answer was cut off at the length limit.)"
+msgstr ""
+
+#: files/parchaos-assistant:169
+msgid "The API key was not accepted. Check it in the settings."
+msgstr ""
+
+#: files/parchaos-assistant:171
+msgid "This key is not allowed to use this model."
+msgstr ""
+
+#: files/parchaos-assistant:173
+msgid "Too many requests right now. Try again in a moment."
+msgstr ""
+
+#: files/parchaos-assistant:175
+#, python-format
+msgid "Anthropic returned an error (%d). Try again later."
+msgstr ""
+
+#: files/parchaos-assistant:177
+msgid "Could not reach Anthropic. Check your internet connection."
+msgstr ""
+
+#: files/parchaos-assistant:183
+msgid "Parcha Assistant"
+msgstr ""
+
+#: files/parchaos-assistant:192
+msgid "New Chat"
+msgstr ""
+
+#: files/parchaos-assistant:195
+msgid "Settings"
+msgstr ""
+
+#: files/parchaos-assistant:212
+msgid "Choose where answers come from"
+msgstr ""
+
+#: files/parchaos-assistant:213
+msgid "Nothing you type is sent anywhere until you choose."
+msgstr ""
+
+#: files/parchaos-assistant:214
+msgid "On this computer"
+msgstr ""
+
+#: files/parchaos-assistant:215
+msgid ""
+"A model you install with Ollama. Private and works offline, but needs a fast "
+"computer and is less capable."
+msgstr ""
+
+#: files/parchaos-assistant:220
+msgid "Claude, by Anthropic"
+msgstr ""
+
+#: files/parchaos-assistant:221
+msgid ""
+"Fast and very capable. Needs your own API key and the internet. What you "
+"type leaves this computer and goes to Anthropic."
+msgstr ""
+
+#: files/parchaos-assistant:243
+msgid "Ask anything"
+msgstr ""
+
+#: files/parchaos-assistant:245
+msgid "Send"
+msgstr ""
+
+#: files/parchaos-assistant:282
+msgid "Answers come from a model on this computer."
+msgstr ""
+
+#: files/parchaos-assistant:286 files/parchaos-assistant:326
+msgid "Answers come from Claude. What you type is sent to Anthropic."
+msgstr ""
+
+#: files/parchaos-assistant:300
+msgid ""
+"No local model yet. Get one in a terminal, for example: ollama pull llama3.2"
+msgstr ""
+
+#: files/parchaos-assistant:309
+#, python-format
+msgid "Answers come from %s on this computer."
+msgstr ""
+
+#: files/parchaos-assistant:313
+msgid "Setting up Claude support for your account (one time)…"
+msgstr ""
+
+#: files/parchaos-assistant:330
+msgid ""
+"Could not set up Claude support. Check your internet connection and open the "
+"assistant again."
+msgstr ""
+
+#: files/parchaos-assistant:336
+msgid "Anthropic API key"
+msgstr ""
+
+#: files/parchaos-assistant:337
+msgid ""
+"Paste your key from console.anthropic.com. It is kept in your keyring and "
+"sent only to Anthropic."
+msgstr ""
+
+#: files/parchaos-assistant:341
+msgid "Cancel"
+msgstr ""
+
+#: files/parchaos-assistant:342
+msgid "Save"
+msgstr ""
+
+#: files/parchaos-assistant:354
+msgid "Assistant Settings"
+msgstr ""
+
+#: files/parchaos-assistant:355
+#, python-format
+msgid "Where answers come from now: %s"
+msgstr ""
+
+#: files/parchaos-assistant:356
+msgid "on this computer"
+msgstr ""
+
+#: files/parchaos-assistant:357
+msgid "Claude"
+msgstr ""
+
+#: files/parchaos-assistant:357
+msgid "not chosen"
+msgstr ""
+
+#: files/parchaos-assistant:358
+msgid "Close"
+msgstr ""
+
+#: files/parchaos-assistant:359
+msgid "Choose Again"
+msgstr ""
+
+#: files/parchaos-assistant:361
+msgid "Forget API Key"
+msgstr ""
+
+#: files/parchaos-assistant:373
+msgid "The API key was removed from your keyring."
+msgstr ""
+
+#: files/parchaos-assistant:395
+msgid "The assistant is not ready yet."
+msgstr ""

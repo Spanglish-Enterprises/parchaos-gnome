@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>org.parchaos.Assistant</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Parcha Assistant</name>
+  <summary>Ask questions and draft text, on this computer or with Claude</summary>
+  <summary xml:lang="es">Haz preguntas y redacta textos, en esta computadora o con Claude</summary>
+  <developer id="org.parchaos">
+    <name>Spanglish Enterprises LLC</name>
+  </developer>
+  <description>
+    <p>
+      Parcha Assistant is a small chat window you open with Ctrl+Alt+Space. You choose where the
+      answers come from: a model running on this computer through Ollama (private, works offline),
+      or Claude by Anthropic with your own API key. Nothing you type is sent anywhere until you
+      choose, and the key stays in your keyring.
+    </p>
+    <p xml:lang="es">
+      Parcha Assistant es una pequeña ventana de conversación que abres con Ctrl+Alt+Espacio. Tú
+      eliges de dónde vienen las respuestas: un modelo en esta computadora con Ollama (privado,
+      funciona sin conexión) o Claude de Anthropic con tu propia clave de API. Nada de lo que
+      escribas se envía a ningún sitio hasta que elijas, y la clave se queda en tu llavero.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.parchaos.Assistant.desktop</launchable>
+  <url type="homepage">https://www.parchaos.org</url>
+  <url type="bugtracker">https://www.parchaos.org/support</url>
+  <url type="vcs-browser">https://github.com/Spanglish-Enterprises/parchaos-gnome</url>
+  <translation type="gettext">parchaos-assistant</translation>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-11-08">
+      <description>
+        <p>First version: chat with a local Ollama model or Claude, streamed replies, Spanish.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -208,6 +208,9 @@ PROFILE_REPO_PACKAGES=(
     # Android apps through Waydroid, opt-in (packaging/parchaos-android/, ticket #117).
     parchaos-android
 
+    # Parcha Assistant, Ctrl+Alt+Space (packaging/parchaos-assistant/, ticket #122).
+    parchaos-assistant
+
     # ParchaOS's own glass library for the optional refractive effects
     # (packaging/parchaos-glass/); needed by the session and Controls extensions.
     parchaos-glass

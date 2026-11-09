@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Parcha Assistant
+Name[es]=Parcha Assistant
+Comment=Ask questions and draft text, with a model on this computer or Claude
+Comment[es]=Haz preguntas y redacta textos, con un modelo en esta computadora o con Claude
+Exec=parchaos-assistant
+Icon=user-available-symbolic
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=assistant;ai;chat;claude;ollama;llm;asistente;
+StartupNotify=true

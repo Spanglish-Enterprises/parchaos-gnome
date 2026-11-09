@@ -1,0 +1,457 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Assistant (ticket #122): a small chat window for questions and drafts, summoned with
+# Ctrl+Alt+Space. Original ParchaOS work (docs/assistant-spec.md).
+#
+#   parchaos-assistant        open the window
+#
+# Two backends, chosen by the user; nothing is sent anywhere until one is chosen:
+#   - On this computer: a local model through Ollama (Fedora's ollama package). The user pulls a
+#     model themselves; ParchaOS never bundles model weights.
+#   - Claude: Anthropic's API with the user's own key, kept in GNOME Keyring (libsecret) and sent
+#     only to Anthropic. The official Python SDK is installed for this user (pip --user) the first
+#     time this backend is chosen, since Fedora does not package it.
+# Settings (which backend, which local model) are in ~/.config/parchaos/assistant.json.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import importlib
+import json
+import os
+import subprocess
+import sys
+import threading
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+gi.require_version('Gdk', '4.0')
+gi.require_version('Secret', '1')
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Secret  # noqa: E402
+
+gettext.bindtextdomain('parchaos-assistant', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-assistant')
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.Assistant'
+CONFIG = os.environ.get('PARCHAOS_ASSISTANT_CONFIG', os.path.join(GLib.get_user_config_dir(), 'parchaos', 'assistant.json'))
+CLAUDE_MODEL = 'claude-opus-5-5'
+OLLAMA_HOST = os.environ.get('PARCHAOS_OLLAMA_HOST', 'http://127.0.0.1:11434')
+SYSTEM = ('You are Parcha Assistant, the assistant built into ParchaOS, a Linux desktop based on Fedora '
+          'and GNOME. Answer clearly and briefly; use plain text with short lists when they help. '
+          'Reply in the language the user writes in.')
+KEY_SCHEMA = Secret.Schema.new('org.parchaos.Assistant', Secret.SchemaFlags.NONE,
+                               {'service': Secret.SchemaAttributeType.STRING})
+KEY_ATTRS = {'service': 'anthropic'}
+
+
+def load_config(path=CONFIG):
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_config(data, path=CONFIG):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=1)
+    os.replace(tmp, path)
+
+
+def get_key():
+    return Secret.password_lookup_sync(KEY_SCHEMA, KEY_ATTRS, None)
+
+
+def store_key(key):
+    Secret.password_store_sync(KEY_SCHEMA, KEY_ATTRS, Secret.COLLECTION_DEFAULT,
+                               _('Parcha Assistant: Anthropic API key'), key, None)
+
+
+def clear_key():
+    Secret.password_clear_sync(KEY_SCHEMA, KEY_ATTRS, None)
+
+
+def load_anthropic():
+    """The anthropic module, or None if it is not installed for this user yet."""
+    try:
+        importlib.invalidate_caches()
+        return importlib.import_module('anthropic')
+    except ImportError:
+        return None
+
+
+class OllamaBackend:
+    """A local model through the Ollama service on this computer."""
+
+    def __init__(self, model):
+        self.model = model
+
+    @staticmethod
+    def models():
+        import ollama
+        listing = ollama.Client(host=OLLAMA_HOST).list()
+        items = listing.get('models', []) if isinstance(listing, dict) else getattr(listing, 'models', [])
+        names = []
+        for m in items:
+            name = m.get('model') or m.get('name') if isinstance(m, dict) else getattr(m, 'model', None)
+            if name:
+                names.append(name)
+        return sorted(names)
+
+    def reply(self, history, on_text):
+        import ollama
+        client = ollama.Client(host=OLLAMA_HOST)
+        messages = [{'role': 'system', 'content': SYSTEM}] + [
+            {'role': m['role'], 'content': m['text']} for m in history]
+        for chunk in client.chat(model=self.model, messages=messages, stream=True):
+            message = chunk['message'] if isinstance(chunk, dict) else chunk.message
+            text = message['content'] if isinstance(message, dict) else message.content
+            if text:
+                on_text(text)
+
+
+    @staticmethod
+    def describe_error(e):
+        if isinstance(e, (ConnectionError, OSError)) or 'connect' in str(e).lower():
+            return _('Ollama is not running. Install it with: sudo dnf install ollama, then: '
+                     'sudo systemctl enable --now ollama')
+        return _('The local model could not answer: %s') % e
+
+
+class ClaudeBackend:
+    """Claude through Anthropic's API, with the user's own key."""
+
+    def __init__(self, key):
+        anthropic = load_anthropic()
+        self.anthropic = anthropic
+        self.client = anthropic.Anthropic(api_key=key)
+        # Full assistant content (text and thinking blocks) as returned, so later turns can be
+        # sent back unchanged.
+        self.turns = []
+
+    def reply(self, history, on_text):
+        a = self.anthropic
+        messages = []
+        for i, m in enumerate(history):
+            if m['role'] == 'assistant' and i // 2 < len(self.turns):
+                messages.append({'role': 'assistant', 'content': self.turns[i // 2]})
+            else:
+                messages.append({'role': m['role'], 'content': m['text']})
+        # Chat is light work: low effort keeps replies quick. If Claude declines for a safety
+        # reason, the server retries on a fallback model it picks ("default").
+        with self.client.beta.messages.stream(
+            model=CLAUDE_MODEL,
+            max_tokens=64000,
+            system=SYSTEM,
+            messages=messages,
+            output_config={'effort': 'low'},
+            betas=['server-side-fallback-2026-07-01'],
+            fallbacks='default',
+        ) as stream:
+            for text in stream.text_stream:
+                on_text(text)
+            final = stream.get_final_message()
+        if final.stop_reason == 'refusal':
+            on_text('\n' + _('(Claude declined to answer this.)'))
+        elif final.stop_reason == 'max_tokens':
+            on_text('\n' + _('(The answer was cut off at the length limit.)'))
+        self.turns.append(final.content)
+
+    def describe_error(self, e):
+        a = self.anthropic
+        if isinstance(e, a.AuthenticationError):
+            return _('The API key was not accepted. Check it in the settings.')
+        if isinstance(e, a.PermissionDeniedError):
+            return _('This key is not allowed to use this model.')
+        if isinstance(e, a.RateLimitError):
+            return _('Too many requests right now. Try again in a moment.')
+        if isinstance(e, a.APIStatusError):
+            return _('Anthropic returned an error (%d). Try again later.') % e.status_code
+        if isinstance(e, a.APIConnectionError):
+            return _('Could not reach Anthropic. Check your internet connection.')
+        return str(e)
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title=_('Parcha Assistant'), default_width=520, default_height=640)
+        self.config = load_config()
+        self.history = []          # [{'role': 'user'|'assistant', 'text': str}]
+        self.backend = None
+        self.busy = False
+
+        self.toasts = Adw.ToastOverlay()
+        view = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        clear = Gtk.Button(icon_name='edit-clear-all-symbolic', tooltip_text=_('New Chat'))
+        clear.connect('clicked', lambda *_a: self.new_chat())
+        header.pack_start(clear)
+        settings = Gtk.Button(icon_name='emblem-system-symbolic', tooltip_text=_('Settings'))
+        settings.connect('clicked', lambda *_a: self.show_settings())
+        header.pack_end(settings)
+        view.add_top_bar(header)
+
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.stack.add_named(self.build_choose(), 'choose')
+        self.stack.add_named(self.build_chat(), 'chat')
+        view.set_content(self.stack)
+        self.toasts.set_child(view)
+        self.set_content(self.toasts)
+        self.connect_backend()
+
+    # ---- first run: choose where answers come from ----
+    def build_choose(self):
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(
+            title=_('Choose where answers come from'),
+            description=_('Nothing you type is sent anywhere until you choose.'))
+        local = Adw.ActionRow(title=_('On this computer'), activatable=True,
+                              subtitle=_('A model you install with Ollama. Private and works offline, '
+                                         'but needs a fast computer and is less capable.'))
+        local.add_prefix(Gtk.Image(icon_name='computer-symbolic'))
+        local.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+        local.connect('activated', lambda *_a: self.choose('ollama'))
+        cloud = Adw.ActionRow(title=_('Claude, by Anthropic'), activatable=True,
+                              subtitle=_('Fast and very capable. Needs your own API key and the internet. '
+                                         'What you type leaves this computer and goes to Anthropic.'))
+        cloud.add_prefix(Gtk.Image(icon_name='network-server-symbolic'))
+        cloud.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+        cloud.connect('activated', lambda *_a: self.choose('claude'))
+        group.add(local)
+        group.add(cloud)
+        page.add(group)
+        return page
+
+    # ---- the chat ----
+    def build_chat(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.notice = Gtk.Label(wrap=True, xalign=0, css_classes=['dim-label', 'caption'],
+                                margin_start=18, margin_end=18, margin_top=6)
+        box.append(self.notice)
+        self.list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                            margin_start=18, margin_end=18, margin_top=12, margin_bottom=12)
+        self.scroller = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER,
+                                           child=Adw.Clamp(maximum_size=700, child=self.list))
+        box.append(self.scroller)
+        entry_box = Gtk.Box(spacing=6, margin_start=12, margin_end=12, margin_bottom=12)
+        self.entry = Gtk.Entry(hexpand=True, placeholder_text=_('Ask anything'))
+        self.entry.connect('activate', lambda *_a: self.send())
+        self.send_button = Gtk.Button(icon_name='go-up-symbolic', tooltip_text=_('Send'),
+                                      css_classes=['suggested-action', 'circular'])
+        self.send_button.connect('clicked', lambda *_a: self.send())
+        entry_box.append(self.entry)
+        entry_box.append(self.send_button)
+        box.append(entry_box)
+        return box
+
+    def bubble(self, role, text=''):
+        label = Gtk.Label(label=text, wrap=True, selectable=True, xalign=0,
+                          halign=Gtk.Align.END if role == 'user' else Gtk.Align.START,
+                          css_classes=['card'], margin_start=48 if role == 'user' else 0,
+                          margin_end=0 if role == 'user' else 48)
+        label.set_margin_top(2)
+        label.add_css_class('parchaos-assistant-' + role)
+        self.list.append(label)
+        GLib.idle_add(self.scroll_down)
+        return label
+
+    def scroll_down(self):
+        adj = self.scroller.get_vadjustment()
+        adj.set_value(adj.get_upper())
+        return False
+
+    def say(self, text):
+        self.toasts.add_toast(Adw.Toast(title=text, timeout=5))
+
+    # ---- backends ----
+    def choose(self, which):
+        self.config['backend'] = which
+        save_config(self.config)
+        self.connect_backend()
+
+    def connect_backend(self):
+        which = self.config.get('backend')
+        self.backend = None
+        if which == 'ollama':
+            self.notice.set_label(_('Answers come from a model on this computer.'))
+            self.stack.set_visible_child_name('chat')
+            threading.Thread(target=self._pick_local_model, daemon=True).start()
+        elif which == 'claude':
+            self.notice.set_label(_('Answers come from Claude. What you type is sent to Anthropic.'))
+            self.stack.set_visible_child_name('chat')
+            self._connect_claude()
+        else:
+            self.stack.set_visible_child_name('choose')
+
+    def _pick_local_model(self):
+        try:
+            models = OllamaBackend.models()
+        except Exception:  # noqa: BLE001 - no service, no package: say how to fix it
+            GLib.idle_add(self.say, _('Ollama is not running. Install it with: sudo dnf install ollama, '
+                                      'then: sudo systemctl enable --now ollama'))
+            return
+        if not models:
+            GLib.idle_add(self.say, _('No local model yet. Get one in a terminal, for example: '
+                                      'ollama pull llama3.2'))
+            return
+        model = self.config.get('ollama_model')
+        if model not in models:
+            model = models[0]
+            self.config['ollama_model'] = model
+            GLib.idle_add(save_config, self.config)
+        self.backend = OllamaBackend(model)
+        GLib.idle_add(self.notice.set_label, _('Answers come from %s on this computer.') % model)
+
+    def _connect_claude(self):
+        if load_anthropic() is None:
+            self.notice.set_label(_('Setting up Claude support for your account (one time)…'))
+
+            def install():
+                ok = subprocess.run([sys.executable, '-m', 'pip', 'install', '--user', '--quiet', 'anthropic'],
+                                    capture_output=True).returncode == 0
+                GLib.idle_add(self._after_install, ok)
+            threading.Thread(target=install, daemon=True).start()
+            return
+        key = get_key()
+        if not key:
+            self.ask_key()
+            return
+        self.backend = ClaudeBackend(key)
+        self.notice.set_label(_('Answers come from Claude. What you type is sent to Anthropic.'))
+
+    def _after_install(self, ok):
+        if not ok:
+            self.notice.set_label(_('Could not set up Claude support. Check your internet connection and '
+                                    'open the assistant again.'))
+            return
+        self._connect_claude()
+
+    def ask_key(self):
+        dialog = Adw.AlertDialog(heading=_('Anthropic API key'),
+                                 body=_('Paste your key from console.anthropic.com. It is kept in your '
+                                        'keyring and sent only to Anthropic.'))
+        entry = Gtk.PasswordEntry(show_peek_icon=True)
+        dialog.set_extra_child(entry)
+        dialog.add_response('cancel', _('Cancel'))
+        dialog.add_response('save', _('Save'))
+        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED)
+
+        def answered(_d, response):
+            key = entry.get_text().strip()
+            if response == 'save' and key:
+                store_key(key)
+                self._connect_claude()
+        dialog.connect('response', answered)
+        dialog.present(self)
+
+    def show_settings(self):
+        dialog = Adw.AlertDialog(heading=_('Assistant Settings'),
+                                 body=_('Where answers come from now: %s') % (
+                                     _('on this computer') if self.config.get('backend') == 'ollama'
+                                     else _('Claude') if self.config.get('backend') == 'claude' else _('not chosen')))
+        dialog.add_response('close', _('Close'))
+        dialog.add_response('switch', _('Choose Again'))
+        if self.config.get('backend') == 'claude':
+            dialog.add_response('forget', _('Forget API Key'))
+            dialog.set_response_appearance('forget', Adw.ResponseAppearance.DESTRUCTIVE)
+
+        def answered(_d, response):
+            if response == 'switch':
+                self.config.pop('backend', None)
+                save_config(self.config)
+                self.new_chat()
+                self.connect_backend()
+            elif response == 'forget':
+                clear_key()
+                self.backend = None
+                self.say(_('The API key was removed from your keyring.'))
+                self.ask_key()
+        dialog.connect('response', answered)
+        dialog.present(self)
+
+    def new_chat(self):
+        if self.busy:
+            return
+        self.history = []
+        if isinstance(self.backend, ClaudeBackend):
+            self.backend.turns = []
+        child = self.list.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.list.remove(child)
+            child = nxt
+
+    def send(self):
+        text = self.entry.get_text().strip()
+        if not text or self.busy:
+            return
+        if self.backend is None:
+            self.say(_('The assistant is not ready yet.'))
+            return
+        self.entry.set_text('')
+        self.history.append({'role': 'user', 'text': text})
+        self.bubble('user', text)
+        answer = self.bubble('assistant', '…')
+        self.busy = True
+        self.send_button.set_sensitive(False)
+        parts = []
+        backend = self.backend
+
+        def on_text(piece):
+            parts.append(piece)
+            GLib.idle_add(answer.set_label, ''.join(parts))
+            GLib.idle_add(self.scroll_down)
+
+        def work():
+            error = None
+            try:
+                backend.reply(list(self.history), on_text)
+            except Exception as e:  # noqa: BLE001 - shown to the user, never raised in the UI thread
+                error = backend.describe_error(e) if hasattr(backend, 'describe_error') else str(e)
+            GLib.idle_add(self._done, answer, ''.join(parts), error)
+        threading.Thread(target=work, daemon=True).start()
+
+    def _done(self, answer, text, error):
+        self.busy = False
+        self.send_button.set_sensitive(True)
+        if error:
+            answer.set_label(error)
+            answer.add_css_class('error')
+            self.history.pop()          # the question gets no answer in the history
+            return
+        self.history.append({'role': 'assistant', 'text': text})
+
+
+CSS = b"""
+.parchaos-assistant-user, .parchaos-assistant-assistant { padding: 8px 12px; border-radius: 16px; }
+.parchaos-assistant-user { background: alpha(@accent_bg_color, 0.85); color: @accent_fg_color; }
+.parchaos-assistant-assistant.error { color: @error_color; }
+"""
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+
+    def do_startup(self):
+        Adw.Application.do_startup(self)
+        css = Gtk.CssProvider()
+        css.load_from_data(CSS, -1)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    def do_activate(self):
+        win = self.get_active_window() or Window(self)
+        win.present()
+        if hasattr(win, 'entry'):
+            win.entry.grab_focus()
+
+
+if __name__ == '__main__':
+    sys.exit(App().run(sys.argv))

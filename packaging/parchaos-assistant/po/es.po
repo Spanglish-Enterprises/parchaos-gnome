@@ -1,0 +1,210 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-assistant package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-assistant\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 20:09-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-assistant:73
+msgid "Parcha Assistant: Anthropic API key"
+msgstr "Parcha Assistant: clave de API de Anthropic"
+
+#. noqa: BLE001 - no service, no package: say how to fix it
+#: files/parchaos-assistant:122 files/parchaos-assistant:296
+msgid ""
+"Ollama is not running. Install it with: sudo dnf install ollama, then: sudo "
+"systemctl enable --now ollama"
+msgstr ""
+"Ollama no se está ejecutando. Instálalo con: sudo dnf install ollama, y "
+"luego: sudo systemctl enable --now ollama"
+
+#: files/parchaos-assistant:124
+#, python-format
+msgid "The local model could not answer: %s"
+msgstr "El modelo local no pudo responder: %s"
+
+#: files/parchaos-assistant:161
+msgid "(Claude declined to answer this.)"
+msgstr "(Claude prefirió no responder esto.)"
+
+#: files/parchaos-assistant:163
+msgid "(The answer was cut off at the length limit.)"
+msgstr "(La respuesta se cortó al llegar al límite de largo.)"
+
+#: files/parchaos-assistant:169
+msgid "The API key was not accepted. Check it in the settings."
+msgstr "La clave de API no fue aceptada. Revísala en la configuración."
+
+#: files/parchaos-assistant:171
+msgid "This key is not allowed to use this model."
+msgstr "Esta clave no tiene permiso para usar este modelo."
+
+#: files/parchaos-assistant:173
+msgid "Too many requests right now. Try again in a moment."
+msgstr ""
+"Hay demasiadas solicitudes ahora mismo. Inténtalo otra vez en un momento."
+
+#: files/parchaos-assistant:175
+#, python-format
+msgid "Anthropic returned an error (%d). Try again later."
+msgstr "Anthropic devolvió un error (%d). Inténtalo más tarde."
+
+#: files/parchaos-assistant:177
+msgid "Could not reach Anthropic. Check your internet connection."
+msgstr "No se pudo conectar con Anthropic. Revisa tu conexión a internet."
+
+#: files/parchaos-assistant:183
+msgid "Parcha Assistant"
+msgstr "Parcha Assistant"
+
+#: files/parchaos-assistant:192
+msgid "New Chat"
+msgstr "Nueva conversación"
+
+#: files/parchaos-assistant:195
+msgid "Settings"
+msgstr "Configuración"
+
+#: files/parchaos-assistant:212
+msgid "Choose where answers come from"
+msgstr "Elige de dónde vienen las respuestas"
+
+#: files/parchaos-assistant:213
+msgid "Nothing you type is sent anywhere until you choose."
+msgstr "Nada de lo que escribas se envía a ningún sitio hasta que elijas."
+
+#: files/parchaos-assistant:214
+msgid "On this computer"
+msgstr "En esta computadora"
+
+#: files/parchaos-assistant:215
+msgid ""
+"A model you install with Ollama. Private and works offline, but needs a fast "
+"computer and is less capable."
+msgstr ""
+"Un modelo que instalas con Ollama. Privado y funciona sin conexión, pero "
+"necesita una computadora rápida y es menos capaz."
+
+#: files/parchaos-assistant:220
+msgid "Claude, by Anthropic"
+msgstr "Claude, de Anthropic"
+
+#: files/parchaos-assistant:221
+msgid ""
+"Fast and very capable. Needs your own API key and the internet. What you "
+"type leaves this computer and goes to Anthropic."
+msgstr ""
+"Rápido y muy capaz. Necesita tu propia clave de API e internet. Lo que "
+"escribas sale de esta computadora y va a Anthropic."
+
+#: files/parchaos-assistant:243
+msgid "Ask anything"
+msgstr "Pregunta lo que quieras"
+
+#: files/parchaos-assistant:245
+msgid "Send"
+msgstr "Enviar"
+
+#: files/parchaos-assistant:282
+msgid "Answers come from a model on this computer."
+msgstr "Las respuestas vienen de un modelo en esta computadora."
+
+#: files/parchaos-assistant:286 files/parchaos-assistant:326
+msgid "Answers come from Claude. What you type is sent to Anthropic."
+msgstr "Las respuestas vienen de Claude. Lo que escribas se envía a Anthropic."
+
+#: files/parchaos-assistant:300
+msgid ""
+"No local model yet. Get one in a terminal, for example: ollama pull llama3.2"
+msgstr ""
+"Todavía no hay un modelo local. Descarga uno en una terminal, por ejemplo: "
+"ollama pull llama3.2"
+
+#: files/parchaos-assistant:309
+#, python-format
+msgid "Answers come from %s on this computer."
+msgstr "Las respuestas vienen de %s en esta computadora."
+
+#: files/parchaos-assistant:313
+msgid "Setting up Claude support for your account (one time)…"
+msgstr "Preparando Claude para tu cuenta (una sola vez)…"
+
+#: files/parchaos-assistant:330
+msgid ""
+"Could not set up Claude support. Check your internet connection and open the "
+"assistant again."
+msgstr ""
+"No se pudo preparar Claude. Revisa tu conexión a internet y abre el "
+"asistente otra vez."
+
+#: files/parchaos-assistant:336
+msgid "Anthropic API key"
+msgstr "Clave de API de Anthropic"
+
+#: files/parchaos-assistant:337
+msgid ""
+"Paste your key from console.anthropic.com. It is kept in your keyring and "
+"sent only to Anthropic."
+msgstr ""
+"Pega tu clave de console.anthropic.com. Se guarda en tu llavero y solo se "
+"envía a Anthropic."
+
+#: files/parchaos-assistant:341
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: files/parchaos-assistant:342
+msgid "Save"
+msgstr "Guardar"
+
+#: files/parchaos-assistant:354
+msgid "Assistant Settings"
+msgstr "Configuración del asistente"
+
+#: files/parchaos-assistant:355
+#, python-format
+msgid "Where answers come from now: %s"
+msgstr "De dónde vienen las respuestas ahora: %s"
+
+#: files/parchaos-assistant:356
+msgid "on this computer"
+msgstr "en esta computadora"
+
+#: files/parchaos-assistant:357
+msgid "Claude"
+msgstr "Claude"
+
+#: files/parchaos-assistant:357
+msgid "not chosen"
+msgstr "sin elegir"
+
+#: files/parchaos-assistant:358
+msgid "Close"
+msgstr "Cerrar"
+
+#: files/parchaos-assistant:359
+msgid "Choose Again"
+msgstr "Elegir otra vez"
+
+#: files/parchaos-assistant:361
+msgid "Forget API Key"
+msgstr "Olvidar la clave de API"
+
+#: files/parchaos-assistant:373
+msgid "The API key was removed from your keyring."
+msgstr "La clave de API se quitó de tu llavero."
+
+#: files/parchaos-assistant:395
+msgid "The assistant is not ready yet."
+msgstr "El asistente todavía no está listo."

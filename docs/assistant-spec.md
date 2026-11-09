@@ -41,3 +41,14 @@ Only this specification exists; nothing is built. Findings from checking Fedora 
 - **Shape:** build it as a small GTK4/libadwaita chat window plus a top-bar button, not a shell extension with custom drawing. It is easier to test (a fake server can stand in for both backends), works the same in the live session, and can still be summoned by shortcut.
 - **Privacy rules to keep:** nothing is sent until the user picks a backend; the cloud backend shows a clear "leaves this computer" note; clipboard or window context is off by default and per request.
 - **Effort:** about two days for chat, streaming, both backends, key storage and Settings entry. Testing beyond fake servers needs the user's key or a machine that can run a model.
+
+## 6. Built (2026-11-08)
+`packaging/parchaos-assistant` 1.0.0: GTK4/libadwaita window, Ctrl+Alt+Space (dconf default custom
+keybinding), first-run choice of backend (nothing sent before it). Local: `python3-ollama` against
+`PARCHAOS_OLLAMA_HOST` (default 127.0.0.1:11434), first pulled model, friendly message when Ollama is
+missing. Claude: official `anthropic` SDK (pip --user on first use, Fedora has no package),
+`claude-opus-5-5`, `output_config.effort=low`, streamed, server-side refusal fallback
+(`fallbacks="default"`, beta `server-side-fallback-2026-07-01`), earlier assistant content sent back
+unchanged, typed SDK errors mapped to plain messages; key in GNOME Keyring via libsecret.
+Tests (`tests/test_assistant.py`) run both backends against fake local servers (SDK 2.6, ollama 0.4.7).
+Not yet: clipboard/window context (per request, off by default), a top-bar button, voice.
