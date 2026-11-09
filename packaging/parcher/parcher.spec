@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        36%{?dist}
+Release:        37%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -95,6 +95,8 @@ Patch9:         0010-sidebar-polish.patch
 Patch10:        0011-previewer-activation-token.patch
 # ParchaOS's own look for the sidebar (appended to the stylesheet in %prep).
 Source1:        parcher-own-layout.css
+# Spanish for the strings ParchaOS adds (merged into Nautilus's es.po in %prep).
+Source2:        parcher-es.po
 
 Provides:       parchaos-finder = %{version}-%{release}
 Obsoletes:      parchaos-finder < 48.7-12
@@ -310,6 +312,14 @@ sed -i 's/GTK_STYLE_PROVIDER_PRIORITY_USER);/GTK_STYLE_PROVIDER_PRIORITY_USER + 
 grep -q 'GTK_STYLE_PROVIDER_PRIORITY_USER + 1);' src/nautilus-application.c
 ! grep -q '#ff453a\|#0a84ff' src/resources/style.css
 ! ( sed -n '/Parcher Pill View Switcher/,$p' src/resources/style.css | grep -q 'border-radius: 9999px' )
+# Tickets #146/#53: Spanish for ParchaOS's own strings (sidebar headings, tags, status line).
+# --use-first keeps Nautilus's translation wherever the same string exists upstream.
+# Obsolete (#~) upstream entries are dropped first; one of them ("Tags") would otherwise win and hide ours.
+msgattrib --no-obsolete -o po/es.po.cur po/es.po
+msgcat --use-first -o po/es.po.new po/es.po.cur %{SOURCE2}
+rm po/es.po.cur
+mv po/es.po.new po/es.po
+msgfmt --check -o /dev/null po/es.po
 
 %build
 %meson -Ddocs=false -Dtests=none
@@ -346,6 +356,9 @@ grep -q 'GTK_STYLE_PROVIDER_PRIORITY_USER + 1);' src/nautilus-application.c
 %{_datadir}/nautilus/
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 48.7-37
+- Tickets #146/#53: Spanish for the strings ParchaOS adds (Cloud Drives, Add Account, Locations, Tags, Recents, tag colours, the status line and icon-size slider), merged into Nautilus's own es.po at build time.
+
 * Fri Oct 02 2026 ParchaOS packaging - 48.7-36
 - The Cloud Drives rows call parchaos-cloud (they called the old pulsar-cloud name, which does not exist, so adding an account or opening a drive did nothing) and use its icon; the add row reads "Add Account…" so it is not clipped in the sidebar.
 

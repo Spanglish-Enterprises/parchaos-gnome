@@ -1,0 +1,67 @@
+# Spanish (Puerto Rican usage) for the strings ParchaOS adds to Parcher (tickets #146/#53).
+# Merged into Nautilus's own po/es.po in %prep (msgcat --use-first), so Nautilus's
+# translations win wherever the same string exists upstream.
+msgid ""
+msgstr ""
+"Project-Id-Version: parcher\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Cloud Drives"
+msgstr "Unidades en la nube"
+
+msgid "Add Account…"
+msgstr "Añadir cuenta…"
+
+msgid "Locations"
+msgstr "Ubicaciones"
+
+msgid "Tags"
+msgstr "Etiquetas"
+
+msgid "Recents"
+msgstr "Recientes"
+
+msgid "Favorites"
+msgstr "Favoritos"
+
+msgid "Red"
+msgstr "Rojo"
+
+msgid "Orange"
+msgstr "Anaranjado"
+
+msgid "Yellow"
+msgstr "Amarillo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Azul"
+
+msgid "Purple"
+msgstr "Morado"
+
+msgid "Gray"
+msgstr "Gris"
+
+msgid "%u item"
+msgid_plural "%u items"
+msgstr[0] "%u elemento"
+msgstr[1] "%u elementos"
+
+msgid "%u of %u selected"
+msgstr "%u de %u seleccionados"
+
+msgid "%s, %s available"
+msgstr "%s, %s disponibles"
+
+msgid "Icon size"
+msgstr "Tamaño de los íconos"
+
+msgid "Open Network Locations"
+msgstr "Abrir ubicaciones de red"
