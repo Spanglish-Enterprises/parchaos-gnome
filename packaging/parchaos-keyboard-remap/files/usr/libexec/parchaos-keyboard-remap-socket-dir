@@ -31,7 +31,17 @@ uid="${1:?usage: parchaos-keyboard-remap-socket-dir UID}"
 install -d -m 0755 -o xremap -g xremap /run/xremap
 install -d -m 0750 -o xremap -g xremap "/run/xremap/$uid"
 if command -v setfacl >/dev/null 2>&1; then
-    setfacl -m "u:$uid:rwx" "/run/xremap/$uid"
+    # The socket itself is made by the user's GNOME Shell extension, owned
+    # by the user and chmod'ed 0660, so the `xremap` account could not
+    # connect to it (EACCES on every focus query, ticket #132). A default
+    # ACL hands the new socket rw for `xremap`; the extension's chmod sets
+    # the mask to rw, which keeps that entry effective.
+    setfacl -m "u:$uid:rwx,d:u:xremap:rw" "/run/xremap/$uid"
+    # A socket made before this ACL existed (an upgrade mid-session) gets
+    # the same entry directly, so remaps work without a re-login.
+    if [[ -S "/run/xremap/$uid/xremap.sock" ]]; then
+        setfacl -m "u:xremap:rw" "/run/xremap/$uid/xremap.sock" || :
+    fi
 else
     logger -t parchaos-keyboard-remap "setfacl not found (acl package missing); per-app remaps will not work for uid $uid"
 fi

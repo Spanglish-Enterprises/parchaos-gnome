@@ -86,7 +86,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
@@ -254,6 +254,13 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 0.15.13-17
+- Ticket #132: the socket directory existed but xremap still could not use
+  it: the extension makes xremap.sock as the user with mode 0660, and the
+  xremap account got "Permission denied" on every focus query, so per-app
+  remaps never matched. The helper now sets a default ACL (u:xremap:rw) on
+  /run/xremap/<uid>, and adds the entry to an already-existing socket.
+
 * Fri Oct 02 2026 ParchaOS packaging - 0.15.13-16
 - Ticket #167: build for aarch64 too, from xremap's own aarch64 release of the same version.
 
