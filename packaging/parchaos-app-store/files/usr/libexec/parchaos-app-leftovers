@@ -1,0 +1,90 @@
+#!/usr/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-app-leftovers: after a Flatpak app is uninstalled (from Parcha Store, the launcher or a
+# terminal), its settings and data stay in ~/.var/app/<id>. This asks once per app whether to move
+# that folder to the Trash, showing its size first. Nothing is ever deleted without the user's
+# choice, and the Trash keeps it restorable (ticket #118).
+#
+# Run by parchaos-app-leftovers.service, which parchaos-app-leftovers.path starts when the
+# installed-apps folders change, and once at login.
+#
+#   parchaos-app-leftovers          ask about every leftover folder
+#   parchaos-app-leftovers --list   print the leftover folders and stop
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -u
+
+export TEXTDOMAIN=parchaos-app-store
+export TEXTDOMAINDIR="${PARCHAOS_LOCALEDIR:-/usr/share/locale}"
+# shellcheck disable=SC1091
+. gettext.sh 2>/dev/null || gettext() { printf '%s' "$1"; }
+
+APPS_DIR="${HOME}/.var/app"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/parchaos"
+KEPT="$STATE_DIR/app-leftovers-kept"
+
+installed() {
+    flatpak info --user "$1" >/dev/null 2>&1 || flatpak info --system "$1" >/dev/null 2>&1
+}
+
+kept() {
+    [ -f "$KEPT" ] && grep -qxF "$1" "$KEPT"
+}
+
+# Folders under ~/.var/app whose app is no longer installed and that the user has not chosen to keep.
+leftovers() {
+    [ -d "$APPS_DIR" ] || return 0
+    local dir id
+    for dir in "$APPS_DIR"/*/; do
+        [ -d "$dir" ] || continue
+        id=$(basename "$dir")
+        # Flatpak ids are reverse-DNS names; anything else was not made by Flatpak.
+        [[ "$id" =~ ^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+){2,}$ ]] || continue
+        installed "$id" && continue
+        kept "$id" && continue
+        printf '%s\n' "$id"
+    done
+}
+
+# The name to show: the app's own name from the Flathub catalogue if Flatpak still knows it, else the id.
+display_name() {
+    local name
+    name=$(flatpak remote-info --system --cached flathub "$1" 2>/dev/null | sed -n 's/^ *Name: //p' | head -n1)
+    [ -z "$name" ] && name=$(flatpak search --columns=name "$1" 2>/dev/null | head -n1)
+    printf '%s' "${name:-$1}"
+}
+
+ask() {
+    local id=$1 name size body choice
+    name=$(display_name "$id")
+    size=$(du -sh "$APPS_DIR/$id" 2>/dev/null | cut -f1)
+    # shellcheck disable=SC2059
+    body=$(printf "$(gettext "%s was uninstalled, but its settings and data (%s) are still in your home folder. Move them to the Trash?")" "$name" "${size:-?}")
+    choice=$(timeout 3600 notify-send -w -u normal -a ParchaOS -i user-trash-symbolic \
+        -A "trash=$(gettext "Move to Trash")" -A "keep=$(gettext "Keep")" \
+        "$(gettext "Leftover app data")" "$body" 2>/dev/null) || return 0
+    case "$choice" in
+        trash)
+            gio trash "$APPS_DIR/$id" 2>/dev/null || return 1
+            ;;
+        keep)
+            mkdir -p "$STATE_DIR" && printf '%s\n' "$id" >> "$KEPT"
+            ;;
+    esac
+    # No choice (the banner was dismissed or timed out): ask again next time.
+    return 0
+}
+
+if [ "${1:-}" = --list ]; then
+    leftovers
+    exit 0
+fi
+
+# notify-send needs the "-A" actions of libnotify 0.7.10 or later; without them there is nothing to ask with.
+notify-send --help 2>&1 | grep -q -- '--action' || exit 0
+
+leftovers | while read -r id; do
+    ask "$id" </dev/null
+done
+exit 0

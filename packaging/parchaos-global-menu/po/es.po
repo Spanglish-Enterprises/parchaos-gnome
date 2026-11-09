@@ -82,7 +82,7 @@ msgstr "Vista rápida"
 
 #: files/extension.js:1085
 msgid "Move to Trash"
-msgstr "Mover a la basura"
+msgstr "Mover a la papelera"
 
 #: files/extension.js:1087
 msgid "Print…"
@@ -212,7 +212,7 @@ msgstr "Red"
 
 #: files/extension.js:1138
 msgid "Trash"
-msgstr "Basura"
+msgstr "Papelera"
 
 #: files/extension.js:1140
 msgid "Go to Folder…"

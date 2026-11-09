@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch for uninstalled Flatpak apps
+
+[Path]
+# An app folder disappears from either installation when an app is uninstalled.
+PathChanged=/var/lib/flatpak/app
+PathChanged=%h/.local/share/flatpak/app
+Unit=parchaos-app-leftovers.service
+
+[Install]
+WantedBy=default.target

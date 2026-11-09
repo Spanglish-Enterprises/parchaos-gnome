@@ -1,0 +1,9 @@
+[Unit]
+Description=Check for leftover app data shortly after login
+
+[Timer]
+OnStartupSec=2min
+Unit=parchaos-app-leftovers.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,7 @@
+[Unit]
+Description=Offer to move leftover data of uninstalled Flatpak apps to the Trash
+Documentation=https://github.com/Spanglish-Enterprises/parchaos-gnome
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/parchaos-app-leftovers

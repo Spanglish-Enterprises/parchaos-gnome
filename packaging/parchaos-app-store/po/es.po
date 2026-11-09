@@ -1,0 +1,37 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-app-store package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-app-store\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 19:37-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. shellcheck disable=SC2059
+#: files/usr/libexec/parchaos-app-leftovers:63
+#, sh-printf-format
+msgid ""
+"%s was uninstalled, but its settings and data (%s) are still in your home "
+"folder. Move them to the Trash?"
+msgstr "%s se desinstaló, pero su configuración y sus datos (%s) siguen en tu carpeta personal. ¿Moverlos a la papelera?"
+
+#: files/usr/libexec/parchaos-app-leftovers:65
+msgid "Move to Trash"
+msgstr "Mover a la papelera"
+
+#: files/usr/libexec/parchaos-app-leftovers:65
+msgid "Keep"
+msgstr "Conservar"
+
+#: files/usr/libexec/parchaos-app-leftovers:66
+msgid "Leftover app data"
+msgstr "Datos de una aplicación desinstalada"

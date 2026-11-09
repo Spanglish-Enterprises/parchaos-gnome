@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        37%{?dist}
+Release:        38%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -113,6 +113,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2.1.0-38
+- Ticket #146: Spanish says Papelera for Trash, matching Parcher.
+
 * Sun Nov 08 2026 ParchaOS packaging - 2.1.0-37
 - Tickets #146/#53: the menu bar is translatable (gettext domain parchaos-global-menu) and ships a Spanish translation in Puerto Rican usage: logo menu, app menu, File/Edit/View/Go/Window/Help, Force Quit, About and the confirmation dialogs.
 
