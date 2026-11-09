@@ -9,6 +9,7 @@
 // This file is a separate implementation for ParchaOS: it draws one pane per actor from a
 // Clutter.Clone of the desktop instead of capturing the whole screen.
 import Clutter from 'gi://Clutter';
+import Cogl from 'gi://Cogl';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
@@ -294,6 +295,41 @@ function floatValue(v) {
     return value;
 }
 
+// GNOME 51 removed ShaderEffect.set_shader_source: an effect now hands its fragment shader to
+// Clutter as a Cogl snippet from vfunc_get_static_snippet (ticket #37). FRAG is split into its
+// declarations (uniforms and helper functions) and the body of main(), which replaces the default
+// fragment code. GNOME 50 keeps the old call.
+const USES_SNIPPETS = typeof Clutter.ShaderEffect.new_with_snippet === 'function';
+
+export function splitShader(source) {
+    const start = source.search(/void\s+main\s*\(\s*(void)?\s*\)\s*\{/);
+    if (start < 0)
+        return null;
+    const open = source.indexOf('{', start);
+    let depth = 0;
+    for (let i = open; i < source.length; i++) {
+        if (source[i] === '{') {
+            depth++;
+        } else if (source[i] === '}' && --depth === 0) {
+            return {declarations: source.slice(0, start).trim(), body: source.slice(open + 1, i).trim()};
+        }
+    }
+    return null;
+}
+
+class GlassEffectBase extends Clutter.ShaderEffect {}
+if (USES_SNIPPETS) {
+    Object.defineProperty(GlassEffectBase.prototype, 'vfunc_get_static_snippet', {
+        value() {
+            const {declarations, body} = splitShader(FRAG);
+            const snippet = Cogl.Snippet.new(Cogl.SnippetHook.FRAGMENT, declarations, null);
+            snippet.set_replace(body);
+            return snippet;
+        },
+    });
+}
+const GlassEffect = GObject.registerClass(GlassEffectBase);
+
 export const GlassPane = GObject.registerClass(
 class GlassPane extends St.Widget {
     _init(params = {}) {
@@ -318,8 +354,9 @@ class GlassPane extends St.Widget {
         // not hide(): the first sync runs during allocation, and show() there left the pane and its
         // copies needing another allocation (ticket #48).
         this._inner.opacity = 0;
-        this._effect = new Clutter.ShaderEffect();
-        this._effect.set_shader_source(FRAG);
+        this._effect = new GlassEffect();
+        if (!USES_SNIPPETS)
+            this._effect.set_shader_source(FRAG);
         this._inner.add_effect(this._effect);
         this.connect('notify::allocation', () => this._sync());
         this.connect('notify::mapped', () => {

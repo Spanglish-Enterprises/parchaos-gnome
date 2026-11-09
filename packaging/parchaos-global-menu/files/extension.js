@@ -504,7 +504,7 @@ const WeatherIndicator = GObject.registerClass({
         // up to two other places (ticket #173), then "Open Weather". The data credit
         // stays (MET Norway's data is CC BY 4.0 and needs attribution).
         this._pop = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'parchaos-weather-pop',
         });
         const content = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
@@ -607,7 +607,7 @@ const WeatherIndicator = GObject.registerClass({
 
         // Header: the place and conditions on the left, the temperature and the day's range on the right.
         const head = new St.BoxLayout({ style_class: 'parchaos-weather-head' });
-        const left = new St.BoxLayout({ vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+        const left = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
         const place = new St.BoxLayout();
         place.add_child(label(d.place, 'parchaos-weather-place', { y_align: Clutter.ActorAlign.CENTER }));
         place.add_child(new St.Icon({ icon_name: 'find-location-symbolic', icon_size: 12,
@@ -619,7 +619,7 @@ const WeatherIndicator = GObject.registerClass({
         left.add_child(cond);
         head.add_child(left);
 
-        const right = new St.BoxLayout({ vertical: true, x_align: Clutter.ActorAlign.END });
+        const right = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_align: Clutter.ActorAlign.END });
         right.add_child(label(this._deg(d.temp, d.imperial), 'parchaos-weather-big', { x_align: Clutter.ActorAlign.END }));
         // a small bar of the day's range with a dot where it is now
         const bar = new St.BoxLayout({ style_class: 'parchaos-weather-range' });
@@ -659,7 +659,7 @@ const WeatherIndicator = GObject.registerClass({
         if (d.hours?.length) {
             const hours = new St.BoxLayout({ style_class: 'parchaos-weather-hours' });
             d.hours.forEach((h, i) => {
-                const col = new St.BoxLayout({ vertical: true, x_expand: true,
+                const col = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true,
                     style_class: 'parchaos-weather-hour' + (i === 0 ? ' now' : '') });
                 const when = GLib.DateTime.new_from_unix_local(h.time);
                 col.add_child(label(when.format(d.imperial ? '%-I %p' : '%H:%M'), 'parchaos-weather-hour-name',
@@ -685,7 +685,7 @@ const WeatherIndicator = GObject.registerClass({
             for (const o of d.others) {
                 const card = new St.BoxLayout({ x_expand: true, style_class: 'parchaos-weather-other' });
                 card.add_child(new St.Icon({ icon_name: o.icon, icon_size: 20, style_class: 'parchaos-weather-other-icon' }));
-                const text = new St.BoxLayout({ vertical: true, x_expand: true });
+                const text = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
                 text.add_child(label(o.name, 'parchaos-weather-other-name'));
                 text.add_child(label(this._deg(o.temp, d.imperial), 'parchaos-weather-other-temp'));
                 card.add_child(text);
@@ -773,7 +773,7 @@ const WeatherIndicator = GObject.registerClass({
     _buildBasicPopover() {
         this._pop.destroy_all_children();
         const head = new St.BoxLayout({ style_class: 'parchaos-weather-head' });
-        const left = new St.BoxLayout({ vertical: true, x_expand: true });
+        const left = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         left.add_child(new St.Label({ text: this._location?.name ?? this._weatherInfo.get_location_name(),
             style_class: 'parchaos-weather-place' }));
         left.add_child(new St.Label({ text: this._weatherInfo.get_temp_summary(), style_class: 'parchaos-weather-big' }));

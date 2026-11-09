@@ -180,6 +180,14 @@ if grep -n '^%%*changelog' packaging/*/*.spec | grep -v ':%changelog$'; then
     fail=1
 fi
 
+echo "== GNOME 51: no St.BoxLayout 'vertical' property =="
+# GNOME Shell 51 removed St.BoxLayout's vertical property; constructing one with it throws and
+# takes the whole extension down (the menu bar's weather popover did, ticket #37). Use
+# orientation: Clutter.Orientation.VERTICAL, which works on 48 and later.
+if grep -rnE "vertical:[[:space:]]*(true|false|!)" packaging --include=*.js; then
+    fail st-boxlayout-vertical
+fi
+
 echo "== packages.sh vs parchaos-desktop Requires/Recommends =="
 # Every non-comment, non-conditional package in packages.sh should appear
 # in the meta-package's Requires list.

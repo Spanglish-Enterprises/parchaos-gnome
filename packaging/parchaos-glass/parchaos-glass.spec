@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-16
+- Ticket #37: works on GNOME 51 (Fedora 45). GNOME 51 removed ShaderEffect.set_shader_source, so every glass pane failed to build; the shader is now handed over as a Cogl snippet (vfunc_get_static_snippet) on 51, and GNOME 50 keeps the old call. Checked in a Fedora 45 test tree (dock pane draws, no errors) and on GNOME 50 (screenshots unchanged).
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-15
 - Ticket #48: no more "Can't update stage views ... needs an allocation" warnings (about 1,600 per hour on the desktop). The pane's frame and copies are placed in its own allocation, the copies line up with translation (repaint only), and the first sync fades the copy in with opacity instead of show(), which ran during allocation.
 

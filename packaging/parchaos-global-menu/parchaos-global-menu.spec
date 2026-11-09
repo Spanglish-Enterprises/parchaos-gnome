@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        38%{?dist}
+Release:        39%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -113,6 +113,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2.1.0-39
+- Ticket #37: the weather popover used St.BoxLayout's vertical property, which GNOME 51 removed; the menu bar failed to load on Fedora 45. Uses orientation instead.
+
 * Sun Nov 08 2026 ParchaOS packaging - 2.1.0-38
 - Ticket #146: Spanish says Papelera for Trash, matching Parcher.
 
