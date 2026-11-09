@@ -1,0 +1,14 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS Game Mode session (ticket #201): started by GDM from the "Game Mode" entry on the
+# login screen. gamescope is the whole compositor and Steam runs in its full-screen view.
+# Quitting Steam ends the session and returns to the login screen. Without Steam, the
+# Gaming setup app opens instead so it can be installed.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+if flatpak info --system com.valvesoftware.Steam >/dev/null 2>&1 \
+    || flatpak info --user com.valvesoftware.Steam >/dev/null 2>&1; then
+    exec gamescope --steam --fullscreen -- flatpak run com.valvesoftware.Steam -gamepadui
+fi
+exec gamescope --fullscreen -- parchaos-gaming

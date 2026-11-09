@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Game Mode
+Name[es]=Modo juego
+Comment=Start straight into Steam's full-screen view
+Comment[es]=Empieza directamente en la vista a pantalla completa de Steam
+Exec=/usr/libexec/parchaos-game-mode
+TryExec=gamescope
+Type=Application

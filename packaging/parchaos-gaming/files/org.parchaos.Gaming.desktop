@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Gaming
+Name[es]=Juegos
+Comment=Install Steam, Heroic, Lutris and Bottles
+Comment[es]=Instala Steam, Heroic, Lutris y Bottles
+Exec=parchaos-gaming
+Icon=applications-games
+Terminal=false
+Type=Application
+Categories=Game;
+Keywords=steam;games;heroic;lutris;bottles;proton;mangohud;gamescope;
+StartupNotify=true

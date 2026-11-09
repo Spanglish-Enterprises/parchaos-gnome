@@ -201,6 +201,10 @@ PROFILE_REPO_PACKAGES=(
     # Read the selected text aloud, Ctrl+Alt+S (packaging/parchaos-speak/).
     parchaos-speak
 
+    # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
+    # controller rules and the Game Mode session; launchers come from Flathub.
+    parchaos-gaming
+
     # ParchaOS's own glass library for the optional refractive effects
     # (packaging/parchaos-glass/); needed by the session and Controls extensions.
     parchaos-glass

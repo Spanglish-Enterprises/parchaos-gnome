@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        76%{?dist}
+Release:        77%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -120,6 +120,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-speak
+Requires:       parchaos-gaming
 Requires:       parchaos-glass
 Requires:       parchaos-image-search
 Requires:       sushi
@@ -275,6 +276,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-77
+- Ticket #201: Require parchaos-gaming (Gaming setup app, gamemode, gamescope, controller rules, Game Mode session).
+
 * Fri Oct 02 2026 ParchaOS packaging - 2026.09.23-76
 - Ticket #170: Require parchaos-whatsnew (what changed in this version, once after a major update).
 

@@ -1,0 +1,221 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS Gaming setup: installs game launchers from Flathub with one click (ticket #201).
+#
+#   parchaos-gaming        open the window
+#
+# Flatpak-first: Steam, Heroic, Lutris and Bottles come from Flathub, never from RPM Fusion. The
+# Steam Flatpak carries its own 32-bit libraries, so it keeps working when Fedora drops i686.
+# gamemode, gamescope and the controller udev rules (steam-devices) are in the base image; this
+# app adds the MangoHud and gamescope Vulkan layers for the Flatpak runtimes the chosen apps use.
+# Installs are system-wide through flatpak's own polkit prompt; nothing here runs as root.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import os
+import sys
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+gettext.bindtextdomain('parchaos-gaming', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-gaming')
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.Gaming'
+REMOTE = 'flathub'
+FLATPAK = os.environ.get('PARCHAOS_FLATPAK', 'flatpak')
+
+# (Flatpak id, name, one-line description, on by default)
+LAUNCHERS = [
+    ('com.valvesoftware.Steam', 'Steam', _('The Steam store and library, with Proton for Windows games'), True),
+    ('com.heroicgameslauncher.hgl', 'Heroic', _('Epic Games, GOG and Amazon Prime Gaming libraries'), False),
+    ('net.lutris.Lutris', 'Lutris', _('One library for games from many stores and emulators'), False),
+    ('com.usebottles.bottles', 'Bottles', _('Run Windows programs and games in separate bottles'), False),
+]
+LAYERS = ['org.freedesktop.Platform.VulkanLayer.MangoHud', 'org.freedesktop.Platform.VulkanLayer.gamescope']
+FREEDESKTOP = 'org.freedesktop.Platform'
+
+
+def runtime_of(info_text):
+    """The 'Runtime:' ref from `flatpak remote-info` / `flatpak info` output, or ''."""
+    for line in info_text.splitlines():
+        key, _sep, value = line.strip().partition(':')
+        if key == 'Runtime' and value.strip():
+            return value.strip()
+    return ''
+
+
+def layer_branches(runtimes):
+    """Freedesktop runtime branches (e.g. '26.08') the Vulkan layers must match, sorted."""
+    branches = set()
+    for ref in runtimes:
+        parts = ref.split('/')
+        if len(parts) == 3 and parts[0] == FREEDESKTOP:
+            branches.add(parts[2])
+    return sorted(branches)
+
+
+def layer_refs(branches, arch='x86_64'):
+    return [f'runtime/{layer}/{arch}/{branch}' for branch in branches for layer in LAYERS]
+
+
+def install_command(refs):
+    return [FLATPAK, 'install', '--system', '--noninteractive', '-y', '--or-update', REMOTE, *refs]
+
+
+def run(argv):
+    """Run a command, return (ok, stdout). Used only for quick queries."""
+    try:
+        proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE)
+        _ok, out, _err = proc.communicate_utf8(None, None)
+        return proc.get_successful(), out or ''
+    except GLib.Error:
+        return False, ''
+
+
+def installed(app_id):
+    return run([FLATPAK, 'info', '--system', app_id])[0]
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title=_('Gaming'), default_width=520, default_height=620)
+        self.switches = {}
+        self.busy = False
+        self.error = []
+
+        view = Adw.ToolbarView()
+        view.add_top_bar(Adw.HeaderBar())
+        page = Adw.PreferencesPage()
+        view.set_content(page)
+        self.set_content(view)
+
+        apps = Adw.PreferencesGroup(
+            title=_('Game launchers'),
+            description=_('Installed from Flathub. Each one keeps its own libraries, so updates to '
+                          'ParchaOS never break your games.'))
+        for app_id, name, blurb, default in LAUNCHERS:
+            row = Adw.SwitchRow(title=name, subtitle=blurb)
+            if installed(app_id):
+                row.set_active(True)
+                row.set_sensitive(False)
+                row.set_subtitle(_('Installed'))
+            else:
+                row.set_active(default)
+            self.switches[app_id] = row
+            apps.add(row)
+        page.add(apps)
+
+        extras = Adw.PreferencesGroup(title=_('Extras'))
+        self.overlay = Adw.SwitchRow(
+            title=_('Performance overlay and scaling'),
+            subtitle=_('MangoHud (frame rate, temperatures) and gamescope for the launchers above'),
+            active=True)
+        extras.add(self.overlay)
+        page.add(extras)
+
+        status = Adw.PreferencesGroup()
+        self.status = Gtk.Label(wrap=True, xalign=0, css_classes=['dim-label'])
+        self.progress = Gtk.ProgressBar(visible=False, margin_top=6)
+        self.button = Gtk.Button(label=_('Install'), halign=Gtk.Align.END, margin_top=12,
+                                 css_classes=['suggested-action', 'pill'])
+        self.button.connect('clicked', self.on_install)
+        status.add(self.status)
+        status.add(self.progress)
+        status.add(self.button)
+        page.add(status)
+
+        session = Adw.PreferencesGroup(
+            title=_('Game Mode'),
+            description=_('For the couch or a handheld: choose "Game Mode" on the login screen '
+                          '(the gear button) to start straight into Steam\'s full-screen view. '
+                          'Quit Steam to get back to the login screen.'))
+        page.add(session)
+
+    def chosen(self):
+        return [app_id for app_id, row in self.switches.items() if row.get_active() and row.get_sensitive()]
+
+    def on_install(self, _button):
+        if self.busy:
+            return
+        apps = self.chosen()
+        if not apps and not self.overlay.get_active():
+            self.status.set_label(_('Nothing to install.'))
+            return
+        self.busy = True
+        self.button.set_sensitive(False)
+        self.progress.set_visible(True)
+        self.pulse = GLib.timeout_add(150, lambda: self.progress.pulse() or True)
+        self.status.set_label(_('Installing. You may be asked for your password.'))
+        self.step(apps, self.layer_step)
+
+    def layer_step(self, ok):
+        if not ok or not self.overlay.get_active():
+            return self.done(ok)
+        # The layers must match the Flatpak runtime branch of each installed launcher.
+        runtimes = []
+        for app_id, *_rest in LAUNCHERS:
+            if installed(app_id):
+                runtimes.append(runtime_of(run([FLATPAK, 'info', '--system', app_id])[1]))
+        if not layer_branches(runtimes):
+            runtimes.append(runtime_of(run([FLATPAK, 'remote-info', '--system', REMOTE, LAUNCHERS[0][0]])[1]))
+        refs = layer_refs(layer_branches(runtimes))
+        if not refs:
+            return self.done(True)
+        self.status.set_label(_('Adding the performance overlay…'))
+        self.step(refs, self.done)
+
+    def step(self, refs, then):
+        if not refs:
+            then(True)
+            return
+        try:
+            proc = Gio.Subprocess.new(install_command(refs),
+                                      Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE)
+        except GLib.Error as e:
+            self.error = e.message
+            then(False)
+            return
+
+        def finished(p, res):
+            try:
+                _ok, out, _err = p.communicate_utf8_finish(res)
+            except GLib.Error as e:
+                out = e.message
+            self.error = (out or '').strip().splitlines()[-1:] if not p.get_successful() else []
+            then(p.get_successful())
+        proc.communicate_utf8_async(None, None, finished)
+
+    def done(self, ok):
+        GLib.source_remove(self.pulse)
+        self.progress.set_visible(False)
+        self.busy = False
+        self.button.set_sensitive(True)
+        if ok:
+            for app_id, row in self.switches.items():
+                if installed(app_id):
+                    row.set_active(True)
+                    row.set_sensitive(False)
+                    row.set_subtitle(_('Installed'))
+            self.status.set_label(_('Done. Your launchers are in the app launcher.'))
+        else:
+            detail = ' '.join(self.error) if isinstance(self.error, list) else str(self.error)
+            self.status.set_label(_('Could not install: %s') % (detail or _('unknown error')))
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+
+    def do_activate(self):
+        win = self.get_active_window() or Window(self)
+        win.present()
+
+
+if __name__ == '__main__':
+    sys.exit(App().run(sys.argv))

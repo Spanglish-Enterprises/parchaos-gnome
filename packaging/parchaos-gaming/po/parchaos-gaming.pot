@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-gaming package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-gaming\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 18:34-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-gaming:35
+msgid "The Steam store and library, with Proton for Windows games"
+msgstr ""
+
+#: files/parchaos-gaming:36
+msgid "Epic Games, GOG and Amazon Prime Gaming libraries"
+msgstr ""
+
+#: files/parchaos-gaming:37
+msgid "One library for games from many stores and emulators"
+msgstr ""
+
+#: files/parchaos-gaming:38
+msgid "Run Windows programs and games in separate bottles"
+msgstr ""
+
+#: files/parchaos-gaming:87
+msgid "Gaming"
+msgstr ""
+
+#: files/parchaos-gaming:99
+msgid "Game launchers"
+msgstr ""
+
+#: files/parchaos-gaming:100
+msgid ""
+"Installed from Flathub. Each one keeps its own libraries, so updates to "
+"ParchaOS never break your games."
+msgstr ""
+
+#: files/parchaos-gaming:107 files/parchaos-gaming:204
+msgid "Installed"
+msgstr ""
+
+#: files/parchaos-gaming:114
+msgid "Extras"
+msgstr ""
+
+#: files/parchaos-gaming:116
+msgid "Performance overlay and scaling"
+msgstr ""
+
+#: files/parchaos-gaming:117
+msgid ""
+"MangoHud (frame rate, temperatures) and gamescope for the launchers above"
+msgstr ""
+
+#: files/parchaos-gaming:125
+msgid "Install"
+msgstr ""
+
+#: files/parchaos-gaming:134
+msgid "Game Mode"
+msgstr ""
+
+#: files/parchaos-gaming:135
+msgid ""
+"For the couch or a handheld: choose \"Game Mode\" on the login screen (the "
+"gear button) to start straight into Steam's full-screen view. Quit Steam to "
+"get back to the login screen."
+msgstr ""
+
+#: files/parchaos-gaming:148
+msgid "Nothing to install."
+msgstr ""
+
+#: files/parchaos-gaming:154
+msgid "Installing. You may be asked for your password."
+msgstr ""
+
+#: files/parchaos-gaming:170
+msgid "Adding the performance overlay…"
+msgstr ""
+
+#: files/parchaos-gaming:205
+msgid "Done. Your launchers are in the app launcher."
+msgstr ""
+
+#: files/parchaos-gaming:208
+#, python-format
+msgid "Could not install: %s"
+msgstr ""
+
+#: files/parchaos-gaming:208
+msgid "unknown error"
+msgstr ""
