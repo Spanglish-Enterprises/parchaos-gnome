@@ -1,0 +1,40 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-dictation package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-dictation\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 19:01-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:97 extension.js:106 extension.js:113
+msgid "Dictation"
+msgstr ""
+
+#: extension.js:97
+msgid "Something went wrong. Nothing was typed."
+msgstr ""
+
+#: extension.js:106
+msgid ""
+"Setting up dictation once (about 200 MB). Press the shortcut again when it "
+"says it is ready."
+msgstr ""
+
+#: extension.js:113
+msgid "Ready. Press the shortcut and speak."
+msgstr ""
+
+#: extension.js:113
+msgid "Setup did not finish. Check your connection and try again."
+msgstr ""

@@ -11,6 +11,12 @@ import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Gettext from 'gettext';
+
+// Translations (tickets #146/#53), bound to the domain directly like the menu bar.
+const DOMAIN = 'parchaos-speak';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
 
 // Tests point this at a stand-in so no speech engine is needed.
 const SAY = GLib.getenv('PARCHAOS_SPEAK_SAY') ?? '/usr/libexec/parchaos-speak/parchaos-speak-say';
@@ -46,7 +52,7 @@ export default class SpeakExtension extends Extension {
                 if (copied && copied.trim())
                     this._speak(copied);
                 else
-                    Main.notify('Speak', 'Select some text first, then press the shortcut.');
+                    Main.notify(_('Speak'), _('Select some text first, then press the shortcut.'));
             });
         });
     }

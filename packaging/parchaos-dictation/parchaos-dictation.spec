@@ -10,7 +10,7 @@
 
 Name:           parchaos-dictation
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Local voice dictation for the ParchaOS desktop
 
 License:        GPL-3.0-or-later
@@ -22,11 +22,13 @@ Source3:        parchaos-dictation-transcribe
 Source4:        parchaos-dictation-model
 Source5:        parchaos-dictation-install-engine
 Source6:        org.parchaos.dictation.policy
+Source7:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
 BuildRequires:  glib2
 BuildRequires:  python3
+BuildRequires:  gettext
 
 Requires:       gnome-shell >= 48
 Requires:       pipewire-utils
@@ -56,14 +58,21 @@ install -Dm0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-dictation/parchao
 install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-dictation/parchaos-dictation-model
 install -Dm0755 %{SOURCE5} %{buildroot}%{_libexecdir}/parchaos-dictation/parchaos-dictation-install-engine
 install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/polkit-1/actions/org.parchaos.dictation.policy
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-dictation.mo %{SOURCE7}
 
 %files
 %license LICENSE
 %{_libexecdir}/parchaos-dictation/
 %{_datadir}/polkit-1/actions/org.parchaos.dictation.policy
 %{_datadir}/gnome-shell/extensions/parchaos-dictation@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-dictation.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-5
+- Tickets #146/#53: translatable (gettext domain parchaos-dictation) with a Spanish translation of the setup and error notifications.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-4
 - Declares GNOME Shell 51 support (Fedora 45 prep, ticket #37).
 

@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        26%{?dist}
+Release:        27%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -18,9 +18,11 @@ URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
+Source3:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
+BuildRequires:  gettext
 
 Requires:       gnome-shell >= 48
 Requires:       parchaos-glass
@@ -43,12 +45,19 @@ DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.or
 install -Dm0644 src/extension.js "$DEST/extension.js"
 install -Dm0644 src/metadata.json "$DEST/metadata.json"
 install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-session.mo %{SOURCE3}
 
 %files
 %license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-session.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-27
+- Tickets #146/#53: translatable (gettext domain parchaos-session) with a Spanish translation of the "ParchaOS was updated" notice.
+
 * Thu Oct 01 2026 ParchaOS packaging - 1.0.0-26
 - Ticket #76: session restore maximizes and restores windows with the Mutter 18 calls (no MaximizeFlags argument), which ends the "too many arguments" warnings at every login.
 

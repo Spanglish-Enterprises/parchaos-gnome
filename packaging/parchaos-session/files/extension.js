@@ -27,6 +27,12 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import Gettext from 'gettext';
+
+// Translations (tickets #146/#53), bound to the domain directly like the menu bar.
+const DOMAIN = 'parchaos-session';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
 
 const LOGIND = 'org.freedesktop.login1';
 
@@ -687,8 +693,8 @@ export default class ParchaSessionExtension extends Extension {
                 // a moment after the update settles, and log what it looked
                 // like so the cause can be found.
                 this._later(3000, () => this._refreshAfterUpdate());
-                Main.notify('ParchaOS was updated',
-                    'Log out and back in to finish the update. Until then the menu bar, dock or wallpaper may look wrong.');
+                Main.notify(_('ParchaOS was updated'),
+                    _('Log out and back in to finish the update. Until then the menu bar, dock or wallpaper may look wrong.'));
             } catch (e) {
                 // No marker yet: nothing has been updated since install.
             }

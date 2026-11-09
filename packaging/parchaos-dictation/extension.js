@@ -13,6 +13,12 @@ import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import Gettext from 'gettext';
+
+// Translations (tickets #146/#53), bound to the domain directly like the menu bar.
+const DOMAIN = 'parchaos-dictation';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
 
 // Clutter.get_default_backend() is gone from GNOME 51; the stage's context
 // has the backend on both 50 and 51.
@@ -88,7 +94,7 @@ export default class DictationExtension extends Extension {
     _fail(err) {
         console.error(`parchaos-dictation: ${err}`);
         this._hide();
-        Main.notify('Dictation', 'Something went wrong. Nothing was typed.');
+        Main.notify(_('Dictation'), _('Something went wrong. Nothing was typed.'));
     }
 
     async _start() {
@@ -97,14 +103,14 @@ export default class DictationExtension extends Extension {
             // First use: fetch what is missing (engine, then model), then stop
             // so the user starts speaking only when ready.
             this._show('working', 'folder-download-symbolic');
-            Main.notify('Dictation', 'Setting up dictation once (about 200 MB). Press the shortcut again when it says it is ready.');
+            Main.notify(_('Dictation'), _('Setting up dictation once (about 200 MB). Press the shortcut again when it says it is ready.'));
             let ok = true;
             if (status.out === 'no-engine')
                 ok = (await run(['pkexec', INSTALL])).ok;
             if (ok)
                 ok = (await run([MODELS, 'download'])).ok;
             this._hide();
-            Main.notify('Dictation', ok ? 'Ready. Press the shortcut and speak.' : 'Setup did not finish. Check your connection and try again.');
+            Main.notify(_('Dictation'), ok ? _('Ready. Press the shortcut and speak.') : _('Setup did not finish. Check your connection and try again.'));
             return;
         }
         this._wav = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'parchaos-dictation.wav']);

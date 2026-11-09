@@ -7,7 +7,7 @@
 
 Name:           parchaos-speak
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Read the selected text aloud on the ParchaOS desktop
 
 License:        GPL-3.0-or-later
@@ -16,11 +16,13 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        org.parchaos.speak.gschema.xml
 Source3:        parchaos-speak-say
+Source4:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
 BuildRequires:  glib2
 BuildRequires:  python3
+BuildRequires:  gettext
 
 Requires:       gnome-shell >= 48
 Requires:       espeak-ng
@@ -45,13 +47,20 @@ install -m 0644 %{SOURCE0} %{SOURCE1} "$DEST/"
 install -m 0644 %{SOURCE2} "$DEST/schemas/"
 glib-compile-schemas "$DEST/schemas"
 install -Dm0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-speak/parchaos-speak-say
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-speak.mo %{SOURCE4}
 
 %files
 %license LICENSE
 %{_libexecdir}/parchaos-speak/
 %{_datadir}/gnome-shell/extensions/parchaos-speak@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-speak.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-2
+- Tickets #146/#53: translatable (gettext domain parchaos-speak) with a Spanish translation of the "select some text first" hint.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #162). Ctrl+Alt+S reads the highlighted text (or
   the clipboard) aloud with espeak-ng; pressing it again stops. The voice
