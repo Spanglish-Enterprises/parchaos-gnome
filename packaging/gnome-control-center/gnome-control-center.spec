@@ -16,15 +16,27 @@
 }%{?-e:.%{-e*}}%{?-s:.%{-s*}}%{!?-n:%{?dist}}
 ## END: Set by rpmautospec
 
+%if 0%{?fedora} >= 45
+%global blueprint_compiler_version 0.19
+%else
 %global blueprint_compiler_version 0.17
+%endif
 %global gcr_version 4.1.0
 %global gnome_online_accounts_version 3.51.0
 %global glib2_version 2.76.6
 %global gnome_desktop_version 44.0-7
 %global gsd_version 48~rc
+%if 0%{?fedora} >= 45
+%global gsettings_desktop_schemas_version 50~alpha
+%else
 %global gsettings_desktop_schemas_version 48~alpha-2
+%endif
 %global upower_version 1.90.6
+%if 0%{?fedora} >= 45
+%global gtk4_version 4.23.0
+%else
 %global gtk4_version 4.15.2
+%endif
 %global gnome_bluetooth_version 42~alpha
 %global libadwaita_version 1.8~alpha
 %global nm_version 1.52.0
@@ -35,15 +47,24 @@
 %bcond malcontent %[!0%{?rhel}]
 
 Name:           gnome-control-center
+# ParchaOS (ticket #37): Fedora 45 gets GNOME 51's Settings, Fedora 44 keeps 50.
+# COPR builds one source RPM for every chroot, so it carries both tarballs
+# and both versions of the patch; %%prep picks the pair for the release.
+%if 0%{?fedora} >= 45
+Version:        51.1
+%else
 Version:        50.4
-Release:        %autorelease -e parchaos2
+%endif
+Release:        %autorelease -e parchaos3
 Summary:        Utilities to configure the GNOME desktop
 
 License:        GPL-2.0-or-later AND CC0-1.0
 URL:            https://gitlab.gnome.org/GNOME/gnome-control-center/
-Source0:        https://download.gnome.org/sources/%{name}/50/%{name}-%{tarball_version}.tar.xz
-# ParchaOS: sidebar entry that opens ParchaOS Settings.
+Source0:        https://download.gnome.org/sources/%{name}/50/%{name}-50.4.tar.xz
+Source1:        https://download.gnome.org/sources/%{name}/51/%{name}-51.1.tar.xz
+# ParchaOS: sidebar entry that opens ParchaOS Settings (GNOME 50, GNOME 51).
 Patch0:         0001-add-parchaos-settings-panel.patch
+Patch1:         0001-add-parchaos-settings-panel-51.patch
 
 BuildRequires:  blueprint-compiler >= %{blueprint_compiler_version}
 BuildRequires:  desktop-file-utils
@@ -127,7 +148,9 @@ Recommends: malcontent-control
 %endif
 # For the network panel
 Recommends: NetworkManager-wifi
+%if 0%{?fedora} < 45
 Recommends: nm-connection-editor
+%endif
 # For Show Details in the color panel
 Recommends: gnome-color-manager
 # For the sharing panel
@@ -176,7 +199,13 @@ can install configuration files that are picked up by the control-center
 utilities.
 
 %prep
-%autosetup -p1 -n %{name}-%{tarball_version}
+%if 0%{?fedora} >= 45
+%setup -q -T -b 1 -n %{name}-%{tarball_version}
+%patch -P 1 -p1
+%else
+%setup -q -n %{name}-%{tarball_version}
+%patch -P 0 -p1
+%endif
 
 %build
 %meson \
@@ -244,6 +273,12 @@ rm -rf $RPM_BUILD_ROOT%{_datadir}/gnome/cursor-fonts
 %dir %{_datadir}/gnome/wm-properties
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 50.4-1.parchaos3 / 51.1-1.parchaos3
+- Ticket #37: build GNOME 51's Settings (51.1, Fedora's f45 spec values) on
+  Fedora 45, so a 44 -> 45 upgrade no longer pins Settings at 50.4 next to
+  GNOME Shell 51. Fedora 44 stays on 50.4. The ParchaOS panel patch is
+  re-made for 51 (shell/ was reformatted upstream).
+
 * Sat Sep 26 2026 ParchaOS packaging - 50.4-1.parchaos2
 - The ParchaOS panel's desktop file used the System category, which
   Settings treats as a System sub-page and redirected there; use the
