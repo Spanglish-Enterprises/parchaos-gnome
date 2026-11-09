@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: scripts/devshot/run.sh PLAN.json [seconds] ; env: EXTS="uuid uuid" (repo extensions to load),
+# Usage: scripts/devshot/run.sh PLAN.json [seconds] (steps: wait, shot, spawn, move, press, type, combo, showApps, ...); env: EXTS="uuid uuid" (repo extensions to load),
 # SETTINGS="dconf-path value;..." (written before the shell starts). Output in $OUT (default /tmp/devshot-out).
 # Runs a throwaway headless shell in a private session bus and HOME. Never touches the real desktop.
 set -u

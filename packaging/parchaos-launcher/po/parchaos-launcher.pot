@@ -1,0 +1,113 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-launcher package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-launcher\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 18:56-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/extension.js:140
+msgid "Games"
+msgstr ""
+
+#: files/extension.js:140
+msgid "Developer"
+msgstr ""
+
+#: files/extension.js:140
+msgid "Creativity"
+msgstr ""
+
+#: files/extension.js:141
+msgid "Entertainment"
+msgstr ""
+
+#: files/extension.js:141
+msgid "Productivity"
+msgstr ""
+
+#: files/extension.js:141
+msgid "Education"
+msgstr ""
+
+#: files/extension.js:142
+msgid "Internet"
+msgstr ""
+
+#: files/extension.js:142
+msgid "Science"
+msgstr ""
+
+#: files/extension.js:142 files/extension.js:143
+msgid "System"
+msgstr ""
+
+#: files/extension.js:143
+msgid "Utilities"
+msgstr ""
+
+#. The folder keeps the name in the language it was made in; the user can rename it.
+#: files/extension.js:150
+msgid "Folder"
+msgstr ""
+
+#: files/extension.js:464
+msgid "Search Applications"
+msgstr ""
+
+#: files/extension.js:1147
+#, javascript-format
+msgid "Uninstall “%s”?"
+msgstr ""
+
+#: files/extension.js:1150
+msgid ""
+"The app will be removed from this computer. Your own files stay where they "
+"are."
+msgstr ""
+
+#: files/extension.js:1153
+msgid "Checking what will be removed…"
+msgstr ""
+
+#: files/extension.js:1159
+msgid "Cancel"
+msgstr ""
+
+#: files/extension.js:1160
+msgid "Uninstall"
+msgstr ""
+
+#: files/extension.js:1179 files/extension.js:1183
+msgid "Couldn’t check what would be removed."
+msgstr ""
+
+#: files/extension.js:1187
+#, javascript-format
+msgid "This also removes: %s."
+msgstr ""
+
+#: files/extension.js:1227
+#, javascript-format
+msgid "%s was uninstalled"
+msgstr ""
+
+#: files/extension.js:1229
+msgid "The removal was cancelled or failed."
+msgstr ""
+
+#: files/extension.js:1230
+#, javascript-format
+msgid "Couldn’t uninstall %s"
+msgstr ""

@@ -82,6 +82,7 @@ export default class X extends Extension {
                     for (const k of ks) { kbd.notify_keyval(t(), k, Clutter.KeyState.PRESSED); await wait(30); }
                     for (const k of [...ks].reverse()) { kbd.notify_keyval(t(), k, Clutter.KeyState.RELEASED); await wait(30); }
                 } else if (step.log) log(step.log);
+                else if (step.showApps) Main.overview.showApps();
                 else if (step.notify) Main.notify(step.notify[0], step.notify[1]);
                 else if (step.osd) Main.osdWindowManager.showAll(Gio.ThemedIcon.new('audio-volume-high-symbolic'), 'Volume', step.osd / 100, 1);
                 else if (step.states) log('DEVSHOT states ' + Main.extensionManager.getUuids().map(u => `${u}=${Main.extensionManager.lookup(u)?.state}`).join(' '));

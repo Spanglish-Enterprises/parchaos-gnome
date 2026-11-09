@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -21,9 +21,11 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-launcher-apps
+Source4:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
+BuildRequires:  gettext
 
 Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       dnf5daemon-server
@@ -55,12 +57,19 @@ install -m 0644 src/extension.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0755 src/parchaos-launcher-apps "$DEST/"
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-launcher.mo %{SOURCE4}
 
 %files
 %license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-launcher@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-launcher.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-17
+- Tickets #146/#53: the launcher is translatable (gettext domain parchaos-launcher) with a Spanish translation in Puerto Rican usage: search hint, new folder names, the uninstall dialog and its notifications.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-16
 - Ticket #135: the launcher and its folders fade in (120 ms) and out (200 ms)
   instead of zooming.

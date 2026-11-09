@@ -1,0 +1,112 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-launcher package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-launcher\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 18:56-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/extension.js:140
+msgid "Games"
+msgstr "Juegos"
+
+#: files/extension.js:140
+msgid "Developer"
+msgstr "Desarrollo"
+
+#: files/extension.js:140
+msgid "Creativity"
+msgstr "Creatividad"
+
+#: files/extension.js:141
+msgid "Entertainment"
+msgstr "Entretenimiento"
+
+#: files/extension.js:141
+msgid "Productivity"
+msgstr "Productividad"
+
+#: files/extension.js:141
+msgid "Education"
+msgstr "Educación"
+
+#: files/extension.js:142
+msgid "Internet"
+msgstr "Internet"
+
+#: files/extension.js:142
+msgid "Science"
+msgstr "Ciencia"
+
+#: files/extension.js:142 files/extension.js:143
+msgid "System"
+msgstr "Sistema"
+
+#: files/extension.js:143
+msgid "Utilities"
+msgstr "Utilidades"
+
+#. The folder keeps the name in the language it was made in; the user can rename it.
+#: files/extension.js:150
+msgid "Folder"
+msgstr "Carpeta"
+
+#: files/extension.js:464
+msgid "Search Applications"
+msgstr "Buscar aplicaciones"
+
+#: files/extension.js:1147
+#, javascript-format
+msgid "Uninstall “%s”?"
+msgstr "¿Desinstalar «%s»?"
+
+#: files/extension.js:1150
+msgid ""
+"The app will be removed from this computer. Your own files stay where they "
+"are."
+msgstr "La aplicación se quitará de esta computadora. Tus archivos se quedan donde están."
+
+#: files/extension.js:1153
+msgid "Checking what will be removed…"
+msgstr "Revisando qué se va a quitar…"
+
+#: files/extension.js:1159
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: files/extension.js:1160
+msgid "Uninstall"
+msgstr "Desinstalar"
+
+#: files/extension.js:1179 files/extension.js:1183
+msgid "Couldn’t check what would be removed."
+msgstr "No se pudo revisar qué se quitaría."
+
+#: files/extension.js:1187
+#, javascript-format
+msgid "This also removes: %s."
+msgstr "También se quita: %s."
+
+#: files/extension.js:1227
+#, javascript-format
+msgid "%s was uninstalled"
+msgstr "Se desinstaló %s"
+
+#: files/extension.js:1229
+msgid "The removal was cancelled or failed."
+msgstr "Se canceló la desinstalación o falló."
+
+#: files/extension.js:1230
+#, javascript-format
+msgid "Couldn’t uninstall %s"
+msgstr "No se pudo desinstalar %s"

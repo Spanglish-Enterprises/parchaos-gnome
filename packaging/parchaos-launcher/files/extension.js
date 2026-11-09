@@ -20,6 +20,14 @@ import * as Background from 'resource:///org/gnome/shell/ui/background.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as OverviewControls from 'resource:///org/gnome/shell/ui/overviewControls.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import Gettext from 'gettext';
+
+// Translations (tickets #146/#53), bound to the domain directly like the menu bar.
+const DOMAIN = 'parchaos-launcher';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
+// Marks a string for translation where it is defined; it is translated where shown.
+const N_ = s => s;
 
 const COLUMNS = 7;
 const ROWS = 5;
@@ -129,16 +137,17 @@ function folderSettings(id) {
 
 // A name for a new folder from what its two apps have in common.
 const FOLDER_NAMES = [
-    ['Game', 'Games'], ['Development', 'Developer'], ['Graphics', 'Creativity'],
-    ['AudioVideo', 'Entertainment'], ['Office', 'Productivity'], ['Education', 'Education'],
-    ['Network', 'Internet'], ['Science', 'Science'], ['System', 'System'],
-    ['Settings', 'System'], ['Utility', 'Utilities'],
+    ['Game', N_('Games')], ['Development', N_('Developer')], ['Graphics', N_('Creativity')],
+    ['AudioVideo', N_('Entertainment')], ['Office', N_('Productivity')], ['Education', N_('Education')],
+    ['Network', N_('Internet')], ['Science', N_('Science')], ['System', N_('System')],
+    ['Settings', N_('System')], ['Utility', N_('Utilities')],
 ];
 
 function newFolderName(apps) {
     const shared = apps.map(app => appCategories(app.get_app_info()))
         .reduce((a, b) => a.filter(c => b.includes(c)));
-    return FOLDER_NAMES.find(([category]) => shared.includes(category))?.[1] ?? 'Folder';
+    // The folder keeps the name in the language it was made in; the user can rename it.
+    return _(FOLDER_NAMES.find(([category]) => shared.includes(category))?.[1] ?? N_('Folder'));
 }
 
 function createFolder(apps) {
@@ -452,7 +461,7 @@ const Launcher = GObject.registerClass({
         // Search field, horizontally centered near the top.
         this._entry = new St.Entry({
             style_class: 'parchaos-launcher-search',
-            hint_text: 'Search Applications',
+            hint_text: _('Search Applications'),
             can_focus: true,
             width: 330 * scale,
         });
@@ -1135,20 +1144,20 @@ const Launcher = GObject.registerClass({
         box.add_child(icon);
         box.add_child(new St.Label({
             style_class: 'parchaos-launcher-confirm-title',
-            text: `Uninstall "${app.get_name()}"?`,
+            text: _('Uninstall “%s”?').format(app.get_name()),
             x_align: Clutter.ActorAlign.CENTER,
         }));
-        const baseText = 'The app will be removed from this computer. Your own files stay where they are.';
+        const baseText = _('The app will be removed from this computer. Your own files stay where they are.');
         const body = new St.Label({
             style_class: 'parchaos-launcher-confirm-body',
-            text: `${baseText}\n\nChecking what will be removed…`,
+            text: `${baseText}\n\n${_('Checking what will be removed…')}`,
             x_align: Clutter.ActorAlign.CENTER,
         });
         body.clutter_text.line_wrap = true;
         box.add_child(body);
         const buttons = new St.BoxLayout({style_class: 'parchaos-launcher-confirm-buttons', x_expand: true});
-        const cancel = new St.Button({label: 'Cancel', style_class: 'parchaos-launcher-confirm-button', x_expand: true, can_focus: true});
-        const remove = new St.Button({label: 'Uninstall', style_class: 'parchaos-launcher-confirm-button destructive', x_expand: true, can_focus: true});
+        const cancel = new St.Button({label: _('Cancel'), style_class: 'parchaos-launcher-confirm-button', x_expand: true, can_focus: true});
+        const remove = new St.Button({label: _('Uninstall'), style_class: 'parchaos-launcher-confirm-button destructive', x_expand: true, can_focus: true});
         cancel.connect('clicked', () => this._closeConfirm());
         // Uninstall stays off until the helper has worked out everything
         // the removal takes with it, which the dialog then lists.
@@ -1167,15 +1176,15 @@ const Launcher = GObject.registerClass({
             try {
                 result = JSON.parse(stdout);
             } catch (e) {
-                result = {error: 'Couldn\'t check what would be removed.'};
+                result = {error: _('Couldn’t check what would be removed.')};
             }
             const packages = result.packages ?? [];
             if (result.error || packages.length === 0) {
-                body.text = result.error || 'Couldn\'t check what would be removed.';
+                body.text = result.error || _('Couldn’t check what would be removed.');
                 return;
             }
             body.text = packages.length > 1
-                ? `${baseText}\n\nThis also removes: ${packages.join(', ')}.`
+                ? `${baseText}\n\n${_('This also removes: %s.').format(packages.join(', '))}`
                 : baseText;
             confirmed = packages;
             remove.reactive = true;
@@ -1215,10 +1224,10 @@ const Launcher = GObject.registerClass({
         this.close();
         runAsync([helper, 'uninstall', id, ...packages]).then(({ok, stderr}) => {
             if (ok) {
-                Main.notify(`${name} was uninstalled`, '');
+                Main.notify(_('%s was uninstalled').format(name), '');
             } else {
-                const reason = stderr.trim().split('\n').pop() || 'The removal was cancelled or failed.';
-                Main.notify(`Couldn't uninstall ${name}`, reason);
+                const reason = stderr.trim().split('\n').pop() || _('The removal was cancelled or failed.');
+                Main.notify(_('Couldn’t uninstall %s').format(name), reason);
             }
         });
     }
