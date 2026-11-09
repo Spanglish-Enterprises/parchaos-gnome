@@ -1,0 +1,414 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-global-menu package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-global-menu\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 18:40-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/extension.js:514
+msgid "Open Weather"
+msgstr ""
+
+#: files/extension.js:518
+msgid "Weather data: MET Norway"
+msgstr ""
+
+#: files/extension.js:834 files/extension.js:951
+msgid "Cancel"
+msgstr ""
+
+#: files/extension.js:839
+msgid "Confirm"
+msgstr ""
+
+#: files/extension.js:901
+msgid "Force Quit Applications"
+msgstr ""
+
+#: files/extension.js:905
+msgid "If an app is not responding, choose it and press Force Quit."
+msgstr ""
+
+#: files/extension.js:941
+msgid "No apps are open."
+msgstr ""
+
+#: files/extension.js:953
+msgid "Force Quit"
+msgstr ""
+
+#: files/extension.js:1075
+msgid "File"
+msgstr ""
+
+#: files/extension.js:1076
+msgid "New Window"
+msgstr ""
+
+#: files/extension.js:1077
+msgid "New Tab"
+msgstr ""
+
+#: files/extension.js:1078
+msgid "New Folder"
+msgstr ""
+
+#: files/extension.js:1080
+msgid "Open"
+msgstr ""
+
+#: files/extension.js:1081
+msgid "Get Info"
+msgstr ""
+
+#: files/extension.js:1082
+msgid "Rename"
+msgstr ""
+
+#: files/extension.js:1083
+msgid "Quick Preview"
+msgstr ""
+
+#: files/extension.js:1085
+msgid "Move to Trash"
+msgstr ""
+
+#: files/extension.js:1087
+msgid "Print…"
+msgstr ""
+
+#. Closed directly: Ctrl+W closes a tab in browsers and does
+#. nothing in a terminal.
+#: files/extension.js:1090
+msgid "Close Window"
+msgstr ""
+
+#: files/extension.js:1094
+msgid "Edit"
+msgstr ""
+
+#: files/extension.js:1095
+msgid "Undo"
+msgstr ""
+
+#: files/extension.js:1096
+msgid "Redo"
+msgstr ""
+
+#: files/extension.js:1098
+msgid "Cut"
+msgstr ""
+
+#: files/extension.js:1099
+msgid "Copy"
+msgstr ""
+
+#: files/extension.js:1100
+msgid "Paste"
+msgstr ""
+
+#: files/extension.js:1101
+msgid "Select All"
+msgstr ""
+
+#: files/extension.js:1103
+msgid "Find…"
+msgstr ""
+
+#: files/extension.js:1107
+msgid "View"
+msgstr ""
+
+#: files/extension.js:1111
+msgid "Show Hidden Files"
+msgstr ""
+
+#: files/extension.js:1113
+msgid "Zoom In"
+msgstr ""
+
+#: files/extension.js:1114
+msgid "Zoom Out"
+msgstr ""
+
+#: files/extension.js:1115
+msgid "Actual Size"
+msgstr ""
+
+#: files/extension.js:1117
+msgid "Reload"
+msgstr ""
+
+#: files/extension.js:1118
+msgid "Enter Full Screen"
+msgstr ""
+
+#: files/extension.js:1122
+msgid "Go"
+msgstr ""
+
+#: files/extension.js:1123
+msgid "Back"
+msgstr ""
+
+#: files/extension.js:1124
+msgid "Forward"
+msgstr ""
+
+#: files/extension.js:1125
+msgid "Enclosing Folder"
+msgstr ""
+
+#: files/extension.js:1127
+msgid "Recents"
+msgstr ""
+
+#: files/extension.js:1128
+msgid "Home"
+msgstr ""
+
+#: files/extension.js:1129
+msgid "Desktop"
+msgstr ""
+
+#: files/extension.js:1130
+msgid "Documents"
+msgstr ""
+
+#: files/extension.js:1131
+msgid "Downloads"
+msgstr ""
+
+#: files/extension.js:1132
+msgid "Pictures"
+msgstr ""
+
+#: files/extension.js:1133
+msgid "Music"
+msgstr ""
+
+#: files/extension.js:1134
+msgid "Videos"
+msgstr ""
+
+#: files/extension.js:1136 files/extension.js:1544
+msgid "Computer"
+msgstr ""
+
+#: files/extension.js:1137
+msgid "Network"
+msgstr ""
+
+#: files/extension.js:1138
+msgid "Trash"
+msgstr ""
+
+#: files/extension.js:1140
+msgid "Go to Folder…"
+msgstr ""
+
+#: files/extension.js:1144
+msgid "Window"
+msgstr ""
+
+#: files/extension.js:1145
+msgid "Minimize"
+msgstr ""
+
+#: files/extension.js:1146
+msgid "Zoom"
+msgstr ""
+
+#: files/extension.js:1148
+msgid "Move Window to Left Half"
+msgstr ""
+
+#: files/extension.js:1149
+msgid "Move Window to Right Half"
+msgstr ""
+
+#: files/extension.js:1150
+msgid "Center Window"
+msgstr ""
+
+#: files/extension.js:1152
+msgid "Bring All to Front"
+msgstr ""
+
+#: files/extension.js:1158
+msgid "Help"
+msgstr ""
+
+#. Ticket #136: "ParchaOS Help" opened the site's front page and
+#. never reached support. The support form is the documented
+#. channel (README, LEGAL, SOURCES all point at /support), so
+#. that is what a help-seeking click should open. The FAQ keeps
+#. its own item rather than being lost behind the change.
+#: files/extension.js:1164
+msgid "ParchaOS Help"
+msgstr ""
+
+#: files/extension.js:1165
+msgid "Questions & Answers (FAQ)"
+msgstr ""
+
+#: files/extension.js:1167
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: files/extension.js:1168 files/extension.js:1306
+msgid "What’s New"
+msgstr ""
+
+#: files/extension.js:1170
+msgid "Report a Bug or Feature Request…"
+msgstr ""
+
+#: files/extension.js:1302
+msgid "Log out now? Any unsaved work will be lost."
+msgstr ""
+
+#: files/extension.js:1305
+msgid "About ParchaOS"
+msgstr ""
+
+#: files/extension.js:1308
+msgid "System Settings…"
+msgstr ""
+
+#: files/extension.js:1309
+msgid "Parcha Store"
+msgstr ""
+
+#: files/extension.js:1311
+msgid "Recent Items"
+msgstr ""
+
+#: files/extension.js:1313
+msgid "Force Quit…"
+msgstr ""
+
+#: files/extension.js:1315
+msgid "Sleep"
+msgstr ""
+
+#: files/extension.js:1316
+msgid "Restart…"
+msgstr ""
+
+#: files/extension.js:1316
+msgid "Restart now? Any unsaved work will be lost."
+msgstr ""
+
+#: files/extension.js:1318
+msgid "Shut Down…"
+msgstr ""
+
+#: files/extension.js:1318
+msgid "Shut down now? Any unsaved work will be lost."
+msgstr ""
+
+#: files/extension.js:1321
+msgid "Lock Screen"
+msgstr ""
+
+#: files/extension.js:1322
+#, javascript-format
+msgid "Log Out %s…"
+msgstr ""
+
+#: files/extension.js:1322
+msgid "Log Out…"
+msgstr ""
+
+#: files/extension.js:1377
+msgid "OK"
+msgstr ""
+
+#: files/extension.js:1402
+#, javascript-format
+msgid "Version %s"
+msgstr ""
+
+#: files/extension.js:1405
+msgid "Version unknown"
+msgstr ""
+
+#: files/extension.js:1442
+msgid "ParchaOS is built on Fedora Linux and GNOME."
+msgstr ""
+
+#: files/extension.js:1450
+msgid "More Info…"
+msgstr ""
+
+#: files/extension.js:1461
+msgid "Legal and Privacy"
+msgstr ""
+
+#: files/extension.js:1472
+msgid "Close"
+msgstr ""
+
+#: files/extension.js:1545
+msgid "Processor"
+msgstr ""
+
+#: files/extension.js:1546
+msgid "Graphics"
+msgstr ""
+
+#: files/extension.js:1547
+msgid "Memory"
+msgstr ""
+
+#: files/extension.js:1548
+msgid "Storage"
+msgstr ""
+
+#: files/extension.js:1549
+msgid "Kernel"
+msgstr ""
+
+#: files/extension.js:1571 files/extension.js:1647
+#, javascript-format
+msgid "About %s"
+msgstr ""
+
+#: files/extension.js:1576
+msgid "Settings…"
+msgstr ""
+
+#: files/extension.js:1579 files/extension.js:1648
+#, javascript-format
+msgid "Hide %s"
+msgstr ""
+
+#: files/extension.js:1589
+msgid "Hide Others"
+msgstr ""
+
+#: files/extension.js:1602
+msgid "Show All"
+msgstr ""
+
+#: files/extension.js:1612 files/extension.js:1649
+#, javascript-format
+msgid "Quit %s"
+msgstr ""
+
+#: files/extension.js:1766
+msgid "No recent items"
+msgstr ""

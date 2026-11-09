@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        36%{?dist}
+Release:        37%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -43,10 +43,12 @@ Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-menu-icon-symbolic.svg
 Source4:        org.parchaos.globalmenu.gschema.xml
+Source5:        es.po
 Source90:       LICENSE
 Source91:       LICENSE-ARTWORK
 
 BuildRequires:  glib2
+BuildRequires:  gettext
 BuildArch:      noarch
 
 Requires:       gnome-shell >= 45
@@ -100,13 +102,20 @@ install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
 mkdir -p "$DEST/schemas"
 install -m 0644 src/org.parchaos.globalmenu.gschema.xml "$DEST/schemas/"
 glib-compile-schemas "$DEST/schemas"
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo %{SOURCE5}
 
 %files
 %license LICENSE-ARTWORK
 %license LICENSE
 %{_datadir}/gnome-shell/extensions/parchaos-global-menu@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2.1.0-37
+- Tickets #146/#53: the menu bar is translatable (gettext domain parchaos-global-menu) and ships a Spanish translation in Puerto Rican usage: logo menu, app menu, File/Edit/View/Go/Window/Help, Force Quit, About and the confirmation dialogs.
+
 * Fri Oct 02 2026 ParchaOS packaging - 2.1.0-36
 - Look-alike audit: menu shortcuts are written as the keys are printed on a PC keyboard (Super+Q, Alt+Super+Esc) instead of another platform's modifier symbols.
 

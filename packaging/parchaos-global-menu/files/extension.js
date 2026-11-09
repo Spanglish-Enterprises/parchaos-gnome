@@ -32,6 +32,13 @@ import Meta from 'gi://Meta';
 import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+import Gettext from 'gettext';
+
+// Translations (ticket #146/#53). Bound to the domain directly, not through the Extension's
+// gettext, because MENU_TABLE is built when the module loads, before the extension object exists.
+const DOMAIN = 'parchaos-global-menu';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
 
 // The adaptive bar tint awaits these two calls. GJS only lets a Gio async
 // method be awaited (called without a callback) after it has been
@@ -504,11 +511,11 @@ const WeatherIndicator = GObject.registerClass({
         content.add_style_class_name('parchaos-weather-pop-item');
         content.add_child(this._pop);
         this.menu.addMenuItem(content);
-        const openItem = new PopupMenu.PopupMenuItem('Open Weather');
+        const openItem = new PopupMenu.PopupMenuItem(_('Open Weather'));
         openItem.add_style_class_name('parchaos-weather-open');
         openItem.connect('activate', () => this._openWeatherApp());
         this.menu.addMenuItem(openItem);
-        const creditItem = new PopupMenu.PopupMenuItem('Weather data: MET Norway', { reactive: false });
+        const creditItem = new PopupMenu.PopupMenuItem(_('Weather data: MET Norway'), { reactive: false });
         creditItem.add_style_class_name('parchaos-weather-credit');
         this.menu.addMenuItem(creditItem);
         this._data = null;
@@ -824,12 +831,12 @@ class ConfirmDialog extends ModalDialog.ModalDialog {
 
         this.setButtons([
             {
-                label: 'Cancel',
+                label: _('Cancel'),
                 action: () => this.close(),
                 key: Clutter.KEY_Escape,
             },
             {
-                label: 'Confirm',
+                label: _('Confirm'),
                 action: () => {
                     this.close();
                     onConfirm();
@@ -891,11 +898,11 @@ class ForceQuitDialog extends ModalDialog.ModalDialog {
     _init() {
         super._init({ styleClass: 'parchaos-confirm-dialog' });
         this.contentLayout.add_child(new St.Label({
-            text: 'Force Quit Applications',
+            text: _('Force Quit Applications'),
             style_class: 'parchaos-about-title',
         }));
         const hint = new St.Label({
-            text: 'If an app is not responding, choose it and press Force Quit.',
+            text: _('If an app is not responding, choose it and press Force Quit.'),
             style_class: 'parchaos-confirm-dialog-label',
         });
         hint.clutter_text.line_wrap = true;
@@ -931,7 +938,7 @@ class ForceQuitDialog extends ModalDialog.ModalDialog {
         }
         if (apps.length === 0) {
             list.add_child(new St.Label({
-                text: 'No apps are open.',
+                text: _('No apps are open.'),
                 style_class: 'parchaos-confirm-dialog-label',
             }));
         }
@@ -941,9 +948,9 @@ class ForceQuitDialog extends ModalDialog.ModalDialog {
             overlay_scrollbars: true,
         }));
 
-        this.addButton({ label: 'Cancel', action: () => this.close(), key: Clutter.KEY_Escape });
+        this.addButton({ label: _('Cancel'), action: () => this.close(), key: Clutter.KEY_Escape });
         this._quit = this.addButton({
-            label: 'Force Quit',
+            label: _('Force Quit'),
             action: () => {
                 const app = this._selected;
                 this.close();
@@ -1065,102 +1072,102 @@ function pendingUpdates() {
 // hint: shown next to the item when the item is not a SHORTCUTS action.
 const MENU_TABLE = [
     {
-        role: 'file', title: 'File', items: [
-            { label: 'New Window', shortcut: 'new-window' },
-            { label: 'New Tab', shortcut: 'new-tab' },
-            { label: 'New Folder', shortcut: 'new-folder' },
+        role: 'file', title: _('File'), items: [
+            { label: _('New Window'), shortcut: 'new-window' },
+            { label: _('New Tab'), shortcut: 'new-tab' },
+            { label: _('New Folder'), shortcut: 'new-folder' },
             SEPARATOR,
-            { label: 'Open', shortcut: 'open' },
-            { label: 'Get Info', shortcut: 'get-info' },
-            { label: 'Rename', shortcut: 'rename' },
-            { label: 'Quick Preview', shortcut: 'quick-preview' },
+            { label: _('Open'), shortcut: 'open' },
+            { label: _('Get Info'), shortcut: 'get-info' },
+            { label: _('Rename'), shortcut: 'rename' },
+            { label: _('Quick Preview'), shortcut: 'quick-preview' },
             SEPARATOR,
-            { label: 'Move to Trash', shortcut: 'trash' },
+            { label: _('Move to Trash'), shortcut: 'trash' },
             SEPARATOR,
-            { label: 'Print\u2026', shortcut: 'print' },
+            { label: _('Print\u2026'), shortcut: 'print' },
             // Closed directly: Ctrl+W closes a tab in browsers and does
             // nothing in a terminal.
-            { label: 'Close Window', hint: 'c W', run: w => w?.delete(global.get_current_time()) },
+            { label: _('Close Window'), hint: 'c W', run: w => w?.delete(global.get_current_time()) },
         ],
     },
     {
-        role: 'edit', title: 'Edit', items: [
-            { label: 'Undo', shortcut: 'undo' },
-            { label: 'Redo', shortcut: 'redo' },
+        role: 'edit', title: _('Edit'), items: [
+            { label: _('Undo'), shortcut: 'undo' },
+            { label: _('Redo'), shortcut: 'redo' },
             SEPARATOR,
-            { label: 'Cut', shortcut: 'cut' },
-            { label: 'Copy', shortcut: 'copy' },
-            { label: 'Paste', shortcut: 'paste' },
-            { label: 'Select All', shortcut: 'select-all' },
+            { label: _('Cut'), shortcut: 'cut' },
+            { label: _('Copy'), shortcut: 'copy' },
+            { label: _('Paste'), shortcut: 'paste' },
+            { label: _('Select All'), shortcut: 'select-all' },
             SEPARATOR,
-            { label: 'Find\u2026', shortcut: 'find' },
+            { label: _('Find\u2026'), shortcut: 'find' },
         ],
     },
     {
-        role: 'view', title: 'View', items: [
+        role: 'view', title: _('View'), items: [
             { label: 'as Icons', shortcut: 'view-icons' },
             { label: 'as List', shortcut: 'view-list' },
             SEPARATOR,
-            { label: 'Show Hidden Files', shortcut: 'hidden-files' },
+            { label: _('Show Hidden Files'), shortcut: 'hidden-files' },
             SEPARATOR,
-            { label: 'Zoom In', shortcut: 'zoom-in' },
-            { label: 'Zoom Out', shortcut: 'zoom-out' },
-            { label: 'Actual Size', shortcut: 'zoom-reset' },
+            { label: _('Zoom In'), shortcut: 'zoom-in' },
+            { label: _('Zoom Out'), shortcut: 'zoom-out' },
+            { label: _('Actual Size'), shortcut: 'zoom-reset' },
             SEPARATOR,
-            { label: 'Reload', shortcut: 'reload' },
-            { label: 'Enter Full Screen', run: w => w && (w.is_fullscreen() ? w.unmake_fullscreen() : w.make_fullscreen()) },
+            { label: _('Reload'), shortcut: 'reload' },
+            { label: _('Enter Full Screen'), run: w => w && (w.is_fullscreen() ? w.unmake_fullscreen() : w.make_fullscreen()) },
         ],
     },
     {
-        role: 'go', title: 'Go', items: [
-            { label: 'Back', shortcut: 'back' },
-            { label: 'Forward', shortcut: 'forward' },
-            { label: 'Enclosing Folder', shortcut: 'enclosing' },
+        role: 'go', title: _('Go'), items: [
+            { label: _('Back'), shortcut: 'back' },
+            { label: _('Forward'), shortcut: 'forward' },
+            { label: _('Enclosing Folder'), shortcut: 'enclosing' },
             SEPARATOR,
-            { label: 'Recents', run: () => openUri('recent:///') },
-            { label: 'Home', run: () => openHome() },
-            { label: 'Desktop', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DESKTOP) },
-            { label: 'Documents', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) },
-            { label: 'Downloads', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) },
-            { label: 'Pictures', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_PICTURES) },
-            { label: 'Music', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_MUSIC) },
-            { label: 'Videos', run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_VIDEOS) },
+            { label: _('Recents'), run: () => openUri('recent:///') },
+            { label: _('Home'), run: () => openHome() },
+            { label: _('Desktop'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DESKTOP) },
+            { label: _('Documents'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) },
+            { label: _('Downloads'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) },
+            { label: _('Pictures'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_PICTURES) },
+            { label: _('Music'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_MUSIC) },
+            { label: _('Videos'), run: () => openSpecialDir(GLib.UserDirectory.DIRECTORY_VIDEOS) },
             SEPARATOR,
-            { label: 'Computer', run: () => openUri('other-locations:///') },
-            { label: 'Network', run: () => openUri('network:///') },
-            { label: 'Trash', run: () => openUri('trash:///') },
+            { label: _('Computer'), run: () => openUri('other-locations:///') },
+            { label: _('Network'), run: () => openUri('network:///') },
+            { label: _('Trash'), run: () => openUri('trash:///') },
             SEPARATOR,
-            { label: 'Go to Folder\u2026', shortcut: 'go-to-folder' },
+            { label: _('Go to Folder\u2026'), shortcut: 'go-to-folder' },
         ],
     },
     {
-        role: 'window', title: 'Window', items: [
-            { label: 'Minimize', run: w => w?.minimize() },
-            { label: 'Zoom', run: w => toggleMaximized(w) },
+        role: 'window', title: _('Window'), items: [
+            { label: _('Minimize'), run: w => w?.minimize() },
+            { label: _('Zoom'), run: w => toggleMaximized(w) },
             SEPARATOR,
-            { label: 'Move Window to Left Half', run: w => tileWindow(w, 'left') },
-            { label: 'Move Window to Right Half', run: w => tileWindow(w, 'right') },
-            { label: 'Center Window', run: w => centerWindow(w) },
+            { label: _('Move Window to Left Half'), run: w => tileWindow(w, 'left') },
+            { label: _('Move Window to Right Half'), run: w => tileWindow(w, 'right') },
+            { label: _('Center Window'), run: w => centerWindow(w) },
             SEPARATOR,
-            { label: 'Bring All to Front', run: w => bringAllToFront(w) },
+            { label: _('Bring All to Front'), run: w => bringAllToFront(w) },
             // The app's open windows are listed here when the menu opens.
             { windows: true },
         ],
     },
     {
-        role: 'help', title: 'Help', items: [
+        role: 'help', title: _('Help'), items: [
             // Ticket #136: "ParchaOS Help" opened the site's front page and
             // never reached support. The support form is the documented
             // channel (README, LEGAL, SOURCES all point at /support), so
             // that is what a help-seeking click should open. The FAQ keeps
             // its own item rather than being lost behind the change.
-            { label: 'ParchaOS Help', run: () => openSiteLink('/support') },
-            { label: 'Questions & Answers (FAQ)', run: () => openSiteLink('/#faq') },
+            { label: _('ParchaOS Help'), run: () => openSiteLink('/support') },
+            { label: _('Questions & Answers (FAQ)'), run: () => openSiteLink('/#faq') },
             SEPARATOR,
-            { label: 'Keyboard Shortcuts', run: () => openSiteLink('/#faq') },
-            { label: 'What\u2019s New', run: () => openSiteLink('/changelog') },
+            { label: _('Keyboard Shortcuts'), run: () => openSiteLink('/#faq') },
+            { label: _('What\u2019s New'), run: () => openSiteLink('/changelog') },
             SEPARATOR,
-            { label: 'Report a Bug or Feature Request\u2026', run: () => openSiteLink('/support') },
+            { label: _('Report a Bug or Feature Request\u2026'), run: () => openSiteLink('/support') },
         ],
     },
 ];
@@ -1292,27 +1299,27 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             apps.lookup_app('org.parchaos.WhatsNew.desktop')?.activate();
         };
         const name = GLib.get_real_name();
-        this._logOut = powerAction('Log out now? Any unsaved work will be lost.',
+        this._logOut = powerAction(_('Log out now? Any unsaved work will be lost.'),
             'gnome-session-quit --logout --no-prompt');
         const systemEntries = [
-            { label: 'About ParchaOS', icon: 'computer-symbolic', run: () => this._showAboutDialog() },
-            { label: 'What\u2019s New', icon: 'starred-symbolic', run: openWhatsNew },
+            { label: _('About ParchaOS'), icon: 'computer-symbolic', run: () => this._showAboutDialog() },
+            { label: _('What\u2019s New'), icon: 'starred-symbolic', run: openWhatsNew },
             SEPARATOR,
-            { label: 'System Settings\u2026', icon: 'emblem-system-symbolic', run: openSystemSettings, updates: true },
-            { label: 'Parcha Store', icon: 'system-software-install-symbolic', run: openStore },
+            { label: _('System Settings\u2026'), icon: 'emblem-system-symbolic', run: openSystemSettings, updates: true },
+            { label: _('Parcha Store'), icon: 'system-software-install-symbolic', run: openStore },
             SEPARATOR,
-            { label: 'Recent Items', recent: true },
+            { label: _('Recent Items'), recent: true },
             SEPARATOR,
-            { label: 'Force Quit\u2026', hint: 'ac Esc', run: () => new ForceQuitDialog().open() },
+            { label: _('Force Quit\u2026'), hint: 'ac Esc', run: () => new ForceQuitDialog().open() },
             SEPARATOR,
-            { label: 'Sleep', run: () => GLib.spawn_command_line_async('systemctl suspend') },
-            { label: 'Restart\u2026', run: powerAction('Restart now? Any unsaved work will be lost.',
+            { label: _('Sleep'), run: () => GLib.spawn_command_line_async('systemctl suspend') },
+            { label: _('Restart\u2026'), run: powerAction(_('Restart now? Any unsaved work will be lost.'),
                 'gnome-session-quit --reboot --no-prompt') },
-            { label: 'Shut Down\u2026', run: powerAction('Shut down now? Any unsaved work will be lost.',
+            { label: _('Shut Down\u2026'), run: powerAction(_('Shut down now? Any unsaved work will be lost.'),
                 'gnome-session-quit --power-off --no-prompt') },
             SEPARATOR,
-            { label: 'Lock Screen', hint: 'kc Q', run: () => Main.screenShield?.lock(true) },
-            { label: name && name !== 'Unknown' ? `Log Out ${name}\u2026` : 'Log Out\u2026', hint: 'cs Q',
+            { label: _('Lock Screen'), hint: 'kc Q', run: () => Main.screenShield?.lock(true) },
+            { label: name && name !== 'Unknown' ? _('Log Out %s\u2026').format(name) : _('Log Out\u2026'), hint: 'cs Q',
                 run: () => this._logOut() },
         ];
         this._fillMenu(logoBtn.menu, systemEntries);
@@ -1367,7 +1374,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         if (description)
             box.add_child(new St.Label({ text: description, style: 'text-align: center;' }));
         dialog.contentLayout.add_child(box);
-        dialog.setButtons([{ label: 'OK', action: () => dialog.close(), key: Clutter.KEY_Escape, default: true }]);
+        dialog.setButtons([{ label: _('OK'), action: () => dialog.close(), key: Clutter.KEY_Escape, default: true }]);
         dialog.open();
     }
 
@@ -1392,10 +1399,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
             x_align: Clutter.ActorAlign.CENTER,
         }));
         const gnome = Config.PACKAGE_VERSION;
-        const version = [osRelease.version ? `Version ${osRelease.version}` : null,
+        const version = [osRelease.version ? _('Version %s').format(osRelease.version) : null,
             gnome ? `GNOME ${gnome}` : null].filter(v => v).join(' · ');
         box.add_child(new St.Label({
-            text: version || 'Version unknown',
+            text: version || _('Version unknown'),
             style_class: 'parchaos-about-version',
             x_align: Clutter.ActorAlign.CENTER,
         }));
@@ -1432,7 +1439,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         box.add_child(specs);
 
         box.add_child(new St.Label({
-            text: 'ParchaOS is built on Fedora Linux and GNOME.',
+            text: _('ParchaOS is built on Fedora Linux and GNOME.'),
             style_class: 'parchaos-about-footer',
             x_align: Clutter.ActorAlign.CENTER,
         }));
@@ -1440,7 +1447,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         dialog.contentLayout.add_child(box);
         dialog.setButtons([
             {
-                label: 'More Info…',
+                label: _('More Info…'),
                 action: () => {
                     dialog.close();
                     try {
@@ -1451,7 +1458,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                 },
             },
             {
-                label: 'Legal and Privacy',
+                label: _('Legal and Privacy'),
                 action: () => {
                     dialog.close();
                     try {
@@ -1462,7 +1469,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                     }
                 },
             },
-            { label: 'Close', action: () => dialog.close(), default: true },
+            { label: _('Close'), action: () => dialog.close(), default: true },
         ]);
         dialog.open();
     }
@@ -1534,12 +1541,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         }
 
         return [
-            ['Computer', model],
-            ['Processor', cpu],
-            ['Graphics', gpu],
-            ['Memory', memGb ? `${memGb} GB` : ''],
-            ['Storage', storage],
-            ['Kernel', this._readFile('/proc/sys/kernel/osrelease')],
+            [_('Computer'), model],
+            [_('Processor'), cpu],
+            [_('Graphics'), gpu],
+            [_('Memory'), memGb ? `${memGb} GB` : ''],
+            [_('Storage'), storage],
+            [_('Kernel'), this._readFile('/proc/sys/kernel/osrelease')],
         ];
     }
 
@@ -1561,15 +1568,15 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         appBtn.roleId = 'app';
         const menu = appBtn.menu;
 
-        this._aboutAppItem = new MenuEntry(`About ${DEFAULT_APP_NAME}`);
+        this._aboutAppItem = new MenuEntry(_('About %s').format(DEFAULT_APP_NAME));
         this._aboutAppItem.connect('activate', () => this._showAppAbout());
         menu.addMenuItem(this._aboutAppItem);
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._settingsAppItem = this._shortcutItem(menu, 'Settings\u2026', 'settings');
+        this._settingsAppItem = this._shortcutItem(menu, _('Settings\u2026'), 'settings');
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._hideAppItem = new MenuEntry(`Hide ${DEFAULT_APP_NAME}`, hintText('c H'));
+        this._hideAppItem = new MenuEntry(_('Hide %s').format(DEFAULT_APP_NAME), hintText('c H'));
         this._hideAppItem.connect('activate', () => {
             const app = this._activeApp();
             if (app)
@@ -1579,7 +1586,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         });
         menu.addMenuItem(this._hideAppItem);
 
-        this._hideOthersItem = new MenuEntry('Hide Others', hintText('ac H'));
+        this._hideOthersItem = new MenuEntry(_('Hide Others'), hintText('ac H'));
         this._hideOthersItem.connect('activate', () => {
             const mine = this._activeApp();
             for (const actor of global.get_window_actors()) {
@@ -1592,7 +1599,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         });
         menu.addMenuItem(this._hideOthersItem);
 
-        this._showAllItem = new MenuEntry('Show All');
+        this._showAllItem = new MenuEntry(_('Show All'));
         this._showAllItem.connect('activate', () => {
             for (const actor of global.get_window_actors()) {
                 if (actor.meta_window.minimized)
@@ -1602,7 +1609,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         menu.addMenuItem(this._showAllItem);
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._quitAppItem = new MenuEntry(`Quit ${DEFAULT_APP_NAME}`, hintText('c Q'));
+        this._quitAppItem = new MenuEntry(_('Quit %s').format(DEFAULT_APP_NAME), hintText('c Q'));
         this._quitAppItem.connect('activate', () => {
             const app = this._activeApp();
             if (app)
@@ -1637,9 +1644,9 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
         const appName = this._displayNameFor(this._trackedWindow);
         this._appNameButton.setLabelText(appName);
-        this._aboutAppItem.label.set_text(`About ${appName}`);
-        this._hideAppItem.label.set_text(`Hide ${appName}`);
-        this._quitAppItem.label.set_text(`Quit ${appName}`);
+        this._aboutAppItem.label.set_text(_('About %s').format(appName));
+        this._hideAppItem.label.set_text(_('Hide %s').format(appName));
+        this._quitAppItem.label.set_text(_('Quit %s').format(appName));
 
         const isIdleState = appName === DEFAULT_APP_NAME && !this._trackedWindow;
         this._hideAppItem.setSensitive(!isIdleState);
@@ -1756,7 +1763,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         sub.removeAll();
         const items = recentItems();
         if (items.length === 0) {
-            const none = new PopupMenu.PopupMenuItem('No recent items');
+            const none = new PopupMenu.PopupMenuItem(_('No recent items'));
             none.setSensitive(false);
             sub.addMenuItem(none);
             return;
