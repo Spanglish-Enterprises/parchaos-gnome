@@ -26,6 +26,14 @@ import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 import * as Location from 'resource:///org/gnome/shell/ui/status/location.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import Gettext from 'gettext';
+
+// Translations (tickets #146/#53), bound to the domain directly like the menu bar.
+const DOMAIN = 'parchaos-controls';
+Gettext.bindtextdomain(DOMAIN, GLib.getenv('PARCHAOS_LOCALEDIR') ?? '/usr/share/locale');
+const _ = s => Gettext.dgettext(DOMAIN, s);
+// Marks a string for translation where it is defined; it is translated where shown.
+const N_ = s => s;
 
 // ParchaOS glass (parchaos-glass): our own refractive glass for the tiles. Optional: without it
 // the panel keeps its plain look.
@@ -520,14 +528,14 @@ function mediaSource() {
 
 // Where each control shows up in the picker beside the panel in edit mode.
 const CATEGORY_ICONS = {
-    'All Controls': ['view-grid-symbolic', '#8e8e93'],
-    'Connectivity': ['network-wireless-symbolic', '#0a84ff'],
-    'Sound and Media': ['audio-volume-high-symbolic', '#ff453a'],
-    'Focus': ['weather-clear-night-symbolic', '#5e5ce6'],
-    'Display': ['display-brightness-symbolic', '#0a84ff'],
-    'System': ['preferences-system-symbolic', '#8e8e93'],
-    'Shortcuts': ['emblem-system-symbolic', '#ff9f0a'],
-    'Other': ['application-x-addon-symbolic', '#30d158'],
+    [N_('All Controls')]: ['view-grid-symbolic', '#8e8e93'],
+    [N_('Connectivity')]: ['network-wireless-symbolic', '#0a84ff'],
+    [N_('Sound and Media')]: ['audio-volume-high-symbolic', '#ff453a'],
+    [N_('Focus')]: ['weather-clear-night-symbolic', '#5e5ce6'],
+    [N_('Display')]: ['display-brightness-symbolic', '#0a84ff'],
+    [N_('System')]: ['preferences-system-symbolic', '#8e8e93'],
+    [N_('Shortcuts')]: ['emblem-system-symbolic', '#ff9f0a'],
+    [N_('Other')]: ['application-x-addon-symbolic', '#30d158'],
 };
 
 // Sizes a control can take, in grid cells (columns x rows); the first is the
@@ -632,28 +640,28 @@ const ControlsPanel = GObject.registerClass({
 
         const net = this._qs._network;
         const connections = [
-            ['wifi', 'Wi-Fi', net?._wirelessToggle, 'wifi', 'Off'],
-            ['bluetooth', 'Bluetooth', this._firstItem(this._qs._bluetooth), 'bluetooth', 'Off'],
-            ['wired', 'Wired', net?._wiredToggle, 'network', 'Off'],
-            ['vpn', 'VPN', net?._vpnToggle, 'network', 'Off'],
-            ['airplane', 'Airplane Mode', this._firstItem(this._qs._rfkill), 'wifi', 'Off'],
+            ['wifi', _('Wi-Fi'), net?._wirelessToggle, 'wifi', _('Off')],
+            ['bluetooth', _('Bluetooth'), this._firstItem(this._qs._bluetooth), 'bluetooth', _('Off')],
+            ['wired', _('Wired'), net?._wiredToggle, 'network', _('Off')],
+            ['vpn', _('VPN'), net?._vpnToggle, 'network', _('Off')],
+            ['airplane', _('Airplane Mode'), this._firstItem(this._qs._rfkill), 'wifi', _('Off')],
         ];
         for (const [id, name, source, panel, sub] of connections) {
             if (source?.visible)
                 add(id, name, 2, 1, this._connectionTile(source, panel, sub));
         }
-        add('media', 'Now playing', 2, 2, this._nowPlayingTile());
+        add('media', _('Now playing'), 2, 2, this._nowPlayingTile());
 
         const dnd = this._firstItem(qs._doNotDisturb);
         if (dnd)
-            add('focus', 'Focus', 2, 1, this._focusTile(dnd));
+            add('focus', _('Focus'), 2, 1, this._focusTile(dnd));
         // GNOME's own dark style toggle writes 'default' (no preference)
         // for light, which Electron/Chromium apps treat as "keep guessing"
         // and can stay dark or light. Write an explicit preference both
         // ways; the toggle still mirrors the state.
         const dark = this._firstItem(qs._darkMode);
         if (dark) {
-            add('dark-mode', 'Dark Mode', 1, 1, smallToggle(dark, 'Dark Mode', () => {
+            add('dark-mode', _('Dark Mode'), 1, 1, smallToggle(dark, _('Dark Mode'), () => {
                 Main.layoutManager.screenTransition.run();
                 const iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
                 iface.set_string('color-scheme', dark.checked ? 'prefer-light' : 'prefer-dark');
@@ -661,28 +669,28 @@ const ControlsPanel = GObject.registerClass({
         }
         const night = this._firstItem(qs._nightLight);
         if (night)
-            add('night-light', 'Night Light', 1, 1, smallToggle(night, 'Night Light'));
+            add('night-light', _('Night Light'), 1, 1, smallToggle(night, _('Night Light')));
 
-        add('display', 'Display', 4, 1, this._displayTile());
-        add('sound', 'Sound', 4, 1, this._soundTile());
+        add('display', _('Display'), 4, 1, this._displayTile());
+        add('sound', _('Sound'), 4, 1, this._soundTile());
 
         // Toggles other extensions add to Quick Settings (e.g. GSConnect's
         // Mobile Devices).
         this._externalItems().forEach((item, i) =>
-            add(`external:${item.title ?? i}`, item.title ?? 'Extra', 2, 1, this._externalTile(item)));
+            add(`external:${item.title ?? i}`, item.title ?? _('Extra'), 2, 1, this._externalTile(item)));
 
         // Small tiles: power mode (when the machine has profiles), then
         // screenshot, settings and lock.
         const power = this._firstItem(qs._powerProfiles);
         if (power?.visible) {
-            add('power', 'Power Mode', 1, 1, smallToggle(power, 'Power Mode', () => {
+            add('power', _('Power Mode'), 1, 1, smallToggle(power, _('Power Mode'), () => {
                 this.emit('request-close');
                 openSettings('power');
             }));
         }
         // Only on machines that have a battery (a desktop PC shows none).
-        add('battery', 'Battery', 2, 1, this._batteryTile());
-        add('screenshot', 'Screenshot', 1, 1, smallAction('applets-screenshooter-symbolic', 'Screenshot', () => {
+        add('battery', _('Battery'), 2, 1, this._batteryTile());
+        add('screenshot', _('Screenshot'), 1, 1, smallAction('applets-screenshooter-symbolic', _('Screenshot'), () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
@@ -690,11 +698,11 @@ const ControlsPanel = GObject.registerClass({
                 return GLib.SOURCE_REMOVE;
             });
         }));
-        add('settings', 'Settings', 1, 1, smallAction('emblem-system-symbolic', 'Settings', () => {
+        add('settings', _('Settings'), 1, 1, smallAction('emblem-system-symbolic', _('Settings'), () => {
             this.emit('request-close');
             openSettings();
         }));
-        add('lock', 'Lock', 1, 1, smallAction('system-lock-screen-symbolic', 'Lock', () => {
+        add('lock', _('Lock'), 1, 1, smallAction('system-lock-screen-symbolic', _('Lock'), () => {
             this.emit('request-close');
             Main.screenShield?.lock(true);
         }));
@@ -709,7 +717,7 @@ const ControlsPanel = GObject.registerClass({
             this._addEditButtons(item);
         this._editButton = new St.Button({
             style_class: 'parchaos-controls-edit',
-            label: 'Edit Controls',
+            label: _('Edit Controls'),
             x_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
             visible: this._canEdit,
@@ -729,7 +737,7 @@ const ControlsPanel = GObject.registerClass({
             style_class: 'parchaos-controls-recent-icon',
             y_align: Clutter.ActorAlign.CENTER,
         });
-        const text = recent.kind === 'location' ? `${recent.app.get_name()} recently` : 'Screenshot taken';
+        const text = recent.kind === 'location' ? _('%s recently').format(recent.app.get_name()) : _('Screenshot taken');
         box.add_child(icon);
         box.add_child(new St.Label({text, y_align: Clutter.ActorAlign.CENTER}));
         this._recentPill = new St.Button({
@@ -1139,7 +1147,7 @@ const ControlsPanel = GObject.registerClass({
     _setEditing(editing) {
         this._editing = editing;
         this._endDrag();
-        this._editButton.label = editing ? 'Done' : 'Edit Controls';
+        this._editButton.label = editing ? _('Done') : _('Edit Controls');
         // The picker has its own Done.
         this._editButton.visible = this._canEdit && !editing;
         this._layout();
@@ -1256,7 +1264,7 @@ const ControlsPanel = GObject.registerClass({
         const {box, t: title, s} = labels();
         const sync = () => {
             title.text = item.title ?? '';
-            s.text = item.subtitle || (item.checked ? 'On' : 'Off');
+            s.text = item.subtitle || (item.checked ? _('On') : _('Off'));
         };
         item.connectObject('notify::title', sync, 'notify::subtitle', sync,
             'notify::checked', sync, row);
@@ -1293,14 +1301,14 @@ const ControlsPanel = GObject.registerClass({
         const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER, style: 'padding: 0 14px 0 12px; spacing: 10px;'});
         const icon = new St.Icon({icon_size: 24, style_class: 'parchaos-controls-circle-icon'});
         row.add_child(icon);
-        const {box, t: title, s: sub} = labels('Battery', '');
+        const {box, t: title, s: sub} = labels(_('Battery'), '');
         row.add_child(box);
         const sync = () => {
             const pct = Math.round(get('Percentage') ?? 0);
             const state = get('State');
             icon.icon_name = get('IconName') ?? 'battery-symbolic';
-            title.text = `Battery ${pct}%`;
-            sub.text = state === 1 ? 'Charging' : state === 4 ? 'Fully charged' : 'On battery';
+            title.text = _('Battery %d%%').format(pct);
+            sub.text = state === 1 ? _('Charging') : state === 4 ? _('Fully charged') : _('On battery');
         };
         const id = proxy.connect('g-properties-changed', sync);
         t.connect('destroy', () => proxy.disconnect(id));
@@ -1324,7 +1332,7 @@ const ControlsPanel = GObject.registerClass({
         const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
         const sync = () => {
             title.text = source.title ?? '';
-            s.text = source.subtitle || (source.checked ? 'On' : defaultSub);
+            s.text = source.subtitle || (source.checked ? _('On') : defaultSub);
         };
         source.connectObject('notify::title', sync, 'notify::subtitle', sync, 'notify::checked', sync, row);
         sync();
@@ -1353,8 +1361,8 @@ const ControlsPanel = GObject.registerClass({
         const t = tile(2, 1, 'parchaos-controls-focus');
         const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER});
         row.add_child(circleFor(dnd, 32));
-        const {box, t: title, s} = labels('Focus', '');
-        const sync = () => (s.text = dnd.checked ? 'Do Not Disturb' : 'Off');
+        const {box, t: title, s} = labels(_('Focus'), '');
+        const sync = () => (s.text = dnd.checked ? _('Do Not Disturb') : _('Off'));
         dnd.connectObject('notify::checked', sync, row);
         sync();
         const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
@@ -1369,7 +1377,7 @@ const ControlsPanel = GObject.registerClass({
         const scale = Main.brightnessManager?.globalScale;
         if (!scale)
             return null;
-        const {tile: t, slider} = sliderTile('Display', 'display-brightness-symbolic');
+        const {tile: t, slider} = sliderTile(_('Display'), 'display-brightness-symbolic');
         let block = false;
         const fromScale = () => {
             block = true;
@@ -1389,7 +1397,7 @@ const ControlsPanel = GObject.registerClass({
         const source = this._qs._volumeOutput?._output;
         if (!source?.slider)
             return null;
-        const {tile: t, slider, icon} = sliderTile('Sound', 'audio-volume-high-symbolic');
+        const {tile: t, slider, icon} = sliderTile(_('Sound'), 'audio-volume-high-symbolic');
         let block = false;
         const fromSource = () => {
             block = true;
@@ -1462,7 +1470,7 @@ const ControlsPanel = GObject.registerClass({
                 player?.connectObject('changed', sync, t);
             }
             if (!player) {
-                title.text = 'Not Playing';
+                title.text = _('Not Playing');
                 artist.text = '';
                 setArt(new St.Icon({icon_name: 'audio-x-generic-symbolic', icon_size: 24}));
                 controls.opacity = 90;
@@ -1471,7 +1479,7 @@ const ControlsPanel = GObject.registerClass({
             }
             controls.opacity = 255;
             controls.reactive = true;
-            title.text = player.trackTitle || player.app?.get_name() || 'Unknown';
+            title.text = player.trackTitle || player.app?.get_name() || _('Unknown');
             artist.text = (player.trackArtists ?? []).join(', ');
             const url = player.trackCoverUrl;
             if (url) {
@@ -1552,7 +1560,7 @@ class ControlsPicker extends St.BoxLayout {
         });
         this._search = new St.Entry({
             style_class: 'parchaos-controls-search',
-            hint_text: 'Search Controls',
+            hint_text: _('Search Controls'),
             can_focus: true,
             primary_icon: new St.Icon({icon_name: 'edit-find-symbolic', style_class: 'parchaos-controls-search-icon'}),
         });
@@ -1597,12 +1605,12 @@ class ControlsPicker extends St.BoxLayout {
         }));
         const footer = new St.BoxLayout({style_class: 'parchaos-controls-picker-footer', reactive: true});
         footer.add_child(new St.Label({
-            text: 'Drag a control to place it in Control Center.',
+            text: _('Drag a control to place it in Control Center.'),
             style_class: 'parchaos-controls-picker-hint',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         }));
-        const done = new St.Button({style_class: 'parchaos-controls-done', label: 'Done', can_focus: true});
+        const done = new St.Button({style_class: 'parchaos-controls-done', label: _('Done'), can_focus: true});
         done.connect('clicked', () => this._panel.finishEditing());
         footer.add_child(done);
         main.add_child(footer);
@@ -1649,7 +1657,7 @@ class ControlsPicker extends St.BoxLayout {
             child: new St.Icon({icon_name: iconName, icon_size: 15, style: `color: ${colour};`}),
             y_align: Clutter.ActorAlign.CENTER,
         }));
-        line.add_child(new St.Label({text: label, y_align: Clutter.ActorAlign.CENTER}));
+        line.add_child(new St.Label({text: _(label), y_align: Clutter.ActorAlign.CENTER}));
         const b = new St.Button({
             style_class: 'parchaos-controls-category',
             child: line,
@@ -1669,9 +1677,9 @@ class ControlsPicker extends St.BoxLayout {
     _whatsNew() {
         const card = new St.BoxLayout({style_class: 'parchaos-controls-whatsnew'});
         const text = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_align: Clutter.ActorAlign.CENTER});
-        text.add_child(new St.Label({text: "What's New", style_class: 'parchaos-controls-whatsnew-title'}));
+        text.add_child(new St.Label({text: _("What's New"), style_class: 'parchaos-controls-whatsnew-title'}));
         const blurb = new St.Label({
-            text: 'Control Center is yours to arrange. Resize and reorder controls so the ones you use most are a click away. Connections can be icon-only, wide or tall.',
+            text: _('Control Center is yours to arrange. Resize and reorder controls so the ones you use most are a click away. Connections can be icon-only, wide or tall.'),
             style_class: 'parchaos-controls-whatsnew-text',
         });
         blurb.clutter_text.line_wrap = true;
@@ -1712,7 +1720,7 @@ class ControlsPicker extends St.BoxLayout {
         const all = this._panel.allItems();
         const names = [...new Set(all.map(i => i.category))];
         this._categories.destroy_all_children();
-        this._categories.add_child(this._categoryRow('All Controls', null));
+        this._categories.add_child(this._categoryRow(N_('All Controls'), null));
         for (const name of names)
             this._categories.add_child(this._categoryRow(name, name));
 
@@ -1720,9 +1728,9 @@ class ControlsPicker extends St.BoxLayout {
         const shown = all.filter(i =>
             (!this._category || i.category === this._category) &&
             (!this._query || i.name.toLowerCase().includes(this._query) ||
-                i.category.toLowerCase().includes(this._query)));
+                _(i.category).toLowerCase().includes(this._query)));
         if (shown.length === 0) {
-            this._gallery.add_child(new St.Label({text: 'No controls match.', style_class: 'parchaos-controls-picker-hint'}));
+            this._gallery.add_child(new St.Label({text: _('No controls match.'), style_class: 'parchaos-controls-picker-hint'}));
             return;
         }
         let first = true;
@@ -1732,13 +1740,13 @@ class ControlsPicker extends St.BoxLayout {
             // Suggestions learn from use (rankSuggestions).
             const picks = rankSuggestions(shown);
             if (picks.length) {
-                this._gallery.add_child(this._heading('Suggestions', true));
+                this._gallery.add_child(this._heading(_('Suggestions'), true));
                 this._flow(this._gallery, picks);
                 first = false;
             }
         }
         for (const category of [...new Set(shown.map(i => i.category))]) {
-            this._gallery.add_child(this._heading(category, first));
+            this._gallery.add_child(this._heading(_(category), first));
             first = false;
             this._flow(this._gallery, shown.filter(i => i.category === category));
         }

@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        54%{?dist}
+Release:        55%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -22,6 +22,7 @@ Source2:        stylesheet.css
 Source3:        parchaos-controls-symbolic.svg
 Source4:        parchaos-screenshot
 Source5:        org.parchaos.Screenshot.desktop
+Source6:        es.po
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -33,6 +34,7 @@ Requires:       parchaos-glass >= 1.0.0-11
 Obsoletes:      gnome-screenshot < 99
 Requires:       libnotify
 BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
 
 %description
 Parcha Controls is ParchaOS's control center: a tiled panel for Wi-Fi,
@@ -58,14 +60,21 @@ install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
 desktop-file-validate %{SOURCE5}
 install -Dm0644 %{SOURCE5} %{buildroot}%{_datadir}/applications/org.parchaos.Screenshot.desktop
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo %{SOURCE6}
 
 %files
 %license LICENSE
 %{_bindir}/parchaos-screenshot
 %{_datadir}/applications/org.parchaos.Screenshot.desktop
 %{_datadir}/gnome-shell/extensions/parchaos-controls@parchaos.org/
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-55
+- Tickets #146/#53: Control Center is translatable (gettext domain parchaos-controls) and ships a Spanish translation in Puerto Rican usage: tile names and states, Edit Controls, the control gallery and its categories. Category names stay English internally (they are keys) and are translated where shown.
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-54
 - The top-bar glyph follows Control Center's new tile shape: one wide and two square rounded rectangles (it still showed a capsule and a circle from the old tiles).
 

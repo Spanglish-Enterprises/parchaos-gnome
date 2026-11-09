@@ -1,0 +1,193 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-controls package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-controls\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 18:51-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/extension.js:531 files/extension.js:1723
+msgid "All Controls"
+msgstr ""
+
+#: files/extension.js:532
+msgid "Connectivity"
+msgstr ""
+
+#: files/extension.js:533
+msgid "Sound and Media"
+msgstr ""
+
+#: files/extension.js:534 files/extension.js:657 files/extension.js:1364
+msgid "Focus"
+msgstr ""
+
+#: files/extension.js:535 files/extension.js:674 files/extension.js:1380
+msgid "Display"
+msgstr ""
+
+#: files/extension.js:536
+msgid "System"
+msgstr ""
+
+#: files/extension.js:537
+msgid "Shortcuts"
+msgstr ""
+
+#: files/extension.js:538
+msgid "Other"
+msgstr ""
+
+#: files/extension.js:643
+msgid "Wi-Fi"
+msgstr ""
+
+#: files/extension.js:643 files/extension.js:644 files/extension.js:645
+#: files/extension.js:646 files/extension.js:647 files/extension.js:1267
+#: files/extension.js:1365
+msgid "Off"
+msgstr ""
+
+#: files/extension.js:644
+msgid "Bluetooth"
+msgstr ""
+
+#: files/extension.js:645
+msgid "Wired"
+msgstr ""
+
+#: files/extension.js:646
+msgid "VPN"
+msgstr ""
+
+#: files/extension.js:647
+msgid "Airplane Mode"
+msgstr ""
+
+#: files/extension.js:653
+msgid "Now playing"
+msgstr ""
+
+#: files/extension.js:664
+msgid "Dark Mode"
+msgstr ""
+
+#: files/extension.js:672
+msgid "Night Light"
+msgstr ""
+
+#: files/extension.js:675 files/extension.js:1400
+msgid "Sound"
+msgstr ""
+
+#: files/extension.js:680
+msgid "Extra"
+msgstr ""
+
+#: files/extension.js:686
+msgid "Power Mode"
+msgstr ""
+
+#. Only on machines that have a battery (a desktop PC shows none).
+#: files/extension.js:692 files/extension.js:1304
+msgid "Battery"
+msgstr ""
+
+#: files/extension.js:693
+msgid "Screenshot"
+msgstr ""
+
+#: files/extension.js:701
+msgid "Settings"
+msgstr ""
+
+#: files/extension.js:705
+msgid "Lock"
+msgstr ""
+
+#: files/extension.js:720 files/extension.js:1150
+msgid "Edit Controls"
+msgstr ""
+
+#: files/extension.js:740
+#, javascript-format
+msgid "%s recently"
+msgstr ""
+
+#: files/extension.js:740
+msgid "Screenshot taken"
+msgstr ""
+
+#: files/extension.js:1150 files/extension.js:1613
+msgid "Done"
+msgstr ""
+
+#: files/extension.js:1267 files/extension.js:1335
+msgid "On"
+msgstr ""
+
+#: files/extension.js:1310
+#, javascript-format
+msgid "Battery %d%%"
+msgstr ""
+
+#: files/extension.js:1311
+msgid "Charging"
+msgstr ""
+
+#: files/extension.js:1311
+msgid "Fully charged"
+msgstr ""
+
+#: files/extension.js:1311
+msgid "On battery"
+msgstr ""
+
+#: files/extension.js:1365
+msgid "Do Not Disturb"
+msgstr ""
+
+#: files/extension.js:1473
+msgid "Not Playing"
+msgstr ""
+
+#: files/extension.js:1482
+msgid "Unknown"
+msgstr ""
+
+#: files/extension.js:1563
+msgid "Search Controls"
+msgstr ""
+
+#: files/extension.js:1608
+msgid "Drag a control to place it in Control Center."
+msgstr ""
+
+#: files/extension.js:1680
+msgid "What's New"
+msgstr ""
+
+#: files/extension.js:1682
+msgid ""
+"Control Center is yours to arrange. Resize and reorder controls so the ones "
+"you use most are a click away. Connections can be icon-only, wide or tall."
+msgstr ""
+
+#: files/extension.js:1733
+msgid "No controls match."
+msgstr ""
+
+#: files/extension.js:1743
+msgid "Suggestions"
+msgstr ""
