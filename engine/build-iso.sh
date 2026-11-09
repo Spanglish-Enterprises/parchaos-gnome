@@ -327,9 +327,47 @@ fi
 # systemd-nspawn handles /proc, /sys, /dev, and resolv.conf itself, so this
 # engine doesn't hand-manage bind mounts the way the Debian engine's manual
 # chroot() calls do.
+unmount_target() { :; }
+if [ -d /run/systemd/system ]; then
 run_in_target() {
     systemd-nspawn -D "$ROOTFS_TARGET" --resolv-conf=bind-host --quiet "$@"
 }
+else
+# No systemd running (CI's Docker container): nspawn can't start there, so use a
+# plain chroot with the host's /proc, /sys, /dev and resolv.conf bound in. The
+# target's own resolv.conf (often a symlink) is put back and the mounts are
+# removed before squashing and on exit, so nothing of the host lands in the image.
+CHROOT_MOUNTED=0
+RESOLV_LINK=""
+unmount_target() {
+    [ "$CHROOT_MOUNTED" -eq 1 ] || return 0
+    for d in dev/pts dev sys proc; do umount -l "$ROOTFS_TARGET/$d" 2>/dev/null || true; done
+    rm -f "$ROOTFS_TARGET/etc/resolv.conf"
+    if [ -n "$RESOLV_LINK" ]; then
+        ln -s "$RESOLV_LINK" "$ROOTFS_TARGET/etc/resolv.conf"
+    elif [ -e "$ROOTFS_TARGET/etc/resolv.conf.parchaos-build" ]; then
+        mv "$ROOTFS_TARGET/etc/resolv.conf.parchaos-build" "$ROOTFS_TARGET/etc/resolv.conf"
+    fi
+    CHROOT_MOUNTED=0
+}
+run_in_target() {
+    if [ "$CHROOT_MOUNTED" -eq 0 ]; then
+        for d in proc sys dev dev/pts; do
+            mkdir -p "$ROOTFS_TARGET/$d"
+            mount --bind "/$d" "$ROOTFS_TARGET/$d"
+        done
+        RESOLV_LINK=$(readlink "$ROOTFS_TARGET/etc/resolv.conf" 2>/dev/null || true)
+        if [ -z "$RESOLV_LINK" ] && [ -e "$ROOTFS_TARGET/etc/resolv.conf" ]; then
+            mv "$ROOTFS_TARGET/etc/resolv.conf" "$ROOTFS_TARGET/etc/resolv.conf.parchaos-build"
+        fi
+        rm -f "$ROOTFS_TARGET/etc/resolv.conf"
+        cp -L /etc/resolv.conf "$ROOTFS_TARGET/etc/resolv.conf"
+        CHROOT_MOUNTED=1
+        trap unmount_target EXIT
+    fi
+    chroot "$ROOTFS_TARGET" "$@"
+}
+fi
 
 if [ "$DROP_TO_CHROOT" -eq 1 ]; then
     echo "--- Dropping into $ROOTFS_TARGET (exit to resume, but note: --chroot stops here, it does not continue to packaging) ---"
@@ -492,6 +530,7 @@ fi
 echo "Compressing rootfs as SquashFS (this is the slow part)..."
 # The x86 BCJ filter and 1 MiB blocks compress binaries noticeably
 # better than plain xz defaults.
+unmount_target
 mksquashfs "$ROOTFS_TARGET" "$ISO_WORKDIR/LiveOS/squashfs.img" \
     -comp xz "${SQUASHFS_BCJ[@]}" -b 1M -e boot -noappend
 
