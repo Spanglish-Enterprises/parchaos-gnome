@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        14%{?dist}
+Release:        15%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-15
+- Ticket #48: no more "Can't update stage views ... needs an allocation" warnings (about 1,600 per hour on the desktop). The pane's frame and copies are placed in its own allocation, the copies line up with translation (repaint only), and the first sync fades the copy in with opacity instead of show(), which ran during allocation.
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-14
 - Look-alike audit: the default glass tint is a soft plum (the ParchaOS palette) instead of neutral smoke.
 

@@ -301,6 +301,7 @@ class GlassPane extends St.Widget {
         this._p = Object.assign({}, GLASS_DEFAULTS, params);
         watchClarity();
         _panes.add(this);
+        this._allocatedPad = clarityAdjust(this._p, _clarity).pad;
         this._inner = new Clutter.Actor();
         // The wallpaper and the windows above it, both as the desktop shows them.
         this._clone = new Clutter.Clone({source: Main.layoutManager._backgroundGroup});
@@ -313,8 +314,10 @@ class GlassPane extends St.Widget {
         this._inner.add_child(this._base);
         this.add_child(this._inner);
         // Nothing is drawn until the first full sync: an unplaced, unclipped copy of the desktop
-        // showed for one frame as a full-screen flash (Edit Controls opening, 2026-10-01).
-        this._inner.hide();
+        // showed for one frame as a full-screen flash (Edit Controls opening, 2026-10-01). Opacity,
+        // not hide(): the first sync runs during allocation, and show() there left the pane and its
+        // copies needing another allocation (ticket #48).
+        this._inner.opacity = 0;
         this._effect = new Clutter.ShaderEffect();
         this._effect.set_shader_source(FRAG);
         this._inner.add_effect(this._effect);
@@ -357,7 +360,26 @@ class GlassPane extends St.Widget {
 
     set(params) {
         Object.assign(this._p, params);
+        this.queue_relayout();
         this._sync();
+    }
+
+    // The copy and its frame are placed here, in the pane's own allocation, instead of with
+    // set_position/set_size from _sync: those ran during allocation and on every frame, left the
+    // children needing another allocation mid-frame and filled the journal with "Can't update
+    // stage views ... needs an allocation" (ticket #48).
+    vfunc_allocate(box) {
+        this.set_allocation(box);
+        const pad = clarityAdjust(this._p, _clarity).pad;
+        const [w, h] = box.get_size();
+        const inner = new Clutter.ActorBox();
+        inner.set_origin(-pad, -pad);
+        inner.set_size(w + 2 * pad, h + 2 * pad);
+        this._inner.allocate(inner);
+        const base = new Clutter.ActorBox();
+        base.set_origin(0, 0);
+        base.set_size(w + 2 * pad, h + 2 * pad);
+        this._base.allocate(base);
     }
 
     // Place the clone so the part of the desktop under the pane (plus padding) shows in it.
@@ -382,10 +404,12 @@ class GlassPane extends St.Widget {
             }
             return;
         }
-        this._inner.set_position(-pad, -pad);
-        this._inner.set_size(w + 2 * pad, h + 2 * pad);
+        if (pad !== this._allocatedPad) {
+            // A new padding changes the frame: allocate again (rare, a settings change).
+            this._allocatedPad = pad;
+            this.queue_relayout();
+        }
         this._inner.set_clip(0, 0, w + 2 * pad, h + 2 * pad);
-        this._base.set_size(w + 2 * pad, h + 2 * pad);
         if (p.bgblur > 0 && !this._blurFx) {
             this._blurFx = new Shell.BlurEffect({mode: Shell.BlurMode.ACTOR, radius: p.bgblur, brightness: 1.0});
             this._base.add_effect(this._blurFx);
@@ -393,8 +417,11 @@ class GlassPane extends St.Widget {
             this._blurFx.radius = p.bgblur;
             this._blurFx.enabled = p.bgblur > 0;
         }
-        this._clone.set_position(-(ax - pad), -(ay - pad));
-        this._windows.set_position(-(ax - pad), -(ay - pad));
+        // Translation only repaints; it never asks for a new allocation.
+        for (const copy of [this._clone, this._windows]) {
+            copy.translation_x = -(ax - pad);
+            copy.translation_y = -(ay - pad);
+        }
         const f = (k, v) => this._effect.set_uniform_value(k, floatValue(v));
         const tex = new GObject.Value();
         tex.init(GObject.TYPE_INT);
@@ -407,7 +434,7 @@ class GlassPane extends St.Widget {
         f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow); f('u_hair', p.hair);
         f('u_spec', p.spec); f('u_shin', p.shin); f('u_sheen', p.sheen); f('u_light', p.light);
         f('u_ao', p.ao); f('u_aor', p.aor); f('u_shr', p.shr); f('u_shi', p.shi);
-        this._inner.show();
+        this._inner.opacity = 255;
         f('u_tr', p.tintc[0]); f('u_tg', p.tintc[1]); f('u_tb', p.tintc[2]);
         this._effect.queue_repaint();
     }
