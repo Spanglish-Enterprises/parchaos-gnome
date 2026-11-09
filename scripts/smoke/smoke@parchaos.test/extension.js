@@ -395,8 +395,11 @@ export default class SmokeTest extends Extension {
                     }
                     if (!win)
                         throw new Error('the test window never appeared');
-                    win.activate(global.get_current_time());
-                    await sleep(500);
+                    // CI runners are slow to hand focus over; poll instead of one fixed wait.
+                    for (let i = 0; i < 20 && menu._trackedWindow !== win; i++) {
+                        win.activate(global.get_current_time());
+                        await sleep(250);
+                    }
                     if (menu._trackedWindow !== win)
                         throw new Error('the menu bar did not track the test window');
 

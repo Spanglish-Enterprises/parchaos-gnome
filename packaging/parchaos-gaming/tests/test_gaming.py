@@ -3,7 +3,16 @@
 import importlib.machinery
 import importlib.util
 import os
+import sys
 import unittest
+
+try:
+    import gi
+    gi.require_version('Gtk', '4.0')
+    gi.require_version('Adw', '1')
+except (ImportError, ValueError):
+    print('gaming: skipped (needs GTK 4 and libadwaita for Python)')
+    sys.exit(0)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PATH = os.path.join(HERE, '..', 'files', 'parchaos-gaming')
