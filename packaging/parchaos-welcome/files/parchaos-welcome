@@ -10,6 +10,7 @@
 #
 # Original code for ParchaOS, GPL-3.0-or-later.
 
+import gettext
 import os
 import subprocess
 import sys
@@ -19,6 +20,10 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+gettext.bindtextdomain('parchaos-welcome', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-welcome')
+_ = gettext.gettext
 
 APP_ID = 'org.parchaos.Welcome'
 STATE_DIR = os.path.join(GLib.get_user_state_dir(), 'parchaos')
@@ -91,7 +96,7 @@ def page(icon_name, title, description, *groups):
 
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title='Welcome to ParchaOS')
+        super().__init__(application=app, title=_('Welcome to ParchaOS'))
         self.set_default_size(640, 620)
 
         self.carousel = Adw.Carousel(allow_scroll_wheel=False, vexpand=True)
@@ -99,9 +104,9 @@ class Window(Adw.ApplicationWindow):
             self.carousel.append(p)
         self.carousel.connect('page-changed', lambda *_: self._sync_buttons())
 
-        self.back = Gtk.Button(label='Back')
+        self.back = Gtk.Button(label=_('Back'))
         self.back.connect('clicked', lambda *_: self._go(-1))
-        self.next = Gtk.Button(label='Continue')
+        self.next = Gtk.Button(label=_('Continue'))
         self.next.add_css_class('suggested-action')
         self.next.connect('clicked', lambda *_: self._go(1))
         dots = Adw.CarouselIndicatorDots(carousel=self.carousel)
@@ -117,87 +122,87 @@ class Window(Adw.ApplicationWindow):
         self._sync_buttons()
 
     def _pages(self):
-        pages = [page('parchaos-logo', 'Welcome to ParchaOS',
-                      'A few quick choices and you\'re set. You can change any of '
-                      'them later in ParchaOS Settings.')]
+        pages = [page('parchaos-logo', _('Welcome to ParchaOS'),
+                      _('A few quick choices and you\'re set. You can change any of '
+                      'them later in ParchaOS Settings.'))]
 
         desktop = schema('org.parchaos.desktop')
         if desktop is not None:
             pages.append(page(
-                'applications-graphics-symbolic', 'Pick a Style',
-                'How the menu bar, dock, launcher and Parcha Controls look.',
-                choice_group('Style', None, [
-                    ('glass', 'Glass', 'Translucent, softly blurred surfaces with rounded shapes.'),
-                    ('classic', 'Classic', 'Calmer frosted surfaces, more opaque, with tighter corners.'),
+                'applications-graphics-symbolic', _('Pick a Style'),
+                _('How the menu bar, dock, launcher and Parcha Controls look.'),
+                choice_group(_('Style'), None, [
+                    ('glass', _('Glass'), _('Translucent, softly blurred surfaces with rounded shapes.')),
+                    ('classic', _('Classic'), _('Calmer frosted surfaces, more opaque, with tighter corners.')),
                 ], desktop.get_string('style'), apply_style)))
 
         interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
         current = 'dark' if interface.get_string('color-scheme') == 'prefer-dark' else 'light'
         pages.append(page(
-            'weather-clear-night-symbolic', 'Light or Dark',
-            'Switch any time from Parcha Controls in the top-right corner.',
-            choice_group('Appearance', None, [
-                ('light', 'Light', 'Bright windows and panels.'),
-                ('dark', 'Dark', 'Dark windows and panels, easier on the eyes at night.'),
+            'weather-clear-night-symbolic', _('Light or Dark'),
+            _('Switch any time from Parcha Controls in the top-right corner.'),
+            choice_group(_('Appearance'), None, [
+                ('light', _('Light'), _('Bright windows and panels.')),
+                ('dark', _('Dark'), _('Dark windows and panels, easier on the eyes at night.')),
             ], current, lambda v: interface.set_string(
                 'color-scheme', 'prefer-dark' if v == 'dark' else 'prefer-light'))))
 
         style = keyboard_style()
         if style is not None:
             pages.append(page(
-                'input-keyboard-symbolic', 'The Super Key',
-                'Choose which key your app shortcuts use.',
-                choice_group('Shortcuts', None, [
-                    ('super-ctrl', 'Super for app shortcuts',
-                     'Super+C copies, Super+V pastes, Super+Q quits. Ctrl stays free in the terminal.'),
-                    ('standard', 'Ctrl for app shortcuts',
-                     'Ctrl+C copies and Ctrl+V pastes; Super opens system features.'),
+                'input-keyboard-symbolic', _('The Super Key'),
+                _('Choose which key your app shortcuts use.'),
+                choice_group(_('Shortcuts'), None, [
+                    ('super-ctrl', _('Super for app shortcuts'),
+                     _('Super+C copies, Super+V pastes, Super+Q quits. Ctrl stays free in the terminal.')),
+                    ('standard', _('Ctrl for app shortcuts'),
+                     _('Ctrl+C copies and Ctrl+V pastes; Super opens system features.')),
                 ], 'standard' if style in ('standard', 'windows') else 'super-ctrl',
                     lambda v: subprocess.Popen(['parchaos-keyboard-style', v]))))
 
         location = schema('org.gnome.system.location')
         if location is not None:
             row = Adw.SwitchRow(
-                title='Location Services',
-                subtitle='Lets the menu bar show the weather where you are, and apps '
+                title=_('Location Services'),
+                subtitle=_('Lets the menu bar show the weather where you are, and apps '
                          'like Maps and Weather find you. To find your approximate '
                          'location, the identifiers of nearby Wi-Fi networks are sent '
-                         'to BeaconDB, and your IP address may be used.')
+                         'to BeaconDB, and your IP address may be used.'))
             location.bind('enabled', row, 'active', Gio.SettingsBindFlags.DEFAULT)
             group = Adw.PreferencesGroup()
             group.add(row)
-            pages.append(page('find-location-symbolic', 'Location',
-                              'Off unless you turn it on. You can change this later '
-                              'in Settings, under Privacy.', group))
+            pages.append(page('find-location-symbolic', _('Location'),
+                              _('Off unless you turn it on. You can change this later '
+                              'in Settings, under Privacy.'), group))
 
         tour = Adw.PreferencesGroup()
         for icon, title, subtitle in (
-            ('view-app-grid-symbolic', 'Launcher', 'Every app, from the dock\'s last button or Super+A. '
-             'Drag icons to arrange them; hold one over another to make a folder.'),
-            ('preferences-system-symbolic', 'Parcha Controls', 'Wi-Fi, Bluetooth, Focus, Dark Mode, '
-             'brightness and sound, from the top-right corner.'),
-            ('open-menu-symbolic', 'Menu bar', 'The menus of the app you\'re using, always at the top. '
-             'The passion fruit holds About, Settings, Lock and Log Out.'),
-            ('view-restore-symbolic', 'Pick up where you left off', 'Apps you had open come back '
-             'when you log in again.'),
-            ('software-update-available-symbolic', 'Updates', 'ParchaOS tells you when updates are '
+            ('view-app-grid-symbolic', _('Launcher'), _('Every app, from the dock\'s last button or Super+A. '
+             'Drag icons to arrange them; hold one over another to make a folder.')),
+            ('preferences-system-symbolic', _('Parcha Controls'), _('Wi-Fi, Bluetooth, Focus, Dark Mode, '
+             'brightness and sound, from the top-right corner.')),
+            ('open-menu-symbolic', _('Menu bar'), _('The menus of the app you\'re using, always at the top. '
+             'The passion fruit holds About, Settings, Lock and Log Out.')),
+            ('view-restore-symbolic', _('Pick up where you left off'), _('Apps you had open come back '
+             'when you log in again.')),
+            ('software-update-available-symbolic', _('Updates'), _('ParchaOS tells you when updates are '
              'ready. Installing them from Parcha Store restarts the computer a few times. That is '
-             'normal, so let it finish. You can also run sudo dnf upgrade in a terminal.'),
+             'normal, so let it finish. You can also run sudo dnf upgrade in a terminal.')),
         ):
             row = Adw.ActionRow(title=title, subtitle=subtitle)
             row.add_prefix(Gtk.Image(icon_name=icon, icon_size=Gtk.IconSize.LARGE))
             tour.add(row)
-        pages.append(page('starred-symbolic', 'Where Things Are', None, tour))
+        pages.append(page('starred-symbolic', _('Where Things Are'), None, tour))
 
         legal = Adw.PreferencesGroup()
-        legal_row = Adw.ActionRow(title='Legal and Privacy', activatable=True,
-                                  subtitle='Licenses, credits, and which services ParchaOS connects to.')
+        legal_row = Adw.ActionRow(title=_('Legal and Privacy'), activatable=True,
+                                  subtitle=_('Licenses, credits, and which services ParchaOS connects to.'))
         legal_row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
         legal_row.connect('activated', lambda _row: open_legal())
         legal.add(legal_row)
-        pages.append(page('emblem-ok-symbolic', 'You\'re All Set',
-                          'Enjoy ParchaOS. Found a bug or have an idea? Help → Report a '
-                          'Bug or Feature Request in the menu bar.', legal))
+        pages.append(page('emblem-ok-symbolic', _('You\'re All Set'),
+                          _('Enjoy ParchaOS. Found a bug or have an idea? Help → Report a '
+                          'Bug or Feature Request in the menu bar.'), legal))
         return pages
 
     def _go(self, step):
@@ -212,7 +217,7 @@ class Window(Adw.ApplicationWindow):
         position = round(self.carousel.get_position())
         last = position >= self.carousel.get_n_pages() - 1
         self.back.set_visible(position > 0)
-        self.next.set_label('Get Started' if last else 'Continue')
+        self.next.set_label(_('Get Started') if last else _('Continue'))
 
 
 LEGAL_FILE = '/usr/share/doc/parchaos/LEGAL.md'

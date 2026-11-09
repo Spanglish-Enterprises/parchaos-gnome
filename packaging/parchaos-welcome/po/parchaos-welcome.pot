@@ -1,0 +1,218 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-welcome package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-welcome\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 19:07-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-welcome:99 files/parchaos-welcome:125
+msgid "Welcome to ParchaOS"
+msgstr ""
+
+#: files/parchaos-welcome:107
+msgid "Back"
+msgstr ""
+
+#: files/parchaos-welcome:109 files/parchaos-welcome:220
+msgid "Continue"
+msgstr ""
+
+#: files/parchaos-welcome:126
+msgid ""
+"A few quick choices and you're set. You can change any of them later in "
+"ParchaOS Settings."
+msgstr ""
+
+#: files/parchaos-welcome:132
+msgid "Pick a Style"
+msgstr ""
+
+#: files/parchaos-welcome:133
+msgid "How the menu bar, dock, launcher and Parcha Controls look."
+msgstr ""
+
+#: files/parchaos-welcome:134
+msgid "Style"
+msgstr ""
+
+#: files/parchaos-welcome:135
+msgid "Glass"
+msgstr ""
+
+#: files/parchaos-welcome:135
+msgid "Translucent, softly blurred surfaces with rounded shapes."
+msgstr ""
+
+#: files/parchaos-welcome:136
+msgid "Classic"
+msgstr ""
+
+#: files/parchaos-welcome:136
+msgid "Calmer frosted surfaces, more opaque, with tighter corners."
+msgstr ""
+
+#: files/parchaos-welcome:142
+msgid "Light or Dark"
+msgstr ""
+
+#: files/parchaos-welcome:143
+msgid "Switch any time from Parcha Controls in the top-right corner."
+msgstr ""
+
+#: files/parchaos-welcome:144
+msgid "Appearance"
+msgstr ""
+
+#: files/parchaos-welcome:145
+msgid "Light"
+msgstr ""
+
+#: files/parchaos-welcome:145
+msgid "Bright windows and panels."
+msgstr ""
+
+#: files/parchaos-welcome:146
+msgid "Dark"
+msgstr ""
+
+#: files/parchaos-welcome:146
+msgid "Dark windows and panels, easier on the eyes at night."
+msgstr ""
+
+#: files/parchaos-welcome:153
+msgid "The Super Key"
+msgstr ""
+
+#: files/parchaos-welcome:154
+msgid "Choose which key your app shortcuts use."
+msgstr ""
+
+#: files/parchaos-welcome:155
+msgid "Shortcuts"
+msgstr ""
+
+#: files/parchaos-welcome:156
+msgid "Super for app shortcuts"
+msgstr ""
+
+#: files/parchaos-welcome:157
+msgid ""
+"Super+C copies, Super+V pastes, Super+Q quits. Ctrl stays free in the "
+"terminal."
+msgstr ""
+
+#: files/parchaos-welcome:158
+msgid "Ctrl for app shortcuts"
+msgstr ""
+
+#: files/parchaos-welcome:159
+msgid "Ctrl+C copies and Ctrl+V pastes; Super opens system features."
+msgstr ""
+
+#: files/parchaos-welcome:166
+msgid "Location Services"
+msgstr ""
+
+#: files/parchaos-welcome:167
+msgid ""
+"Lets the menu bar show the weather where you are, and apps like Maps and "
+"Weather find you. To find your approximate location, the identifiers of "
+"nearby Wi-Fi networks are sent to BeaconDB, and your IP address may be used."
+msgstr ""
+
+#: files/parchaos-welcome:174
+msgid "Location"
+msgstr ""
+
+#: files/parchaos-welcome:175
+msgid ""
+"Off unless you turn it on. You can change this later in Settings, under "
+"Privacy."
+msgstr ""
+
+#: files/parchaos-welcome:180
+msgid "Launcher"
+msgstr ""
+
+#: files/parchaos-welcome:180
+msgid ""
+"Every app, from the dock's last button or Super+A. Drag icons to arrange "
+"them; hold one over another to make a folder."
+msgstr ""
+
+#: files/parchaos-welcome:182
+msgid "Parcha Controls"
+msgstr ""
+
+#: files/parchaos-welcome:182
+msgid ""
+"Wi-Fi, Bluetooth, Focus, Dark Mode, brightness and sound, from the top-right "
+"corner."
+msgstr ""
+
+#: files/parchaos-welcome:184
+msgid "Menu bar"
+msgstr ""
+
+#: files/parchaos-welcome:184
+msgid ""
+"The menus of the app you're using, always at the top. The passion fruit "
+"holds About, Settings, Lock and Log Out."
+msgstr ""
+
+#: files/parchaos-welcome:186
+msgid "Pick up where you left off"
+msgstr ""
+
+#: files/parchaos-welcome:186
+msgid "Apps you had open come back when you log in again."
+msgstr ""
+
+#: files/parchaos-welcome:188
+msgid "Updates"
+msgstr ""
+
+#: files/parchaos-welcome:188
+msgid ""
+"ParchaOS tells you when updates are ready. Installing them from Parcha Store "
+"restarts the computer a few times. That is normal, so let it finish. You can "
+"also run sudo dnf upgrade in a terminal."
+msgstr ""
+
+#: files/parchaos-welcome:195
+msgid "Where Things Are"
+msgstr ""
+
+#: files/parchaos-welcome:198
+msgid "Legal and Privacy"
+msgstr ""
+
+#: files/parchaos-welcome:199
+msgid "Licenses, credits, and which services ParchaOS connects to."
+msgstr ""
+
+#: files/parchaos-welcome:203
+msgid "You're All Set"
+msgstr ""
+
+#: files/parchaos-welcome:204
+msgid ""
+"Enjoy ParchaOS. Found a bug or have an idea? Help → Report a Bug or Feature "
+"Request in the menu bar."
+msgstr ""
+
+#: files/parchaos-welcome:220
+msgid "Get Started"
+msgstr ""

@@ -1,16 +1,18 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-welcome
 Source1:        org.parchaos.Welcome.desktop
 Source2:        parchaos-welcome-autostart.desktop
+Source3:        es.po
 Source90:       LICENSE
 BuildArch:      noarch
 
 BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
 Requires:       parchaos-desktop-schemas >= 2026.09.23-33
 Requires:       python3-gobject
 Requires:       gtk4
@@ -34,6 +36,9 @@ cp -p %{SOURCE90} .
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-welcome
 install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/applications/org.parchaos.Welcome.desktop
 install -Dm0644 %{SOURCE2} %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-welcome.mo %{SOURCE3}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Welcome.desktop
@@ -44,8 +49,12 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %{_bindir}/parchaos-welcome
 %{_datadir}/applications/org.parchaos.Welcome.desktop
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-welcome.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-9
+- Tickets #146/#53: the Welcome tour is translatable (gettext domain parchaos-welcome) with a Spanish translation in Puerto Rican usage (gender-neutral greeting).
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-8
 - Ticket #146: Spanish name and description in the .desktop file(s).
 
