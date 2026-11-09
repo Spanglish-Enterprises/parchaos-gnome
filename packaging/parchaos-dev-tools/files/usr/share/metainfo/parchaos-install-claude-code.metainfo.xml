@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>parchaos-install-claude-code</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Install Developer Tools</name>
+  <name xml:lang="es">Instalar herramientas de desarrollo</name>
+  <summary>Install Claude Code and other development utilities</summary>
+  <summary xml:lang="es">Instala Claude Code y otras utilidades de desarrollo</summary>
+  <developer id="org.parchaos">
+    <name>Spanglish Enterprises LLC</name>
+  </developer>
+  <description>
+    <p>
+      Opens a terminal that installs Anthropic's Claude Code command-line tool for your account,
+      using its official installer, and tells you how to start it.
+    </p>
+    <p xml:lang="es">
+      Abre una terminal que instala para tu cuenta la herramienta de línea de comandos Claude Code
+      de Anthropic, con su instalador oficial, y te dice cómo empezar a usarla.
+    </p>
+  </description>
+  <launchable type="desktop-id">parchaos-install-claude-code.desktop</launchable>
+  <url type="homepage">https://www.parchaos.org</url>
+  <url type="bugtracker">https://www.parchaos.org/support</url>
+  <url type="vcs-browser">https://github.com/Spanglish-Enterprises/parchaos-gnome</url>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <internet>always</internet>
+  </requires>
+  <categories>
+    <category>Development</category>
+  </categories>
+  <releases>
+    <release version="1.0.0" date="2026-09-28">
+      <description>
+        <p>First version: one-click Claude Code installer.</p>
+      </description>
+    </release>
+  </releases>
+</component>

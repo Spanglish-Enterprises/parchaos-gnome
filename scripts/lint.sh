@@ -180,11 +180,11 @@ if grep -n '^%%*changelog' packaging/*/*.spec | grep -v ':%changelog$'; then
     fail=1
 fi
 
-echo "== packages.sh vs parchaos-desktop Requires =="
+echo "== packages.sh vs parchaos-desktop Requires/Recommends =="
 # Every non-comment, non-conditional package in packages.sh should appear
 # in the meta-package's Requires list.
 mapfile -t pkg_list < <(grep -vE '^\s*#|^\s*$|^\s*if |^\s*fi\b|^\s*\[|^\s*then' profiles/parchaos/packages.sh | grep -oE '^[a-z0-9][a-z0-9+._-]*' | sort -u)
-mapfile -t req_list < <(grep '^Requires:' packaging/parchaos-desktop/parchaos-desktop.spec | sed 's/^Requires:\s*//' | sort -u)
+mapfile -t req_list < <(grep -E '^(Requires|Recommends):' packaging/parchaos-desktop/parchaos-desktop.spec | sed -E 's/^(Requires|Recommends):\s*//' | sort -u)
 missing=()
 for pkg in "${pkg_list[@]}"; do
     grep -qx "$pkg" <<<"${req_list[*]}" || missing+=("$pkg")

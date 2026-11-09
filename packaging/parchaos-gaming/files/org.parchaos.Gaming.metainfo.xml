@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>org.parchaos.Gaming</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Gaming</name>
+  <name xml:lang="es">Juegos</name>
+  <summary>Set up Steam, Heroic, Lutris and Bottles in one click</summary>
+  <summary xml:lang="es">Instala Steam, Heroic, Lutris y Bottles con un clic</summary>
+  <developer id="org.parchaos">
+    <name>Spanglish Enterprises LLC</name>
+  </developer>
+  <description>
+    <p>
+      Gaming installs the game launchers you choose from Flathub: Steam, Heroic (Epic Games, GOG
+      and Amazon), Lutris and Bottles, plus the MangoHud performance overlay and gamescope for
+      them. Each launcher keeps its own libraries, so updates to ParchaOS never break your games.
+    </p>
+    <p xml:lang="es">
+      Juegos instala desde Flathub los lanzadores que elijas: Steam, Heroic (Epic Games, GOG y
+      Amazon), Lutris y Bottles, además del indicador de rendimiento MangoHud y gamescope para
+      ellos. Cada lanzador trae sus propias bibliotecas, así que las actualizaciones de ParchaOS
+      nunca rompen tus juegos.
+    </p>
+    <p>
+      It also adds Game Mode to the login screen: a session that starts straight into Steam's
+      full-screen view, for the couch or a handheld.
+    </p>
+    <p xml:lang="es">
+      También añade el Modo juego a la pantalla de inicio de sesión: una sesión que empieza
+      directamente en la vista a pantalla completa de Steam, para el sofá o una consola portátil.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.parchaos.Gaming.desktop</launchable>
+  <url type="homepage">https://www.parchaos.org</url>
+  <url type="bugtracker">https://www.parchaos.org/support</url>
+  <url type="vcs-browser">https://github.com/Spanglish-Enterprises/parchaos-gnome</url>
+  <translation type="gettext">parchaos-gaming</translation>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <internet>first-run</internet>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <categories>
+    <category>Game</category>
+  </categories>
+  <releases>
+    <release version="1.0.0" date="2026-11-08">
+      <description>
+        <p>First version: Flathub launchers, performance overlay and Game Mode.</p>
+      </description>
+    </release>
+  </releases>
+</component>

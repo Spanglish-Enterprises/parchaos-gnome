@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        77%{?dist}
+Release:        78%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -108,7 +108,6 @@ Requires:       parchaos-gnome-plymouth-theme
 Requires:       parchaos-gnome-wallpaper
 Requires:       parchaos-keyboard-remap
 Requires:       parchaos-cloud
-Requires:       parchaos-dev-tools
 Requires:       parchaos-app-store
 Requires:       parchaos-focus-schedule
 Requires:       parchaos-yin-yang
@@ -120,9 +119,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-speak
-Requires:       parchaos-gaming
 Requires:       parchaos-glass
-Requires:       parchaos-image-search
 Requires:       sushi
 Requires:       parchaos-snapshots
 Requires:       parchaos-ui-tune
@@ -139,9 +136,14 @@ Requires:       parchaos-release
 Requires:       parchaos-updates
 Requires:       parchaos-welcome
 Requires:       parchaos-boot
-Requires:       parchaos-sky
 Requires:       parchaos-whatsnew
 Requires:       parchaos-desktop-schemas = %{version}-%{release}
+# Apps people may not want (ticket #118): installed by default and on upgrade, but removing one
+# (from Parcha Store or dnf) no longer removes this package, and dnf does not bring it back.
+Recommends:     parchaos-sky
+Recommends:     parchaos-gaming
+Recommends:     parchaos-dev-tools
+Recommends:     parchaos-image-search
 
 # TMOG is no longer part of ParchaOS; remove the launcher on update.
 Obsoletes:      parchaos-tmog < 1.0.0-3
@@ -276,6 +278,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-78
+- Ticket #118: Parcha Sky, Gaming, Install Developer Tools and Photo Search are Recommends instead of Requires, so removing one of them from Parcha Store no longer removes the desktop meta-package.
+
 * Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-77
 - Ticket #201: Require parchaos-gaming (Gaming setup app, gamemode, gamescope, controller rules, Game Mode session).
 
