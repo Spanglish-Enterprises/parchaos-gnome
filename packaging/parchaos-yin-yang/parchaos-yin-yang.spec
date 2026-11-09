@@ -58,7 +58,7 @@ Name:           parchaos-yin-yang
 # versioning inconsistency, not a typo on this end), confirmed by
 # checking pyproject.toml's content at the v4.0.1 ref directly.
 Version:        4.0.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Automatic light/dark theme switching with real sunrise/sunset support
 
 License:        MIT
@@ -195,6 +195,11 @@ install -m 0644 usr/share/parchaos-yin-yang/resources/yin_yang.timer \
 %{_datadir}/parchaos-yin-yang/resources/yin_yang.timer
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 4.0.1-6
+- Ticket #37: relax the python-dateutil pin to >=2.9. Fedora 45 packages
+  dateutil 2.9.0.post0 as version "2.9", so the generated ">= 2.9^post0"
+  requirement could not be met and the 44 -> 45 upgrade failed.
+
 * Wed Sep 30 2026 ParchaOS packaging - 4.0.1-5
 - Fedora 45 prep (ticket #37): accept systemd-python 236 (upstream pins
   exactly 235) and Python 3.15 in the relaxed pins.
