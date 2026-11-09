@@ -1,0 +1,51 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-updates package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-updates\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 19:04-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Build the notification text. Installing from Parcha Store applies updates
+#. with a restart into an update screen and another back (more with a kernel
+#. update); a user who does not expect that can think the machine has crashed
+#. (ticket #134). Say so up front.
+#. shellcheck disable=SC2059
+#: files/usr/bin/parchaos-updates-check:57
+#, sh-printf-format
+msgid ""
+"%d update is ready. Install it from Parcha Store, or run 'sudo dnf upgrade'."
+msgid_plural ""
+"%d updates are ready. Install them from Parcha Store, or run 'sudo dnf "
+"upgrade'."
+msgstr[0] ""
+"%d actualización está lista. Instálala desde Parcha Store o ejecuta 'sudo dnf "
+"upgrade'."
+msgstr[1] ""
+"%d actualizaciones están listas. Instálalas desde Parcha Store o ejecuta "
+"'sudo dnf upgrade'."
+
+#: files/usr/bin/parchaos-updates-check:59
+msgid ""
+"Updating from the Store restarts the computer a few times. That is normal, "
+"so let it finish."
+msgstr "Actualizar desde la Store reinicia la computadora varias veces. Es normal, así que deja que termine."
+
+#: files/usr/bin/parchaos-updates-check:60
+msgid "Software Updates"
+msgstr "Actualizaciones de software"
+
+#: files/usr/bin/parchaos-updates-check:61
+msgid "See what's new"
+msgstr "Ver las novedades"
