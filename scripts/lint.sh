@@ -159,7 +159,7 @@ ${narrative_new}"
 fi
 if [ -n "$narrative_lines" ]; then
     bad=$(printf '%s\n' "$narrative_lines" |
-        grep -Ei 'macOS|Apple|Finder|Spotlight|Launchpad|iCloud|Safari|genie' |
+        grep -Ei 'macOS|\bApple\b|Finder|Spotlight|Launchpad|iCloud|Safari|genie' |
         grep -vEi '^docs/DEVELOPMENT\.md: .*(naming|approved|policy|Apple-|not renamed|renamed from)' |
         grep -vEi 'trademark|trade dress|naming policy|instead of|in place of|replac|remov|renam|copied|reproduce|original artwork' |
         grep -vEi "[\`'\"][^\`'\"]*(macos|apple|finder|spotlight|launchpad|icloud|safari)[^\`'\"]*[\`'\"]" |
