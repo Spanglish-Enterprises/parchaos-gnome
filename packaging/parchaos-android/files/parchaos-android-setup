@@ -1,0 +1,16 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Sets up Android app support (ticket #117). Run as root through polkit
+# (org.parchaos.android.setup) from the Android Apps window. It installs Waydroid from
+# Fedora's repositories, downloads the Android image from Waydroid's own servers
+# (ParchaOS does not redistribute it), starts the Waydroid container service and,
+# when firewalld is running, lets Android's network bridge through.
+set -e
+dnf5 install -y waydroid
+[ -f /var/lib/waydroid/waydroid.cfg ] || waydroid init
+systemctl enable --now waydroid-container.service
+if firewall-cmd --state >/dev/null 2>&1; then
+    firewall-cmd --permanent --zone=trusted --add-interface=waydroid0 >/dev/null
+    firewall-cmd --reload >/dev/null
+fi
+echo "Android app support is ready."

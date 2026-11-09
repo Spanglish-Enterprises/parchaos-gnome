@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Android Apps
+Name[es]=Aplicaciones de Android
+Comment=Install and run Android apps
+Comment[es]=Instala y usa aplicaciones de Android
+Exec=parchaos-android
+Icon=phone-symbolic
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=android;apk;waydroid;phone;
+StartupNotify=true

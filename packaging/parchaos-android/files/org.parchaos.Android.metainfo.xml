@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>org.parchaos.Android</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Android Apps</name>
+  <name xml:lang="es">Aplicaciones de Android</name>
+  <summary>Install and run Android apps in their own windows</summary>
+  <summary xml:lang="es">Instala y usa aplicaciones de Android en sus propias ventanas</summary>
+  <developer id="org.parchaos">
+    <name>Spanglish Enterprises LLC</name>
+  </developer>
+  <description>
+    <p>
+      Android Apps sets up Waydroid, which runs Android in a container on this computer, and lets
+      you install APK files, open and remove Android apps, and stop Android when you are done.
+      Android apps also appear in the launcher. Setting up downloads the Android system from the
+      Waydroid project and needs an administrator password.
+    </p>
+    <p xml:lang="es">
+      Aplicaciones de Android configura Waydroid, que ejecuta Android en un contenedor en esta
+      computadora, y te deja instalar archivos APK, abrir y quitar aplicaciones de Android y detener
+      Android cuando termines. Las aplicaciones de Android también aparecen en el lanzador. La
+      configuración descarga el sistema Android del proyecto Waydroid y pide una contraseña de
+      administrador.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.parchaos.Android.desktop</launchable>
+  <url type="homepage">https://www.parchaos.org</url>
+  <url type="bugtracker">https://www.parchaos.org/support</url>
+  <url type="vcs-browser">https://github.com/Spanglish-Enterprises/parchaos-gnome</url>
+  <translation type="gettext">parchaos-android</translation>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <internet>first-run</internet>
+  </requires>
+  <releases>
+    <release version="1.0.0" date="2026-11-08">
+      <description>
+        <p>First version: set up, install APK files, open, remove, start and stop Android.</p>
+      </description>
+    </release>
+  </releases>
+</component>

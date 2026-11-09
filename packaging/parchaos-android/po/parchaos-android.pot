@@ -1,0 +1,125 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-android package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-android\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-08 19:40-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-android:90 files/parchaos-android:118
+msgid "Android Apps"
+msgstr ""
+
+#: files/parchaos-android:94
+msgid "Install an APK File…"
+msgstr ""
+
+#: files/parchaos-android:97
+msgid "Stop Android"
+msgstr ""
+
+#. Not set up yet.
+#: files/parchaos-android:109
+msgid "Set Up"
+msgstr ""
+
+#: files/parchaos-android:119
+msgid ""
+"Run Android apps in their own windows. Setting up downloads the Android "
+"system from the Waydroid project (about 800 MB) and needs your password. "
+"Android only runs while you use an Android app."
+msgstr ""
+
+#. Set up, Android stopped.
+#: files/parchaos-android:124
+msgid "Start Android"
+msgstr ""
+
+#: files/parchaos-android:127
+msgid "Android Is Not Running"
+msgstr ""
+
+#: files/parchaos-android:128
+msgid ""
+"Start Android to see and manage your apps. Opening an Android app from the "
+"launcher starts it too."
+msgstr ""
+
+#: files/parchaos-android:133 files/parchaos-android:159
+msgid "Installed Android Apps"
+msgstr ""
+
+#: files/parchaos-android:162
+msgid "No Android apps yet. Install an APK file with the + button."
+msgstr ""
+
+#: files/parchaos-android:165
+msgid "Open"
+msgstr ""
+
+#: files/parchaos-android:168 files/parchaos-android:208
+msgid "Remove"
+msgstr ""
+
+#: files/parchaos-android:179
+msgid "Setting up. This can take several minutes."
+msgstr ""
+
+#: files/parchaos-android:186
+#, python-format
+msgid "Setup did not finish: %s"
+msgstr ""
+
+#: files/parchaos-android:194
+msgid "Starting Android…"
+msgstr ""
+
+#: files/parchaos-android:202
+#, python-format
+msgid "Could not open the app: %s"
+msgstr ""
+
+#: files/parchaos-android:205
+#, python-format
+msgid "Remove %s?"
+msgstr ""
+
+#: files/parchaos-android:206
+msgid "The app and its data are removed from Android."
+msgstr ""
+
+#: files/parchaos-android:207
+msgid "Cancel"
+msgstr ""
+
+#: files/parchaos-android:218
+msgid "Android apps (APK)"
+msgstr ""
+
+#: files/parchaos-android:222
+msgid "Install an APK File"
+msgstr ""
+
+#: files/parchaos-android:229
+msgid "Installing…"
+msgstr ""
+
+#: files/parchaos-android:241
+msgid "Installed."
+msgstr ""
+
+#: files/parchaos-android:241
+#, python-format
+msgid "Could not install: %s"
+msgstr ""

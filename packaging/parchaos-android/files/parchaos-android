@@ -1,0 +1,255 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS Android Apps (ticket #117): a small window around Waydroid's own command line.
+#
+#   parchaos-android        open the window
+#
+# Android support is opt-in. Until it is set up, the window explains what setup does and runs
+# parchaos-android-setup through a password prompt (it installs Waydroid from Fedora and downloads
+# the Android image from Waydroid's servers). After that it installs APK files, lists the Android
+# apps with Open and Remove, and starts or stops Android. Android only runs while it is needed:
+# opening an app starts it, Stop Android ends it. Waydroid adds each Android app to the launcher.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import os
+import shutil
+import sys
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+gettext.bindtextdomain('parchaos-android', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-android')
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.Android'
+WAYDROID = os.environ.get('PARCHAOS_WAYDROID', 'waydroid')
+SETUP = os.environ.get('PARCHAOS_ANDROID_SETUP', '/usr/libexec/parchaos-android-setup')
+CONFIG = os.environ.get('PARCHAOS_WAYDROID_CONFIG', '/var/lib/waydroid/waydroid.cfg')
+
+
+def parse_status(text):
+    """`waydroid status` -> {'Session': 'RUNNING', 'Container': ...}; keys as Waydroid prints them."""
+    status = {}
+    for line in text.splitlines():
+        key, sep, value = line.partition(':')
+        if sep and key.strip():
+            status[key.strip()] = value.strip()
+    return status
+
+
+def parse_apps(text):
+    """`waydroid app list` -> [(name, package)], sorted by name. Each app is a 'Name:' line
+    followed by a 'packageName:' line (and categories, which are not needed here)."""
+    apps, name = [], None
+    for line in text.splitlines():
+        key, sep, value = line.strip().partition(':')
+        if not sep:
+            continue
+        if key == 'Name':
+            name = value.strip()
+        elif key == 'packageName' and name is not None:
+            apps.append((name, value.strip()))
+            name = None
+    return sorted(apps, key=lambda a: a[0].lower())
+
+
+def is_set_up():
+    return shutil.which(WAYDROID) is not None and os.path.exists(CONFIG)
+
+
+def run(argv, done):
+    """Run a command without blocking the window; done(ok, output) is called when it ends."""
+    try:
+        proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE)
+    except GLib.Error as e:
+        done(False, e.message)
+        return
+
+    def finished(p, res):
+        try:
+            _ok, out, _err = p.communicate_utf8_finish(res)
+        except GLib.Error as e:
+            out = e.message
+        done(p.get_successful(), out or '')
+    proc.communicate_utf8_async(None, None, finished)
+
+
+def last_line(text):
+    lines = [line for line in text.strip().splitlines() if line.strip()]
+    return lines[-1] if lines else ''
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title=_('Android Apps'), default_width=560, default_height=620)
+        self.toast = Adw.ToastOverlay()
+        view = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        self.install_button = Gtk.Button(icon_name='list-add-symbolic', tooltip_text=_('Install an APK File…'))
+        self.install_button.connect('clicked', self.on_install_apk)
+        header.pack_start(self.install_button)
+        self.stop_button = Gtk.Button(label=_('Stop Android'))
+        self.stop_button.connect('clicked', self.on_stop)
+        header.pack_end(self.stop_button)
+        view.add_top_bar(header)
+        self.toast.set_child(view)
+        view.set_content(self.toast_child())
+        self.set_content(self.toast)
+        self.refresh()
+
+    def toast_child(self):
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        # Not set up yet.
+        self.setup_button = Gtk.Button(label=_('Set Up'), halign=Gtk.Align.CENTER,
+                                       css_classes=['suggested-action', 'pill'])
+        self.setup_button.connect('clicked', self.on_setup)
+        self.setup_progress = Gtk.ProgressBar(visible=False, width_request=240, halign=Gtk.Align.CENTER)
+        self.setup_note = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER, css_classes=['dim-label'])
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, halign=Gtk.Align.CENTER)
+        for w in (self.setup_button, self.setup_progress, self.setup_note):
+            box.append(w)
+        self.stack.add_named(Adw.StatusPage(
+            icon_name='phone-symbolic', title=_('Android Apps'),
+            description=_('Run Android apps in their own windows. Setting up downloads the Android '
+                          'system from the Waydroid project (about 800 MB) and needs your password. '
+                          'Android only runs while you use an Android app.'),
+            child=box), 'setup')
+        # Set up, Android stopped.
+        start = Gtk.Button(label=_('Start Android'), halign=Gtk.Align.CENTER, css_classes=['pill'])
+        start.connect('clicked', self.on_start)
+        self.stack.add_named(Adw.StatusPage(
+            icon_name='phone-symbolic', title=_('Android Is Not Running'),
+            description=_('Start Android to see and manage your apps. Opening an Android app from the '
+                          'launcher starts it too.'),
+            child=start), 'stopped')
+        # Running: the list of apps.
+        self.list_page = Adw.PreferencesPage()
+        self.apps_group = Adw.PreferencesGroup(title=_('Installed Android Apps'))
+        self.list_page.add(self.apps_group)
+        self.stack.add_named(self.list_page, 'apps')
+        return self.stack
+
+    def say(self, text):
+        self.toast.add_toast(Adw.Toast(title=text, timeout=4))
+
+    def refresh(self):
+        ready = is_set_up()
+        self.install_button.set_sensitive(ready)
+        self.stop_button.set_visible(False)
+        if not ready:
+            self.stack.set_visible_child_name('setup')
+            return
+        run([WAYDROID, 'status'], self._on_status)
+
+    def _on_status(self, ok, out):
+        if parse_status(out).get('Session') != 'RUNNING':
+            self.stack.set_visible_child_name('stopped')
+            return
+        self.stop_button.set_visible(True)
+        run([WAYDROID, 'app', 'list'], self._on_list)
+
+    def _on_list(self, ok, out):
+        self.list_page.remove(self.apps_group)
+        self.apps_group = Adw.PreferencesGroup(title=_('Installed Android Apps'))
+        apps = parse_apps(out) if ok else []
+        if not apps:
+            self.apps_group.set_description(_('No Android apps yet. Install an APK file with the + button.'))
+        for name, package in apps:
+            row = Adw.ActionRow(title=GLib.markup_escape_text(name), subtitle=package)
+            open_button = Gtk.Button(label=_('Open'), valign=Gtk.Align.CENTER)
+            open_button.connect('clicked', lambda _b, p=package: self.on_open(p))
+            remove = Gtk.Button(icon_name='user-trash-symbolic', valign=Gtk.Align.CENTER,
+                                tooltip_text=_('Remove'), css_classes=['flat'])
+            remove.connect('clicked', lambda _b, n=name, p=package: self.on_remove(n, p))
+            row.add_suffix(open_button)
+            row.add_suffix(remove)
+            self.apps_group.add(row)
+        self.list_page.add(self.apps_group)
+        self.stack.set_visible_child_name('apps')
+
+    def on_setup(self, _button):
+        self.setup_button.set_sensitive(False)
+        self.setup_progress.set_visible(True)
+        self.setup_note.set_label(_('Setting up. This can take several minutes.'))
+        pulse = GLib.timeout_add(150, lambda: self.setup_progress.pulse() or True)
+
+        def done(ok, out):
+            GLib.source_remove(pulse)
+            self.setup_progress.set_visible(False)
+            self.setup_button.set_sensitive(True)
+            self.setup_note.set_label('' if ok else _('Setup did not finish: %s') % last_line(out))
+            self.refresh()
+        run(['pkexec', SETUP], done)
+
+    def on_start(self, _button):
+        # `waydroid session start` stays in the foreground for as long as Android runs; it outlives
+        # this window on purpose, so Android apps keep running when the window is closed.
+        GLib.spawn_async([WAYDROID, 'session', 'start'], flags=GLib.SpawnFlags.SEARCH_PATH)
+        self.say(_('Starting Android…'))
+        GLib.timeout_add_seconds(8, lambda: self.refresh() and False)
+
+    def on_stop(self, _button):
+        run([WAYDROID, 'session', 'stop'], lambda ok, out: self.refresh())
+
+    def on_open(self, package):
+        run([WAYDROID, 'app', 'launch', package],
+            lambda ok, out: ok or self.say(_('Could not open the app: %s') % last_line(out)))
+
+    def on_remove(self, name, package):
+        dialog = Adw.AlertDialog(heading=_('Remove %s?') % name,
+                                 body=_('The app and its data are removed from Android.'))
+        dialog.add_response('cancel', _('Cancel'))
+        dialog.add_response('remove', _('Remove'))
+        dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE)
+
+        def answered(d, response):
+            if response == 'remove':
+                run([WAYDROID, 'app', 'remove', package], lambda ok, out: self.refresh())
+        dialog.connect('response', answered)
+        dialog.present(self)
+
+    def on_install_apk(self, _button):
+        apk = Gtk.FileFilter(name=_('Android apps (APK)'))
+        apk.add_suffix('apk')
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(apk)
+        chooser = Gtk.FileDialog(title=_('Install an APK File'), filters=filters, default_filter=apk)
+
+        def chosen(d, res):
+            try:
+                path = d.open_finish(res).get_path()
+            except GLib.Error:
+                return
+            self.say(_('Installing…'))
+            # Installing needs Android running; start it first if it is not.
+            run([WAYDROID, 'status'], lambda ok, out: self._install(path, parse_status(out).get('Session') == 'RUNNING'))
+        chooser.open(self, None, chosen)
+
+    def _install(self, path, running):
+        if not running:
+            GLib.spawn_async([WAYDROID, 'session', 'start'], flags=GLib.SpawnFlags.SEARCH_PATH)
+            GLib.timeout_add_seconds(10, lambda: self._install(path, True) and False)
+            return
+
+        def done(ok, out):
+            self.say(_('Installed.') if ok else _('Could not install: %s') % last_line(out))
+            self.refresh()
+        run([WAYDROID, 'app', 'install', path], done)
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+
+    def do_activate(self):
+        (self.get_active_window() or Window(self)).present()
+
+
+if __name__ == '__main__':
+    sys.exit(App().run(sys.argv))
