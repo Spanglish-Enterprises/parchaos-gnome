@@ -2,11 +2,13 @@
 Type=Application
 Version=1.0
 Name=Add Cloud Account
+Name[es]=Añadir cuenta en la nube
 GenericName=Cloud Storage
 Keywords=cloud;drive;onedrive;dropbox;storage;
 TryExec=parchaos-cloud
 Exec=parchaos-cloud choose
 Comment=Connect a cloud storage account and mount it under Cloud
+Comment[es]=Conecta una cuenta de almacenamiento en la nube y móntala en la carpeta Cloud
 Icon=parchaos-cloud
 Terminal=false
 StartupNotify=false

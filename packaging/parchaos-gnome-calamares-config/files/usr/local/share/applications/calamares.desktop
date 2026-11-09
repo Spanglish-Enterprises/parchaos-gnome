@@ -2,11 +2,13 @@
 Type=Application
 Version=1.0
 Name=Install ParchaOS
+Name[es]=Instalar ParchaOS
 GenericName=System Installer
 Keywords=calamares;system;installer;
 TryExec=calamares
 Exec=/usr/local/bin/parchaos-launch-calamares
 Comment=Install ParchaOS on this computer
+Comment[es]=Instala ParchaOS en esta computadora
 Icon=calamares
 Terminal=false
 StartupNotify=true

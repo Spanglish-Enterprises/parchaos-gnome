@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Screenshot
+Name[es]=Captura de pantalla
 Comment=Capture the screen, a window or an area
+Comment[es]=Captura la pantalla, una ventana o un área
 Exec=parchaos-screenshot
 Icon=accessories-screenshot
 Terminal=false

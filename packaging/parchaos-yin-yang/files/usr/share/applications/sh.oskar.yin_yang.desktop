@@ -3,6 +3,7 @@ Type=Application
 Name=Yin & Yang
 GenericName=Automatic Theme Switcher
 Comment=Automatically switch between light and dark themes
+Comment[es]=Cambia solo entre los temas claro y oscuro
 Exec=yin_yang
 Icon=sh.oskar.yin_yang
 Terminal=false

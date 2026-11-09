@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Photo Search
+Name[es]=Búsqueda de fotos
 Comment=Find pictures by what is in them
+Comment[es]=Encuentra fotos por lo que aparece en ellas
 Exec=parchaos-image-search folders
 Icon=image-x-generic
 NoDisplay=true

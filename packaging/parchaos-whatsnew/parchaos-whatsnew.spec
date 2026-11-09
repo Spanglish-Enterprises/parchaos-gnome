@@ -1,6 +1,6 @@
 Name:           parchaos-whatsnew
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        What changed in this version of ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -54,6 +54,9 @@ python3 -c "import json; d = json.load(open('%{SOURCE3}')); assert d['version'] 
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-whatsnew.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-3
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-2
 - BuildRequires python3 for the content check in %check.
 

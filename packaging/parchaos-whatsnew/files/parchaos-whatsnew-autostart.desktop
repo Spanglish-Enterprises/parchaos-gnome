@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=ParchaOS What's New
+Name[es]=Novedades de ParchaOS
 Comment=Shown once after a major update
+Comment[es]=Se muestra una vez después de una actualización grande
 Exec=parchaos-whatsnew --if-new
 Icon=parchaos-logo
 NoDisplay=true

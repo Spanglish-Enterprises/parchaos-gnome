@@ -47,7 +47,7 @@
 
 Name:           parchaos-browser
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        ParchaOS's rebranded Chromium browser (Blink engine, for full Google-service compatibility)
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -128,6 +128,9 @@ fi
 %{_datadir}/icons/hicolor/scalable/apps/es.parchaos.Browser.svg
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-7
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Sat Sep 26 2026 ParchaOS packaging - 1.0.0-6
 - Ship the license text (%license) with an accurate SPDX License tag.
 * Fri Sep 25 2026 ParchaOS packaging - 1.0.0-5

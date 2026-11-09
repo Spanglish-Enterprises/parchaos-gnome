@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Install Developer Tools
+Name[es]=Instalar herramientas de desarrollo
 Comment=Install Claude Code and other development utilities
+Comment[es]=Instala Claude Code y otras utilidades de desarrollo
 Exec=parchaos-install-claude-code
 Icon=utilities-terminal
 Terminal=false

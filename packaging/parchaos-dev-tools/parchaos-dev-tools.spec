@@ -1,6 +1,6 @@
 Name:           parchaos-dev-tools
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        First-class developer tooling integration for ParchaOS
 
 License:        GPL-3.0-or-later
@@ -35,5 +35,8 @@ chmod 0755 %{buildroot}%{_bindir}/parchaos-install-claude-code
 %{_datadir}/applications/parchaos-install-claude-code.desktop
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-2
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Mon Sep 28 2026 ParchaOS Project <hello@parchaos.com> - 1.0.0-1
 - Initial release with Claude Code installer (Ticket #121)

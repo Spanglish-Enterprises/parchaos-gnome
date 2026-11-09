@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=ParchaOS Settings
+Name[es]=Configuración de ParchaOS
 Comment=Preferences specific to ParchaOS, like how the Super key works
+Comment[es]=Preferencias propias de ParchaOS, como el funcionamiento de la tecla Super
 Exec=parchaos-settings
 Icon=preferences-desktop-symbolic
 Categories=GTK;Settings;DesktopSettings;

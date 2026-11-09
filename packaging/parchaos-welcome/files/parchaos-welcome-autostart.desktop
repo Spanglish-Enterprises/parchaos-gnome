@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=ParchaOS Welcome
+Name[es]=Bienvenida a ParchaOS
 Comment=Shown once, at first login
+Comment[es]=Se muestra una vez, al primer inicio de sesión
 Exec=parchaos-welcome --first-run
 Icon=parchaos-logo
 NoDisplay=true

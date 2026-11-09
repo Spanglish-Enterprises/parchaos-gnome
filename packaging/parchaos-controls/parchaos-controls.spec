@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        55%{?dist}
+Release:        56%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -72,6 +72,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-56
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-55
 - Tickets #146/#53: Control Center is translatable (gettext domain parchaos-controls) and ships a Spanish translation in Puerto Rican usage: tile names and states, Edit Controls, the control gallery and its categories. Category names stay English internally (they are keys) and are translated where shown.
 

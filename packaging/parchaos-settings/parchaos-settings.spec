@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        29%{?dist}
+Release:        30%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-30
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Fri Oct 02 2026 ParchaOS packaging - 1.0.0-29
 - Ticket #171: Appearance > Glass clarity: a slider from Clear to Tinted with a live preview of glass buttons over a photo-like scene, and Reset. The desktop follows as you drag. Spanish translation.
 

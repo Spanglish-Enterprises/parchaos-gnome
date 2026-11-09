@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -46,6 +46,9 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %config(noreplace) %{_sysconfdir}/xdg/autostart/parchaos-welcome.desktop
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-8
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Tue Sep 29 2026 ParchaOS packaging - 1.0.0-7
 - "Where Things Are" gains an Updates row: ParchaOS says when updates are
   ready, and installing from Parcha Store restarts the computer a few times,

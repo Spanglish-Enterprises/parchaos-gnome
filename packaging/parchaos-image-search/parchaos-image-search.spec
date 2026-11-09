@@ -9,7 +9,7 @@
 
 Name:           parchaos-image-search
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Find your pictures by what is in them
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ install -Dm0644 %{SOURCE9} %{buildroot}%{_userunitdir}/parchaos-image-search-ind
 %{_userunitdir}/parchaos-image-search-index.timer
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-2
+- Ticket #146: Spanish name and description in the .desktop file(s).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #123). Checked with the real model: 23 pictures
   indexed in under a second, and phrases like "a sea and a stone tower" and

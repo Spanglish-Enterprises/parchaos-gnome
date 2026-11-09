@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=ParchaOS Welcome
+Name[es]=Bienvenida a ParchaOS
 Comment=Set up your style, keyboard and location, and see where things are
+Comment[es]=Elige tu estilo, teclado y ubicación, y mira dónde están las cosas
 Exec=parchaos-welcome
 Icon=parchaos-logo
 Categories=GNOME;GTK;Settings;DesktopSettings;
