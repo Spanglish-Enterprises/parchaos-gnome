@@ -12,7 +12,7 @@
 
 Name:           parchaos-updates
 Version:        1.0.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Check for ParchaOS updates and notify
 
 License:        GPL-3.0-or-later
@@ -21,15 +21,19 @@ Source0:        parchaos-updates-check
 Source1:        usr/lib/systemd/user/parchaos-updates.service
 Source2:        usr/lib/systemd/user/parchaos-updates.timer
 Source3:        usr/bin/parchaos-updates-whatsnew
+Source4:        es.po
 Source90:       LICENSE
 BuildArch:      noarch
 
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  gettext
 
 Requires:       dnf
 Requires:       python3-gobject
 Requires:       libadwaita
 Requires:       libnotify
+# gettext.sh for the translated notification.
+Requires:       gettext-runtime
 Requires(post): systemd
 
 %description
@@ -46,6 +50,9 @@ cp -p %{SOURCE90} .
 %install
 install -Dm0755 %{SOURCE0} %{buildroot}%{_bindir}/parchaos-updates-check
 install -Dm0755 %{SOURCE3} %{buildroot}%{_bindir}/parchaos-updates-whatsnew
+# Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
+install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
+msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-updates.mo %{SOURCE4}
 install -Dm0644 %{SOURCE1} %{buildroot}%{_userunitdir}/parchaos-updates.service
 install -Dm0644 %{SOURCE2} %{buildroot}%{_userunitdir}/parchaos-updates.timer
 # Enable the timer for every user with a packaged wants symlink, the way
@@ -71,12 +78,16 @@ ln -s ../parchaos-updates.timer \
 %files
 %license LICENSE
 %{_bindir}/parchaos-updates-check
+%{_datadir}/locale/es/LC_MESSAGES/parchaos-updates.mo
 %{_bindir}/parchaos-updates-whatsnew
 %{_userunitdir}/parchaos-updates.service
 %{_userunitdir}/parchaos-updates.timer
 %{_userunitdir}/timers.target.wants/parchaos-updates.timer
 
 %changelog
+* Sun Nov 08 2026 ParchaOS packaging - 1.0.0-7
+- Tickets #146/#53: the update notification is translatable (gettext.sh, domain parchaos-updates) with a Spanish translation, plural-aware.
+
 * Wed Sep 30 2026 ParchaOS packaging - 1.0.0-6
 - Writes the number of waiting updates to ~/.cache/parchaos/updates-count so the menu bar's logo menu can show it next to System Settings.
 
