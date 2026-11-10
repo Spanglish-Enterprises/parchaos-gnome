@@ -1066,7 +1066,7 @@ class Window(Adw.ApplicationWindow):
                     else when.format('%a %H:%M')
                 counted = gettext.ngettext('%d time', '%d times', times) % times
                 row = Adw.ActionRow(title=GLib.markup_escape_text(name or _('An app')),
-                                    subtitle=f'{label} · {stamp} · {counted}')
+                                    subtitle=' · '.join((label, stamp, counted)))
                 row.add_prefix(Gtk.Image(icon_name=icon))
                 rows.append(row)
                 group.add(row)
