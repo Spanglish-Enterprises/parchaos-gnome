@@ -3,7 +3,7 @@
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
 // type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv],
 // menu "status-area-name" (open or close that menu-bar menu), indicators N (add N tray-like status icons),
-// moveWindow [n, x, y, w, h] (the nth normal window, oldest first), windows "label" (log every window's monitor and frame). Test tool only; never run against a real session.
+// screenshotUI (open GNOME's screenshot tool), moveWindow [n, x, y, w, h] (the nth normal window, oldest first), windows "label" (log every window's monitor and frame). Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -107,6 +107,7 @@ export default class X extends Extension {
                 else if (step.showApps) Main.overview.showApps();
                 else if (step.menu) Main.panel.statusArea[step.menu]?.menu.toggle();
                 else if (step.indicators) addIndicators(step.indicators);
+                else if (step.screenshotUI) Main.screenshotUI.open().catch(e => log(`devshot ERR ${e}`));
                 else if (step.moveWindow) {
                     const [n, x, y, w, h] = step.moveWindow;
                     normalWindows()[n]?.move_resize_frame(true, x, y, w, h);

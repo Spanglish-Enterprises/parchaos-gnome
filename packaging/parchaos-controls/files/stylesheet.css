@@ -999,3 +999,42 @@ StWidget:drop {
 .parchaos-battery-detail {
   color: rgba(255, 255, 255, 0.7);
 }
+
+/* Screenshot thumbnail (ticket #155) */
+.parchaos-shot-card {
+  padding: 8px 8px 4px;
+  spacing: 4px;
+  border-radius: 18px;
+  background-color: rgba(34, 34, 38, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.parchaos-shot-image {
+  border-radius: 10px;
+  padding: 0;
+}
+
+.parchaos-shot-image:hover {
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.parchaos-shot-actions {
+  spacing: 4px;
+}
+
+.parchaos-shot-action {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.parchaos-shot-action:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.parchaos-shot-tip {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}

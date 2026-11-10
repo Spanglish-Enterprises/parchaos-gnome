@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        57%{?dist}
+Release:        58%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -24,6 +24,7 @@ Source4:        parchaos-screenshot
 Source5:        org.parchaos.Screenshot.desktop
 Source6:        es.po
 Source7:        energy.js
+Source8:        thumbnail.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -34,6 +35,8 @@ Requires:       parchaos-glass >= 1.0.0-11
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
 Requires:       libnotify
+# Mark Up on the screenshot thumbnail (ticket #155): crop, arrows, shapes and text.
+Recommends:     drawing
 BuildRequires:  desktop-file-utils
 BuildRequires:  gettext
 
@@ -45,7 +48,7 @@ status icons (or Super+S) in place of GNOME's Quick Settings menu.
 
 %prep
 mkdir -p src/icons
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} src/
 cp %{SOURCE3} src/icons/
 cp -p %{SOURCE90} .
 
@@ -55,7 +58,7 @@ cp -p %{SOURCE90} .
 UUID=parchaos-controls@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST/icons"
-install -m 0644 src/extension.js src/energy.js src/metadata.json src/stylesheet.css "$DEST/"
+install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
 install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
@@ -73,6 +76,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-58
+- Ticket #155: screenshot thumbnail. After a capture a small preview slides in at the bottom right in place of GNOME's banner, with Mark Up (Drawing, now recommended; crop, arrows, shapes, text), Copy, Show in Files, Delete and Close. It leaves after 7 seconds unless the pointer is on it; Escape closes it while the pointer is on it. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-57
 - Ticket #174: battery menu for laptops. On machines with a battery the battery icon gets its own menu-bar menu: charge, power source and time left, a Power Saver switch (power-profiles-daemon), the two apps using the most processor time over the last minute (read locally from /proc by the new energy.js, nothing stored) and Power Settings. Desktops show nothing new. Spanish strings added.
 

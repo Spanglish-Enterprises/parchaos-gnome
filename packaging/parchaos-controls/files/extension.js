@@ -27,6 +27,7 @@ import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 import * as Location from 'resource:///org/gnome/shell/ui/status/location.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {EnergySampler} from './energy.js';
+import {ScreenshotThumbnail} from './thumbnail.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -2549,6 +2550,7 @@ export default class ParchaControlsExtension extends Extension {
 
     enable() {
         this._exportShellBus();
+        this._thumbnail = new ScreenshotThumbnail(_);
         recentActivity = new RecentActivity();
         usageLearner = new UsageLearner();
         this._injections = new InjectionManager();
@@ -2635,6 +2637,8 @@ export default class ParchaControlsExtension extends Extension {
     }
 
     disable() {
+        this._thumbnail?.destroy();
+        this._thumbnail = null;
         this._shellBus?.unexport();
         this._shellBus = null;
         if (this._shellBusName) {

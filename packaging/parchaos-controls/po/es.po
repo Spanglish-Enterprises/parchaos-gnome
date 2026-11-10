@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-controls\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-09 22:31-0600\n"
+"POT-Creation-Date: 2026-11-09 23:01-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,169 +16,169 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: files/extension.js:532 files/extension.js:1724
+#: files/extension.js:533 files/extension.js:1725
 msgid "All Controls"
 msgstr "Todos los controles"
 
-#: files/extension.js:533
+#: files/extension.js:534
 msgid "Connectivity"
 msgstr "Conectividad"
 
-#: files/extension.js:534
+#: files/extension.js:535
 msgid "Sound and Media"
 msgstr "Sonido y multimedia"
 
-#: files/extension.js:535 files/extension.js:658 files/extension.js:1365
+#: files/extension.js:536 files/extension.js:659 files/extension.js:1366
 msgid "Focus"
 msgstr "Enfoque"
 
-#: files/extension.js:536 files/extension.js:675 files/extension.js:1381
+#: files/extension.js:537 files/extension.js:676 files/extension.js:1382
 msgid "Display"
 msgstr "Pantalla"
 
-#: files/extension.js:537
+#: files/extension.js:538
 msgid "System"
 msgstr "Sistema"
 
-#: files/extension.js:538
+#: files/extension.js:539
 msgid "Shortcuts"
 msgstr "Atajos"
 
-#: files/extension.js:539
+#: files/extension.js:540
 msgid "Other"
 msgstr "Otros"
 
-#: files/extension.js:644
+#: files/extension.js:645
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
-#: files/extension.js:644 files/extension.js:645 files/extension.js:646
-#: files/extension.js:647 files/extension.js:648 files/extension.js:1268
-#: files/extension.js:1366
+#: files/extension.js:645 files/extension.js:646 files/extension.js:647
+#: files/extension.js:648 files/extension.js:649 files/extension.js:1269
+#: files/extension.js:1367
 msgid "Off"
 msgstr "Desactivado"
 
-#: files/extension.js:645
+#: files/extension.js:646
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: files/extension.js:646
+#: files/extension.js:647
 msgid "Wired"
 msgstr "Cableada"
 
-#: files/extension.js:647
+#: files/extension.js:648
 msgid "VPN"
 msgstr "VPN"
 
-#: files/extension.js:648
+#: files/extension.js:649
 msgid "Airplane Mode"
 msgstr "Modo avión"
 
-#: files/extension.js:654
+#: files/extension.js:655
 msgid "Now playing"
 msgstr "Reproduciendo"
 
-#: files/extension.js:665
+#: files/extension.js:666
 msgid "Dark Mode"
 msgstr "Modo oscuro"
 
-#: files/extension.js:673
+#: files/extension.js:674
 msgid "Night Light"
 msgstr "Luz nocturna"
 
-#: files/extension.js:676 files/extension.js:1401
+#: files/extension.js:677 files/extension.js:1402
 msgid "Sound"
 msgstr "Sonido"
 
-#: files/extension.js:681
+#: files/extension.js:682
 msgid "Extra"
 msgstr "Extra"
 
-#: files/extension.js:687 files/extension.js:2360
+#: files/extension.js:688 files/extension.js:2361
 msgid "Power Mode"
 msgstr "Modo de energía"
 
 #. Only on machines that have a battery (a desktop PC shows none).
-#: files/extension.js:693 files/extension.js:1305 files/extension.js:2336
-#: files/extension.js:2348
+#: files/extension.js:694 files/extension.js:1306 files/extension.js:2337
+#: files/extension.js:2349
 msgid "Battery"
 msgstr "Batería"
 
-#: files/extension.js:694
+#: files/extension.js:695
 msgid "Screenshot"
 msgstr "Captura de pantalla"
 
-#: files/extension.js:702
+#: files/extension.js:703
 msgid "Settings"
 msgstr "Configuración"
 
-#: files/extension.js:706
+#: files/extension.js:707
 msgid "Lock"
 msgstr "Bloquear"
 
-#: files/extension.js:721 files/extension.js:1151
+#: files/extension.js:722 files/extension.js:1152
 msgid "Edit Controls"
 msgstr "Editar controles"
 
-#: files/extension.js:741
+#: files/extension.js:742
 #, javascript-format
 msgid "%s recently"
 msgstr "%s, hace poco"
 
-#: files/extension.js:741
+#: files/extension.js:742
 msgid "Screenshot taken"
 msgstr "Captura tomada"
 
-#: files/extension.js:1151 files/extension.js:1614
+#: files/extension.js:1152 files/extension.js:1615
 msgid "Done"
 msgstr "Listo"
 
-#: files/extension.js:1268 files/extension.js:1336
+#: files/extension.js:1269 files/extension.js:1337
 msgid "On"
 msgstr "Activado"
 
-#: files/extension.js:1311
+#: files/extension.js:1312
 #, javascript-format
 msgid "Battery %d%%"
 msgstr "Batería %d%%"
 
-#: files/extension.js:1312
+#: files/extension.js:1313
 msgid "Charging"
 msgstr "Cargando"
 
-#: files/extension.js:1312 files/extension.js:2418
+#: files/extension.js:1313 files/extension.js:2419
 msgid "Fully charged"
 msgstr "Carga completa"
 
-#: files/extension.js:1312
+#: files/extension.js:1313
 msgid "On battery"
 msgstr "Usando batería"
 
-#: files/extension.js:1366
+#: files/extension.js:1367
 msgid "Do Not Disturb"
 msgstr "No molestar"
 
-#: files/extension.js:1474
+#: files/extension.js:1475
 msgid "Not Playing"
 msgstr "Nada suena"
 
-#: files/extension.js:1483
+#: files/extension.js:1484
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: files/extension.js:1564
+#: files/extension.js:1565
 msgid "Search Controls"
 msgstr "Buscar controles"
 
-#: files/extension.js:1609
+#: files/extension.js:1610
 msgid "Drag a control to place it in Control Center."
 msgstr "Arrastra un control para ponerlo en el Centro de control."
 
-#: files/extension.js:1681
+#: files/extension.js:1682
 msgid "What's New"
 msgstr "Novedades"
 
-#: files/extension.js:1683
+#: files/extension.js:1684
 msgid ""
 "Control Center is yours to arrange. Resize and reorder controls so the ones "
 "you use most are a click away. Connections can be icon-only, wide or tall."
@@ -187,59 +187,83 @@ msgstr ""
 "los controles para tener a un clic los que más usas. Las conexiones pueden "
 "ser solo un ícono, anchas o altas."
 
-#: files/extension.js:1734
+#: files/extension.js:1735
 msgid "No controls match."
 msgstr "Ningún control coincide."
 
-#: files/extension.js:1744
+#: files/extension.js:1745
 msgid "Suggestions"
 msgstr "Sugerencias"
 
-#: files/extension.js:2323
+#: files/extension.js:2324
 #, javascript-format
 msgid "%d min"
 msgstr "%d min"
 
-#: files/extension.js:2324
+#: files/extension.js:2325
 #, javascript-format
 msgid "%d h %02d min"
 msgstr "%d h %02d min"
 
-#: files/extension.js:2361
+#: files/extension.js:2362
 msgid "Power Saver"
 msgstr "Ahorro de energía"
 
-#: files/extension.js:2368
+#: files/extension.js:2369
 msgid "Using Significant Energy"
 msgstr "Usando mucha energía"
 
-#: files/extension.js:2373
+#: files/extension.js:2374
 msgid "Power Settings…"
 msgstr "Configuración de energía…"
 
-#: files/extension.js:2407 files/extension.js:2409
+#: files/extension.js:2408 files/extension.js:2410
 #, javascript-format
 msgid "%d%%"
 msgstr "%d%%"
 
-#: files/extension.js:2411
+#: files/extension.js:2412
 msgid "Power Source: Battery"
 msgstr "Fuente de energía: batería"
 
-#: files/extension.js:2411
+#: files/extension.js:2412
 msgid "Power Source: Power Adapter"
 msgstr "Fuente de energía: adaptador de corriente"
 
-#: files/extension.js:2414
+#: files/extension.js:2415
 #, javascript-format
 msgid "%s remaining"
 msgstr "Quedan %s"
 
-#: files/extension.js:2416
+#: files/extension.js:2417
 #, javascript-format
 msgid "%s until full"
 msgstr "%s para carga completa"
 
-#: files/extension.js:2451
+#: files/extension.js:2452
 msgid "No apps are using much power"
 msgstr "Ninguna app está usando mucha energía"
+
+#: files/thumbnail.js:75 files/thumbnail.js:91
+msgid "Mark Up"
+msgstr "Marcar"
+
+#: files/thumbnail.js:92
+msgid "Copy"
+msgstr "Copiar"
+
+#: files/thumbnail.js:93
+msgid "Show in Files"
+msgstr "Mostrar en Archivos"
+
+#: files/thumbnail.js:94
+msgid "Delete"
+msgstr "Eliminar"
+
+#: files/thumbnail.js:95
+msgid "Close"
+msgstr "Cerrar"
+
+#: files/thumbnail.js:204
+msgid "Copied"
+msgstr "Copiado"
