@@ -26,6 +26,7 @@ import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 import * as Location from 'resource:///org/gnome/shell/ui/status/location.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {EnergySampler} from './energy.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -2298,6 +2299,235 @@ const SHELL_BUS_XML = `<node><interface name="org.parchaos.Shell">
   <method name="OpenScreenshotUI"/>
 </interface></node>`;
 
+// Battery menu (ticket #174): on machines with a battery, the battery icon leaves the controls
+// button and gets its own menu: charge, power source, the Power Saver switch, the apps using the
+// most processor time over the last minute, and Power Settings. Desktops show nothing new.
+const UPOWER = ['org.freedesktop.UPower', '/org/freedesktop/UPower/devices/DisplayDevice', 'org.freedesktop.UPower.Device'];
+const PROFILES = ['org.freedesktop.UPower.PowerProfiles', '/org/freedesktop/UPower/PowerProfiles', 'org.freedesktop.UPower.PowerProfiles'];
+// UPower device states: 1 charging, 2 discharging, 3 empty, 4 fully charged, 5 pending charge, 6 pending discharge.
+const ON_BATTERY_STATES = [2, 3, 6];
+
+function systemProxy([name, path, iface], done) {
+    Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, name, path, iface, null,
+        (_o, res) => {
+            try {
+                done(Gio.DBusProxy.new_for_bus_finish(res));
+            } catch (e) {
+                done(null);
+            }
+        });
+}
+
+function formatDuration(seconds) {
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    return minutes < 60 ? _('%d min').format(minutes)
+        : _('%d h %02d min').format(Math.floor(minutes / 60), minutes % 60);
+}
+
+function menuHeading(text) {
+    const item = new PopupMenu.PopupMenuItem(text, {reactive: false, can_focus: false});
+    item.label.add_style_class_name('parchaos-battery-heading');
+    return item;
+}
+
+const BatteryButton = GObject.registerClass(
+class BatteryButton extends PanelMenu.Button {
+    _init(device) {
+        super._init(0.5, _('Battery'));
+        this._device = device;
+        this._interface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+
+        const box = new St.BoxLayout({style_class: 'panel-status-indicators-box'});
+        this._icon = new St.Icon({style_class: 'system-status-icon'});
+        this._percent = new St.Label({y_align: Clutter.ActorAlign.CENTER, style_class: 'parchaos-battery-percent'});
+        box.add_child(this._icon);
+        box.add_child(this._percent);
+        this.add_child(box);
+
+        const header = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        header.add_child(new St.Label({text: _('Battery'), x_expand: true, style_class: 'parchaos-battery-title'}));
+        this._headerPercent = new St.Label({style_class: 'parchaos-battery-title'});
+        header.add_child(this._headerPercent);
+        this.menu.addMenuItem(header);
+        this._source = new PopupMenu.PopupMenuItem('', {reactive: false, can_focus: false});
+        this._source.label.add_style_class_name('parchaos-battery-detail');
+        this.menu.addMenuItem(this._source);
+
+        // A separator at the start of a section is never drawn, so it sits outside; the menu hides
+        // it when two separators would meet (no power profiles).
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._modeSection = new PopupMenu.PopupMenuSection();
+        this._modeSection.addMenuItem(menuHeading(_('Power Mode')));
+        this._saver = new PopupMenu.PopupSwitchMenuItem(_('Power Saver'), false);
+        this._saver.connect('toggled', (_i, on) => this._setProfile(on ? 'power-saver' : 'balanced'));
+        this._modeSection.addMenuItem(this._saver);
+        this._modeSection.actor.hide();
+        this.menu.addMenuItem(this._modeSection);
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(menuHeading(_('Using Significant Energy')));
+        this._apps = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(this._apps);
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addAction(_('Power Settings…'), () => openSettings('power'));
+
+        this._deviceId = device.connect('g-properties-changed', () => this._sync());
+        this._interface.connectObject('changed::show-battery-percentage', () => this._sync(), this);
+        systemProxy(PROFILES, proxy => {
+            if (!proxy || this._destroyed)
+                return;
+            this._profiles = proxy;
+            this._profilesId = proxy.connect('g-properties-changed', () => this._syncProfile());
+            this._syncProfile();
+        });
+
+        // Samples every 30 s so that opening the menu can compare against about a minute ago.
+        this._sampler = new EnergySampler();
+        this._sampler.record();
+        this._sampleId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 30, () => {
+            this._sampler.record();
+            return GLib.SOURCE_CONTINUE;
+        });
+        this.menu.connect('open-state-changed', (_m, open) => {
+            if (open)
+                this._syncApps();
+        });
+        this._sync();
+    }
+
+    _get(name) {
+        return this._device.get_cached_property(name)?.deepUnpack();
+    }
+
+    _sync() {
+        const pct = Math.round(this._get('Percentage') ?? 0);
+        const state = this._get('State');
+        this._icon.icon_name = this._get('IconName') || 'battery-symbolic';
+        this._percent.text = _('%d%%').format(pct);
+        this._percent.visible = this._interface.get_boolean('show-battery-percentage');
+        this._headerPercent.text = _('%d%%').format(pct);
+        const onBattery = ON_BATTERY_STATES.includes(state);
+        let text = onBattery ? _('Power Source: Battery') : _('Power Source: Power Adapter');
+        const toEmpty = this._get('TimeToEmpty') ?? 0, toFull = this._get('TimeToFull') ?? 0;
+        if (state === 2 && toEmpty > 0)
+            text += '\n' + _('%s remaining').format(formatDuration(toEmpty));
+        else if (state === 1 && toFull > 0)
+            text += '\n' + _('%s until full').format(formatDuration(toFull));
+        else if (state === 4)
+            text += '\n' + _('Fully charged');
+        this._source.label.text = text;
+    }
+
+    _syncProfile() {
+        const profile = this._profiles?.get_cached_property('ActiveProfile')?.deepUnpack();
+        const choices = this._profiles?.get_cached_property('Profiles')?.deepUnpack() ?? [];
+        const hasSaver = choices.some(p => p.Profile?.deepUnpack?.() === 'power-saver');
+        this._modeSection.actor.visible = !!profile && hasSaver;
+        this._saver.setToggleState(profile === 'power-saver');
+    }
+
+    _setProfile(profile) {
+        this._profiles?.call('org.freedesktop.DBus.Properties.Set',
+            new GLib.Variant('(ssv)', [PROFILES[2], 'ActiveProfile', new GLib.Variant('s', profile)]),
+            Gio.DBusCallFlags.NONE, -1, null, (p, res) => {
+                try {
+                    p.call_finish(res);
+                } catch (e) {
+                    logError(e, 'parchaos-controls: could not change the power mode');
+                    this._syncProfile();
+                }
+            });
+    }
+
+    _syncApps() {
+        this._apps.removeAll();
+        const appSystem = Shell.AppSystem.get_default();
+        const busy = this._sampler.busyNow(4)
+            .map(([id]) => appSystem.lookup_app(`${id}.desktop`))
+            .filter(app => app)
+            .slice(0, 2);
+        if (!busy.length) {
+            const none = new PopupMenu.PopupMenuItem(_('No apps are using much power'), {reactive: false, can_focus: false});
+            none.label.add_style_class_name('parchaos-battery-detail');
+            this._apps.addMenuItem(none);
+            return;
+        }
+        for (const app of busy) {
+            const item = new PopupMenu.PopupImageMenuItem(app.get_name(), app.get_icon());
+            item.connect('activate', () => app.activate());
+            this._apps.addMenuItem(item);
+        }
+    }
+
+    _onDestroy() {
+        this._destroyed = true;
+        if (this._sampleId)
+            GLib.source_remove(this._sampleId);
+        this._sampleId = 0;
+        this._sampler?.clear();
+        this._device.disconnect(this._deviceId);
+        if (this._profilesId)
+            this._profiles.disconnect(this._profilesId);
+        this._interface.disconnectObject(this);
+        super._onDestroy();
+    }
+});
+
+// Shows the battery menu while a battery is present (laptops; a dock or hot-swap can change it)
+// and hides GNOME's own battery icon in the controls button meanwhile.
+class BatteryWatcher {
+    constructor(qs, beforeActor) {
+        this._qs = qs;
+        this._before = beforeActor;
+        systemProxy(UPOWER, proxy => {
+            if (!proxy || this._destroyed)
+                return;
+            this._device = proxy;
+            this._deviceId = proxy.connect('g-properties-changed', () => this._sync());
+            this._sync();
+        });
+    }
+
+    _present() {
+        const get = name => this._device.get_cached_property(name)?.deepUnpack();
+        // Type 2 is a battery; IsPresent is false on a desktop.
+        return !!get('IsPresent') && get('Type') === 2;
+    }
+
+    _sync() {
+        const present = this._present();
+        if (present && !this._button) {
+            this._button = new BatteryButton(this._device);
+            const box = this._before.get_parent();
+            const index = Math.max(0, box?.get_children().indexOf(this._before) ?? 0);
+            Main.panel.addToStatusArea('parchaos-battery', this._button, index, 'right');
+            const system = this._qs._system;
+            system?.hide();
+            system?.connectObject('notify::visible', () => {
+                if (system.visible)
+                    system.hide();
+            }, this);
+        } else if (!present && this._button) {
+            this._drop();
+        }
+    }
+
+    _drop() {
+        this._button?.destroy();
+        this._button = null;
+        this._qs._system?.disconnectObject(this);
+        this._qs._system?.show();
+    }
+
+    destroy() {
+        this._destroyed = true;
+        if (this._deviceId)
+            this._device.disconnect(this._deviceId);
+        this._drop();
+    }
+}
+
 for (const name of ['_destroyPanel', '_beginEdit', '_endEdit', '_glassWanted'])
     HostedControls.prototype[name] = ControlsButton.prototype[name];
 
@@ -2363,6 +2593,7 @@ export default class ParchaControlsExtension extends Extension {
         const boxName = box === Main.panel._leftBox ? 'left'
             : box === Main.panel._centerBox ? 'center' : 'right';
         Main.panel.addToStatusArea('parchaos-controls', this._button, Math.max(index, 0), boxName);
+        this._battery = new BatteryWatcher(qs, this._button.container);
         qs.container.hide();
         qs.container.connectObject('notify::visible', () => {
             if (qs.container.visible)
@@ -2388,6 +2619,8 @@ export default class ParchaControlsExtension extends Extension {
         this._host = null;
         this._injections?.clear();
         this._injections = new InjectionManager();
+        this._battery?.destroy();
+        this._battery = null;
         this._button?.destroy();
         this._button = null;
         this._qs?.container.disconnectObject(this);

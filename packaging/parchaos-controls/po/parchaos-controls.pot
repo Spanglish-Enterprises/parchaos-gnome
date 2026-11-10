@@ -8,186 +8,236 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-controls\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-08 18:51-0600\n"
+"POT-Creation-Date: 2026-11-09 22:31-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: files/extension.js:531 files/extension.js:1723
+#: files/extension.js:532 files/extension.js:1724
 msgid "All Controls"
 msgstr ""
 
-#: files/extension.js:532
+#: files/extension.js:533
 msgid "Connectivity"
 msgstr ""
 
-#: files/extension.js:533
+#: files/extension.js:534
 msgid "Sound and Media"
 msgstr ""
 
-#: files/extension.js:534 files/extension.js:657 files/extension.js:1364
+#: files/extension.js:535 files/extension.js:658 files/extension.js:1365
 msgid "Focus"
 msgstr ""
 
-#: files/extension.js:535 files/extension.js:674 files/extension.js:1380
+#: files/extension.js:536 files/extension.js:675 files/extension.js:1381
 msgid "Display"
 msgstr ""
 
-#: files/extension.js:536
+#: files/extension.js:537
 msgid "System"
 msgstr ""
 
-#: files/extension.js:537
+#: files/extension.js:538
 msgid "Shortcuts"
 msgstr ""
 
-#: files/extension.js:538
+#: files/extension.js:539
 msgid "Other"
 msgstr ""
 
-#: files/extension.js:643
+#: files/extension.js:644
 msgid "Wi-Fi"
 msgstr ""
 
-#: files/extension.js:643 files/extension.js:644 files/extension.js:645
-#: files/extension.js:646 files/extension.js:647 files/extension.js:1267
-#: files/extension.js:1365
+#: files/extension.js:644 files/extension.js:645 files/extension.js:646
+#: files/extension.js:647 files/extension.js:648 files/extension.js:1268
+#: files/extension.js:1366
 msgid "Off"
 msgstr ""
 
-#: files/extension.js:644
+#: files/extension.js:645
 msgid "Bluetooth"
 msgstr ""
 
-#: files/extension.js:645
+#: files/extension.js:646
 msgid "Wired"
 msgstr ""
 
-#: files/extension.js:646
+#: files/extension.js:647
 msgid "VPN"
 msgstr ""
 
-#: files/extension.js:647
+#: files/extension.js:648
 msgid "Airplane Mode"
 msgstr ""
 
-#: files/extension.js:653
+#: files/extension.js:654
 msgid "Now playing"
 msgstr ""
 
-#: files/extension.js:664
+#: files/extension.js:665
 msgid "Dark Mode"
 msgstr ""
 
-#: files/extension.js:672
+#: files/extension.js:673
 msgid "Night Light"
 msgstr ""
 
-#: files/extension.js:675 files/extension.js:1400
+#: files/extension.js:676 files/extension.js:1401
 msgid "Sound"
 msgstr ""
 
-#: files/extension.js:680
+#: files/extension.js:681
 msgid "Extra"
 msgstr ""
 
-#: files/extension.js:686
+#: files/extension.js:687 files/extension.js:2360
 msgid "Power Mode"
 msgstr ""
 
 #. Only on machines that have a battery (a desktop PC shows none).
-#: files/extension.js:692 files/extension.js:1304
+#: files/extension.js:693 files/extension.js:1305 files/extension.js:2336
+#: files/extension.js:2348
 msgid "Battery"
 msgstr ""
 
-#: files/extension.js:693
+#: files/extension.js:694
 msgid "Screenshot"
 msgstr ""
 
-#: files/extension.js:701
+#: files/extension.js:702
 msgid "Settings"
 msgstr ""
 
-#: files/extension.js:705
+#: files/extension.js:706
 msgid "Lock"
 msgstr ""
 
-#: files/extension.js:720 files/extension.js:1150
+#: files/extension.js:721 files/extension.js:1151
 msgid "Edit Controls"
 msgstr ""
 
-#: files/extension.js:740
+#: files/extension.js:741
 #, javascript-format
 msgid "%s recently"
 msgstr ""
 
-#: files/extension.js:740
+#: files/extension.js:741
 msgid "Screenshot taken"
 msgstr ""
 
-#: files/extension.js:1150 files/extension.js:1613
+#: files/extension.js:1151 files/extension.js:1614
 msgid "Done"
 msgstr ""
 
-#: files/extension.js:1267 files/extension.js:1335
+#: files/extension.js:1268 files/extension.js:1336
 msgid "On"
 msgstr ""
 
-#: files/extension.js:1310
+#: files/extension.js:1311
 #, javascript-format
 msgid "Battery %d%%"
 msgstr ""
 
-#: files/extension.js:1311
+#: files/extension.js:1312
 msgid "Charging"
 msgstr ""
 
-#: files/extension.js:1311
+#: files/extension.js:1312 files/extension.js:2418
 msgid "Fully charged"
 msgstr ""
 
-#: files/extension.js:1311
+#: files/extension.js:1312
 msgid "On battery"
 msgstr ""
 
-#: files/extension.js:1365
+#: files/extension.js:1366
 msgid "Do Not Disturb"
 msgstr ""
 
-#: files/extension.js:1473
+#: files/extension.js:1474
 msgid "Not Playing"
 msgstr ""
 
-#: files/extension.js:1482
+#: files/extension.js:1483
 msgid "Unknown"
 msgstr ""
 
-#: files/extension.js:1563
+#: files/extension.js:1564
 msgid "Search Controls"
 msgstr ""
 
-#: files/extension.js:1608
+#: files/extension.js:1609
 msgid "Drag a control to place it in Control Center."
 msgstr ""
 
-#: files/extension.js:1680
+#: files/extension.js:1681
 msgid "What's New"
 msgstr ""
 
-#: files/extension.js:1682
+#: files/extension.js:1683
 msgid ""
 "Control Center is yours to arrange. Resize and reorder controls so the ones "
 "you use most are a click away. Connections can be icon-only, wide or tall."
 msgstr ""
 
-#: files/extension.js:1733
+#: files/extension.js:1734
 msgid "No controls match."
 msgstr ""
 
-#: files/extension.js:1743
+#: files/extension.js:1744
 msgid "Suggestions"
+msgstr ""
+
+#: files/extension.js:2323
+#, javascript-format
+msgid "%d min"
+msgstr ""
+
+#: files/extension.js:2324
+#, javascript-format
+msgid "%d h %02d min"
+msgstr ""
+
+#: files/extension.js:2361
+msgid "Power Saver"
+msgstr ""
+
+#: files/extension.js:2368
+msgid "Using Significant Energy"
+msgstr ""
+
+#: files/extension.js:2373
+msgid "Power Settings…"
+msgstr ""
+
+#: files/extension.js:2407 files/extension.js:2409
+#, javascript-format
+msgid "%d%%"
+msgstr ""
+
+#: files/extension.js:2411
+msgid "Power Source: Battery"
+msgstr ""
+
+#: files/extension.js:2411
+msgid "Power Source: Power Adapter"
+msgstr ""
+
+#: files/extension.js:2414
+#, javascript-format
+msgid "%s remaining"
+msgstr ""
+
+#: files/extension.js:2416
+#, javascript-format
+msgid "%s until full"
+msgstr ""
+
+#: files/extension.js:2451
+msgid "No apps are using much power"
 msgstr ""

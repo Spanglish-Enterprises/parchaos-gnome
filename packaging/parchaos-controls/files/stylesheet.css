@@ -980,3 +980,22 @@ StWidget:drop {
   padding: 4px 16px;
   font-size: 13px;
 }
+
+/* Battery menu (ticket #174) */
+.parchaos-battery-percent {
+  padding-left: 4px;
+}
+
+.parchaos-battery-title {
+  font-weight: 700;
+}
+
+.parchaos-battery-heading {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.parchaos-battery-detail {
+  color: rgba(255, 255, 255, 0.7);
+}

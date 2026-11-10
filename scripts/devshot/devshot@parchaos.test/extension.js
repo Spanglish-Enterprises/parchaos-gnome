@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
-// type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv]. Test tool only; never run against a real session.
+// type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv],
+// menu "status-area-name" (open or close that menu-bar menu). Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -83,6 +84,7 @@ export default class X extends Extension {
                     for (const k of [...ks].reverse()) { kbd.notify_keyval(t(), k, Clutter.KeyState.RELEASED); await wait(30); }
                 } else if (step.log) log(step.log);
                 else if (step.showApps) Main.overview.showApps();
+                else if (step.menu) Main.panel.statusArea[step.menu]?.menu.toggle();
                 else if (step.notify) Main.notify(step.notify[0], step.notify[1]);
                 else if (step.osd) Main.osdWindowManager.showAll(Gio.ThemedIcon.new('audio-volume-high-symbolic'), 'Volume', step.osd / 100, 1);
                 else if (step.states) log('DEVSHOT states ' + Main.extensionManager.getUuids().map(u => `${u}=${Main.extensionManager.lookup(u)?.state}`).join(' '));
