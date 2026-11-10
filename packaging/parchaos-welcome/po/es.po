@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-welcome\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-08 19:07-0600\n"
+"POT-Creation-Date: 2026-11-10 00:04-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,7 +24,7 @@ msgstr "Te damos la bienvenida a ParchaOS"
 msgid "Back"
 msgstr "Atrás"
 
-#: files/parchaos-welcome:109 files/parchaos-welcome:220
+#: files/parchaos-welcome:109 files/parchaos-welcome:223
 msgid "Continue"
 msgstr "Continuar"
 
@@ -32,7 +32,9 @@ msgstr "Continuar"
 msgid ""
 "A few quick choices and you're set. You can change any of them later in "
 "ParchaOS Settings."
-msgstr "Unas pocas decisiones rápidas y listo. Puedes cambiar cualquiera de ellas más tarde en Configuración de ParchaOS."
+msgstr ""
+"Unas pocas decisiones rápidas y listo. Puedes cambiar cualquiera de ellas "
+"más tarde en Configuración de ParchaOS."
 
 #: files/parchaos-welcome:132
 msgid "Pick a Style"
@@ -52,7 +54,8 @@ msgstr "Cristal"
 
 #: files/parchaos-welcome:135
 msgid "Translucent, softly blurred surfaces with rounded shapes."
-msgstr "Superficies translúcidas, suavemente difuminadas, con formas redondeadas."
+msgstr ""
+"Superficies translúcidas, suavemente difuminadas, con formas redondeadas."
 
 #: files/parchaos-welcome:136
 msgid "Classic"
@@ -60,7 +63,9 @@ msgstr "Clásico"
 
 #: files/parchaos-welcome:136
 msgid "Calmer frosted surfaces, more opaque, with tighter corners."
-msgstr "Superficies esmeriladas más tranquilas, más opacas, con esquinas más cerradas."
+msgstr ""
+"Superficies esmeriladas más tranquilas, más opacas, con esquinas más "
+"cerradas."
 
 #: files/parchaos-welcome:142
 msgid "Light or Dark"
@@ -68,7 +73,9 @@ msgstr "Claro u oscuro"
 
 #: files/parchaos-welcome:143
 msgid "Switch any time from Parcha Controls in the top-right corner."
-msgstr "Cámbialo cuando quieras desde Parcha Controls, en la esquina superior derecha."
+msgstr ""
+"Cámbialo cuando quieras desde Parcha Controls, en la esquina superior "
+"derecha."
 
 #: files/parchaos-welcome:144
 msgid "Appearance"
@@ -110,7 +117,8 @@ msgstr "Super para los atajos de las aplicaciones"
 msgid ""
 "Super+C copies, Super+V pastes, Super+Q quits. Ctrl stays free in the "
 "terminal."
-msgstr "Super+C copia, Super+V pega, Super+Q cierra. Ctrl queda libre en la terminal."
+msgstr ""
+"Super+C copia, Super+V pega, Super+Q cierra. Ctrl queda libre en la terminal."
 
 #: files/parchaos-welcome:158
 msgid "Ctrl for app shortcuts"
@@ -129,7 +137,11 @@ msgid ""
 "Lets the menu bar show the weather where you are, and apps like Maps and "
 "Weather find you. To find your approximate location, the identifiers of "
 "nearby Wi-Fi networks are sent to BeaconDB, and your IP address may be used."
-msgstr "Permite que la barra de menús muestre el tiempo donde estás y que aplicaciones como Mapas y Meteorología te ubiquen. Para hallar tu ubicación aproximada, se envían a BeaconDB los identificadores de las redes Wi-Fi cercanas, y se puede usar tu dirección IP."
+msgstr ""
+"Permite que la barra de menús muestre el tiempo donde estás y que "
+"aplicaciones como Mapas y Meteorología te ubiquen. Para hallar tu ubicación "
+"aproximada, se envían a BeaconDB los identificadores de las redes Wi-Fi "
+"cercanas, y se puede usar tu dirección IP."
 
 #: files/parchaos-welcome:174
 msgid "Location"
@@ -139,7 +151,9 @@ msgstr "Ubicación"
 msgid ""
 "Off unless you turn it on. You can change this later in Settings, under "
 "Privacy."
-msgstr "Desactivada a menos que la actives. Puedes cambiarlo más tarde en Configuración, en Privacidad."
+msgstr ""
+"Desactivada a menos que la actives. Puedes cambiarlo más tarde en "
+"Configuración, en Privacidad."
 
 #: files/parchaos-welcome:180
 msgid "Launcher"
@@ -149,7 +163,10 @@ msgstr "Lanzador"
 msgid ""
 "Every app, from the dock's last button or Super+A. Drag icons to arrange "
 "them; hold one over another to make a folder."
-msgstr "Todas las aplicaciones, desde el último botón del dock o con Super+A. Arrastra los íconos para ordenarlos; deja uno sobre otro para crear una carpeta."
+msgstr ""
+"Todas las aplicaciones, desde el último botón del dock o con Super+A. "
+"Arrastra los íconos para ordenarlos; deja uno sobre otro para crear una "
+"carpeta."
 
 #: files/parchaos-welcome:182
 msgid "Parcha Controls"
@@ -159,7 +176,9 @@ msgstr "Parcha Controls"
 msgid ""
 "Wi-Fi, Bluetooth, Focus, Dark Mode, brightness and sound, from the top-right "
 "corner."
-msgstr "Wi-Fi, Bluetooth, Enfoque, Modo oscuro, brillo y sonido, desde la esquina superior derecha."
+msgstr ""
+"Wi-Fi, Bluetooth, Enfoque, Modo oscuro, brillo y sonido, desde la esquina "
+"superior derecha."
 
 #: files/parchaos-welcome:184
 msgid "Menu bar"
@@ -169,7 +188,9 @@ msgstr "Barra de menús"
 msgid ""
 "The menus of the app you're using, always at the top. The passion fruit "
 "holds About, Settings, Lock and Log Out."
-msgstr "Los menús de la aplicación que estás usando, siempre arriba. La parcha tiene Acerca de, Configuración, Bloquear y Cerrar sesión."
+msgstr ""
+"Los menús de la aplicación que estás usando, siempre arriba. La parcha tiene "
+"Acerca de, Configuración, Bloquear y Cerrar sesión."
 
 #: files/parchaos-welcome:186
 msgid "Pick up where you left off"
@@ -177,41 +198,58 @@ msgstr "Sigue donde te quedaste"
 
 #: files/parchaos-welcome:186
 msgid "Apps you had open come back when you log in again."
-msgstr "Las aplicaciones que tenías abiertas vuelven cuando inicias sesión otra vez."
+msgstr ""
+"Las aplicaciones que tenías abiertas vuelven cuando inicias sesión otra vez."
 
-#: files/parchaos-welcome:188
+#. Ticket #161: a place for passwords without a third-party app.
+#: files/parchaos-welcome:189
+msgid "Parcha Keys"
+msgstr "Parcha Keys"
+
+#: files/parchaos-welcome:189
+msgid ""
+"Your saved passwords and keys, the ones apps and the browser keep for you, "
+"in the launcher under Parcha Keys."
+msgstr "Tus contraseñas y claves guardadas, las que guardan las apps y el navegador, en el lanzador bajo Parcha Keys."
+
+#: files/parchaos-welcome:191
 msgid "Updates"
 msgstr "Actualizaciones"
 
-#: files/parchaos-welcome:188
+#: files/parchaos-welcome:191
 msgid ""
 "ParchaOS tells you when updates are ready. Installing them from Parcha Store "
 "restarts the computer a few times. That is normal, so let it finish. You can "
 "also run sudo dnf upgrade in a terminal."
-msgstr "ParchaOS te avisa cuando hay actualizaciones listas. Instalarlas desde Parcha Store reinicia la computadora varias veces. Es normal, así que deja que termine. También puedes ejecutar sudo dnf upgrade en una terminal."
+msgstr ""
+"ParchaOS te avisa cuando hay actualizaciones listas. Instalarlas desde "
+"Parcha Store reinicia la computadora varias veces. Es normal, así que deja "
+"que termine. También puedes ejecutar sudo dnf upgrade en una terminal."
 
-#: files/parchaos-welcome:195
+#: files/parchaos-welcome:198
 msgid "Where Things Are"
 msgstr "Dónde está cada cosa"
 
-#: files/parchaos-welcome:198
+#: files/parchaos-welcome:201
 msgid "Legal and Privacy"
 msgstr "Aviso legal y privacidad"
 
-#: files/parchaos-welcome:199
+#: files/parchaos-welcome:202
 msgid "Licenses, credits, and which services ParchaOS connects to."
 msgstr "Licencias, créditos y a qué servicios se conecta ParchaOS."
 
-#: files/parchaos-welcome:203
+#: files/parchaos-welcome:206
 msgid "You're All Set"
 msgstr "Todo listo"
 
-#: files/parchaos-welcome:204
+#: files/parchaos-welcome:207
 msgid ""
 "Enjoy ParchaOS. Found a bug or have an idea? Help → Report a Bug or Feature "
 "Request in the menu bar."
-msgstr "Disfruta ParchaOS. ¿Encontraste un error o tienes una idea? Ayuda → Reportar un error o pedir una función, en la barra de menús."
+msgstr ""
+"Disfruta ParchaOS. ¿Encontraste un error o tienes una idea? Ayuda → Reportar "
+"un error o pedir una función, en la barra de menús."
 
-#: files/parchaos-welcome:220
+#: files/parchaos-welcome:223
 msgid "Get Started"
 msgstr "Empezar"

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-welcome\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-08 19:07-0600\n"
+"POT-Creation-Date: 2026-11-10 00:04-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,7 +25,7 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
-#: files/parchaos-welcome:109 files/parchaos-welcome:220
+#: files/parchaos-welcome:109 files/parchaos-welcome:223
 msgid "Continue"
 msgstr ""
 
@@ -180,39 +180,50 @@ msgstr ""
 msgid "Apps you had open come back when you log in again."
 msgstr ""
 
-#: files/parchaos-welcome:188
+#. Ticket #161: a place for passwords without a third-party app.
+#: files/parchaos-welcome:189
+msgid "Parcha Keys"
+msgstr ""
+
+#: files/parchaos-welcome:189
+msgid ""
+"Your saved passwords and keys, the ones apps and the browser keep for you, "
+"in the launcher under Parcha Keys."
+msgstr ""
+
+#: files/parchaos-welcome:191
 msgid "Updates"
 msgstr ""
 
-#: files/parchaos-welcome:188
+#: files/parchaos-welcome:191
 msgid ""
 "ParchaOS tells you when updates are ready. Installing them from Parcha Store "
 "restarts the computer a few times. That is normal, so let it finish. You can "
 "also run sudo dnf upgrade in a terminal."
 msgstr ""
 
-#: files/parchaos-welcome:195
+#: files/parchaos-welcome:198
 msgid "Where Things Are"
 msgstr ""
 
-#: files/parchaos-welcome:198
+#: files/parchaos-welcome:201
 msgid "Legal and Privacy"
 msgstr ""
 
-#: files/parchaos-welcome:199
+#: files/parchaos-welcome:202
 msgid "Licenses, credits, and which services ParchaOS connects to."
 msgstr ""
 
-#: files/parchaos-welcome:203
+#: files/parchaos-welcome:206
 msgid "You're All Set"
 msgstr ""
 
-#: files/parchaos-welcome:204
+#: files/parchaos-welcome:207
 msgid ""
 "Enjoy ParchaOS. Found a bug or have an idea? Help → Report a Bug or Feature "
 "Request in the menu bar."
 msgstr ""
 
-#: files/parchaos-welcome:220
+#: files/parchaos-welcome:223
 msgid "Get Started"
 msgstr ""

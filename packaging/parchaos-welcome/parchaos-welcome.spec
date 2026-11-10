@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -52,6 +52,9 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-welcome.mo
 
 %changelog
+* Tue Nov 10 2026 ParchaOS packaging - 1.0.0-10
+- Ticket #161: the tour's "Where Things Are" page mentions Parcha Keys for saved passwords and keys. Spanish string added.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-9
 - Tickets #146/#53: the Welcome tour is translatable (gettext domain parchaos-welcome) with a Spanish translation in Puerto Rican usage (gender-neutral greeting).
 
