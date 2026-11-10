@@ -210,6 +210,8 @@ PROFILE_REPO_PACKAGES=(
 
     # Parcha Assistant, Ctrl+Alt+Space (packaging/parchaos-assistant/, ticket #122).
     parchaos-assistant
+    # Ambient Sounds, generated rain/ocean/noise with a timer (packaging/parchaos-ambient/, ticket #183).
+    parchaos-ambient
 
     # ParchaOS's own glass library for the optional refractive effects
     # (packaging/parchaos-glass/); needed by the session and Controls extensions.

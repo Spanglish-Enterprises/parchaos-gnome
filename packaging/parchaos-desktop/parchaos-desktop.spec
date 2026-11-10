@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        81%{?dist}
+Release:        82%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -146,6 +146,7 @@ Recommends:     parchaos-dev-tools
 Recommends:     parchaos-image-search
 Recommends:     parchaos-android
 Recommends:     parchaos-assistant
+Recommends:     parchaos-ambient
 
 # TMOG is no longer part of ParchaOS; remove the launcher on update.
 Obsoletes:      parchaos-tmog < 1.0.0-3
@@ -280,6 +281,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 2026.09.23-82
+- Ticket #183: ambient-sound, ambient-volume, ambient-tone and ambient-minutes settings; Recommends parchaos-ambient.
+
 * Mon Nov 09 2026 ParchaOS packaging - 2026.09.23-81
 - Ticket #176: new menu-bar-background setting (auto, clear, tinted, solid); auto is clear with the glass style and tinted with classic.
 

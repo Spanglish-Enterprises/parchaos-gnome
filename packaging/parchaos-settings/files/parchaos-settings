@@ -251,12 +251,119 @@ class Window(Adw.ApplicationWindow):
         breakpoint_.add_setter(self._split, 'collapsed', True)
         self.add_breakpoint(breakpoint_)
 
-        self.add(self._appearance_page())
-        self.add(self._desktop_page())
-        self.add(self._privacy_page())
-        self.add(self._backups_page())
-        self.add(self._keyboard_page())
+        self.add(self._appearance_page(), 'appearance')
+        self.add(self._desktop_page(), 'desktop')
+        self.add(self._privacy_page(), 'privacy')
+        self.add(self._backups_page(), 'backups')
+        self.add(self._keyboard_page(), 'keyboard')
+        sound = self._sound_page()
+        if sound:
+            self.add(sound, 'sound')
         self._list.select_row(self._list.get_row_at_index(0))
+
+    # Ambient Sounds (ticket #183): parchaos-ambient plays, these rows set what and how.
+    def _sound_page(self):
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup('org.parchaos.desktop', True) if source else None
+        if schema is None or 'ambient-sound' not in schema.list_keys() or \
+                not GLib.find_program_in_path('parchaos-ambient'):
+            return None
+        settings = Gio.Settings(settings_schema=schema)
+        page = Adw.PreferencesPage(title=_('Sound'), icon_name='audio-speakers-symbolic')
+        group = Adw.PreferencesGroup(
+            title=_('Ambient Sounds'),
+            description=_('Calm background sound that plays under everything else. All of it is '
+                          'generated on this computer.'))
+        page.add(group)
+
+        sounds = [('rain', _('Rain')), ('ocean', _('Ocean')), ('stream', _('Stream')),
+                  ('night', _('Night')), ('white', _('White noise')), ('pink', _('Pink noise')),
+                  ('brown', _('Brown noise'))]
+        sound_row = Adw.ComboRow(title=_('Sound'), model=Gtk.StringList.new([t for _v, t in sounds]))
+        values = [v for v, _t in sounds]
+        current = settings.get_string('ambient-sound')
+        sound_row.set_selected(values.index(current) if current in values else 0)
+        group.add(sound_row)
+
+        def scale_row(title, key, low, high):
+            row = Adw.ActionRow(title=title)
+            box = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
+            scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01)
+            scale.set_draw_value(False)
+            scale.set_size_request(220, -1)
+            scale.update_property([Gtk.AccessibleProperty.LABEL], [title])
+            scale.set_value(settings.get_double(key))
+            scale.connect('value-changed', lambda sc: settings.set_double(key, round(sc.get_value(), 2)))
+            if low:
+                box.append(Gtk.Label(label=low, css_classes=['dim-label']))
+            box.append(scale)
+            if high:
+                box.append(Gtk.Label(label=high, css_classes=['dim-label']))
+            row.add_suffix(box)
+            return row
+
+        group.add(scale_row(_('Volume'), 'ambient-volume', None, None))
+        group.add(scale_row(_('Tone'), 'ambient-tone', _('Warmer'), _('Brighter')))
+
+        timers = [(15, _('15 minutes')), (30, _('30 minutes')), (60, _('1 hour')), (120, _('2 hours')),
+                  (240, _('4 hours')), (480, _('8 hours')), (0, _('Never'))]
+        timer_row = Adw.ComboRow(title=_('Stop after'), model=Gtk.StringList.new([t for _v, t in timers]))
+        minutes = [v for v, _t in timers]
+        chosen = settings.get_int('ambient-minutes')
+        timer_row.set_selected(minutes.index(chosen) if chosen in minutes else 2)
+        timer_row.connect('notify::selected',
+                          lambda r, _p: settings.set_int('ambient-minutes', minutes[r.get_selected()]))
+        group.add(timer_row)
+
+        button = Gtk.Button(label=_('Play'), halign=Gtk.Align.END, margin_top=12,
+                            css_classes=['suggested-action', 'pill'])
+        group.add(button)
+        state = {'playing': '', 'group': None}
+
+        def show():
+            playing = bool(state['playing'])
+            button.set_label(_('Stop') if playing else _('Play'))
+            for name in ('suggested-action', 'destructive-action'):
+                button.remove_css_class(name)
+            button.add_css_class('destructive-action' if playing else 'suggested-action')
+
+        def run(*args):
+            try:
+                subprocess.Popen(['parchaos-ambient', *args])
+            except OSError:
+                pass
+
+        def on_sound(row, _p):
+            settings.set_string('ambient-sound', values[row.get_selected()])
+            if state['playing']:
+                run('play', values[row.get_selected()])
+
+        sound_row.connect('notify::selected', on_sound)
+        button.connect('clicked', lambda _b: run('stop') if state['playing'] else run('play', values[sound_row.get_selected()]))
+
+        # The player's "playing" state, while it runs.
+        def appeared(conn, _name, _owner):
+            group_ = Gio.DBusActionGroup.get(conn, 'org.parchaos.Ambient', '/org/parchaos/Ambient')
+            state['group'] = group_
+
+            def sync(*_a):
+                value = group_.get_action_state('playing') if group_.has_action('playing') else None
+                state['playing'] = value.get_string() if value else ''
+                show()
+            group_.connect('action-added', sync)
+            group_.connect('action-state-changed', sync)
+            group_.list_actions()
+            sync()
+
+        def vanished(*_a):
+            state['playing'] = ''
+            state['group'] = None
+            show()
+
+        self._ambient_watch = Gio.bus_watch_name(Gio.BusType.SESSION, 'org.parchaos.Ambient',
+                                                 Gio.BusNameWatcherFlags.NONE, appeared, vanished)
+        show()
+        return page
 
     def _keyboard_page(self):
         page = Adw.PreferencesPage(title=_('Keyboard'),
@@ -281,8 +388,9 @@ class Window(Adw.ApplicationWindow):
         group.add(self._super_row)
         return page
 
-    def add(self, page):
+    def add(self, page, page_id=None):
         name = page.get_title()
+        page.page_id = page_id
         self._stack.add_titled(page, name, name)
         icon = Gtk.Image(icon_name=page.get_icon_name(), margin_start=4, margin_end=4,
                          valign=Gtk.Align.CENTER)
@@ -294,6 +402,14 @@ class Window(Adw.ApplicationWindow):
         row.section = name
         self._list.append(row)
         self._pages.append(page)
+
+    # `parchaos-settings sound` (or appearance, desktop, privacy, backups, keyboard) opens that page.
+    def show_page(self, page_id):
+        for index, page in enumerate(self._pages):
+            if getattr(page, 'page_id', None) == page_id:
+                self._list.select_row(self._list.get_row_at_index(index))
+                return True
+        return False
 
     def _on_section_selected(self, _list, row):
         if row is None:
@@ -1091,11 +1207,18 @@ class Window(Adw.ApplicationWindow):
 class App(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID,
-                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+                         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 
     def do_activate(self):
         win = self.props.active_window or Window(self)
         win.present()
+
+    def do_command_line(self, command_line):
+        self.activate()
+        args = command_line.get_arguments()[1:]
+        if args:
+            self.props.active_window.show_page(args[0])
+        return 0
 
 
 if __name__ == '__main__':

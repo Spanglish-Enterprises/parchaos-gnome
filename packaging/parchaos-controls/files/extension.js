@@ -564,6 +564,7 @@ const ITEM_SIZES = {
     'screenshot': SMALL_SIZES,
     'settings': SMALL_SIZES,
     'lock': SMALL_SIZES,
+    'ambient': SWITCH_SIZES,
 };
 
 const ITEM_META = {
@@ -583,8 +584,58 @@ const ITEM_META = {
     'screenshot': {category: 'Shortcuts', icon: 'applets-screenshooter-symbolic'},
     'settings': {category: 'Shortcuts', icon: 'emblem-system-symbolic'},
     'lock': {category: 'Shortcuts', icon: 'system-lock-screen-symbolic'},
+    'ambient': {category: 'Sound and Media', icon: 'weather-showers-scattered-symbolic'},
     'external': {category: 'Other', icon: 'application-x-addon-symbolic'},
 };
+
+// Controls that start hidden: they appear only once the user adds them in Edit Controls.
+const OPTIONAL_ITEMS = new Set(['ambient']);
+
+// Ambient Sounds (ticket #183): mirrors parchaos-ambient's "playing" action state over D-Bus, in the
+// shape the tile circles read (checked, icon-name). The player only runs while a sound plays.
+const AmbientState = GObject.registerClass({
+    Properties: {
+        'checked': GObject.ParamSpec.boolean('checked', null, null, GObject.ParamFlags.READWRITE, false),
+        'icon-name': GObject.ParamSpec.string('icon-name', null, null, GObject.ParamFlags.READWRITE,
+            'weather-showers-scattered-symbolic'),
+    },
+}, class AmbientState extends GObject.Object {
+    _init() {
+        super._init();
+        this._watchId = Gio.bus_watch_name(Gio.BusType.SESSION, 'org.parchaos.Ambient', Gio.BusNameWatcherFlags.NONE,
+            () => this._attach(), () => this._detach());
+    }
+
+    _attach() {
+        this._detach();
+        this._group = Gio.DBusActionGroup.get(Gio.DBus.session, 'org.parchaos.Ambient', '/org/parchaos/Ambient');
+        const sync = () => {
+            const state = this._group?.get_action_state('playing')?.deepUnpack() ?? '';
+            if (this.checked !== !!state) {
+                this.checked = !!state;
+                this.notify('checked');
+            }
+        };
+        this._group.connectObject('action-added', sync, 'action-state-changed', sync, this);
+        // The group only fills once it has listed the remote actions.
+        this._group.list_actions();
+        sync();
+    }
+
+    _detach() {
+        this._group?.disconnectObject(this);
+        this._group = null;
+        if (this.checked) {
+            this.checked = false;
+            this.notify('checked');
+        }
+    }
+
+    destroy() {
+        Gio.bus_unwatch_name(this._watchId);
+        this._detach();
+    }
+});
 
 const ControlsPanel = GObject.registerClass({
     Signals: {'request-close': {}, 'edit-changed': {}, 'items-changed': {}},
@@ -693,6 +744,12 @@ const ControlsPanel = GObject.registerClass({
         }
         // Only on machines that have a battery (a desktop PC shows none).
         add('battery', _('Battery'), 2, 1, this._batteryTile());
+        if (GLib.find_program_in_path('parchaos-ambient')) {
+            const ambient = new AmbientState();
+            const tile = smallToggle(ambient, _('Ambient Sounds'), () => spawn(['parchaos-ambient', 'toggle']));
+            tile.connect('destroy', () => ambient.destroy());
+            add('ambient', _('Ambient Sounds'), 1, 1, tile);
+        }
         add('screenshot', _('Screenshot'), 1, 1, smallAction('applets-screenshooter-symbolic', _('Screenshot'), () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
@@ -925,7 +982,7 @@ const ControlsPanel = GObject.registerClass({
         const sizes = new Map((this._canSize ? this._desktop.get_strv('controls-sizes') : [])
             .map(e => e.split('=')).filter(e => e.length === 2));
         for (const item of ordered) {
-            item.hidden = hidden.has(item.id);
+            item.hidden = hidden.has(item.id) || (OPTIONAL_ITEMS.has(item.id) && !saved.includes(item.id));
             const [c, r] = (sizes.get(item.id) ?? '').split('x').map(Number);
             const ok = item.sizes.some(([sc, sr]) => sc === c && sr === r);
             [item.cols, item.rows] = ok ? [c, r] : item.defaultSize;

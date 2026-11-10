@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        59%{?dist}
+Release:        60%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -77,6 +77,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-60
+- Ticket #183: Ambient Sounds control (Sound and Media), on while a sound plays; starts hidden until added in Edit Controls (new: controls can start hidden). Spanish string added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-59
 - Ticket #179: ongoing activity. A small capsule left of the status icons shows what is going on now, newest first: a screen recording (elapsed time, Stop; GNOME's own red indicator steps aside), a transfer or download an app reports progress for, or media playing (title; Pause and Next in its popover). Clicking it lists them all. Nothing shows when idle. Spanish strings added.
 

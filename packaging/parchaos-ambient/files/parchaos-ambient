@@ -1,0 +1,304 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ParchaOS Ambient Sounds (ticket #183): rain, ocean, stream, night and white, pink or brown noise
+# in the background, with a tone control and a timer.
+#
+#   parchaos-ambient play [SOUND]   start SOUND (or the last one); see SOUNDS below
+#   parchaos-ambient stop
+#   parchaos-ambient toggle         stop if playing, else play the last sound
+#   parchaos-ambient status         print the sound playing, or nothing
+#
+# Every sound is made here from generated noise and tones (GStreamer's test source, filters and
+# slow random swells); no recordings are used, so there is nothing to license. The player is a
+# D-Bus service (org.parchaos.Ambient) that only runs while a sound plays; Parcha Controls and
+# ParchaOS Settings drive it through its actions ("play" with a sound name, "stop", "toggle") and
+# read the "playing" state. Volume, tone and timer come from org.parchaos.desktop (ambient-*);
+# the stream follows the default output device, so switching speakers or headphones keeps it going.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import math
+import os
+import random
+import sys
+
+import gi
+
+gi.require_version('Gst', '1.0')
+from gi.repository import Gio, GLib, Gst  # noqa: E402
+
+APP_ID = 'org.parchaos.Ambient'
+SCHEMA = 'org.parchaos.desktop'
+SOUNDS = ['rain', 'ocean', 'stream', 'night', 'white', 'pink', 'brown']
+TICK_MS = 50
+
+# Each sound is layers of generated noise or tone. A layer: wave, filters (element, properties),
+# level (set so that every sound plays at about the same loudness), and an optional motion: 'swell' (slow waves, period in seconds), 'flutter' (fast random
+# level, as water over stones), 'patter' (random droplets) or 'chirp' (insect calls).
+LAYERS = {
+    'white': [{'wave': 'white-noise', 'level': 0.8}],
+    'pink': [{'wave': 'pink-noise', 'level': 1.2}],
+    'brown': [{'wave': 'red-noise', 'level': 0.65}],
+    'rain': [
+        {'wave': 'pink-noise', 'level': 1.4,
+         'filters': [('audiocheblimit', {'mode': 'high-pass', 'cutoff': 500.0, 'poles': 4})]},
+        {'wave': 'white-noise', 'level': 0.6, 'motion': ('patter', 0.0),
+         'filters': [('audiochebband', {'mode': 'band-pass', 'lower-frequency': 2500.0,
+                                        'upper-frequency': 7000.0, 'poles': 4})]},
+    ],
+    'ocean': [
+        {'wave': 'red-noise', 'level': 0.65, 'motion': ('swell', 9.0)},
+        {'wave': 'pink-noise', 'level': 0.2, 'motion': ('swell', 9.0),
+         'filters': [('audiocheblimit', {'mode': 'high-pass', 'cutoff': 1200.0, 'poles': 4})]},
+    ],
+    'stream': [
+        {'wave': 'white-noise', 'level': 0.45, 'motion': ('flutter', 0.0),
+         'filters': [('audiochebband', {'mode': 'band-pass', 'lower-frequency': 700.0,
+                                        'upper-frequency': 3200.0, 'poles': 4})]},
+        {'wave': 'red-noise', 'level': 0.5},
+    ],
+    'night': [
+        {'wave': 'red-noise', 'level': 0.6,
+         'filters': [('audiocheblimit', {'mode': 'low-pass', 'cutoff': 900.0, 'poles': 4})]},
+        {'wave': 'sine', 'freq': 4600.0, 'level': 0.1, 'motion': ('chirp', 0.0)},
+    ],
+}
+
+
+def tone_cutoff(tone):
+    """Tone 0 (warmer) .. 1 (brighter) -> low-pass cutoff in Hz, on a log scale 1.2 kHz .. 18 kHz."""
+    tone = min(1.0, max(0.0, tone))
+    return 1200.0 * (18000.0 / 1200.0) ** tone
+
+
+def timer_seconds(minutes):
+    """The auto-stop timer: 15 min to 8 h; 0 means no timer."""
+    return 0 if minutes <= 0 else int(min(480, max(15, minutes)) * 60)
+
+
+class Motion:
+    """Level over time for one layer; step() is called every TICK_MS and returns 0..1."""
+
+    def __init__(self, kind, period, rng):
+        self.kind, self.period, self.rng = kind, period, rng
+        self.t = rng.uniform(0, 100)
+        self.value, self.target = 1.0, 1.0
+        self.next_change = 0.0
+
+    def step(self, dt):
+        self.t += dt
+        if self.kind == 'swell':
+            # A slow wave with a little irregularity, never fully quiet.
+            base = 0.5 + 0.5 * math.sin(2 * math.pi * self.t / self.period)
+            wobble = 0.15 * math.sin(2 * math.pi * self.t / (self.period * 2.7))
+            return min(1.0, max(0.15, 0.2 + 0.8 * base + wobble))
+        if self.kind == 'flutter':
+            if self.t >= self.next_change:
+                self.target = self.rng.uniform(0.55, 1.0)
+                self.next_change = self.t + self.rng.uniform(0.05, 0.3)
+            self.value += (self.target - self.value) * 0.35
+            return self.value
+        if self.kind == 'patter':
+            # Short bright droplets at random moments.
+            if self.rng.random() < 0.18:
+                self.value = self.rng.uniform(0.4, 1.0)
+            else:
+                self.value *= 0.55
+            return self.value
+        if self.kind == 'chirp':
+            # Insect calls: bursts of quick pulses with pauses between them.
+            if self.t >= self.next_change:
+                self.target = 0.0 if self.target else 1.0
+                self.next_change = self.t + (self.rng.uniform(0.25, 0.6) if self.target else self.rng.uniform(1.0, 3.5))
+            if not self.target:
+                return 0.0
+            return 1.0 if int(self.t * 22) % 2 == 0 else 0.0
+        return 1.0
+
+
+def build(sound, sink_name='autoaudiosink', rng=None, live=True):
+    """The pipeline for a sound: (pipeline, [(volume element, level, Motion or None)], tone, master)."""
+    rng = rng or random.Random()
+    pipeline = Gst.Pipeline.new(f'ambient-{sound}')
+    mixer = Gst.ElementFactory.make('audiomixer')
+    tone = Gst.ElementFactory.make('audiocheblimit')
+    tone.set_property('mode', 'low-pass')
+    tone.set_property('poles', 4)
+    master = Gst.ElementFactory.make('volume')
+    convert = Gst.ElementFactory.make('audioconvert')
+    sink = Gst.ElementFactory.make(sink_name)
+    for element in (mixer, tone, master, convert, sink):
+        pipeline.add(element)
+    mixer.link(tone)
+    tone.link(master)
+    master.link(convert)
+    convert.link(sink)
+    layers = []
+    caps = Gst.Caps.from_string('audio/x-raw,format=F32LE,rate=44100,channels=2,layout=interleaved')
+    for spec in LAYERS[sound]:
+        src = Gst.ElementFactory.make('audiotestsrc')
+        src.set_property('wave', spec['wave'])
+        src.set_property('is-live', live)
+        if 'freq' in spec:
+            src.set_property('freq', spec['freq'])
+        chain = [src, Gst.ElementFactory.make('capsfilter'), Gst.ElementFactory.make('audioconvert')]
+        chain[1].set_property('caps', caps)
+        for name, props in spec.get('filters', []):
+            element = Gst.ElementFactory.make(name)
+            for key, value in props.items():
+                element.set_property(key, value)
+            chain.append(element)
+        volume = Gst.ElementFactory.make('volume')
+        volume.set_property('volume', spec['level'])
+        chain.append(volume)
+        for element in chain:
+            pipeline.add(element)
+        for a, b in zip(chain, chain[1:]):
+            a.link(b)
+        volume.link(mixer)
+        motion = Motion(*spec['motion'], rng) if 'motion' in spec else None
+        layers.append((volume, spec['level'], motion))
+    return pipeline, layers, tone, master
+
+
+def desktop_settings():
+    source = Gio.SettingsSchemaSource.get_default()
+    schema = source.lookup(SCHEMA, True) if source else None
+    if schema is None or not schema.has_key('ambient-sound'):
+        return None
+    return Gio.Settings(settings_schema=schema)
+
+
+class Ambient(Gio.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        GLib.set_application_name('Ambient Sounds')
+        # Run as a D-Bus service, it quits a few seconds after the sound stops.
+        self.set_inactivity_timeout(3000)
+        self.settings = desktop_settings()
+        self.pipeline = None
+        self.sound = ''
+        self.held = False
+        self.tick_id = 0
+        self.timer_id = 0
+        play = Gio.SimpleAction.new('play', GLib.VariantType.new('s'))
+        play.connect('activate', lambda _a, p: self.play(p.get_string()))
+        stop = Gio.SimpleAction.new('stop', None)
+        stop.connect('activate', lambda *_a: self.stop())
+        toggle = Gio.SimpleAction.new('toggle', None)
+        toggle.connect('activate', lambda *_a: self.stop() if self.sound else self.play(''))
+        self.playing = Gio.SimpleAction.new_stateful('playing', None, GLib.Variant('s', ''))
+        for action in (play, stop, toggle, self.playing):
+            self.add_action(action)
+        if self.settings:
+            for key in ('ambient-volume', 'ambient-tone'):
+                self.settings.connect(f'changed::{key}', lambda *_a: self.apply_levels())
+            self.settings.connect('changed::ambient-minutes', lambda *_a: self.restart_timer())
+
+    def setting(self, key, default):
+        if not self.settings:
+            return default
+        value = self.settings.get_value(key)
+        return value.unpack()
+
+    def play(self, sound):
+        sound = sound or self.setting('ambient-sound', 'rain')
+        if sound not in SOUNDS:
+            sound = 'rain'
+        self.stop(release=False)
+        # Tests play into a silent sink (PARCHAOS_AMBIENT_SINK=fakesink).
+        self.pipeline, self.layers, self.tone, self.master = build(
+            sound, os.environ.get('PARCHAOS_AMBIENT_SINK', 'autoaudiosink'))
+        self.pipeline.get_bus().add_signal_watch()
+        self.pipeline.get_bus().connect('message::error', self.on_error)
+        self.sound = sound
+        self.apply_levels()
+        self.pipeline.set_state(Gst.State.PLAYING)
+        if self.settings and self.settings.get_string('ambient-sound') != sound:
+            self.settings.set_string('ambient-sound', sound)
+        self.tick_id = GLib.timeout_add(TICK_MS, self.tick)
+        self.restart_timer()
+        if not self.held:
+            self.hold()
+            self.held = True
+        self.playing.set_state(GLib.Variant('s', sound))
+
+    def restart_timer(self):
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+            self.timer_id = 0
+        seconds = timer_seconds(self.setting('ambient-minutes', 60))
+        if self.sound and seconds:
+            self.timer_id = GLib.timeout_add_seconds(seconds, self.on_timer)
+
+    def on_timer(self):
+        self.timer_id = 0
+        self.stop()
+        return GLib.SOURCE_REMOVE
+
+    def apply_levels(self):
+        if not self.pipeline:
+            return
+        self.master.set_property('volume', min(1.0, max(0.0, self.setting('ambient-volume', 0.5))))
+        self.tone.set_property('cutoff', tone_cutoff(self.setting('ambient-tone', 0.5)))
+
+    def tick(self):
+        for volume, level, motion in self.layers:
+            if motion:
+                volume.set_property('volume', level * motion.step(TICK_MS / 1000))
+        return GLib.SOURCE_CONTINUE
+
+    def on_error(self, _bus, message):
+        err, _debug = message.parse_error()
+        print(f'parchaos-ambient: {err.message}', file=sys.stderr)
+        self.stop()
+
+    def stop(self, release=True):
+        if self.tick_id:
+            GLib.source_remove(self.tick_id)
+            self.tick_id = 0
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+            self.timer_id = 0
+        if self.pipeline:
+            self.pipeline.get_bus().remove_signal_watch()
+            self.pipeline.set_state(Gst.State.NULL)
+            self.pipeline = None
+        self.sound = ''
+        self.playing.set_state(GLib.Variant('s', ''))
+        if release and self.held:
+            self.held = False
+            self.release()
+
+    def do_command_line(self, command_line):
+        args = command_line.get_arguments()[1:]
+        verb = args[0] if args else 'toggle'
+        if verb == 'play':
+            self.play(args[1] if len(args) > 1 else '')
+        elif verb == 'stop':
+            self.stop()
+        elif verb == 'toggle':
+            self.activate_action('toggle', None)
+        elif verb == 'status':
+            if self.sound:
+                command_line.print_literal(self.sound + '\n')
+        else:
+            command_line.printerr_literal(f'usage: parchaos-ambient play [{"|".join(SOUNDS)}] | stop | toggle | status\n')
+            return 2
+        return 0
+
+
+def main():
+    Gst.init(None)
+    if os.environ.get('PARCHAOS_AMBIENT_RENDER'):
+        # Tests: render a sound for a moment to a fake sink and exit.
+        pipeline, layers, _tone, _master = build(os.environ['PARCHAOS_AMBIENT_RENDER'], 'fakesink', random.Random(1), live=False)
+        pipeline.set_state(Gst.State.PLAYING)
+        ok = pipeline.get_state(5 * Gst.SECOND)[0] != Gst.StateChangeReturn.FAILURE
+        pipeline.set_state(Gst.State.NULL)
+        return 0 if ok else 1
+    return Ambient().run(sys.argv)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

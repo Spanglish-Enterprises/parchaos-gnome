@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        31%{?dist}
+Release:        32%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-32
+- Ticket #183: Sound page with Ambient Sounds (sound, volume, tone, stop after, Play/Stop). `parchaos-settings PAGE` opens a page (appearance, desktop, privacy, backups, keyboard, sound). Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-31
 - Ticket #176: Appearance > Style has a Menu bar background choice (Clear, Tinted, Solid). Spanish strings added.
 

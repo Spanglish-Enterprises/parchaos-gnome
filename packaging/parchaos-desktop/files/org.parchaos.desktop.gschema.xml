@@ -31,6 +31,38 @@
         tinted with the classic style (ticket #176).
       </description>
     </key>
+    <key name="ambient-sound" type="s">
+      <choices>
+        <choice value="rain"/>
+        <choice value="ocean"/>
+        <choice value="stream"/>
+        <choice value="night"/>
+        <choice value="white"/>
+        <choice value="pink"/>
+        <choice value="brown"/>
+      </choices>
+      <default>'rain'</default>
+      <summary>Ambient sound</summary>
+      <description>The sound parchaos-ambient plays (ticket #183). All of them are generated, not recorded.</description>
+    </key>
+    <key name="ambient-volume" type="d">
+      <range min="0.0" max="1.0"/>
+      <default>0.5</default>
+      <summary>Ambient sound volume</summary>
+      <description>Its own level, under the system volume.</description>
+    </key>
+    <key name="ambient-tone" type="d">
+      <range min="0.0" max="1.0"/>
+      <default>0.5</default>
+      <summary>Ambient sound tone</summary>
+      <description>0 is warmer (darker), 1 is brighter.</description>
+    </key>
+    <key name="ambient-minutes" type="i">
+      <range min="0" max="480"/>
+      <default>60</default>
+      <summary>Stop ambient sounds after (minutes)</summary>
+      <description>15 to 480 minutes; 0 keeps playing until stopped.</description>
+    </key>
     <key name="folder-colour" type="s">
       <choices>
         <choice value="passion"/>
