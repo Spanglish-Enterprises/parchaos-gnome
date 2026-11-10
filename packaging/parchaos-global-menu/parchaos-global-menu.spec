@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        40%{?dist}
+Release:        41%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -113,6 +113,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 2.1.0-41
+- Ticket #179: the ongoing-activity capsule never folds into the status icon overflow; folding passes over the items that always stay instead of stopping at them.
+
 * Mon Nov 09 2026 ParchaOS packaging - 2.1.0-40
 - Ticket #176: menu bar background follows the new menu-bar-background setting (clear, tinted, solid; text and band colour still follow the wallpaper). Status icons that do not fit beside the clock fold into a "..." item that shows them in a small strip under the bar; Control Center and the battery always stay. Spanish string added.
 

@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        58%{?dist}
+Release:        59%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -25,6 +25,7 @@ Source5:        org.parchaos.Screenshot.desktop
 Source6:        es.po
 Source7:        energy.js
 Source8:        thumbnail.js
+Source9:        activity.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -48,7 +49,7 @@ status icons (or Super+S) in place of GNOME's Quick Settings menu.
 
 %prep
 mkdir -p src/icons
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} %{SOURCE9} src/
 cp %{SOURCE3} src/icons/
 cp -p %{SOURCE90} .
 
@@ -58,7 +59,7 @@ cp -p %{SOURCE90} .
 UUID=parchaos-controls@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST/icons"
-install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/metadata.json src/stylesheet.css "$DEST/"
+install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/activity.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
 install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
@@ -76,6 +77,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-59
+- Ticket #179: ongoing activity. A small capsule left of the status icons shows what is going on now, newest first: a screen recording (elapsed time, Stop; GNOME's own red indicator steps aside), a transfer or download an app reports progress for, or media playing (title; Pause and Next in its popover). Clicking it lists them all. Nothing shows when idle. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-58
 - Ticket #155: screenshot thumbnail. After a capture a small preview slides in at the bottom right in place of GNOME's banner, with Mark Up (Drawing, now recommended; crop, arrows, shapes, text), Copy, Show in Files, Delete and Close. It leaves after 7 seconds unless the pointer is on it; Escape closes it while the pointer is on it. Spanish strings added.
 

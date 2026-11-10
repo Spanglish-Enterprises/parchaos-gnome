@@ -28,6 +28,7 @@ import * as Location from 'resource:///org/gnome/shell/ui/status/location.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {EnergySampler} from './energy.js';
 import {ScreenshotThumbnail} from './thumbnail.js';
+import {addActivityButton} from './activity.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -2596,6 +2597,7 @@ export default class ParchaControlsExtension extends Extension {
             : box === Main.panel._centerBox ? 'center' : 'right';
         Main.panel.addToStatusArea('parchaos-controls', this._button, Math.max(index, 0), boxName);
         this._battery = new BatteryWatcher(qs, this._button.container);
+        this._activity = addActivityButton(_, mediaSource());
         qs.container.hide();
         qs.container.connectObject('notify::visible', () => {
             if (qs.container.visible)
@@ -2623,6 +2625,8 @@ export default class ParchaControlsExtension extends Extension {
         this._injections = new InjectionManager();
         this._battery?.destroy();
         this._battery = null;
+        this._activity?.destroy();
+        this._activity = null;
         this._button?.destroy();
         this._button = null;
         this._qs?.container.disconnectObject(this);

@@ -1190,9 +1190,9 @@ const MENU_TABLE = [
 // Status icon overflow (ticket #176). GNOME squeezes the status icons into
 // the space right of the clock and cuts off whatever does not fit. Instead,
 // the left-most ones fold into a "..." item; clicking it shows them in a
-// small strip under the bar, where they work as usual. Control Center and
-// the battery always stay in the bar.
-const KEEP_IN_BAR = ['parchaos-controls', 'parchaos-battery', 'quickSettings'];
+// small strip under the bar, where they work as usual. Control Center, the
+// battery and the ongoing-activity capsule always stay in the bar.
+const KEEP_IN_BAR = ['parchaos-controls', 'parchaos-battery', 'parchaos-activity', 'quickSettings'];
 
 const OverflowButton = GObject.registerClass(
 class OverflowButton extends PanelMenu.Button {
@@ -1269,15 +1269,19 @@ class StatusOverflow {
         const all = [...this._folded, ...right.get_children().filter(c => c !== this._button.container)];
         const keep = new Set(KEEP_IN_BAR.map(role => panel.statusArea[role]?.container).filter(c => c));
         let total = all.reduce((sum, c) => sum + width(c), 0);
-        let count = 0;
+        // Fold from the left, passing over the items that always stay.
+        const fold = [];
         if (total > room) {
             total += this._button.container.get_preferred_width(-1)[1];
-            while (count < all.length && total > room && !keep.has(all[count])) {
-                total -= width(all[count]);
-                count++;
+            for (const c of all) {
+                if (total <= room)
+                    break;
+                if (keep.has(c))
+                    continue;
+                fold.push(c);
+                total -= width(c);
             }
         }
-        const fold = all.slice(0, count);
         if (fold.length === this._folded.length && fold.every((c, i) => c === this._folded[i])) {
             this._button.container.visible = fold.some(c => c.visible);
             return;
@@ -1287,7 +1291,7 @@ class StatusOverflow {
             c.get_parent()?.remove_child(c);
         for (const c of fold)
             this._strip.add_child(c);
-        all.slice(count).forEach((c, i) => right.insert_child_at_index(c, i + 1));
+        all.filter(c => !fold.includes(c)).forEach((c, i) => right.insert_child_at_index(c, i + 1));
         this._folded = fold;
         this._button.container.visible = fold.some(c => c.visible);
     }
