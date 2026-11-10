@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        32%{?dist}
+Release:        33%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-33
+- Ticket #160: App permissions gains Background (keep running with no window open) for every Flatpak app, through the portal permission store: off sets "no", on removes the entry. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-32
 - Ticket #183: Sound page with Ambient Sounds (sound, volume, tone, stop after, Play/Stop). `parchaos-settings PAGE` opens a page (appearance, desktop, privacy, backups, keyboard, sound). Spanish strings added.
 

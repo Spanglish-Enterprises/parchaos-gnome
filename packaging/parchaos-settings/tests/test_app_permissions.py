@@ -60,4 +60,28 @@ for bad in (('../x', 'files'), ('org.example.App', 'camera')):
     except ValueError:
         pass
 
+# Background goes through the portal's permission store (a fake flatpak keeps it in a file).
+store = os.path.join(tmp, 'store')
+fake = os.path.join(tmp, 'fake-flatpak')
+with open(fake, 'w') as f:
+    f.write(f'''#!/bin/sh
+store={store}
+touch "$store"
+case "$1" in
+  permissions) cat "$store" ;;
+  permission-set) grep -v "	$4	" "$store" > "$store.new"; mv "$store.new" "$store"
+                  printf 'background\tbackground\t%s\t%s\t0x00\n' "$4" "$5" >> "$store" ;;
+  permission-remove) grep -v "	$4	" "$store" > "$store.new"; mv "$store.new" "$store" ;;
+esac
+''')
+os.chmod(fake, 0o755)
+tool.FLATPAK = fake
+check(not tool.blocked('org.example.App', 'background'), 'background allowed at first')
+tool.set_permission('org.example.App', 'background', True)
+check(tool.blocked('org.example.App', 'background'), 'background blocked')
+check(not tool.blocked('org.other.App', 'background'), 'other apps untouched')
+tool.set_permission('org.example.App', 'background', False)
+check(not tool.blocked('org.example.App', 'background'), 'background allowed again')
+check('org.example.App' not in open(store).read(), 'store entry removed on allow')
+
 sys.exit(1 if failures else 0)

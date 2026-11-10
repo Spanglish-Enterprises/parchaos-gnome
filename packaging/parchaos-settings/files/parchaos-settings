@@ -1074,6 +1074,7 @@ class Window(Adw.ApplicationWindow):
             'network': (_('Network'), _('Internet and local network')),
             'files': (_('Files'), _('Your home folder and other drives')),
             'devices': (_('Devices'), _('Cameras, game controllers and other hardware')),
+            'background': (_('Background'), _('Keep running when no window is open')),
         }
         for app in apps:
             expander = Adw.ExpanderRow(title=GLib.markup_escape_text(app['name']))
@@ -1106,7 +1107,11 @@ class Window(Adw.ApplicationWindow):
         if proc.get_exit_status() != 0:
             self._perm_failed(row, action, (err or '').strip() or _('The change was not saved.'))
             return
-        self.add_toast(Adw.Toast(title=_('Saved. Restart %s for this to apply.') % row.app_name))
+        # The portal checks Background when the app asks; the rest apply when the app starts.
+        if row.perm == 'background':
+            self.add_toast(Adw.Toast(title=_('Saved.')))
+        else:
+            self.add_toast(Adw.Toast(title=_('Saved. Restart %s for this to apply.') % row.app_name))
 
     def _perm_failed(self, row, action, message):
         row.handler_block_by_func(self._on_perm_toggled)
