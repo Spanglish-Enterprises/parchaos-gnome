@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        60%{?dist}
+Release:        61%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -26,6 +26,7 @@ Source6:        es.po
 Source7:        energy.js
 Source8:        thumbnail.js
 Source9:        activity.js
+Source10:       catalog.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -49,7 +50,7 @@ status icons (or Super+S) in place of GNOME's Quick Settings menu.
 
 %prep
 mkdir -p src/icons
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} %{SOURCE9} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} src/
 cp %{SOURCE3} src/icons/
 cp -p %{SOURCE90} .
 
@@ -59,7 +60,7 @@ cp -p %{SOURCE90} .
 UUID=parchaos-controls@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST/icons"
-install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/activity.js src/metadata.json src/stylesheet.css "$DEST/"
+install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/activity.js src/catalog.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
 install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
@@ -77,6 +78,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-61
+- Ticket #172: the controls catalogue (catalog.js), all hidden until added in Edit Controls and shown only when they apply: Calculator, Timer, Alarm, Stopwatch (Clocks on that tab), New Note (Text Editor, ~/Documents/Notes), Weather (mirrors the menu-bar weather), Keyboard Brightness (UPower, backlit keyboards only), Screen Recording, Keep Awake (session inhibitor), Camera Off, Microphone Off, Location, Larger Text, Zoom, High Contrast, Show Desktop, Back Up Now, Clipboard History, Dictation, Speak Selection, Snapshots. New picker categories (Accessibility, Privacy, Clock, Notes, Weather, Desktop, Utilities). Smoke test covers add, tap and remove. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-60
 - Ticket #183: Ambient Sounds control (Sound and Media), on while a sound plays; starts hidden until added in Edit Controls (new: controls can start hidden). Spanish string added.
 

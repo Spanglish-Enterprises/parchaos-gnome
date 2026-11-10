@@ -10,7 +10,14 @@ Wi-Fi, Bluetooth, Wired, VPN, Airplane mode, Now Playing, Focus (Do Not Disturb)
 Night Light, Display (only with a built-in backlight), Sound, Power mode, Battery (only with a
 battery), Screenshot, Settings, Lock, plus other extensions' Quick Settings toggles ("Other").
 
-## To add: backing already on the system (no new packages)
+## Shipped 2026-11-09: backing already on the system (no new packages)
+
+All of these are in parchaos-controls 1.0.0-61 (`files/catalog.js`), hidden until added, each shown
+only when it applies. Timer, Alarm and Stopwatch open Clocks on that tab (its `panel-id` state);
+a running Clocks timer cannot be read (Clocks has no public interface for it). Weather is 2x1 only
+and appears once the menu-bar weather item has data. Text Size is the 1x1 "Larger Text" switch
+(125%). The smoke test adds, taps (switches) and removes each one. Ambient Sounds (#183) joined
+the Sound and Media category.
 
 | Control | Category | Size(s) | What it does | Backed by |
 |---|---|---|---|---|

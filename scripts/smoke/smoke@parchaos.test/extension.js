@@ -251,6 +251,72 @@ export default class SmokeTest extends Extension {
         }
 
         const launcher = ext('parchaos-launcher@parchaos.org')?.stateObj;
+        // Edit Controls catalogue (ticket #172): every control starts hidden; add each, tap the
+        // switches (their setting flips and flips back), then remove it again.
+        if (controlsButton) {
+            await this._check('controls catalogue add, tap, remove', async () => {
+                const desktop = new Gio.Settings({schema_id: 'org.parchaos.desktop'});
+                const switches = {
+                    'camera-off': ['org.gnome.desktop.privacy', 'disable-camera'],
+                    'microphone-off': ['org.gnome.desktop.privacy', 'disable-microphone'],
+                    'location': ['org.gnome.system.location', 'enabled'],
+                    'larger-text': ['org.gnome.desktop.interface', 'text-scaling-factor'],
+                    'zoom': ['org.gnome.desktop.a11y.applications', 'screen-magnifier-enabled'],
+                    'high-contrast': ['org.gnome.desktop.a11y.interface', 'high-contrast'],
+                };
+                const findCircle = actor => actor.has_style_class_name?.('parchaos-controls-circle') ? actor
+                    : (actor.get_children?.() ?? []).map(findCircle).find(a => a) ?? null;
+                try {
+                    controlsButton.menu.open();
+                    await sleep(600);
+                    // Saving the order rebuilds the panel (and can close the menu), so reopen it when
+                    // needed and look the item up again after each change.
+                    const panelNow = async () => {
+                        if (!controlsButton._panel) {
+                            controlsButton.menu.open();
+                            await sleep(600);
+                        }
+                        return controlsButton._panel;
+                    };
+                    const current = async id => (await panelNow())?._items.find(i => i.id === id);
+                    const ids = ['calculator', 'new-note', 'screen-recording', 'keep-awake', 'show-desktop', ...Object.keys(switches)];
+                    for (const id of ids) {
+                        if (!await current(id))
+                            continue;
+                        (await panelNow())._ordered();
+                        if (!(await current(id)).hidden)
+                            throw new Error(`${id} is shown before it was added`);
+                        (await panelNow())._toggleHidden(await current(id));
+                        await sleep(300);
+                        if ((await current(id)).hidden || !desktop.get_strv('controls-order').includes(id))
+                            throw new Error(`${id} could not be added`);
+                        if (switches[id]) {
+                            const [schema, key] = switches[id];
+                            const settings = new Gio.Settings({schema_id: schema});
+                            const before = settings.get_value(key).print(false);
+                            findCircle((await current(id)).widget).emit('clicked', 1);
+                            await sleep(200);
+                            if (settings.get_value(key).print(false) === before)
+                                throw new Error(`tapping ${id} did not change ${key}`);
+                            findCircle((await current(id)).widget).emit('clicked', 1);
+                            await sleep(200);
+                            if (settings.get_value(key).print(false) !== before)
+                                throw new Error(`tapping ${id} again did not restore ${key}`);
+                        }
+                        (await panelNow())._toggleHidden(await current(id));
+                        await sleep(300);
+                        if (!(await current(id)).hidden)
+                            throw new Error(`${id} could not be removed`);
+                    }
+                    controlsButton.menu.close();
+                    await sleep(300);
+                } finally {
+                    desktop.reset('controls-order');
+                    desktop.reset('controls-hidden');
+                }
+            });
+        }
+
         if (launcher) {
             await this._check('launcher open, folder, close', async () => {
                 launcher.toggle();

@@ -29,6 +29,7 @@ import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extension
 import {EnergySampler} from './energy.js';
 import {ScreenshotThumbnail} from './thumbnail.js';
 import {addActivityButton} from './activity.js';
+import {CATALOG, CATALOG_APPS, addCatalogControls, resetCatalog} from './catalog.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -112,6 +113,7 @@ const USAGE_HALF_LIFE_DAYS = 14;
 const USAGE_APPS = {
     'org.gnome.Settings.desktop': 'settings',
     'org.parchaos.Settings.desktop': 'settings',
+    ...CATALOG_APPS,
 };
 
 class UsageLearner {
@@ -538,6 +540,13 @@ const CATEGORY_ICONS = {
     [N_('Display')]: ['display-brightness-symbolic', '#0a84ff'],
     [N_('System')]: ['preferences-system-symbolic', '#8e8e93'],
     [N_('Shortcuts')]: ['emblem-system-symbolic', '#ff9f0a'],
+    [N_('Accessibility')]: ['preferences-desktop-accessibility-symbolic', '#0a84ff'],
+    [N_('Privacy')]: ['camera-disabled-symbolic', '#8e8e93'],
+    [N_('Clock')]: ['alarm-symbolic', '#ff9f0a'],
+    [N_('Notes')]: ['document-new-symbolic', '#ffd60a'],
+    [N_('Weather')]: ['weather-few-clouds-symbolic', '#64d2ff'],
+    [N_('Desktop')]: ['user-desktop-symbolic', '#bf5af2'],
+    [N_('Utilities')]: ['accessories-calculator-symbolic', '#30d158'],
     [N_('Other')]: ['application-x-addon-symbolic', '#30d158'],
 };
 
@@ -589,7 +598,11 @@ const ITEM_META = {
 };
 
 // Controls that start hidden: they appear only once the user adds them in Edit Controls.
-const OPTIONAL_ITEMS = new Set(['ambient']);
+const OPTIONAL_ITEMS = new Set(['ambient', ...Object.keys(CATALOG)]);
+for (const [id, {category, icon, sizes}] of Object.entries(CATALOG)) {
+    ITEM_META[id] = {category, icon};
+    ITEM_SIZES[id] = sizes;
+}
 
 // Ambient Sounds (ticket #183): mirrors parchaos-ambient's "playing" action state over D-Bus, in the
 // shape the tile circles read (checked, icon-name). The player only runs while a sound plays.
@@ -750,6 +763,11 @@ const ControlsPanel = GObject.registerClass({
             tile.connect('destroy', () => ambient.destroy());
             add('ambient', _('Ambient Sounds'), 1, 1, tile);
         }
+        // The catalogue (ticket #172): all hidden until added in Edit Controls.
+        addCatalogControls({
+            _, add, smallToggle, smallAction, sliderTile, tile, labels,
+            close: () => this.emit('request-close'),
+        });
         add('screenshot', _('Screenshot'), 1, 1, smallAction('applets-screenshooter-symbolic', _('Screenshot'), () => {
             this.emit('request-close');
             // Let the menu close before the screenshot UI grabs input.
@@ -2698,6 +2716,7 @@ export default class ParchaControlsExtension extends Extension {
     }
 
     disable() {
+        resetCatalog();
         this._thumbnail?.destroy();
         this._thumbnail = null;
         this._shellBus?.unexport();
