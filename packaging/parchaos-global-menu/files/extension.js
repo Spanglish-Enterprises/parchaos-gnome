@@ -33,6 +33,7 @@ import GWeather from 'gi://GWeather';
 import Geoclue from 'gi://Geoclue';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import Gettext from 'gettext';
+import {Tiling, tile, arrange} from './tiling.js';
 
 // Translations (ticket #146/#53). Bound to the domain directly, not through the Extension's
 // gettext, because MENU_TABLE is built when the module loads, before the extension object exists.
@@ -1029,16 +1030,6 @@ function openUri(uri) {
     }
 }
 
-function tileWindow(window, side) {
-    if (!window)
-        return;
-    const area = window.get_work_area_current_monitor();
-    if (isMaximized(window))
-        setMaximized(window, false);
-    const width = Math.floor(area.width / 2);
-    window.move_resize_frame(false, side === 'left' ? area.x : area.x + width, area.y, width, area.height);
-}
-
 function centerWindow(window) {
     if (!window)
         return;
@@ -1159,9 +1150,34 @@ const MENU_TABLE = [
             { label: _('Minimize'), run: w => w?.minimize() },
             { label: _('Zoom'), run: w => toggleMaximized(w) },
             SEPARATOR,
-            { label: _('Move Window to Left Half'), run: w => tileWindow(w, 'left') },
-            { label: _('Move Window to Right Half'), run: w => tileWindow(w, 'right') },
+            { label: _('Move Window to Left Half'), hint: 'kc \u2190', run: w => tile(w, 'left') },
+            { label: _('Move Window to Right Half'), hint: 'kc \u2192', run: w => tile(w, 'right') },
             { label: _('Center Window'), run: w => centerWindow(w) },
+            // Ticket #182: the same layouts as dragging to an edge or corner and the arrow keys.
+            {
+                label: _('Move & Resize'), submenu: [
+                    { label: _('Top Left'), run: w => tile(w, 'top-left') },
+                    { label: _('Top Right'), run: w => tile(w, 'top-right') },
+                    { label: _('Bottom Left'), run: w => tile(w, 'bottom-left') },
+                    { label: _('Bottom Right'), run: w => tile(w, 'bottom-right') },
+                    SEPARATOR,
+                    { label: _('Left Third'), run: w => tile(w, 'left-third') },
+                    { label: _('Center Third'), run: w => tile(w, 'center-third') },
+                    { label: _('Right Third'), run: w => tile(w, 'right-third') },
+                    { label: _('Left Two Thirds'), run: w => tile(w, 'left-two-thirds') },
+                    { label: _('Right Two Thirds'), run: w => tile(w, 'right-two-thirds') },
+                    SEPARATOR,
+                    { label: _('Fill'), hint: 'kc \u2191', run: w => tile(w, 'fill') },
+                    { label: _('Return to Previous Size'), hint: 'kc \u2193', run: w => tile(w, 'restore') },
+                ],
+            },
+            {
+                label: _('Arrange Windows'), submenu: [
+                    { label: _('Two Side by Side'), run: w => arrange(2, w) },
+                    { label: _('Three'), run: w => arrange(3, w) },
+                    { label: _('Four in a Grid'), run: w => arrange(4, w) },
+                ],
+            },
             SEPARATOR,
             { label: _('Bring All to Front'), run: w => bringAllToFront(w) },
             // The app's open windows are listed here when the menu opens.
@@ -1465,9 +1481,12 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         bind('lock-screen', () => Main.screenShield?.lock(true));
         bind('log-out', () => this._logOut?.());
         bind('force-quit', () => new ForceQuitDialog().open());
+        this._tiling = new Tiling(this._keySettings);
     }
 
     _unbindKeys() {
+        this._tiling?.destroy();
+        this._tiling = null;
         if (!this._keySettings)
             return;
         for (const name of ['lock-screen', 'log-out', 'force-quit'])
@@ -1942,6 +1961,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
                     if (open)
                         this._refreshWindowList();
                 });
+            } else if (entry.submenu) {
+                const sub = new PopupMenu.PopupSubMenuMenuItem(entry.label);
+                this._fillMenu(sub.menu, entry.submenu);
+                menu.addMenuItem(sub);
             } else if (entry.recent) {
                 this._recentItem = new PopupMenu.PopupSubMenuMenuItem(entry.label);
                 menu.addMenuItem(this._recentItem);

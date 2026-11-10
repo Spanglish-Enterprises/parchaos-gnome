@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        41%{?dist}
+Release:        42%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -44,6 +44,7 @@ Source2:        stylesheet.css
 Source3:        parchaos-menu-icon-symbolic.svg
 Source4:        org.parchaos.globalmenu.gschema.xml
 Source5:        es.po
+Source6:        tiling.js
 Source90:       LICENSE
 Source91:       LICENSE-ARTWORK
 
@@ -79,7 +80,7 @@ and how.
 %prep
 mkdir -p src
 cd src
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} .
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} %{SOURCE6} .
 # %%prep works in src/; %%license reads from the build directory.
 cp -p %{SOURCE90} ..
 cp -p %{SOURCE91} ..
@@ -96,6 +97,7 @@ UUID=parchaos-global-menu@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST"
 install -m 0644 src/extension.js "$DEST/"
+install -m 0644 src/tiling.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0644 src/parchaos-menu-icon-symbolic.svg "$DEST/"
@@ -113,6 +115,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 2.1.0-42
+- Ticket #182: window tiling (tiling.js). Drag a window to a left or right edge for a half, a corner for a quarter, the top for fill, with a preview of where it goes; GNOME's own edge tiling is off while this runs. Ctrl+Super+arrows: halves, Up/Down into quarters, Up fills, Down returns to the size before tiling (keys in org.parchaos.globalmenu tile-*). Window menu: Move & Resize (quarters, thirds, two thirds, fill, previous size) and Arrange Windows (two, three, four). One code path for all three; works per monitor. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 2.1.0-41
 - Ticket #179: the ongoing-activity capsule never folds into the status icon overflow; folding passes over the items that always stay instead of stopping at them.
 

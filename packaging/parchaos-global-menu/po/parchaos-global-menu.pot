@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-global-menu\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-09 22:41-0600\n"
+"POT-Creation-Date: 2026-11-09 23:42-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,237 +17,301 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: files/extension.js:528
+#: files/extension.js:529
 msgid "Open Weather"
 msgstr ""
 
-#: files/extension.js:532
+#: files/extension.js:533
 msgid "Weather data: MET Norway"
 msgstr ""
 
-#: files/extension.js:848 files/extension.js:965
+#: files/extension.js:849 files/extension.js:966
 msgid "Cancel"
 msgstr ""
 
-#: files/extension.js:853
+#: files/extension.js:854
 msgid "Confirm"
 msgstr ""
 
-#: files/extension.js:915
+#: files/extension.js:916
 msgid "Force Quit Applications"
 msgstr ""
 
-#: files/extension.js:919
+#: files/extension.js:920
 msgid "If an app is not responding, choose it and press Force Quit."
 msgstr ""
 
-#: files/extension.js:955
+#: files/extension.js:956
 msgid "No apps are open."
 msgstr ""
 
-#: files/extension.js:967
+#: files/extension.js:968
 msgid "Force Quit"
 msgstr ""
 
-#: files/extension.js:1089
+#: files/extension.js:1080
 msgid "File"
 msgstr ""
 
-#: files/extension.js:1090
+#: files/extension.js:1081
 msgid "New Window"
 msgstr ""
 
-#: files/extension.js:1091
+#: files/extension.js:1082
 msgid "New Tab"
 msgstr ""
 
-#: files/extension.js:1092
+#: files/extension.js:1083
 msgid "New Folder"
 msgstr ""
 
-#: files/extension.js:1094
+#: files/extension.js:1085
 msgid "Open"
 msgstr ""
 
-#: files/extension.js:1095
+#: files/extension.js:1086
 msgid "Get Info"
 msgstr ""
 
-#: files/extension.js:1096
+#: files/extension.js:1087
 msgid "Rename"
 msgstr ""
 
-#: files/extension.js:1097
+#: files/extension.js:1088
 msgid "Quick Preview"
 msgstr ""
 
-#: files/extension.js:1099
+#: files/extension.js:1090
 msgid "Move to Trash"
 msgstr ""
 
-#: files/extension.js:1101
+#: files/extension.js:1092
 msgid "Print…"
 msgstr ""
 
 #. Closed directly: Ctrl+W closes a tab in browsers and does
 #. nothing in a terminal.
-#: files/extension.js:1104
+#: files/extension.js:1095
 msgid "Close Window"
 msgstr ""
 
-#: files/extension.js:1108
+#: files/extension.js:1099
 msgid "Edit"
 msgstr ""
 
-#: files/extension.js:1109
+#: files/extension.js:1100
 msgid "Undo"
 msgstr ""
 
-#: files/extension.js:1110
+#: files/extension.js:1101
 msgid "Redo"
 msgstr ""
 
-#: files/extension.js:1112
+#: files/extension.js:1103
 msgid "Cut"
 msgstr ""
 
-#: files/extension.js:1113
+#: files/extension.js:1104
 msgid "Copy"
 msgstr ""
 
-#: files/extension.js:1114
+#: files/extension.js:1105
 msgid "Paste"
 msgstr ""
 
-#: files/extension.js:1115
+#: files/extension.js:1106
 msgid "Select All"
 msgstr ""
 
-#: files/extension.js:1117
+#: files/extension.js:1108
 msgid "Find…"
 msgstr ""
 
-#: files/extension.js:1121
+#: files/extension.js:1112
 msgid "View"
 msgstr ""
 
-#: files/extension.js:1125
+#: files/extension.js:1116
 msgid "Show Hidden Files"
 msgstr ""
 
-#: files/extension.js:1127
+#: files/extension.js:1118
 msgid "Zoom In"
 msgstr ""
 
-#: files/extension.js:1128
+#: files/extension.js:1119
 msgid "Zoom Out"
 msgstr ""
 
-#: files/extension.js:1129
+#: files/extension.js:1120
 msgid "Actual Size"
 msgstr ""
 
-#: files/extension.js:1131
+#: files/extension.js:1122
 msgid "Reload"
 msgstr ""
 
-#: files/extension.js:1132
+#: files/extension.js:1123
 msgid "Enter Full Screen"
 msgstr ""
 
-#: files/extension.js:1136
+#: files/extension.js:1127
 msgid "Go"
 msgstr ""
 
-#: files/extension.js:1137
+#: files/extension.js:1128
 msgid "Back"
 msgstr ""
 
-#: files/extension.js:1138
+#: files/extension.js:1129
 msgid "Forward"
 msgstr ""
 
-#: files/extension.js:1139
+#: files/extension.js:1130
 msgid "Enclosing Folder"
 msgstr ""
 
-#: files/extension.js:1141
+#: files/extension.js:1132
 msgid "Recents"
 msgstr ""
 
-#: files/extension.js:1142
+#: files/extension.js:1133
 msgid "Home"
 msgstr ""
 
-#: files/extension.js:1143
+#: files/extension.js:1134
 msgid "Desktop"
 msgstr ""
 
-#: files/extension.js:1144
+#: files/extension.js:1135
 msgid "Documents"
 msgstr ""
 
-#: files/extension.js:1145
+#: files/extension.js:1136
 msgid "Downloads"
 msgstr ""
 
-#: files/extension.js:1146
+#: files/extension.js:1137
 msgid "Pictures"
 msgstr ""
 
-#: files/extension.js:1147
+#: files/extension.js:1138
 msgid "Music"
 msgstr ""
 
-#: files/extension.js:1148
+#: files/extension.js:1139
 msgid "Videos"
 msgstr ""
 
-#: files/extension.js:1150 files/extension.js:1744
+#: files/extension.js:1141 files/extension.js:1767
 msgid "Computer"
 msgstr ""
 
-#: files/extension.js:1151
+#: files/extension.js:1142
 msgid "Network"
 msgstr ""
 
-#: files/extension.js:1152
+#: files/extension.js:1143
 msgid "Trash"
 msgstr ""
 
-#: files/extension.js:1154
+#: files/extension.js:1145
 msgid "Go to Folder…"
 msgstr ""
 
-#: files/extension.js:1158
+#: files/extension.js:1149
 msgid "Window"
 msgstr ""
 
-#: files/extension.js:1159
+#: files/extension.js:1150
 msgid "Minimize"
 msgstr ""
 
-#: files/extension.js:1160
+#: files/extension.js:1151
 msgid "Zoom"
 msgstr ""
 
-#: files/extension.js:1162
+#: files/extension.js:1153
 msgid "Move Window to Left Half"
 msgstr ""
 
-#: files/extension.js:1163
+#: files/extension.js:1154
 msgid "Move Window to Right Half"
 msgstr ""
 
-#: files/extension.js:1164
+#: files/extension.js:1155
 msgid "Center Window"
 msgstr ""
 
+#: files/extension.js:1158
+msgid "Move & Resize"
+msgstr ""
+
+#: files/extension.js:1159
+msgid "Top Left"
+msgstr ""
+
+#: files/extension.js:1160
+msgid "Top Right"
+msgstr ""
+
+#: files/extension.js:1161
+msgid "Bottom Left"
+msgstr ""
+
+#: files/extension.js:1162
+msgid "Bottom Right"
+msgstr ""
+
+#: files/extension.js:1164
+msgid "Left Third"
+msgstr ""
+
+#: files/extension.js:1165
+msgid "Center Third"
+msgstr ""
+
 #: files/extension.js:1166
+msgid "Right Third"
+msgstr ""
+
+#: files/extension.js:1167
+msgid "Left Two Thirds"
+msgstr ""
+
+#: files/extension.js:1168
+msgid "Right Two Thirds"
+msgstr ""
+
+#: files/extension.js:1170
+msgid "Fill"
+msgstr ""
+
+#: files/extension.js:1171
+msgid "Return to Previous Size"
+msgstr ""
+
+#: files/extension.js:1175
+msgid "Arrange Windows"
+msgstr ""
+
+#: files/extension.js:1176
+msgid "Two Side by Side"
+msgstr ""
+
+#: files/extension.js:1177
+msgid "Three"
+msgstr ""
+
+#: files/extension.js:1178
+msgid "Four in a Grid"
+msgstr ""
+
+#: files/extension.js:1182
 msgid "Bring All to Front"
 msgstr ""
 
-#: files/extension.js:1172
+#: files/extension.js:1188
 msgid "Help"
 msgstr ""
 
@@ -256,163 +320,163 @@ msgstr ""
 #. channel (README, LEGAL, SOURCES all point at /support), so
 #. that is what a help-seeking click should open. The FAQ keeps
 #. its own item rather than being lost behind the change.
-#: files/extension.js:1178
+#: files/extension.js:1194
 msgid "ParchaOS Help"
 msgstr ""
 
-#: files/extension.js:1179
+#: files/extension.js:1195
 msgid "Questions & Answers (FAQ)"
 msgstr ""
 
-#: files/extension.js:1181
+#: files/extension.js:1197
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: files/extension.js:1182 files/extension.js:1506
+#: files/extension.js:1198 files/extension.js:1529
 msgid "What’s New"
 msgstr ""
 
-#: files/extension.js:1184
+#: files/extension.js:1200
 msgid "Report a Bug or Feature Request…"
 msgstr ""
 
-#: files/extension.js:1200
+#: files/extension.js:1216
 msgid "More Status Icons"
 msgstr ""
 
-#: files/extension.js:1502
+#: files/extension.js:1525
 msgid "Log out now? Any unsaved work will be lost."
 msgstr ""
 
-#: files/extension.js:1505
+#: files/extension.js:1528
 msgid "About ParchaOS"
 msgstr ""
 
-#: files/extension.js:1508
+#: files/extension.js:1531
 msgid "System Settings…"
 msgstr ""
 
-#: files/extension.js:1509
+#: files/extension.js:1532
 msgid "Parcha Store"
 msgstr ""
 
-#: files/extension.js:1511
+#: files/extension.js:1534
 msgid "Recent Items"
 msgstr ""
 
-#: files/extension.js:1513
+#: files/extension.js:1536
 msgid "Force Quit…"
 msgstr ""
 
-#: files/extension.js:1515
+#: files/extension.js:1538
 msgid "Sleep"
 msgstr ""
 
-#: files/extension.js:1516
+#: files/extension.js:1539
 msgid "Restart…"
 msgstr ""
 
-#: files/extension.js:1516
+#: files/extension.js:1539
 msgid "Restart now? Any unsaved work will be lost."
 msgstr ""
 
-#: files/extension.js:1518
+#: files/extension.js:1541
 msgid "Shut Down…"
 msgstr ""
 
-#: files/extension.js:1518
+#: files/extension.js:1541
 msgid "Shut down now? Any unsaved work will be lost."
 msgstr ""
 
-#: files/extension.js:1521
+#: files/extension.js:1544
 msgid "Lock Screen"
 msgstr ""
 
-#: files/extension.js:1522
+#: files/extension.js:1545
 #, javascript-format
 msgid "Log Out %s…"
 msgstr ""
 
-#: files/extension.js:1522
+#: files/extension.js:1545
 msgid "Log Out…"
 msgstr ""
 
-#: files/extension.js:1577
+#: files/extension.js:1600
 msgid "OK"
 msgstr ""
 
-#: files/extension.js:1602
+#: files/extension.js:1625
 #, javascript-format
 msgid "Version %s"
 msgstr ""
 
-#: files/extension.js:1605
+#: files/extension.js:1628
 msgid "Version unknown"
 msgstr ""
 
-#: files/extension.js:1642
+#: files/extension.js:1665
 msgid "ParchaOS is built on Fedora Linux and GNOME."
 msgstr ""
 
-#: files/extension.js:1650
+#: files/extension.js:1673
 msgid "More Info…"
 msgstr ""
 
-#: files/extension.js:1661
+#: files/extension.js:1684
 msgid "Legal and Privacy"
 msgstr ""
 
-#: files/extension.js:1672
+#: files/extension.js:1695
 msgid "Close"
 msgstr ""
 
-#: files/extension.js:1745
+#: files/extension.js:1768
 msgid "Processor"
 msgstr ""
 
-#: files/extension.js:1746
+#: files/extension.js:1769
 msgid "Graphics"
 msgstr ""
 
-#: files/extension.js:1747
+#: files/extension.js:1770
 msgid "Memory"
 msgstr ""
 
-#: files/extension.js:1748
+#: files/extension.js:1771
 msgid "Storage"
 msgstr ""
 
-#: files/extension.js:1749
+#: files/extension.js:1772
 msgid "Kernel"
 msgstr ""
 
-#: files/extension.js:1771 files/extension.js:1847
+#: files/extension.js:1794 files/extension.js:1870
 #, javascript-format
 msgid "About %s"
 msgstr ""
 
-#: files/extension.js:1776
+#: files/extension.js:1799
 msgid "Settings…"
 msgstr ""
 
-#: files/extension.js:1779 files/extension.js:1848
+#: files/extension.js:1802 files/extension.js:1871
 #, javascript-format
 msgid "Hide %s"
 msgstr ""
 
-#: files/extension.js:1789
+#: files/extension.js:1812
 msgid "Hide Others"
 msgstr ""
 
-#: files/extension.js:1802
+#: files/extension.js:1825
 msgid "Show All"
 msgstr ""
 
-#: files/extension.js:1812 files/extension.js:1849
+#: files/extension.js:1835 files/extension.js:1872
 #, javascript-format
 msgid "Quit %s"
 msgstr ""
 
-#: files/extension.js:1966
+#: files/extension.js:1993
 msgid "No recent items"
 msgstr ""

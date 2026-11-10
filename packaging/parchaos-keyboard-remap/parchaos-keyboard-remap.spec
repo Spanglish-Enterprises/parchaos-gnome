@@ -86,7 +86,7 @@
 
 Name:           parchaos-keyboard-remap
 Version:        %{xremap_version}
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS keyboard remap: Super as Ctrl and friends, via xremap
 
 License:        MIT AND GPL-2.0-or-later AND GPL-3.0-or-later AND (MIT OR Apache-2.0) AND Apache-2.0 AND BSD-3-Clause AND (Apache-2.0 OR BSL-1.0) AND Unicode-3.0 AND (Unlicense OR MIT)
@@ -254,6 +254,9 @@ dconf update >/dev/null 2>&1 || :
 %{_sysconfdir}/dconf/db/local.d/02-parchaos-keyboard-remap
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 0.15.13-18
+- Ticket #182: Ctrl+Super+arrows pass through unchanged, so the line-end and file manager rules do not turn the window tiling keys into Super+Home and the like.
+
 * Sun Nov 08 2026 ParchaOS packaging - 0.15.13-17
 - Ticket #132: the socket directory existed but xremap still could not use
   it: the extension makes xremap.sock as the user with mode 0660, and the

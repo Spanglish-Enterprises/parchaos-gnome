@@ -18,6 +18,16 @@ modmap:
       RightCtrl: RightMeta
 
 keymap:
+  # Window tiling (ticket #182) answers to Ctrl+Super+arrows. Passed through
+  # unchanged, so the rules below (line ends, the file manager's arrows) do
+  # not turn them into Super+Home and the like.
+  - name: parchaos-window-tiling
+    remap:
+      Ctrl-Super-Left: Ctrl-Super-Left
+      Ctrl-Super-Right: Ctrl-Super-Right
+      Ctrl-Super-Up: Ctrl-Super-Up
+      Ctrl-Super-Down: Ctrl-Super-Down
+
   # The terminal keeps Ctrl for itself; its menu actions answer to
   # Shift+Super instead (set in 02-parchaos-keyboard-remap).
   - name: parchaos-terminal-actions

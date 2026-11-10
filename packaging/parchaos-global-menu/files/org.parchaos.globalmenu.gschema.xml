@@ -17,5 +17,21 @@
       <default><![CDATA[['<Alt><Control>Escape']]]></default>
       <summary>Open Force Quit</summary>
     </key>
+    <key name="tile-left" type="as">
+      <default><![CDATA[['<Control><Super>Left']]]></default>
+      <summary>Tile the window to the left (half; from a right quarter, the left quarter)</summary>
+    </key>
+    <key name="tile-right" type="as">
+      <default><![CDATA[['<Control><Super>Right']]]></default>
+      <summary>Tile the window to the right (half; from a left quarter, the right quarter)</summary>
+    </key>
+    <key name="tile-up" type="as">
+      <default><![CDATA[['<Control><Super>Up']]]></default>
+      <summary>Top quarter of a half, or fill the screen</summary>
+    </key>
+    <key name="tile-down" type="as">
+      <default><![CDATA[['<Control><Super>Down']]]></default>
+      <summary>Bottom quarter of a half, or back to the size before tiling</summary>
+    </key>
   </schema>
 </schemalist>
