@@ -27,6 +27,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {WindowLayouts, isMaximized, maximize, unmaximize} from './layouts.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -57,28 +58,6 @@ let restoredThisLogin = false;
 function desktopSettings() {
     const schema = Gio.SettingsSchemaSource.get_default()?.lookup('org.parchaos.desktop', true);
     return schema ? new Gio.Settings({settings_schema: schema}) : null;
-}
-
-function isMaximized(win) {
-    if (typeof win.is_maximized === 'function')
-        return win.is_maximized();
-    return win.get_maximized?.() === Meta.MaximizeFlags.BOTH;
-}
-
-// Mutter 18 (GNOME 50) dropped the MaximizeFlags argument along with
-// get_maximized(); passing it only logs "too many arguments".
-function maximize(win) {
-    if (typeof win.is_maximized === 'function')
-        win.maximize();
-    else
-        win.maximize(Meta.MaximizeFlags.BOTH);
-}
-
-function unmaximize(win) {
-    if (typeof win.is_maximized === 'function')
-        win.unmaximize();
-    else
-        win.unmaximize(Meta.MaximizeFlags.BOTH);
 }
 
 // A package update replaces the shell extensions and theme under a running
@@ -121,14 +100,19 @@ export default class ParchaSessionExtension extends Extension {
             }
         }
 
+        this._layouts = new WindowLayouts();
+
         this._saveId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, SAVE_INTERVAL, () => {
             this._save();
+            this._layouts?.record();
             return GLib.SOURCE_CONTINUE;
         });
     }
 
     disable() {
         this._save();
+        this._layouts?.destroy();
+        this._layouts = null;
         if (this._saveId)
             GLib.source_remove(this._saveId);
         this._saveId = 0;
@@ -741,6 +725,7 @@ export default class ParchaSessionExtension extends Extension {
                 app: app.get_id(),
                 workspace: w.get_workspace()?.index() ?? 0,
                 monitor: w.get_monitor(),
+                monitorSet: this._layouts?.currentKey(),
                 x: r.x, y: r.y, width: r.width, height: r.height,
                 maximized: isMaximized(w),
                 fullscreen: w.is_fullscreen(),
@@ -864,11 +849,21 @@ export default class ParchaSessionExtension extends Extension {
             const nWorkspaces = global.workspace_manager.get_n_workspaces();
             if (entry.workspace < nWorkspaces)
                 win.change_workspace_by_index(entry.workspace, false);
-            if (isMaximized(win))
-                unmaximize(win);
-            win.move_resize_frame(true, entry.x, entry.y, entry.width, entry.height);
-            if (entry.maximized)
+            // Logged out with other monitors connected (ticket #181): use this setup's own
+            // remembered place for the app, or leave the window where GNOME puts it.
+            const otherSetup = entry.monitorSet && this._layouts && entry.monitorSet !== this._layouts.currentKey();
+            const known = otherSetup ? this._layouts.claimFor(entry.app) : null;
+            if (known) {
+                this._layouts.place(win, known);
+            } else if (!otherSetup) {
+                if (isMaximized(win))
+                    unmaximize(win);
+                win.move_resize_frame(true, entry.x, entry.y, entry.width, entry.height);
+                if (entry.maximized)
+                    maximize(win);
+            } else if (entry.maximized) {
                 maximize(win);
+            }
             if (entry.fullscreen)
                 win.make_fullscreen();
             if (entry.minimized)

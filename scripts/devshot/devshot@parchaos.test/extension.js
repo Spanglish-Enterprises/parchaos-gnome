@@ -2,10 +2,12 @@
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
 // type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv],
-// menu "status-area-name" (open or close that menu-bar menu), indicators N (add N tray-like status icons). Test tool only; never run against a real session.
+// menu "status-area-name" (open or close that menu-bar menu), indicators N (add N tray-like status icons),
+// moveWindow [n, x, y, w, h] (the nth normal window, oldest first), windows "label" (log every window's monitor and frame). Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -18,6 +20,11 @@ const wait = ms => new Promise(r => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, 
 const TRAY_ICONS = ['mail-unread-symbolic', 'weather-clear-symbolic', 'printer-symbolic', 'input-gaming-symbolic',
     'media-removable-symbolic', 'camera-photo-symbolic', 'mail-send-symbolic', 'starred-symbolic', 'user-available-symbolic',
     'emblem-synchronizing-symbolic', 'folder-download-symbolic', 'call-start-symbolic'];
+function normalWindows() {
+    return global.display.list_all_windows().filter(w => w.get_window_type() === Meta.WindowType.NORMAL)
+        .sort((a, b) => a.get_stable_sequence() - b.get_stable_sequence());
+}
+
 function addIndicators(n) {
     for (let i = 0; i < n; i++) {
         const button = new PanelMenu.Button(0.5, `Tray ${i + 1}`);
@@ -100,6 +107,15 @@ export default class X extends Extension {
                 else if (step.showApps) Main.overview.showApps();
                 else if (step.menu) Main.panel.statusArea[step.menu]?.menu.toggle();
                 else if (step.indicators) addIndicators(step.indicators);
+                else if (step.moveWindow) {
+                    const [n, x, y, w, h] = step.moveWindow;
+                    normalWindows()[n]?.move_resize_frame(true, x, y, w, h);
+                } else if (step.windows) {
+                    log(`DEVSHOT windows ${step.windows} ` + normalWindows().map(w => {
+                        const r = w.get_frame_rect();
+                        return `${w.get_title()}@${w.get_monitor()}:${r.x},${r.y},${r.width}x${r.height}`;
+                    }).join(' '));
+                }
                 else if (step.notify) Main.notify(step.notify[0], step.notify[1]);
                 else if (step.osd) Main.osdWindowManager.showAll(Gio.ThemedIcon.new('audio-volume-high-symbolic'), 'Volume', step.osd / 100, 1);
                 else if (step.states) log('DEVSHOT states ' + Main.extensionManager.getUuids().map(u => `${u}=${Main.extensionManager.lookup(u)?.state}`).join(' '));

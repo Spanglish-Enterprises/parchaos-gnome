@@ -10,7 +10,7 @@
 
 Name:           parchaos-session
 Version:        1.0.0
-Release:        27%{?dist}
+Release:        28%{?dist}
 Summary:        ParchaOS Session Restore for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -19,6 +19,7 @@ Source0:        extension.js
 Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        es.po
+Source4:        layouts.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -35,7 +36,7 @@ editors, note apps) come back with them.
 
 %prep
 mkdir -p src
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE4} src/
 cp -p %{SOURCE90} .
 
 %build
@@ -43,6 +44,7 @@ cp -p %{SOURCE90} .
 %install
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/parchaos-session@parchaos.org
 install -Dm0644 src/extension.js "$DEST/extension.js"
+install -Dm0644 src/layouts.js "$DEST/layouts.js"
 install -Dm0644 src/metadata.json "$DEST/metadata.json"
 install -Dm0644 src/stylesheet.css "$DEST/stylesheet.css"
 # Spanish (es_PR falls back to es). Another language: a Source line and one more msgfmt line.
@@ -55,6 +57,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-session
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-session.mo
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-28
+- Ticket #181: remembers window positions for each monitor setup (monitors known by EDID vendor, product and serial). When the same set of screens comes back (re-plugging, waking up, docking) every window returns to its monitor and place; a new setup keeps GNOME's placement. Kept in ~/.local/state/parchaos/window-layouts.json (last 8 setups). At login with a different setup than at logout, restored windows use that setup's remembered place or GNOME's.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-27
 - Tickets #146/#53: translatable (gettext domain parchaos-session) with a Spanish translation of the "ParchaOS was updated" notice.
 
