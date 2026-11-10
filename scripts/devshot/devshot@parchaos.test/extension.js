@@ -2,17 +2,31 @@
 // devshot: drives a headless GNOME Shell from $DEVSHOT_OUT/plan.json (a list of steps) and
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
 // type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv],
-// menu "status-area-name" (open or close that menu-bar menu). Test tool only; never run against a real session.
+// menu "status-area-name" (open or close that menu-bar menu), indicators N (add N tray-like status icons). Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const OUT = GLib.getenv('DEVSHOT_OUT');
 const wait = ms => new Promise(r => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => { r(); return GLib.SOURCE_REMOVE; }));
+const TRAY_ICONS = ['mail-unread-symbolic', 'weather-clear-symbolic', 'printer-symbolic', 'input-gaming-symbolic',
+    'media-removable-symbolic', 'camera-photo-symbolic', 'mail-send-symbolic', 'starred-symbolic', 'user-available-symbolic',
+    'emblem-synchronizing-symbolic', 'folder-download-symbolic', 'call-start-symbolic'];
+function addIndicators(n) {
+    for (let i = 0; i < n; i++) {
+        const button = new PanelMenu.Button(0.5, `Tray ${i + 1}`);
+        button.add_child(new St.Icon({icon_name: TRAY_ICONS[i % TRAY_ICONS.length], style_class: 'system-status-icon'}));
+        button.menu.addMenuItem(new PopupMenu.PopupMenuItem(`Tray item ${i + 1}`));
+        Main.panel.addToStatusArea(`devshot-tray-${i}`, button, 1, 'right');
+    }
+}
+
 async function shot(name) {
     log(`DEVSHOT shot ${name} at ${GLib.get_monotonic_time()}`);
     const f = Gio.File.new_for_path(`${OUT}/${name}.png`);
@@ -85,6 +99,7 @@ export default class X extends Extension {
                 } else if (step.log) log(step.log);
                 else if (step.showApps) Main.overview.showApps();
                 else if (step.menu) Main.panel.statusArea[step.menu]?.menu.toggle();
+                else if (step.indicators) addIndicators(step.indicators);
                 else if (step.notify) Main.notify(step.notify[0], step.notify[1]);
                 else if (step.osd) Main.osdWindowManager.showAll(Gio.ThemedIcon.new('audio-volume-high-symbolic'), 'Volume', step.osd / 100, 1);
                 else if (step.states) log('DEVSHOT states ' + Main.extensionManager.getUuids().map(u => `${u}=${Main.extensionManager.lookup(u)?.state}`).join(' '));

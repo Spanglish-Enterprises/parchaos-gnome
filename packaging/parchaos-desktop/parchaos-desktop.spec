@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        80%{?dist}
+Release:        81%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -280,6 +280,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 2026.09.23-81
+- Ticket #176: new menu-bar-background setting (auto, clear, tinted, solid); auto is clear with the glass style and tinted with classic.
+
 * Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-80
 - Ticket #122: Recommends parchaos-assistant (Parcha Assistant, Ctrl+Alt+Space).
 

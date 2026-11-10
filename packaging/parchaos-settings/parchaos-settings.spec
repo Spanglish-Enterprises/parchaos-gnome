@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        30%{?dist}
+Release:        31%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Mon Nov 09 2026 ParchaOS packaging - 1.0.0-31
+- Ticket #176: Appearance > Style has a Menu bar background choice (Clear, Tinted, Solid). Spanish strings added.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-30
 - Ticket #146: Spanish name and description in the .desktop file(s).
 

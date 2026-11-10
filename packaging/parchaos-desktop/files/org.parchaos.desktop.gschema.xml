@@ -15,6 +15,22 @@
         "classic": calmer frosted surfaces, more opaque, with tighter corners.
       </description>
     </key>
+    <key name="menu-bar-background" type="s">
+      <choices>
+        <choice value="auto"/>
+        <choice value="clear"/>
+        <choice value="tinted"/>
+        <choice value="solid"/>
+      </choices>
+      <default>'auto'</default>
+      <summary>Menu bar background</summary>
+      <description>
+        "clear": no background, only a faint shade at the top edge so the text stays readable.
+        "tinted": an even translucent band. "solid": an opaque band. The colour of the band and
+        its text follows the wallpaper under the bar. "auto" is clear with the glass style and
+        tinted with the classic style (ticket #176).
+      </description>
+    </key>
     <key name="folder-colour" type="s">
       <choices>
         <choice value="passion"/>

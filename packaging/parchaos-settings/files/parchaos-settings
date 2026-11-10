@@ -583,6 +583,8 @@ class Window(Adw.ApplicationWindow):
             check.connect('toggled', self._on_style_toggled, value)
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        if 'menu-bar-background' in schema.list_keys():
+            group.add(self._menu_bar_row())
         if 'glass-clarity' in schema.list_keys():
             page.add(self._glass_clarity_group())
         if 'glass-effects' in schema.list_keys() and os.path.isdir(
@@ -591,6 +593,34 @@ class Window(Adw.ApplicationWindow):
         if 'folder-colour' in schema.list_keys():
             page.add(self._folder_colour_group())
         return page
+
+    # Menu bar background (ticket #176). "auto" (the default) shows as what it means for the
+    # current style: Clear with Glass, Tinted with Classic. Choosing one stores it.
+    def _menu_bar_row(self):
+        values = ['clear', 'tinted', 'solid']
+        row = Adw.ComboRow(title=_('Menu bar background'),
+                           subtitle=_('The text follows the wallpaper in every mode.'),
+                           model=Gtk.StringList.new([_('Clear'), _('Tinted'), _('Solid')]))
+
+        def from_setting(*_a):
+            value = self._desktop.get_string('menu-bar-background')
+            if value not in values:
+                value = 'tinted' if self._desktop.get_string('style') == 'classic' else 'clear'
+            if row.get_selected() != values.index(value):
+                row.handler_block_by_func(to_setting)
+                row.set_selected(values.index(value))
+                row.handler_unblock_by_func(to_setting)
+
+        def to_setting(*_a):
+            value = values[row.get_selected()]
+            if self._desktop.get_string('menu-bar-background') != value:
+                self._desktop.set_string('menu-bar-background', value)
+
+        row.connect('notify::selected', to_setting)
+        self._desktop.connect('changed::menu-bar-background', from_setting)
+        self._desktop.connect('changed::style', from_setting)
+        from_setting()
+        return row
 
     # How clear or tinted the glass is, with a preview that follows the slider (ticket #171).
     def _glass_clarity_group(self):

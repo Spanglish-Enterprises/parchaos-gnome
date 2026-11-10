@@ -252,12 +252,21 @@
     color: rgba(255, 255, 255, 0.45);
 }
 
-/* Classic style: a calm, even frosted bar; no glow; rounded-rectangle
-   highlights instead of pills. */
-#panel.parchaos-menubar.parchaos-style-classic {
+/* Menu bar background (ticket #176), a class on #panel chosen from the
+   menu-bar-background setting: clear is the faint top shade above, tinted
+   an even translucent band (the classic style's default), solid an opaque
+   one. Light variants below follow the wallpaper like the text does. */
+#panel.parchaos-menubar.parchaos-bar-tinted {
     background-gradient-direction: none;
     background-color: rgba(24, 24, 28, 0.42);
 }
+
+#panel.parchaos-menubar.parchaos-bar-solid {
+    background-gradient-direction: none;
+    background-color: rgb(30, 30, 34);
+}
+
+/* Classic style: no glow; rounded-rectangle highlights instead of pills. */
 
 #panel.parchaos-style-classic .parchaos-menubar-label,
 #panel.parchaos-style-classic .parchaos-menubar-app-label {
@@ -309,9 +318,14 @@
     background-gradient-end: rgba(255, 255, 255, 0.0);
 }
 
-#panel.parchaos-menubar.parchaos-menubar-light.parchaos-style-classic {
+#panel.parchaos-menubar.parchaos-menubar-light.parchaos-bar-tinted {
     background-gradient-direction: none;
     background-color: rgba(246, 246, 248, 0.55);
+}
+
+#panel.parchaos-menubar.parchaos-menubar-light.parchaos-bar-solid {
+    background-gradient-direction: none;
+    background-color: rgb(242, 242, 245);
 }
 
 #panel.parchaos-menubar-light .panel-button,
@@ -386,4 +400,20 @@
 .parchaos-menu-row-icon {
     width: 16px;
     height: 16px;
+}
+
+/* Status icons that do not fit beside the clock fold into a "..." item
+   (ticket #176) and open in this strip under it. It is named "panel" too,
+   so the items keep their menu-bar look. */
+#panel.parchaos-overflow-strip {
+    padding: 4px 6px;
+    border-radius: 14px;
+    background-gradient-direction: none;
+    background-color: rgba(30, 30, 34, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.parchaos-overflow-glyph {
+    font-weight: 700;
 }

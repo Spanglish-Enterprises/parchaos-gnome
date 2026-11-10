@@ -241,11 +241,25 @@ function styleSettings() {
     return schema ? new Gio.Settings({settings_schema: schema}) : null;
 }
 
+const BAR_BACKGROUNDS = ['clear', 'tinted', 'solid'];
+
+// The bar's background (ticket #176): the menu-bar-background setting, where "auto" is clear
+// with the glass style and tinted with the classic one.
+function barBackground(settings) {
+    const style = settings?.get_string('style') ?? 'glass';
+    const chosen = settings?.settings_schema.has_key('menu-bar-background')
+        ? settings.get_string('menu-bar-background') : 'auto';
+    return BAR_BACKGROUNDS.includes(chosen) ? chosen : style === 'classic' ? 'tinted' : 'clear';
+}
+
 function applyStyleClass(actor, settings) {
     const style = settings?.get_string('style') ?? 'glass';
     for (const s of ['glass', 'classic'])
         actor.remove_style_class_name(`parchaos-style-${s}`);
     actor.add_style_class_name(`parchaos-style-${style}`);
+    for (const b of BAR_BACKGROUNDS)
+        actor.remove_style_class_name(`parchaos-bar-${b}`);
+    actor.add_style_class_name(`parchaos-bar-${barBackground(settings)}`);
 }
 
 // ---------------------------------------------------------------------
@@ -1172,13 +1186,194 @@ const MENU_TABLE = [
     },
 ];
 
+// ---------------------------------------------------------------------
+// Status icon overflow (ticket #176). GNOME squeezes the status icons into
+// the space right of the clock and cuts off whatever does not fit. Instead,
+// the left-most ones fold into a "..." item; clicking it shows them in a
+// small strip under the bar, where they work as usual. Control Center and
+// the battery always stay in the bar.
+const KEEP_IN_BAR = ['parchaos-controls', 'parchaos-battery', 'quickSettings'];
+
+const OverflowButton = GObject.registerClass(
+class OverflowButton extends PanelMenu.Button {
+    _init(onActivate) {
+        super._init(0.5, _('More Status Icons'), true);
+        this._onActivate = onActivate;
+        this.add_child(new St.Icon({
+            icon_name: 'view-more-horizontal-symbolic',
+            style_class: 'system-status-icon parchaos-overflow-glyph',
+        }));
+    }
+
+    vfunc_event(event) {
+        const type = event.type();
+        const key = type === Clutter.EventType.KEY_PRESS ? event.get_key_symbol() : 0;
+        if (type === Clutter.EventType.BUTTON_PRESS || type === Clutter.EventType.TOUCH_BEGIN ||
+            [Clutter.KEY_Return, Clutter.KEY_KP_Enter, Clutter.KEY_space].includes(key)) {
+            this._onActivate();
+            return Clutter.EVENT_STOP;
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+});
+
+class StatusOverflow {
+    constructor() {
+        this._folded = [];
+        this._button = new OverflowButton(() => this.toggle());
+        Main.panel.addToStatusArea('parchaos-overflow', this._button, 0, 'right');
+        this._button.container.hide();
+        // Named "panel" so the folded items keep their menu-bar styling.
+        this._strip = new St.BoxLayout({name: 'panel', style_class: 'parchaos-overflow-strip', reactive: true, visible: false});
+        Main.layoutManager.addTopChrome(this._strip);
+
+        const right = Main.panel._rightBox;
+        right.connectObject('child-added', (_box, child) => {
+            if (child !== this._button.container)
+                right.set_child_at_index(this._button.container, 0);
+        }, this);
+        // Any change in the bar's boxes (an icon appears, the app menus change, the screen
+        // resizes) queues a relayout; check the fit once before the next frame.
+        for (const actor of [Main.panel, Main.panel._leftBox, Main.panel._centerBox, right, this._strip])
+            actor.connectObject('queue-relayout', () => this._queue(), this);
+        global.display.connectObject('notify::focus-window', () => this.close(), this);
+        Main.overview.connectObject('showing', () => this.close(), this);
+        this._queue();
+    }
+
+    _queue() {
+        if (this._laterId)
+            return;
+        const laters = global.compositor?.get_laters?.();
+        const run = () => {
+            this._laterId = 0;
+            this._fit();
+            return GLib.SOURCE_REMOVE;
+        };
+        this._laterId = laters ? laters.add(Meta.LaterType.BEFORE_REDRAW, run)
+            : Meta.later_add(Meta.LaterType.BEFORE_REDRAW, run);
+    }
+
+    _fit() {
+        // Never reshuffle under the pointer while the strip is open.
+        if (this._strip.visible)
+            return;
+        const panel = Main.panel, right = panel._rightBox;
+        const panelWidth = panel.width;
+        if (!panelWidth)
+            return;
+        const [, centerWidth] = panel._centerBox.get_preferred_width(-1);
+        // The same space GNOME's panel gives the status icons: from the clock to the edge.
+        const room = Math.floor(Math.max(0, (panelWidth - centerWidth) / 2));
+        const width = actor => actor.visible ? actor.get_preferred_width(-1)[1] : 0;
+        const all = [...this._folded, ...right.get_children().filter(c => c !== this._button.container)];
+        const keep = new Set(KEEP_IN_BAR.map(role => panel.statusArea[role]?.container).filter(c => c));
+        let total = all.reduce((sum, c) => sum + width(c), 0);
+        let count = 0;
+        if (total > room) {
+            total += this._button.container.get_preferred_width(-1)[1];
+            while (count < all.length && total > room && !keep.has(all[count])) {
+                total -= width(all[count]);
+                count++;
+            }
+        }
+        const fold = all.slice(0, count);
+        if (fold.length === this._folded.length && fold.every((c, i) => c === this._folded[i])) {
+            this._button.container.visible = fold.some(c => c.visible);
+            return;
+        }
+        // Folded items go into the strip in their order; the rest go back after the "..." item.
+        for (const c of all)
+            c.get_parent()?.remove_child(c);
+        for (const c of fold)
+            this._strip.add_child(c);
+        all.slice(count).forEach((c, i) => right.insert_child_at_index(c, i + 1));
+        this._folded = fold;
+        this._button.container.visible = fold.some(c => c.visible);
+    }
+
+    toggle() {
+        if (this._strip.visible)
+            this.close();
+        else
+            this.open();
+    }
+
+    open() {
+        if (!this._folded.some(c => c.visible))
+            return;
+        const monitor = Main.layoutManager.findMonitorForActor(Main.panel) ?? Main.layoutManager.primaryMonitor;
+        const [bx] = this._button.get_transformed_position();
+        const [, py] = Main.panel.get_transformed_position();
+        this._strip.show();
+        const [, stripWidth] = this._strip.get_preferred_width(-1);
+        const x = Math.max(monitor.x + 6, Math.min(bx, monitor.x + monitor.width - stripWidth - 6));
+        this._strip.set_position(Math.round(x), Math.round(py + Main.panel.height + 4));
+        this._button.add_style_pseudo_class('checked');
+        // A press anywhere else closes the strip; so does closing a menu opened from it.
+        global.stage.connectObject('captured-event', (_stage, event) => {
+            const type = event.type();
+            if (type !== Clutter.EventType.BUTTON_PRESS && type !== Clutter.EventType.TOUCH_BEGIN)
+                return Clutter.EVENT_PROPAGATE;
+            const target = global.stage.get_event_actor?.(event) ?? event.get_source?.();
+            if (!target || (!this._strip.contains(target) && !this._button.contains(target)))
+                this.close();
+            return Clutter.EVENT_PROPAGATE;
+        }, this);
+        for (const c of this._folded) {
+            c.get_child?.()?.menu?.connectObject?.('open-state-changed', (_m, isOpen) => {
+                if (!isOpen)
+                    this.close();
+            }, this);
+        }
+    }
+
+    close() {
+        if (!this._strip.visible)
+            return;
+        global.stage.disconnectObject(this);
+        for (const c of this._folded)
+            c.get_child?.()?.menu?.disconnectObject?.(this);
+        this._strip.hide();
+        this._button.remove_style_pseudo_class('checked');
+        this._queue();
+    }
+
+    destroy() {
+        this.close();
+        if (this._laterId) {
+            const laters = global.compositor?.get_laters?.();
+            if (laters)
+                laters.remove(this._laterId);
+            else
+                Meta.later_remove(this._laterId);
+            this._laterId = 0;
+        }
+        for (const actor of [Main.panel, Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox, this._strip])
+            actor.disconnectObject(this);
+        global.display.disconnectObject(this);
+        Main.overview.disconnectObject(this);
+        // Everything folded goes back to where it was.
+        this._folded.forEach((c, i) => {
+            this._strip.remove_child(c);
+            Main.panel._rightBox.insert_child_at_index(c, i + 1);
+        });
+        this._folded = [];
+        this._button.destroy();
+        this._strip.destroy();
+    }
+}
+
 export default class ParchaOSGlobalMenuExtension extends Extension {
     enable() {
         Main.panel.add_style_class_name('parchaos-menubar');
         this._styleSettings = styleSettings();
         applyStyleClass(Main.panel, this._styleSettings);
-        this._styleChangedId = this._styleSettings?.connect('changed::style',
-            () => applyStyleClass(Main.panel, this._styleSettings)) ?? 0;
+        this._styleChangedId = this._styleSettings?.connect('changed',
+            (_s, key) => {
+                if (key === 'style' || key === 'menu-bar-background')
+                    applyStyleClass(Main.panel, this._styleSettings);
+            }) ?? 0;
         this._menuBarButtons = [];
         this._shortcutItems = [];
         this._trackedWindow = null;
@@ -1207,6 +1402,7 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
 
         this._weatherIndicator = new WeatherIndicator();
         Main.panel.addToStatusArea('parchaos-weather', this._weatherIndicator, 0, 'right');
+        this._overflow = new StatusOverflow();
 
         this._focusSignal = global.display.connect('notify::focus-window',
             () => this._followFocus());
@@ -1224,6 +1420,10 @@ export default class ParchaOSGlobalMenuExtension extends Extension {
         this._styleSettings = null;
         for (const s of ['glass', 'classic'])
             Main.panel.remove_style_class_name(`parchaos-style-${s}`);
+        for (const b of BAR_BACKGROUNDS)
+            Main.panel.remove_style_class_name(`parchaos-bar-${b}`);
+        this._overflow?.destroy();
+        this._overflow = null;
         if (this._focusSignal) {
             global.display.disconnect(this._focusSignal);
             this._focusSignal = 0;
