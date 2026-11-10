@@ -11,7 +11,7 @@
 
 Name:           parchaos-controls
 Version:        1.0.0
-Release:        61%{?dist}
+Release:        62%{?dist}
 Summary:        Parcha Controls, ParchaOS's control center for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -27,6 +27,7 @@ Source7:        energy.js
 Source8:        thumbnail.js
 Source9:        activity.js
 Source10:       catalog.js
+Source11:       privacy.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -37,6 +38,8 @@ Requires:       parchaos-glass >= 1.0.0-11
 # cannot reach GNOME Shell's capture tool on Wayland.
 Obsoletes:      gnome-screenshot < 99
 Requires:       libnotify
+# pw-dump names the apps using the camera for the privacy report (ticket #159).
+Requires:       pipewire-utils
 # Mark Up on the screenshot thumbnail (ticket #155): crop, arrows, shapes and text.
 Recommends:     drawing
 BuildRequires:  desktop-file-utils
@@ -50,7 +53,7 @@ status icons (or Super+S) in place of GNOME's Quick Settings menu.
 
 %prep
 mkdir -p src/icons
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} src/
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} %{SOURCE11} src/
 cp %{SOURCE3} src/icons/
 cp -p %{SOURCE90} .
 
@@ -60,7 +63,7 @@ cp -p %{SOURCE90} .
 UUID=parchaos-controls@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST/icons"
-install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/activity.js src/catalog.js src/metadata.json src/stylesheet.css "$DEST/"
+install -m 0644 src/extension.js src/energy.js src/thumbnail.js src/activity.js src/catalog.js src/privacy.js src/metadata.json src/stylesheet.css "$DEST/"
 install -m 0644 src/icons/parchaos-controls-symbolic.svg "$DEST/icons/"
 
 install -Dm0755 %{SOURCE4} %{buildroot}%{_bindir}/parchaos-screenshot
@@ -78,6 +81,9 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-control
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-controls.mo
 
 %changelog
+* Tue Nov 10 2026 ParchaOS packaging - 1.0.0-62
+- Ticket #159: privacy report log (privacy.js): microphone use from the sound mixer's recording streams, camera use from PipeWire (pw-dump when the camera turns on), location grants and screen sharing/recording handles, kept seven days in ~/.local/share/parchaos/privacy-log.json (0600). The privacy-report setting turns it off and deletes the file. Requires pipewire-utils.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-61
 - Ticket #172: the controls catalogue (catalog.js), all hidden until added in Edit Controls and shown only when they apply: Calculator, Timer, Alarm, Stopwatch (Clocks on that tab), New Note (Text Editor, ~/Documents/Notes), Weather (mirrors the menu-bar weather), Keyboard Brightness (UPower, backlit keyboards only), Screen Recording, Keep Awake (session inhibitor), Camera Off, Microphone Off, Location, Larger Text, Zoom, High Contrast, Show Desktop, Back Up Now, Clipboard History, Dictation, Speak Selection, Snapshots. New picker categories (Accessibility, Privacy, Clock, Notes, Weather, Desktop, Utilities). Smoke test covers add, tap and remove. Spanish strings added.
 

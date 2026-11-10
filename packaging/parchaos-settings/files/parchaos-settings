@@ -965,6 +965,9 @@ class Window(Adw.ApplicationWindow):
     def _privacy_page(self):
         page = Adw.PreferencesPage(title=_('Privacy'),
                                    icon_name='preferences-system-privacy-symbolic')
+        report = self._privacy_report_group()
+        if report:
+            page.add(report)
         page.add(self._learning_group())
         self._net_group = Adw.PreferencesGroup(
             title=_('Network access'),
@@ -992,6 +995,86 @@ class Window(Adw.ApplicationWindow):
             self._net_placeholder.set_title(_('Could not list apps'))
             self._net_placeholder.set_subtitle(err.message)
         return page
+
+    # Privacy report (ticket #159): apps that used the microphone, camera, location or screen
+    # sharing in the last seven days, from the log Parcha Controls keeps (privacy-log.json).
+    PRIVACY_LOG = os.environ.get('PARCHAOS_PRIVACY_LOG') or os.path.join(
+        GLib.get_user_data_dir(), 'parchaos', 'privacy-log.json')
+
+    @staticmethod
+    def summarize_privacy(events, now):
+        """[(kind, app, name, last use, times)] for the last seven days, most recent first."""
+        since = now - 7 * 86400
+        rows = {}
+        for e in events:
+            end = e.get('end') or now
+            if end < since:
+                continue
+            key = (e.get('kind', ''), e.get('app') or e.get('name') or '')
+            row = rows.setdefault(key, [key[0], e.get('app', ''), e.get('name', ''), 0, 0])
+            row[3] = max(row[3], end)
+            row[4] += 1
+        return sorted((tuple(r) for r in rows.values()), key=lambda r: -r[3])
+
+    def _privacy_report_group(self):
+        settings = self._desktop_settings()
+        if settings is None or not settings.props.settings_schema.has_key('privacy-report'):
+            return None
+        group = Adw.PreferencesGroup(
+            title=_('Recently used'),
+            description=_('Apps that used the microphone, camera, location or screen sharing in the '
+                          'last seven days. Only what goes through the desktop\'s own services shows '
+                          'here: an app that opens a device directly, such as some command-line '
+                          'tools, is not seen, and screen sharing does not say which app asked.'))
+        refresh = Gtk.Button(icon_name='view-refresh-symbolic', valign=Gtk.Align.CENTER,
+                             tooltip_text=_('Refresh'), css_classes=['flat'])
+        group.set_header_suffix(refresh)
+        keep = Adw.SwitchRow(title=_('Keep this report'),
+                             subtitle=_('Kept on this computer for seven days. Turning it off deletes it.'))
+        settings.bind('privacy-report', keep, 'active', Gio.SettingsBindFlags.DEFAULT)
+        group.add(keep)
+        self._privacy_settings = settings
+        rows = []
+        kinds = {
+            'microphone': ('audio-input-microphone-symbolic', _('Microphone')),
+            'camera': ('camera-web-symbolic', _('Camera')),
+            'location': ('find-location-symbolic', _('Location')),
+            'screen': ('video-display-symbolic', _('Screen sharing or recording')),
+        }
+
+        def fill(*_a):
+            for row in rows:
+                group.remove(row)
+            rows.clear()
+            try:
+                with open(self.PRIVACY_LOG, encoding='utf-8') as f:
+                    events = json.load(f).get('events', [])
+            except (OSError, ValueError):
+                events = []
+            now = int(GLib.get_real_time() / 1e6)
+            summary = self.summarize_privacy(events, now)
+            if not summary:
+                row = Adw.ActionRow(title=_('Nothing in the last seven days'))
+                rows.append(row)
+                group.add(row)
+                return
+            for kind, app, name, last, times in summary[:30]:
+                icon, label = kinds.get(kind, ('dialog-information-symbolic', kind))
+                when = GLib.DateTime.new_from_unix_local(last)
+                today = GLib.DateTime.new_now_local()
+                stamp = when.format('%H:%M') if when.get_day_of_year() == today.get_day_of_year() \
+                    else when.format('%a %H:%M')
+                counted = gettext.ngettext('%d time', '%d times', times) % times
+                row = Adw.ActionRow(title=GLib.markup_escape_text(name or _('An app')),
+                                    subtitle=f'{label} · {stamp} · {counted}')
+                row.add_prefix(Gtk.Image(icon_name=icon))
+                rows.append(row)
+                group.add(row)
+
+        refresh.connect('clicked', fill)
+        settings.connect('changed::privacy-report', lambda *_a: GLib.timeout_add(500, lambda: fill() or False))
+        fill()
+        return group
 
     # Control Center learns which controls are used, to suggest them in Edit Controls. Only
     # control names, a fading score and a time are kept, in a file only you can read; turning

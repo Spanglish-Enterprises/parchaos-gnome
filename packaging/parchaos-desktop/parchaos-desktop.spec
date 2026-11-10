@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        82%{?dist}
+Release:        83%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -281,6 +281,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Tue Nov 10 2026 ParchaOS packaging - 2026.09.23-83
+- Ticket #159: privacy-report setting (on by default), for the privacy report in ParchaOS Settings.
+
 * Mon Nov 09 2026 ParchaOS packaging - 2026.09.23-82
 - Ticket #183: ambient-sound, ambient-volume, ambient-tone and ambient-minutes settings; Recommends parchaos-ambient.
 

@@ -63,6 +63,15 @@
       <summary>Stop ambient sounds after (minutes)</summary>
       <description>15 to 480 minutes; 0 keeps playing until stopped.</description>
     </key>
+    <key name="privacy-report" type="b">
+      <default>true</default>
+      <summary>Keep a privacy report</summary>
+      <description>
+        Note which apps used the microphone, camera, location or screen sharing, for Settings &gt;
+        Privacy (ticket #159). Kept for seven days in ~/.local/share/parchaos/privacy-log.json,
+        readable only by the user. Turning it off deletes the file.
+      </description>
+    </key>
     <key name="folder-colour" type="s">
       <choices>
         <choice value="passion"/>

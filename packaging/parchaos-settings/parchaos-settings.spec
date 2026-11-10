@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        33%{?dist}
+Release:        34%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Tue Nov 10 2026 ParchaOS packaging - 1.0.0-34
+- Ticket #159: Privacy > Recently used lists the apps that used the microphone, camera, location or screen sharing in the last seven days (kind, last use, how many times), says plainly what it cannot see, and has a switch to stop keeping the report. Spanish strings added.
+
 * Mon Nov 09 2026 ParchaOS packaging - 1.0.0-33
 - Ticket #160: App permissions gains Background (keep running with no window open) for every Flatpak app, through the portal permission store: off sets "no", on removes the entry. Spanish strings added.
 

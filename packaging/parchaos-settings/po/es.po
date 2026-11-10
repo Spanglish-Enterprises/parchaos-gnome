@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: parchaos-settings\n"
 "Report-Msgid-Bugs-To: https://github.com/Spanglish-Enterprises/parchaos-"
 "gnome/issues\n"
-"POT-Creation-Date: 2026-11-09 23:54-0600\n"
+"POT-Creation-Date: 2026-11-09 23:57-0600\n"
 "PO-Revision-Date: 2026-09-30 04:00-0400\n"
 "Last-Translator: ParchaOS\n"
 "Language-Team: Spanish\n"
@@ -16,6 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: files/parchaos-settings:52
 msgid "The share did not accept that username or password."
@@ -209,8 +210,8 @@ msgstr "Iconos en el escritorio"
 msgid "Files, folders and the Trash that sit on the desktop."
 msgstr "Archivos, carpetas y la Papelera que están en el escritorio."
 
-#: files/parchaos-settings:467 files/parchaos-settings:984
-#: files/parchaos-settings:1050
+#: files/parchaos-settings:467 files/parchaos-settings:987
+#: files/parchaos-settings:1133
 msgid "Not available"
 msgstr "No disponible"
 
@@ -589,11 +590,11 @@ msgstr "Conectado. El acceso queda guardado."
 msgid "Privacy"
 msgstr "Privacidad"
 
-#: files/parchaos-settings:970
+#: files/parchaos-settings:973
 msgid "Network access"
 msgstr "Acceso a la red"
 
-#: files/parchaos-settings:971
+#: files/parchaos-settings:974
 msgid ""
 "Turn a switch off to keep that app off the network. It takes effect the next "
 "time the app starts. A blocked app cannot reach the internet or your local "
@@ -603,28 +604,83 @@ msgstr ""
 "vez que la app se inicie. Una app bloqueada no puede llegar a internet ni a "
 "tu red local."
 
-#: files/parchaos-settings:974
+#: files/parchaos-settings:977
 msgid "Find an app"
 msgstr "Buscar una app"
 
-#: files/parchaos-settings:979 files/parchaos-settings:1047
+#: files/parchaos-settings:982 files/parchaos-settings:1130
 msgid "Loading apps..."
 msgstr "Cargando apps..."
 
-#: files/parchaos-settings:985
+#: files/parchaos-settings:988
 msgid "The network access helper is not installed."
 msgstr "El ayudante de acceso a la red no está instalado."
 
-#: files/parchaos-settings:992 files/parchaos-settings:1057
-#: files/parchaos-settings:1065 files/parchaos-settings:1127
+#: files/parchaos-settings:995 files/parchaos-settings:1140
+#: files/parchaos-settings:1148 files/parchaos-settings:1210
 msgid "Could not list apps"
 msgstr "No se pudo mostrar la lista de apps"
 
-#: files/parchaos-settings:1003
+#: files/parchaos-settings:1024
+msgid "Recently used"
+msgstr "Usado recientemente"
+
+#: files/parchaos-settings:1025
+msgid ""
+"Apps that used the microphone, camera, location or screen sharing in the "
+"last seven days. Only what goes through the desktop's own services shows "
+"here: an app that opens a device directly, such as some command-line tools, "
+"is not seen, and screen sharing does not say which app asked."
+msgstr "Apps que usaron el micrófono, la cámara, la ubicación o la pantalla compartida en los últimos siete días. Solo aparece lo que pasa por los servicios del propio escritorio: una app que abre un dispositivo directamente, como algunas herramientas de línea de comandos, no se ve, y compartir pantalla no dice qué app lo pidió."
+
+#: files/parchaos-settings:1030
+msgid "Refresh"
+msgstr "Actualizar"
+
+#: files/parchaos-settings:1032
+msgid "Keep this report"
+msgstr "Guardar este informe"
+
+#: files/parchaos-settings:1033
+msgid "Kept on this computer for seven days. Turning it off deletes it."
+msgstr "Se guarda en esta computadora por siete días. Al apagarlo se borra."
+
+#: files/parchaos-settings:1039
+msgid "Microphone"
+msgstr "Micrófono"
+
+#: files/parchaos-settings:1040
+msgid "Camera"
+msgstr "Cámara"
+
+#: files/parchaos-settings:1041
+msgid "Location"
+msgstr "Ubicación"
+
+#: files/parchaos-settings:1042
+msgid "Screen sharing or recording"
+msgstr "Pantalla compartida o grabación"
+
+#: files/parchaos-settings:1057
+msgid "Nothing in the last seven days"
+msgstr "Nada en los últimos siete días"
+
+#: files/parchaos-settings:1067
+#, python-format
+msgid "%d time"
+msgid_plural "%d times"
+msgstr[0] "%d vez"
+msgstr[1] "%d veces"
+
+#: files/parchaos-settings:1068
+msgid "An app"
+msgstr "Una app"
+
+#: files/parchaos-settings:1086
 msgid "Suggestions"
 msgstr "Sugerencias"
 
-#: files/parchaos-settings:1004
+#: files/parchaos-settings:1087
 msgid ""
 "ParchaOS can learn which controls you use, to suggest them when you edit "
 "Control Center. It keeps only the names of the controls and when they were "
@@ -634,31 +690,31 @@ msgstr ""
 "el Centro de control. Solo guarda los nombres de los controles y cuándo se "
 "usaron, en esta computadora. No se envía nada a ningún sitio."
 
-#: files/parchaos-settings:1007
+#: files/parchaos-settings:1090
 msgid "Learn from how I use Control Center"
 msgstr "Aprender de cómo uso el Centro de control"
 
-#: files/parchaos-settings:1016
+#: files/parchaos-settings:1099
 msgid "Forget what was learned"
 msgstr "Olvidar lo aprendido"
 
-#: files/parchaos-settings:1017
+#: files/parchaos-settings:1100
 msgid "Suggestions start over from the defaults."
 msgstr "Las sugerencias vuelven a empezar desde las predeterminadas."
 
-#: files/parchaos-settings:1018
+#: files/parchaos-settings:1101
 msgid "Forget"
 msgstr "Olvidar"
 
-#: files/parchaos-settings:1034
+#: files/parchaos-settings:1117
 msgid "Forgotten"
 msgstr "Olvidado"
 
-#: files/parchaos-settings:1043
+#: files/parchaos-settings:1126
 msgid "App permissions"
 msgstr "Permisos de las apps"
 
-#: files/parchaos-settings:1044
+#: files/parchaos-settings:1127
 msgid ""
 "What each Flatpak app is allowed to use. A switch appears only for things "
 "the app asks for. Changes apply the next time the app starts."
@@ -666,74 +722,74 @@ msgstr ""
 "Lo que cada app de Flatpak puede usar. Solo aparece un interruptor para lo "
 "que la app pide. Los cambios se aplican la próxima vez que la app se abra."
 
-#: files/parchaos-settings:1070
+#: files/parchaos-settings:1153
 msgid "No Flatpak apps with permissions to change"
 msgstr "No hay apps de Flatpak con permisos que cambiar"
 
-#: files/parchaos-settings:1074
+#: files/parchaos-settings:1157
 msgid "Network"
 msgstr "Red"
 
-#: files/parchaos-settings:1074
+#: files/parchaos-settings:1157
 msgid "Internet and local network"
 msgstr "Internet y red local"
 
-#: files/parchaos-settings:1075
+#: files/parchaos-settings:1158
 msgid "Files"
 msgstr "Archivos"
 
-#: files/parchaos-settings:1075
+#: files/parchaos-settings:1158
 msgid "Your home folder and other drives"
 msgstr "Tu carpeta personal y otras unidades"
 
-#: files/parchaos-settings:1076
+#: files/parchaos-settings:1159
 msgid "Devices"
 msgstr "Dispositivos"
 
-#: files/parchaos-settings:1076
+#: files/parchaos-settings:1159
 msgid "Cameras, game controllers and other hardware"
 msgstr "Cámaras, controles de juego y otros aparatos"
 
-#: files/parchaos-settings:1077
+#: files/parchaos-settings:1160
 msgid "Background"
 msgstr "Segundo plano"
 
-#: files/parchaos-settings:1077
+#: files/parchaos-settings:1160
 msgid "Keep running when no window is open"
 msgstr "Seguir funcionando sin ventanas abiertas"
 
-#: files/parchaos-settings:1108 files/parchaos-settings:1163
+#: files/parchaos-settings:1191 files/parchaos-settings:1246
 msgid "The change was not saved."
 msgstr "El cambio no se guardó."
 
-#: files/parchaos-settings:1112
+#: files/parchaos-settings:1195
 msgid "Saved."
 msgstr "Guardado."
 
-#: files/parchaos-settings:1114
+#: files/parchaos-settings:1197
 #, python-format
 msgid "Saved. Restart %s for this to apply."
 msgstr "Guardado. Reinicia %s para que se aplique."
 
-#: files/parchaos-settings:1133
+#: files/parchaos-settings:1216
 msgid "Flatpak app"
 msgstr "App de Flatpak"
 
-#: files/parchaos-settings:1133
+#: files/parchaos-settings:1216
 msgid "App"
 msgstr "App"
 
-#: files/parchaos-settings:1167
+#: files/parchaos-settings:1250
 #, python-format
 msgid "%s is blocked from the network. Restart it for this to apply."
 msgstr "%s está bloqueada de la red. Reiníciala para que se aplique."
 
-#: files/parchaos-settings:1170
+#: files/parchaos-settings:1253
 #, python-format
 msgid "%s can use the network again. Restart it for this to apply."
 msgstr "%s puede volver a usar la red. Reiníciala para que se aplique."
 
-#: files/parchaos-settings:1205
+#: files/parchaos-settings:1288
 #, python-format
 msgid "Could not change it: %s"
 msgstr "No se pudo cambiar: %s"

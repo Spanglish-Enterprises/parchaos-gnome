@@ -30,6 +30,7 @@ import {EnergySampler} from './energy.js';
 import {ScreenshotThumbnail} from './thumbnail.js';
 import {addActivityButton} from './activity.js';
 import {CATALOG, CATALOG_APPS, addCatalogControls, resetCatalog} from './catalog.js';
+import {PrivacyLog} from './privacy.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -289,8 +290,10 @@ class RecentActivity {
                             try {
                                 const [granted] = value.deepUnpack();
                                 const app = Shell.AppSystem.get_default().lookup_app(`${desktopId}.desktop`);
-                                if (granted && app)
+                                if (granted && app) {
                                     this._latest = {kind: 'location', app, time: GLib.get_monotonic_time()};
+                                    privacyLog?.noteLocation(app);
+                                }
                             } catch (e) {
                                 logError(e, 'parchaos-controls: recent location');
                             }
@@ -326,6 +329,7 @@ class RecentActivity {
 }
 
 let recentActivity = null;
+let privacyLog = null;
 
 function showInFiles(file) {
     Gio.DBus.session.call('org.freedesktop.FileManager1', '/org/freedesktop/FileManager1',
@@ -2628,6 +2632,7 @@ export default class ParchaControlsExtension extends Extension {
         this._exportShellBus();
         this._thumbnail = new ScreenshotThumbnail(_);
         recentActivity = new RecentActivity();
+        privacyLog = new PrivacyLog(styleSettings());
         usageLearner = new UsageLearner();
         this._injections = new InjectionManager();
         this._waitId = 0;
@@ -2732,6 +2737,8 @@ export default class ParchaControlsExtension extends Extension {
         this._teardown();
         recentActivity?.destroy();
         recentActivity = null;
+        privacyLog?.destroy();
+        privacyLog = null;
         usageLearner?.destroy();
         usageLearner = null;
         this._injections?.clear();
