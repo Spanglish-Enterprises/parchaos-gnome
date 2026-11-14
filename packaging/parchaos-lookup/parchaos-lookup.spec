@@ -9,7 +9,7 @@
 
 Name:           parchaos-lookup
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Look up the text in any part of the screen on ParchaOS
 
 License:        GPL-3.0-or-later
@@ -20,6 +20,8 @@ Source2:        org.parchaos.lookup.gschema.xml
 Source3:        parchaos-lookup-ocr
 Source4:        stylesheet.css
 Source5:        es.po
+# Suggested names for Parcher's rename box (ticket #185).
+Source6:        parchaos-name-suggest
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -33,6 +35,10 @@ Requires:       tesseract-langpack-eng
 Requires:       tesseract-langpack-spa
 Requires:       python3-gobject
 Requires:       gdk-pixbuf2
+# parchaos-name-suggest reads PDFs, photo metadata and music tags through these.
+Requires:       poppler-glib
+Requires:       libgexiv2
+Requires:       gstreamer1-plugins-base
 
 %description
 Press Ctrl+Shift+Space (Super+Shift+Space on the ParchaOS keyboard layout),
@@ -42,7 +48,7 @@ for it or ask the assistant. The text is read on this computer.
 
 %prep
 cp -p %{SOURCE90} .
-python3 -m py_compile %{SOURCE3}
+python3 -m py_compile %{SOURCE3} %{SOURCE6}
 
 %build
 
@@ -54,6 +60,7 @@ install -m 0644 %{SOURCE0} %{SOURCE1} %{SOURCE4} "$DEST/"
 install -m 0644 %{SOURCE2} "$DEST/schemas/"
 glib-compile-schemas "$DEST/schemas"
 install -Dm0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-lookup/parchaos-lookup-ocr
+install -Dm0755 %{SOURCE6} %{buildroot}%{_libexecdir}/parchaos-lookup/parchaos-name-suggest
 # Spanish (es_PR falls back to es).
 install -d %{buildroot}%{_datadir}/locale/es/LC_MESSAGES
 msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-lookup.mo %{SOURCE5}
@@ -65,6 +72,12 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-lookup.
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-lookup.mo
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-2
+- Ticket #185: parchaos-name-suggest prints up to three names for a file from
+  its content (a receipt's shop and date via the same OCR, a document's
+  title or first heading, a PDF's title or first line, a photo's date and
+  place, music tags). Parcher's rename box shows them.
+
 * Fri Nov 13 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #180): Screen Lookup. The shortcut dims the screen;
   drag a box, and a glass popover offers Copy Text, Search the Web and Ask

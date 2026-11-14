@@ -1,0 +1,265 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-name-suggest FILE: print up to three better names for FILE, one per line
+# (ticket #185; Parcher's rename box shows them).
+#
+# Everything is read on this computer, with rules and the file's own metadata, no
+# model download:
+#   documents   the title in the file's properties, or its first heading or line
+#   PDFs        the title, or the first line of the first page
+#   pictures    the text in them (parchaos-lookup-ocr: a receipt's shop and date),
+#               a photo's date and place from its EXIF/IPTC/XMP data
+#   music       artist and title from the tags
+# A date found in the text or metadata is added as YYYY-MM-DD. The extension stays.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import os
+import re
+import subprocess
+import sys
+import zipfile
+from xml.etree import ElementTree
+
+OCR = os.environ.get('PARCHAOS_LOOKUP_OCR', '/usr/libexec/parchaos-lookup/parchaos-lookup-ocr')
+MAX_LEN = 80
+MAX_SUGGESTIONS = 3
+
+MONTHS = {
+    'jan': 1, 'january': 1, 'ene': 1, 'enero': 1, 'feb': 2, 'february': 2, 'febrero': 2,
+    'mar': 3, 'march': 3, 'marzo': 3, 'apr': 4, 'april': 4, 'abr': 4, 'abril': 4,
+    'may': 5, 'mayo': 5, 'jun': 6, 'june': 6, 'junio': 6, 'jul': 7, 'july': 7, 'julio': 7,
+    'aug': 8, 'august': 8, 'ago': 8, 'agosto': 8, 'sep': 9, 'sept': 9, 'september': 9,
+    'septiembre': 9, 'set': 9, 'oct': 10, 'october': 10, 'octubre': 10, 'nov': 11,
+    'november': 11, 'noviembre': 11, 'dec': 12, 'december': 12, 'dic': 12, 'diciembre': 12,
+}
+
+
+def day_first():
+    """Whether a/b/yyyy reads as day/month: yes for Spanish outside Puerto Rico and the US."""
+    lang = os.environ.get('LC_TIME') or os.environ.get('LC_ALL') or os.environ.get('LANG') or ''
+    return lang.startswith('es') and not lang.startswith(('es_PR', 'es_US'))
+
+
+def find_date(text):
+    """The first date in `text` as YYYY-MM-DD, or None."""
+    def valid(y, m, d):
+        return 1990 <= y <= 2100 and 1 <= m <= 12 and 1 <= d <= 31
+
+    m = re.search(r'\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b', text)
+    if m and valid(int(m[1]), int(m[2]), int(m[3])):
+        return f'{int(m[1]):04d}-{int(m[2]):02d}-{int(m[3]):02d}'
+    m = re.search(r'\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})\b', text)
+    if m:
+        a, b, y = int(m[1]), int(m[2]), int(m[3])
+        y += 2000 if y < 100 else 0
+        d, mo = (a, b) if a > 12 or (b <= 12 and day_first()) else (b, a)
+        if valid(y, mo, d):
+            return f'{y:04d}-{mo:02d}-{d:02d}'
+    m = re.search(r'\b([A-Za-zé]{3,10})\.?\s+(\d{1,2}),?\s+(\d{4})\b', text)        # Nov 13, 2026
+    if m and m[1].lower() in MONTHS and valid(int(m[3]), MONTHS[m[1].lower()], int(m[2])):
+        return f'{int(m[3]):04d}-{MONTHS[m[1].lower()]:02d}-{int(m[2]):02d}'
+    m = re.search(r'\b(\d{1,2})\s+(?:de\s+)?([A-Za-zé]{3,10})\.?\s+(?:de\s+)?(\d{4})\b', text)  # 13 de noviembre de 2026
+    if m and m[2].lower() in MONTHS and valid(int(m[3]), MONTHS[m[2].lower()], int(m[1])):
+        return f'{int(m[3]):04d}-{MONTHS[m[2].lower()]:02d}-{int(m[1]):02d}'
+    return None
+
+
+def title_line(text):
+    """The first line that reads like a title: mostly letters, not a date or an amount."""
+    for line in text.splitlines():
+        line = re.sub(r'^[#*=\-\s]+|[#*=\s]+$', '', line).strip()
+        letters = sum(c.isalpha() for c in line)
+        if letters < 3 or letters / max(1, len(line.replace(' ', ''))) < 0.6 or find_date(line):
+            continue
+        return line
+    return None
+
+
+def clean(name):
+    """A name that is safe as a file name: no slashes or control characters, tidy spaces."""
+    name = re.sub(r'[\x00-\x1f/\\:*?"<>|]+', ' ', name)
+    name = re.sub(r'\s+', ' ', name).strip(' .-_')
+    if len(name) > MAX_LEN:
+        name = name[:MAX_LEN].rsplit(' ', 1)[0]
+    return name
+
+
+def with_date(title, date):
+    return f'{title} {date}' if title and date else title or date
+
+
+# --- Readers: each returns (title, date) or None. ---
+
+def read_text(path):
+    try:
+        with open(path, encoding='utf-8', errors='replace') as f:
+            text = f.read(20000)
+    except OSError:
+        return None
+    m = re.search(r'^\s{0,3}#\s+(.+)$', text, re.M)          # a Markdown heading
+    return (m[1].strip() if m else title_line(text)), None
+
+
+def read_office(path):
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = z.namelist()
+            for meta in ('docProps/core.xml', 'meta.xml'):
+                if meta in names:
+                    root = ElementTree.fromstring(z.read(meta))
+                    title = next((el.text for el in root.iter() if el.tag.endswith('}title') and el.text), None)
+                    date = next((el.text[:10] for el in root.iter()
+                                 if el.tag.endswith(('}created', '}creation-date')) and el.text), None)
+                    if title:
+                        return title.strip(), date
+            for body in ('word/document.xml', 'content.xml'):
+                if body in names:
+                    root = ElementTree.fromstring(z.read(body))
+                    text = '\n'.join(''.join(el.itertext()) for el in root.iter()
+                                     if el.tag.endswith(('}p', '}h')))
+                    return title_line(text), None
+    except (OSError, zipfile.BadZipFile, ElementTree.ParseError, KeyError):
+        return None
+    return None
+
+
+def read_pdf(path):
+    try:
+        import gi
+        gi.require_version('Poppler', '0.18')
+        from gi.repository import GLib, Poppler
+        doc = Poppler.Document.new_from_file(GLib.filename_to_uri(os.path.abspath(path), None), None)
+    except Exception:
+        return None
+    date = None
+    if doc.get_creation_date() and doc.get_creation_date() > 0:
+        import time
+        date = time.strftime('%Y-%m-%d', time.localtime(doc.get_creation_date()))
+    title = (doc.get_title() or '').strip()
+    text = doc.get_page(0).get_text() if doc.get_n_pages() else ''
+    if not title or title.lower().startswith(('untitled', 'microsoft word', 'document')):
+        title = title_line(text or '')
+    return title, find_date(text or '') or date
+
+
+def read_audio(path):
+    try:
+        import gi
+        gi.require_version('Gst', '1.0')
+        gi.require_version('GstPbutils', '1.0')
+        from gi.repository import GLib, Gst, GstPbutils
+        Gst.init(None)
+        info = GstPbutils.Discoverer.new(5 * Gst.SECOND).discover_uri(GLib.filename_to_uri(os.path.abspath(path), None))
+        tags = info.get_tags()
+    except Exception:
+        return None
+    if tags is None:
+        return None
+    ok_a, artist = tags.get_string('artist')
+    ok_t, title = tags.get_string('title')
+    if ok_t and title:
+        return (f'{artist} - {title}' if ok_a and artist else title), None
+    return None
+
+
+def read_photo_metadata(path):
+    try:
+        import gi
+        gi.require_version('GExiv2', '0.16')
+        from gi.repository import GExiv2
+        meta = GExiv2.Metadata()
+        meta.open_path(path)
+    except Exception:
+        return None
+    date = None
+    for tag in ('Exif.Photo.DateTimeOriginal', 'Exif.Image.DateTime', 'Xmp.photoshop.DateCreated'):
+        try:
+            if meta.has_tag(tag):
+                value = meta.get_tag_string(tag)
+                m = re.match(r'(\d{4})[:-](\d{2})[:-](\d{2})', value or '')
+                if m:
+                    date = f'{m[1]}-{m[2]}-{m[3]}'
+                    break
+        except Exception:
+            continue
+    place = None
+    for tag in ('Iptc.Application2.City', 'Xmp.photoshop.City', 'Xmp.iptc.Location',
+                'Iptc.Application2.SubLocation'):
+        try:
+            if meta.has_tag(tag):
+                place = (meta.get_tag_string(tag) or '').strip() or None
+                if place:
+                    break
+        except Exception:
+            continue
+    return (place, date) if place or date else None
+
+
+def read_image_text(path):
+    """A receipt or a screenshot of a page: its title line and the date in it."""
+    try:
+        text = subprocess.run([OCR, path], capture_output=True, text=True, timeout=60).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    # A photo usually gives a few garbled characters; real text gives whole words.
+    words = re.findall(r'[A-Za-zÀ-ÿ]{3,}', text)
+    if len(words) < 3:
+        return None
+    return title_line(text), find_date(text)
+
+
+def content_type(path):
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    try:
+        info = Gio.File.new_for_path(path).query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, None)
+        return info.get_content_type() or ''
+    except Exception:
+        return Gio.content_type_guess(path, None)[0] or ''
+
+
+def suggest(path):
+    base = os.path.basename(path)
+    stem, ext = os.path.splitext(base)
+    kind = content_type(path)
+    found = []
+    if kind == 'application/pdf':
+        found.append(read_pdf(path))
+    elif kind.startswith('image/'):
+        found.append(read_image_text(path))
+        found.append(read_photo_metadata(path))
+    elif kind.startswith('audio/'):
+        found.append(read_audio(path))
+    elif kind.startswith('text/'):
+        found.append(read_text(path))
+    elif 'opendocument' in kind or 'officedocument' in kind:
+        found.append(read_office(path))
+
+    names = []
+    for result in found:
+        if not result:
+            continue
+        title, date = result
+        title = clean(title or '')
+        if title.lower() == stem.lower():
+            title = ''     # a title that only repeats the file name says nothing new
+        for candidate in (with_date(title, date), title, date):
+            candidate = clean(candidate or '')
+            if candidate and candidate.lower() != stem.lower() and candidate + ext not in names:
+                names.append(candidate + ext)
+    return names[:MAX_SUGGESTIONS]
+
+
+def main(argv):
+    if len(argv) != 2:
+        print('usage: parchaos-name-suggest FILE', file=sys.stderr)
+        return 2
+    for name in suggest(argv[1]):
+        print(name)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

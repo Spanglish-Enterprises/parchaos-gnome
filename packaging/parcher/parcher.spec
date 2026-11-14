@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        38%{?dist}
+Release:        39%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -97,6 +97,9 @@ Patch10:        0011-previewer-activation-token.patch
 # matches the words, from ParchaOS Photo search, labelled "Photos: <words>".
 # Only when Photo search is on.
 Patch11:        0012-photo-search.patch
+# Suggested names in the rename box (ticket #185), from the file's content, by
+# parchaos-name-suggest (parchaos-lookup). Without it nothing changes.
+Patch12:        0013-name-suggestions.patch
 # ParchaOS's own look for the sidebar (appended to the stylesheet in %prep).
 Source1:        parcher-own-layout.css
 # Spanish for the strings ParchaOS adds (merged into Nautilus's es.po in %prep).
@@ -360,6 +363,13 @@ msgfmt --check -o /dev/null po/es.po
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 48.7-39
+- Ticket #185: suggested names in the rename box (0013-name-suggestions.patch).
+  Renaming a file on this computer shows up to three names read from its
+  content (a receipt's shop and date, a document's title, a photo's date and
+  place, music tags) by parchaos-name-suggest from Screen Lookup; one click
+  fills the name in, keeping the extension. Spanish string added.
+
 * Fri Nov 13 2026 ParchaOS packaging - 48.7-38
 - Ticket #163: photo search in Parcher's search (0012-photo-search.patch). A new search provider asks ParchaOS Photo search (its search-provider D-Bus service) for pictures that show the typed words and lists them with the file-name results, under the current folder, labelled "Photos: <words>". Only when Photo search is on (its index exists), so the service is never woken otherwise. Spanish string added.
 

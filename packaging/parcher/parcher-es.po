@@ -70,3 +70,7 @@ msgstr "Abrir ubicaciones de red"
 #, c-format
 msgid "Photos: %s"
 msgstr "Fotos: %s"
+
+#. Translators: heading over names Parcher suggests in the rename box, read from the file.
+msgid "Suggestions"
+msgstr "Sugerencias"

@@ -1,0 +1,231 @@
+ParchaOS: suggested names in the rename box (ticket #185)
+
+When a file on this computer is renamed, a helper (parchaos-name-suggest, from
+Screen Lookup) reads it - a document title or first heading, the text in a picture
+such as a receipt, a photo date and place, music tags - and prints up to three
+names; they are shown as buttons under the name field, and choosing one fills it in
+with the extension kept. Without the helper the popover is unchanged.
+
+Original code for ParchaOS, GPL-3.0-or-later.
+
+diff --git a/src/nautilus-rename-file-popover.c b/src/nautilus-rename-file-popover.c
+index d40e3c7..45bde1d 100644
+--- a/src/nautilus-rename-file-popover.c
++++ b/src/nautilus-rename-file-popover.c
+@@ -17,6 +17,12 @@
+ #define RENAME_ENTRY_MIN_CHARS 30
+ #define RENAME_ENTRY_MAX_CHARS 50
+ 
++/* ParchaOS (ticket #185): a helper reads the file (its title, the text in a picture, a
++ * photo's date and place, music tags) and prints up to three better names, one per line.
++ * It ships with Screen Lookup; without it the popover is as before. */
++#define NAME_SUGGEST_HELPER "/usr/libexec/parchaos-lookup/parchaos-name-suggest"
++#define MAX_NAME_SUGGESTIONS 3
++
+ struct _NautilusRenameFilePopover
+ {
+     GtkPopover parent_instance;
+@@ -31,6 +37,9 @@ struct _NautilusRenameFilePopover
+ 
+     GtkWidget *name_entry;
+     GtkWidget *title_label;
++    GtkWidget *suggestions_revealer;
++    GtkWidget *suggestions_box;
++    GCancellable *suggest_cancellable;
+ 
+     gulong file_changed_handler_id;
+ };
+@@ -47,12 +56,32 @@ disconnect_signal_handlers (NautilusRenameFilePopover *self)
+     g_clear_signal_handler (&self->file_changed_handler_id, self->target_file);
+ }
+ 
++static void
++clear_suggestions (NautilusRenameFilePopover *self)
++{
++    GtkWidget *child;
++
++    g_cancellable_cancel (self->suggest_cancellable);
++    g_clear_object (&self->suggest_cancellable);
++
++    if (self->suggestions_box == NULL)
++    {
++        return;
++    }
++    while ((child = gtk_widget_get_first_child (self->suggestions_box)) != NULL)
++    {
++        gtk_box_remove (GTK_BOX (self->suggestions_box), child);
++    }
++    gtk_revealer_set_reveal_child (GTK_REVEALER (self->suggestions_revealer), FALSE);
++}
++
+ static void
+ reset_state (NautilusRenameFilePopover *self)
+ {
+     g_assert (NAUTILUS_IS_RENAME_FILE_POPOVER (self));
+ 
+     disconnect_signal_handlers (self);
++    clear_suggestions (self);
+ 
+     g_clear_object (&self->target_file);
+ 
+@@ -161,6 +190,102 @@ on_name_accepted (NautilusRenameFilePopover *self)
+     reset_state (self);
+ }
+ 
++static void
++on_suggestion_clicked (GtkButton                 *button,
++                       NautilusRenameFilePopover *self)
++{
++    const char *name = g_object_get_data (G_OBJECT (button), "parchaos-name");
++
++    gtk_editable_set_text (GTK_EDITABLE (self->name_entry), name);
++    gtk_widget_grab_focus (self->name_entry);
++    /* As when the popover opens: the name selected, the extension left alone. */
++    gtk_editable_select_region (GTK_EDITABLE (self->name_entry), 0,
++                                nautilus_filename_get_extension_char_offset (name));
++}
++
++static void
++on_suggestions_ready (GObject      *source,
++                      GAsyncResult *result,
++                      gpointer      user_data)
++{
++    NautilusRenameFilePopover *self;
++    g_autofree char *out = NULL;
++    g_auto (GStrv) lines = NULL;
++    g_autoptr (GError) error = NULL;
++    guint shown = 0;
++
++    if (!g_subprocess_communicate_utf8_finish (G_SUBPROCESS (source), result, &out, NULL, &error))
++    {
++        return;     /* cancelled, or the helper failed: no suggestions */
++    }
++    self = NAUTILUS_RENAME_FILE_POPOVER (user_data);
++    if (self->target_file == NULL || out == NULL)
++    {
++        return;
++    }
++
++    lines = g_strsplit (out, "\n", -1);
++    for (guint i = 0; lines[i] != NULL && shown < MAX_NAME_SUGGESTIONS; i++)
++    {
++        GtkWidget *button;
++        GtkWidget *label;
++        const char *name = g_strstrip (lines[i]);
++
++        if (*name == '\0' || strchr (name, '/') != NULL || !g_utf8_validate (name, -1, NULL))
++        {
++            continue;
++        }
++        label = gtk_label_new (name);
++        gtk_label_set_xalign (GTK_LABEL (label), 0);
++        gtk_label_set_ellipsize (GTK_LABEL (label), PANGO_ELLIPSIZE_MIDDLE);
++        button = gtk_button_new ();
++        gtk_button_set_child (GTK_BUTTON (button), label);
++        gtk_widget_add_css_class (button, "flat");
++        gtk_widget_set_tooltip_text (button, name);
++        g_object_set_data_full (G_OBJECT (button), "parchaos-name", g_strdup (name), g_free);
++        g_signal_connect (button, "clicked", G_CALLBACK (on_suggestion_clicked), self);
++        gtk_box_append (GTK_BOX (self->suggestions_box), button);
++        shown++;
++    }
++    gtk_revealer_set_reveal_child (GTK_REVEALER (self->suggestions_revealer), shown > 0);
++}
++
++static void
++start_suggestions (NautilusRenameFilePopover *self)
++{
++    g_autoptr (GFile) location = NULL;
++    g_autofree char *path = NULL;
++    g_autoptr (GSubprocess) helper = NULL;
++    const char *program = g_getenv ("PARCHAOS_NAME_SUGGEST");
++
++    clear_suggestions (self);
++    if (program == NULL)
++    {
++        program = NAME_SUGGEST_HELPER;
++    }
++    if (self->target_is_folder || !nautilus_file_is_regular_file (self->target_file) ||
++        !g_file_test (program, G_FILE_TEST_IS_EXECUTABLE))
++    {
++        return;
++    }
++    location = nautilus_file_get_location (self->target_file);
++    path = g_file_get_path (location);
++    if (path == NULL)
++    {
++        return;     /* only files on this computer */
++    }
++
++    helper = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_SILENCE,
++                               NULL, program, path, NULL);
++    if (helper == NULL)
++    {
++        return;
++    }
++    self->suggest_cancellable = g_cancellable_new ();
++    g_subprocess_communicate_utf8_async (helper, NULL, self->suggest_cancellable,
++                                         on_suggestions_ready, self);
++}
++
+ GtkWidget *
+ nautilus_rename_file_popover_new (void)
+ {
+@@ -249,6 +374,8 @@ nautilus_rename_file_popover_show_for_file (NautilusRenameFilePopover *self,
+     gtk_editable_set_width_chars (GTK_EDITABLE (self->name_entry),
+                                   MIN (MAX (n_chars, RENAME_ENTRY_MIN_CHARS),
+                                        RENAME_ENTRY_MAX_CHARS));
++
++    start_suggestions (self);
+ }
+ 
+ static void
+@@ -290,6 +417,8 @@ nautilus_rename_file_popover_class_init (NautilusRenameFilePopoverClass *klass)
+ 
+     gtk_widget_class_bind_template_child (widget_class, NautilusRenameFilePopover, name_entry);
+     gtk_widget_class_bind_template_child (widget_class, NautilusRenameFilePopover, title_label);
++    gtk_widget_class_bind_template_child (widget_class, NautilusRenameFilePopover, suggestions_revealer);
++    gtk_widget_class_bind_template_child (widget_class, NautilusRenameFilePopover, suggestions_box);
+     gtk_widget_class_bind_template_child (widget_class, NautilusRenameFilePopover, validator);
+ 
+     gtk_widget_class_bind_template_callback (widget_class, on_closed);
+diff --git a/src/resources/ui/nautilus-rename-file-popover.ui b/src/resources/ui/nautilus-rename-file-popover.ui
+index 9e11130..7219493 100644
+--- a/src/resources/ui/nautilus-rename-file-popover.ui
++++ b/src/resources/ui/nautilus-rename-file-popover.ui
+@@ -28,6 +28,35 @@
+             <signal name="activate" handler="nautilus_filename_validator_try_accept" object="validator" swapped="yes"/>
+           </object>
+         </child>
++        <child>
++          <!-- ParchaOS (ticket #185): names suggested from the file's content. -->
++          <object class="GtkRevealer" id="suggestions_revealer">
++            <property name="reveal-child">False</property>
++            <property name="child">
++              <object class="GtkBox">
++                <property name="orientation">vertical</property>
++                <property name="spacing">6</property>
++                <property name="margin-bottom">12</property>
++                <child>
++                  <object class="GtkLabel">
++                    <property name="label" translatable="yes">Suggestions</property>
++                    <property name="xalign">0</property>
++                    <style>
++                      <class name="dim-label"/>
++                      <class name="caption-heading"/>
++                    </style>
++                  </object>
++                </child>
++                <child>
++                  <object class="GtkBox" id="suggestions_box">
++                    <property name="orientation">vertical</property>
++                    <property name="spacing">4</property>
++                  </object>
++                </child>
++              </object>
++            </property>
++          </object>
++        </child>
+         <child>
+           <object class="GtkRevealer">
+             <property name="reveal-child" bind-source="validator" bind-property="has-feedback"/>
