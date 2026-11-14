@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        37%{?dist}
+Release:        38%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -93,6 +93,10 @@ Patch9:         0010-sidebar-polish.patch
 # Quick Preview (spacebar): Sushi 50's ShowFile takes a fourth argument, the
 # activation token, and rejects Nautilus 48's three-argument call.
 Patch10:        0011-previewer-activation-token.patch
+# Photo search in Parcher's search (ticket #163): pictures whose content
+# matches the words, from ParchaOS Photo search, labelled "Photos: <words>".
+# Only when Photo search is on.
+Patch11:        0012-photo-search.patch
 # ParchaOS's own look for the sidebar (appended to the stylesheet in %prep).
 Source1:        parcher-own-layout.css
 # Spanish for the strings ParchaOS adds (merged into Nautilus's es.po in %prep).
@@ -356,6 +360,9 @@ msgfmt --check -o /dev/null po/es.po
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 48.7-38
+- Ticket #163: photo search in Parcher's search (0012-photo-search.patch). A new search provider asks ParchaOS Photo search (its search-provider D-Bus service) for pictures that show the typed words and lists them with the file-name results, under the current folder, labelled "Photos: <words>". Only when Photo search is on (its index exists), so the service is never woken otherwise. Spanish string added.
+
 * Sun Nov 08 2026 ParchaOS packaging - 48.7-37
 - Tickets #146/#53: Spanish for the strings ParchaOS adds (Cloud Drives, Add Account, Locations, Tags, Recents, tag colours, the status line and icon-size slider), merged into Nautilus's own es.po at build time.
 

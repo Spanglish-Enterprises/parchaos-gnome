@@ -65,3 +65,8 @@ msgstr "Tamaño de los íconos"
 
 msgid "Open Network Locations"
 msgstr "Abrir ubicaciones de red"
+
+#. Translators: shown under a picture found by what it shows; %s is what was searched for.
+#, c-format
+msgid "Photos: %s"
+msgstr "Fotos: %s"

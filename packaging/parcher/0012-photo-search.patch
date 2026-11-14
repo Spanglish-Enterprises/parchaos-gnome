@@ -1,0 +1,437 @@
+diff --git a/src/meson.build b/src/meson.build
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -246,6 +246,8 @@
+   'nautilus-search-engine-model.h',
+   'nautilus-search-engine-recent.c',
+   'nautilus-search-engine-recent.h',
++  'parcher-photo-search.c',
++  'parcher-photo-search.h',
+   'nautilus-search-engine-simple.c',
+   'nautilus-search-engine-simple.h',
+   'nautilus-search-hit.c',
+diff --git a/src/nautilus-search-engine.c b/src/nautilus-search-engine.c
+--- a/src/nautilus-search-engine.c
++++ b/src/nautilus-search-engine.c
+@@ -29,6 +29,7 @@
+ #include "nautilus-search-engine-recent.h"
+ #include "nautilus-search-engine-simple.h"
+ #include "nautilus-search-engine-tracker.h"
++#include "parcher-photo-search.h"
+ 
+ typedef struct
+ {
+@@ -36,6 +37,7 @@
+     NautilusSearchEngineRecent *recent;
+     NautilusSearchEngineSimple *simple;
+     NautilusSearchEngineModel *model;
++    ParcherPhotoSearch *photos;
+ 
+     GHashTable *uris;
+     guint providers_running;
+@@ -79,6 +81,7 @@
+     nautilus_search_provider_set_query (NAUTILUS_SEARCH_PROVIDER (priv->recent), query);
+     nautilus_search_provider_set_query (NAUTILUS_SEARCH_PROVIDER (priv->model), query);
+     nautilus_search_provider_set_query (NAUTILUS_SEARCH_PROVIDER (priv->simple), query);
++    nautilus_search_provider_set_query (NAUTILUS_SEARCH_PROVIDER (priv->photos), query);
+ }
+ 
+ static void
+@@ -149,6 +152,18 @@
+     nautilus_search_provider_start (NAUTILUS_SEARCH_PROVIDER (priv->simple));
+ }
+ 
++/* Parcher (ParchaOS #163): pictures whose content matches, from Photo search. */
++static void
++search_engine_start_real_photos (NautilusSearchEngine *engine)
++{
++    NautilusSearchEnginePrivate *priv;
++
++    priv = nautilus_search_engine_get_instance_private (engine);
++    priv->providers_running++;
++
++    nautilus_search_provider_start (NAUTILUS_SEARCH_PROVIDER (priv->photos));
++}
++
+ static void
+ search_engine_start_real (NautilusSearchEngine       *engine,
+                           NautilusSearchEngineTarget  target_engine)
+@@ -188,6 +203,7 @@
+             search_engine_start_real_recent (engine);
+             search_engine_start_real_model (engine);
+             search_engine_start_real_simple (engine);
++            search_engine_start_real_photos (engine);
+         }
+     }
+ }
+@@ -288,6 +304,7 @@
+     nautilus_search_provider_stop (NAUTILUS_SEARCH_PROVIDER (priv->recent));
+     nautilus_search_provider_stop (NAUTILUS_SEARCH_PROVIDER (priv->model));
+     nautilus_search_provider_stop (NAUTILUS_SEARCH_PROVIDER (priv->simple));
++    nautilus_search_provider_stop (NAUTILUS_SEARCH_PROVIDER (priv->photos));
+ 
+     priv->running = FALSE;
+     priv->restart = FALSE;
+@@ -464,6 +481,7 @@
+     g_clear_object (&priv->recent);
+     g_clear_object (&priv->model);
+     g_clear_object (&priv->simple);
++    g_clear_object (&priv->photos);
+ 
+     G_OBJECT_CLASS (nautilus_search_engine_parent_class)->finalize (object);
+ }
+@@ -528,6 +546,8 @@
+ 
+     priv->recent = nautilus_search_engine_recent_new ();
+     connect_provider_signals (engine, NAUTILUS_SEARCH_PROVIDER (priv->recent));
++    priv->photos = parcher_photo_search_new ();
++    connect_provider_signals (engine, NAUTILUS_SEARCH_PROVIDER (priv->photos));
+ 
+     /* The recent engine is really only meant for the shell search provider,
+      * where it might get search hits that are not indexed by tracker. */
+diff --git a/src/parcher-photo-search.c b/src/parcher-photo-search.c
+--- /dev/null
++++ b/src/parcher-photo-search.c
+@@ -0,0 +1,320 @@
++/*
++ * Parcher photo search (ParchaOS ticket #163): a search provider that adds
++ * pictures whose content matches the search words, next to the file-name
++ * results. It asks ParchaOS Photo search (parchaos-image-search), which
++ * answers GNOME's search-provider D-Bus interface, and labels each hit
++ * "Photos: <words>". Only when Photo search is on: turning it off deletes
++ * its index, so with no index the provider finishes at once and never wakes
++ * the service.
++ *
++ * Original code for ParchaOS, GPL-3.0-or-later.
++ */
++#define G_LOG_DOMAIN "nautilus-search"
++
++#include <config.h>
++#include <glib/gi18n.h>
++#include <gio/gio.h>
++#include <string.h>
++
++#include "nautilus-search-hit.h"
++#include "nautilus-search-provider.h"
++#include "parcher-photo-search.h"
++
++#define PHOTO_BUS_NAME "org.parchaos.ImageSearch.SearchProvider"
++#define PHOTO_OBJECT_PATH "/org/parchaos/ImageSearch/SearchProvider"
++#define PHOTO_INTERFACE "org.gnome.Shell.SearchProvider2"
++/* The first search loads the image model, which takes a moment. */
++#define PHOTO_TIMEOUT_MS 20000
++#define PHOTO_MIN_LENGTH 3
++
++struct _ParcherPhotoSearch
++{
++    GObject parent_instance;
++
++    NautilusQuery *query;
++    GCancellable *cancellable;
++    gboolean running;
++    guint idle_id;
++};
++
++static void nautilus_search_provider_init (NautilusSearchProviderInterface *iface);
++
++G_DEFINE_TYPE_WITH_CODE (ParcherPhotoSearch,
++                         parcher_photo_search,
++                         G_TYPE_OBJECT,
++                         G_IMPLEMENT_INTERFACE (NAUTILUS_TYPE_SEARCH_PROVIDER,
++                                                nautilus_search_provider_init))
++
++enum
++{
++    PROP_0,
++    PROP_RUNNING,
++    LAST_PROP
++};
++
++ParcherPhotoSearch *
++parcher_photo_search_new (void)
++{
++    return g_object_new (PARCHER_TYPE_PHOTO_SEARCH, NULL);
++}
++
++static gboolean
++photo_search_enabled (void)
++{
++    g_autofree char *index = g_build_filename (g_get_user_data_dir (),
++                                               "parchaos-image-search",
++                                               "index.sqlite", NULL);
++
++    return g_file_test (index, G_FILE_TEST_IS_REGULAR);
++}
++
++static void
++finish (ParcherPhotoSearch *self,
++        GList              *hits)
++{
++    NautilusSearchProvider *provider = NAUTILUS_SEARCH_PROVIDER (self);
++
++    if (hits != NULL && !g_cancellable_is_cancelled (self->cancellable))
++    {
++        nautilus_search_provider_hits_added (provider, hits);
++    }
++    g_list_free_full (hits, g_object_unref);
++
++    self->running = FALSE;
++    g_clear_object (&self->cancellable);
++    nautilus_search_provider_finished (provider, NAUTILUS_SEARCH_PROVIDER_STATUS_NORMAL);
++    g_object_notify (G_OBJECT (provider), "running");
++}
++
++static gboolean
++finish_empty_idle (gpointer user_data)
++{
++    ParcherPhotoSearch *self = user_data;
++
++    self->idle_id = 0;
++    finish (self, NULL);
++    return G_SOURCE_REMOVE;
++}
++
++static gboolean
++mime_types_allow_pictures (NautilusQuery *query,
++                           const char    *path)
++{
++    g_autoptr (GPtrArray) mime_types = nautilus_query_get_mime_types (query);
++    g_autofree char *type = NULL;
++
++    if (mime_types == NULL || mime_types->len == 0)
++    {
++        return TRUE;
++    }
++
++    type = g_content_type_guess (path, NULL, 0, NULL);
++    for (guint i = 0; i < mime_types->len; i++)
++    {
++        if (g_content_type_is_a (type, g_ptr_array_index (mime_types, i)))
++        {
++            return TRUE;
++        }
++    }
++    return FALSE;
++}
++
++static void
++on_results (GObject      *source,
++            GAsyncResult *result,
++            gpointer      user_data)
++{
++    g_autoptr (ParcherPhotoSearch) self = user_data;
++    g_autoptr (GError) error = NULL;
++    g_autoptr (GVariant) reply = NULL;
++    g_autoptr (GFile) location = NULL;
++    g_autofree char *text = NULL;
++    g_autofree char *snippet = NULL;
++    g_autofree const char **paths = NULL;
++    GList *hits = NULL;
++
++    reply = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, &error);
++    if (reply == NULL)
++    {
++        if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
++        {
++            g_debug ("Photo search did not answer: %s", error->message);
++        }
++        finish (self, NULL);
++        return;
++    }
++    if (self->query == NULL || g_cancellable_is_cancelled (self->cancellable))
++    {
++        finish (self, NULL);
++        return;
++    }
++
++    location = nautilus_query_get_location (self->query);
++    text = nautilus_query_get_text (self->query);
++    /* Translators: shown under a picture found by what it shows; %s is what was searched for. */
++    snippet = g_strdup_printf (_("Photos: %s"), g_strstrip (text));
++
++    g_variant_get (reply, "(^a&s)", &paths);
++    for (guint i = 0; paths != NULL && paths[i] != NULL; i++)
++    {
++        g_autoptr (GFile) file = g_file_new_for_path (paths[i]);
++        g_autoptr (GFileInfo) info = NULL;
++        g_autofree char *uri = NULL;
++        NautilusSearchHit *hit;
++
++        if (location != NULL && !g_file_has_prefix (file, location))
++        {
++            continue;
++        }
++        if (!mime_types_allow_pictures (self->query, paths[i]))
++        {
++            continue;
++        }
++        info = g_file_query_info (file, G_FILE_ATTRIBUTE_TIME_MODIFIED "," G_FILE_ATTRIBUTE_TIME_ACCESS ","
++                                  G_FILE_ATTRIBUTE_TIME_CREATED, G_FILE_QUERY_INFO_NONE, NULL, NULL);
++        if (info == NULL)
++        {
++            continue;
++        }
++
++        uri = g_file_get_uri (file);
++        hit = nautilus_search_hit_new (uri);
++        /* Best matches first, below a file whose name matches the words. */
++        nautilus_search_hit_set_fts_rank (hit, 0.5 - 0.02 * i);
++        nautilus_search_hit_set_fts_snippet (hit, snippet);
++        {
++            g_autoptr (GDateTime) mtime = g_file_info_get_modification_date_time (info);
++            g_autoptr (GDateTime) atime = g_file_info_get_access_date_time (info);
++            g_autoptr (GDateTime) ctime = g_file_info_get_creation_date_time (info);
++
++            nautilus_search_hit_set_modification_time (hit, mtime);
++            nautilus_search_hit_set_access_time (hit, atime);
++            nautilus_search_hit_set_creation_time (hit, ctime);
++        }
++        hits = g_list_prepend (hits, hit);
++    }
++
++    finish (self, g_list_reverse (hits));
++}
++
++static void
++parcher_photo_search_start (NautilusSearchProvider *provider)
++{
++    ParcherPhotoSearch *self = PARCHER_PHOTO_SEARCH (provider);
++    g_autofree char *text = NULL;
++    g_auto (GStrv) words = NULL;
++    GDBusConnection *bus;
++
++    g_return_if_fail (self->query);
++
++    self->running = TRUE;
++    g_clear_object (&self->cancellable);
++    self->cancellable = g_cancellable_new ();
++    g_object_notify (G_OBJECT (provider), "running");
++
++    text = nautilus_query_get_text (self->query);
++    bus = g_application_get_dbus_connection (g_application_get_default ());
++    if (text == NULL || strlen (g_strstrip (text)) < PHOTO_MIN_LENGTH || bus == NULL ||
++        !photo_search_enabled ())
++    {
++        self->idle_id = g_idle_add (finish_empty_idle, self);
++        return;
++    }
++
++    words = g_strsplit_set (text, " \t", -1);
++    g_dbus_connection_call (bus, PHOTO_BUS_NAME, PHOTO_OBJECT_PATH, PHOTO_INTERFACE,
++                            "GetInitialResultSet",
++                            g_variant_new ("(^as)", words),
++                            G_VARIANT_TYPE ("(as)"),
++                            G_DBUS_CALL_FLAGS_NONE, PHOTO_TIMEOUT_MS,
++                            self->cancellable, on_results, g_object_ref (self));
++}
++
++static void
++parcher_photo_search_stop (NautilusSearchProvider *provider)
++{
++    ParcherPhotoSearch *self = PARCHER_PHOTO_SEARCH (provider);
++
++    if (self->cancellable != NULL)
++    {
++        g_cancellable_cancel (self->cancellable);
++    }
++}
++
++static void
++parcher_photo_search_set_query (NautilusSearchProvider *provider,
++                                NautilusQuery          *query)
++{
++    ParcherPhotoSearch *self = PARCHER_PHOTO_SEARCH (provider);
++
++    g_clear_object (&self->query);
++    self->query = g_object_ref (query);
++}
++
++static gboolean
++parcher_photo_search_is_running (NautilusSearchProvider *provider)
++{
++    return PARCHER_PHOTO_SEARCH (provider)->running;
++}
++
++static void
++parcher_photo_search_get_property (GObject    *object,
++                                   guint       prop_id,
++                                   GValue     *value,
++                                   GParamSpec *pspec)
++{
++    switch (prop_id)
++    {
++        case PROP_RUNNING:
++        {
++            g_value_set_boolean (value, PARCHER_PHOTO_SEARCH (object)->running);
++        }
++        break;
++
++        default:
++        {
++            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
++        }
++    }
++}
++
++static void
++parcher_photo_search_finalize (GObject *object)
++{
++    ParcherPhotoSearch *self = PARCHER_PHOTO_SEARCH (object);
++
++    g_clear_handle_id (&self->idle_id, g_source_remove);
++    if (self->cancellable != NULL)
++    {
++        g_cancellable_cancel (self->cancellable);
++    }
++    g_clear_object (&self->cancellable);
++    g_clear_object (&self->query);
++
++    G_OBJECT_CLASS (parcher_photo_search_parent_class)->finalize (object);
++}
++
++static void
++nautilus_search_provider_init (NautilusSearchProviderInterface *iface)
++{
++    iface->set_query = parcher_photo_search_set_query;
++    iface->start = parcher_photo_search_start;
++    iface->stop = parcher_photo_search_stop;
++    iface->is_running = parcher_photo_search_is_running;
++}
++
++static void
++parcher_photo_search_class_init (ParcherPhotoSearchClass *klass)
++{
++    GObjectClass *object_class = G_OBJECT_CLASS (klass);
++
++    object_class->finalize = parcher_photo_search_finalize;
++    object_class->get_property = parcher_photo_search_get_property;
++
++    g_object_class_override_property (object_class, PROP_RUNNING, "running");
++}
++
++static void
++parcher_photo_search_init (ParcherPhotoSearch *self)
++{
++}
+diff --git a/src/parcher-photo-search.h b/src/parcher-photo-search.h
+--- /dev/null
++++ b/src/parcher-photo-search.h
+@@ -0,0 +1,18 @@
++/*
++ * Parcher photo search: pictures whose content matches the search words
++ * (ParchaOS ticket #163). Original code for ParchaOS, GPL-3.0-or-later.
++ */
++
++#pragma once
++
++#include <glib-object.h>
++
++G_BEGIN_DECLS
++
++#define PARCHER_TYPE_PHOTO_SEARCH (parcher_photo_search_get_type ())
++
++G_DECLARE_FINAL_TYPE (ParcherPhotoSearch, parcher_photo_search, PARCHER, PHOTO_SEARCH, GObject);
++
++ParcherPhotoSearch *parcher_photo_search_new (void);
++
++G_END_DECLS
