@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        38%{?dist}
+Release:        39%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,12 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 1.0.0-39
+- Ticket #168 follow-up: controls for settings an organisation has locked
+  (Style, Accent colour, Icon style, Menu bar background, Glass clarity,
+  Refraction, Folder colour, desktop Icon size) are greyed out with "Set by
+  <organisation>", and follow the lock if it changes while open.
+
 * Sat Nov 14 2026 ParchaOS packaging - 1.0.0-38
 - Ticket #168: a banner says which organisation manages the computer, from
   /etc/parchaos/managed.json (written by parchaos-policy). Spanish included.

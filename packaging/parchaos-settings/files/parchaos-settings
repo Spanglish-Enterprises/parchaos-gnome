@@ -217,17 +217,40 @@ class GlassPreview(Gtk.DrawingArea):
         cr.stroke()
 
 
+def managed_info():
+    """What parchaos-policy wrote about the organisation that manages this computer, or {}."""
+    try:
+        with open(os.environ.get('PARCHAOS_MANAGED', '/etc/parchaos/managed.json'), encoding='utf-8') as f:
+            info = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return info if isinstance(info, dict) else {}
+
+
+def follow_lock(widgets, settings, key):
+    """A setting an organisation has locked (parchaos-policy, ticket #168) can't be changed:
+    grey out its controls and say who set it. Controls made with Gio.Settings.bind already do
+    this; this is for the ones wired by hand. Follows the lock if it changes while open."""
+    widgets = widgets if isinstance(widgets, (list, tuple)) else [widgets]
+
+    def update(*_a):
+        writable = settings.is_writable(key)
+        name = str(managed_info().get('name') or '').strip()
+        why = (_('Set by {name}').format(name=name) if name else _('Set by your organisation'))
+        for widget in widgets:
+            widget.set_sensitive(writable)
+            widget.set_tooltip_text(None if writable else why)
+    update()
+    settings.connect(f'writable-changed::{key}', update)
+
+
 class Window(Adw.ApplicationWindow):
     # A sidebar of sections beside the page of the chosen section, the layout
     # GNOME's own Settings uses. It folds to a single column in a narrow window.
     @staticmethod
     def _managed_banner():
         """Who manages this computer (parchaos-policy, ticket #168), when an organisation does."""
-        try:
-            with open(os.environ.get('PARCHAOS_MANAGED', '/etc/parchaos/managed.json'), encoding='utf-8') as f:
-                info = json.load(f)
-        except (OSError, ValueError):
-            return None
+        info = managed_info()
         name = str(info.get('name') or '').strip()
         if not name:
             return None
@@ -659,6 +682,7 @@ class Window(Adw.ApplicationWindow):
             row.connect('notify::selected', store)
             self._ding.connect('changed::icon-size', load)
             group.add(row)
+            follow_lock(row, self._ding, 'icon-size')
         return group
 
     # Scheduled Do Not Disturb (parchaos-focus-schedule reads these keys).
@@ -962,6 +986,7 @@ class Window(Adw.ApplicationWindow):
             group.add(row)
             self._style_buttons[value] = check
             check.connect('toggled', self._on_style_toggled, value)
+            follow_lock(row, self._desktop, 'style')
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
         page.add(self._colours_group(schema))
@@ -1042,6 +1067,7 @@ class Window(Adw.ApplicationWindow):
             self._interface = interface   # keep the connection alive with the page
             row.add_suffix(box)
             group.add(row)
+            follow_lock(row, interface, 'accent-color')
 
         if 'icon-style' in schema.list_keys():
             values = [value for value, _n, _d in self.ICON_STYLES]
@@ -1066,6 +1092,7 @@ class Window(Adw.ApplicationWindow):
             row.connect('notify::selected', store_style)
             self._desktop.connect('changed::icon-style', load_style)
             group.add(row)
+            follow_lock(row, self._desktop, 'icon-style')
         return group
 
     def _colour_preview(self):
@@ -1116,6 +1143,7 @@ class Window(Adw.ApplicationWindow):
         self._desktop.connect('changed::menu-bar-background', from_setting)
         self._desktop.connect('changed::style', from_setting)
         from_setting()
+        follow_lock(row, self._desktop, 'menu-bar-background')
         return row
 
     # How clear or tinted the glass is, with a preview that follows the slider (ticket #171).
@@ -1161,6 +1189,7 @@ class Window(Adw.ApplicationWindow):
         reset = Gtk.Button(label=_('Reset'), halign=Gtk.Align.END, margin_top=6, css_classes=['flat'])
         reset.connect('clicked', lambda *_a: self._desktop.reset('glass-clarity'))
         group.add(reset)
+        follow_lock([scale, reset], self._desktop, 'glass-clarity')
         return group
 
     # Glass is the style; refraction is an extra on top of it (ticket #20):
@@ -1179,6 +1208,7 @@ class Window(Adw.ApplicationWindow):
         self._desktop.connect('changed::style', lambda *_: self._sync_refraction())
         self._sync_refraction()
         group.add(self._refraction_row)
+        self._desktop.connect('writable-changed::glass-effects', lambda *_a: self._sync_refraction())
         return group
 
     def _sync_refraction(self):
@@ -1187,12 +1217,16 @@ class Window(Adw.ApplicationWindow):
             return
         glass = self._desktop.get_string('style') == 'glass'
         on = glass and self._desktop.get_boolean('glass-effects')
-        row.set_sensitive(glass)
+        locked = not self._desktop.is_writable('glass-effects')
+        row.set_sensitive(glass and not locked)
         if row.get_active() != on:
             row.handler_block_by_func(self._on_refraction_toggled)
             row.set_active(on)
             row.handler_unblock_by_func(self._on_refraction_toggled)
-        if glass:
+        if locked:
+            name = str(managed_info().get('name') or '').strip()
+            row.set_tooltip_text(_('Set by {name}').format(name=name) if name else _('Set by your organisation'))
+        elif glass:
             row.set_tooltip_text(None)
         else:
             row.set_tooltip_text(_('Refraction needs the Glass style.'))
@@ -1252,6 +1286,7 @@ class Window(Adw.ApplicationWindow):
         load()
         row.connect('notify::selected', store)
         self._desktop.connect('changed::folder-colour', load)
+        follow_lock(row, self._desktop, 'folder-colour')
         group.add(row)
         return group
 
