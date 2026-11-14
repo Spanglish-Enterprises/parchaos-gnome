@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Translate Selection (ticket #152); the same glass as Screen Lookup. */
+.parchaos-translate-popup {
+  padding: 12px;
+  border-radius: 18px;
+  background-color: rgba(36, 36, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  color: white;
+}
+.parchaos-translate-body { spacing: 10px; }
+.parchaos-translate-header { spacing: 6px; }
+.parchaos-translate-direction { font-size: 9pt; font-weight: 600; color: rgba(255, 255, 255, 0.65); padding-left: 4px; }
+.parchaos-translate-title { font-weight: 700; padding: 2px 4px; }
+.parchaos-translate-text { font-size: 11pt; padding: 2px 4px; }
+.parchaos-translate-scroll { max-height: 320px; }
+.parchaos-translate-status { padding: 4px; color: rgba(255, 255, 255, 0.8); }
+.parchaos-translate-note { font-size: 8.5pt; color: rgba(255, 255, 255, 0.5); }
+.parchaos-translate-actions { spacing: 6px; }
+.parchaos-translate-button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.10);
+}
+.parchaos-translate-button.parchaos-translate-icon { padding: 5px; }
+.parchaos-translate-button:hover, .parchaos-translate-button:focus { background-color: rgba(255, 255, 255, 0.20); }
+.parchaos-translate-button:active { background-color: -st-accent-color; }
+.parchaos-translate-button.parchaos-translate-suggested { background-color: -st-accent-color; }
+.parchaos-translate-button-content { spacing: 6px; }

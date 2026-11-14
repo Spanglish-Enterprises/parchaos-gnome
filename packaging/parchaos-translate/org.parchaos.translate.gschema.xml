@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.translate" path="/org/parchaos/translate/">
+    <key name="translate-shortcut" type="as">
+      <default><![CDATA[['<Control><Alt>t']]]></default>
+      <summary>Translate the selected text</summary>
+      <description>English text is shown in Spanish and Spanish text in English, translated on this computer.</description>
+    </key>
+  </schema>
+</schemalist>

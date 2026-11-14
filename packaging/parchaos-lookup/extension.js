@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Screen Lookup (ticket #180): press the shortcut, drag a box around part of the screen, and
-// choose what to do with the text in it: copy it, search the web for it, or ask the assistant.
+// choose what to do with the text in it: copy it, translate it, search the web for it, or ask
+// the assistant.
 //
 // The text is read on this computer (parchaos-lookup-ocr, Tesseract). Nothing leaves the
 // machine unless Search the Web is chosen; Ask the Assistant only fills in the assistant's
@@ -27,6 +28,7 @@ const _ = s => Gettext.dgettext(DOMAIN, s);
 
 // Tests point this at a stand-in so no OCR engine is needed.
 const OCR = GLib.getenv('PARCHAOS_LOOKUP_OCR') ?? '/usr/libexec/parchaos-lookup/parchaos-lookup-ocr';
+const TRANSLATE = GLib.getenv('PARCHAOS_TRANSLATE') ?? 'parchaos-translate';
 const SEARCH_URL = 'https://duckduckgo.com/?q=';
 const MIN_SIZE = 8;          // px; a smaller box is taken as a click and cancels
 const PREVIEW_CHARS = 400;
@@ -152,7 +154,7 @@ export default class LookupExtension extends Extension {
     }
 
     /** The glass popover by the selection: "Reading..." while `text` is null, then the actions. */
-    _showPopover(rect, text) {
+    _showPopover(rect, text, status = null) {
         this._closePopover();
         this._actions = null;
         const catcher = new St.Widget({
@@ -180,7 +182,9 @@ export default class LookupExtension extends Extension {
         });
 
         if (text === null) {
-            popover.add_child(new St.Label({style_class: 'parchaos-lookup-status', text: _('Reading the text…')}));
+            const label = new St.Label({style_class: 'parchaos-lookup-status', text: status ?? _('Reading the text…')});
+            label.clutter_text.line_wrap = true;
+            popover.add_child(label);
         } else if (!text) {
             popover.add_child(new St.Label({style_class: 'parchaos-lookup-status', text: _('No text found in that area.')}));
         } else {
@@ -206,6 +210,12 @@ export default class LookupExtension extends Extension {
                 const query = text.replace(/\s+/g, ' ').slice(0, 300);
                 Gio.AppInfo.launch_default_for_uri(SEARCH_URL + encodeURIComponent(query), global.create_app_launch_context(0, -1));
             });
+            // Translate Selection (ticket #152), when installed: the text in the other language,
+            // made on this computer; the actions then work on the translation.
+            if (GLib.find_program_in_path(TRANSLATE)) {
+                this._action(actions, 'preferences-desktop-locale-symbolic', _('Translate'), () =>
+                    this._translate(rect, text).catch(e => logError(e, 'parchaos-lookup: translate')));
+            }
             if (GLib.find_program_in_path('parchaos-assistant')) {
                 this._action(actions, 'chat-message-new-symbolic', _('Ask the Assistant'), () => {
                     this._closePopover();
@@ -228,6 +238,27 @@ export default class LookupExtension extends Extension {
             y = Math.max(monitor.y + 10, rect.y - natHeight - 10);
         x = Math.max(monitor.x + 10, Math.min(x, monitor.x + monitor.width - width - 10));
         popover.set_position(x, y);
+    }
+
+    async _translate(rect, text) {
+        this._showPopover(rect, null, _('Translating…'));
+        let result = null;
+        try {
+            const proc = Gio.Subprocess.new([TRANSLATE, '--json'],
+                Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+            const [out] = await proc.communicate_utf8_async(text, null);
+            result = JSON.parse((out ?? '').trim() || 'null');
+        } catch (e) {
+            result = null;
+        }
+        if (!this._catcher)
+            return;
+        if (result && typeof result.text === 'string')
+            this._showPopover(rect, result.text);
+        else if (result?.error)
+            this._showPopover(rect, null, _('Translation is not set up yet. Select any text and press Ctrl+Alt+T to set it up.'));
+        else
+            this._showPopover(rect, null, _('Could not translate this text.'));
     }
 
     _action(container, icon, label, callback) {

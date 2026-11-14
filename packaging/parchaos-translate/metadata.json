@@ -1,0 +1,8 @@
+{
+  "uuid": "parchaos-translate@parchaos.org",
+  "name": "Translate Selection",
+  "description": "Select text in any app and press Ctrl+Alt+T to see it in English or Spanish. The translation is made on this computer.",
+  "shell-version": ["48", "49", "50", "51"],
+  "settings-schema": "org.parchaos.translate",
+  "url": "https://parchaos.org"
+}

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-lookup\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-13 23:18-0600\n"
+"POT-Creation-Date: 2026-11-14 17:08-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,30 +16,50 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension.js:60
+#: extension.js:63
 msgid "Drag around the text to look up"
 msgstr "Arrastra alrededor del texto que quieres consultar"
 
-#: extension.js:186
+#: extension.js:185
 msgid "Reading the text…"
 msgstr "Leyendo el texto…"
 
-#: extension.js:188
+#: extension.js:189
 msgid "No text found in that area."
 msgstr "No se encontró texto en esa zona."
 
-#: extension.js:198
+#: extension.js:200
 msgid "Copy Text"
 msgstr "Copiar texto"
 
-#: extension.js:200
+#: extension.js:202
 msgid "Copied"
 msgstr "Copiado"
 
-#: extension.js:206
+#: extension.js:208
 msgid "Search the Web"
 msgstr "Buscar en la web"
 
-#: extension.js:212
+#: extension.js:216
+msgid "Translate"
+msgstr "Traducir"
+
+#: extension.js:220
 msgid "Ask the Assistant"
 msgstr "Preguntar al asistente"
+
+#: extension.js:244
+msgid "Translating…"
+msgstr "Traduciendo…"
+
+#: extension.js:259
+msgid ""
+"Translation is not set up yet. Select any text and press Ctrl+Alt+T to set "
+"it up."
+msgstr ""
+"La traducción aún no está configurada. Selecciona cualquier texto y pulsa "
+"Ctrl+Alt+T para configurarla."
+
+#: extension.js:261
+msgid "Could not translate this text."
+msgstr "No se pudo traducir este texto."

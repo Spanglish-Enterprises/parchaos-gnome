@@ -1,0 +1,338 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Translate (ticket #152): translate text on this computer, English <-> Spanish,
+# with nothing sent anywhere.
+#
+#   parchaos-translate [--to en|es] [--json] [TEXT]   translate TEXT (or standard input)
+#   parchaos-translate status                         ready | no-engine | no-model
+#   parchaos-translate setup                          install the engine (one password prompt)
+#                                                     and download the models (checked)
+#   parchaos-translate remove                         delete the downloaded models
+#
+# The models are Opus-MT (Helsinki-NLP, University of Helsinki; Apache-2.0 on their model
+# cards, trained on the OPUS corpora), in the ONNX form published by Xenova, pinned to one
+# revision with a SHA-256 for every file. They run with Fedora's onnxruntime; the words are
+# split with Fedora's sentencepiece. About 115 MB per direction.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.request
+
+DATA = os.environ.get('PARCHAOS_TRANSLATE_DATA') or os.path.join(
+    os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'), 'parchaos', 'translate')
+INSTALL_ENGINE = os.environ.get('PARCHAOS_TRANSLATE_INSTALL_ENGINE') or \
+    '/usr/libexec/parchaos-translate/parchaos-translate-install-engine'
+LANGS = ('en', 'es')
+
+# pair: (repository, revision, {file: (path in the repository, size, SHA-256)})
+MODELS = {
+    'en-es': ('Xenova/opus-mt-en-es', '4b002a4c7edd54a7ced58877258b87f7efd3f892', {
+        'config.json': ('config.json', 1468,
+                        '499eae1f97eeba63172fc884f92fd727ae803b7ceb79c0f653aa4b011152af2f'),
+        'source.spm': ('source.spm', 801636,
+                       '4dd547c24816a335e7b0b2e63376a8f1b3cbfc671eda5ab808dd44fdadaa8791'),
+        'target.spm': ('target.spm', 825924,
+                       'e236ee6d866b635c0142114f8647f39831f9d92534aa2aad75c942f6a78ad0e3'),
+        'vocab.json': ('vocab.json', 1720044,
+                       'b074b4cca0036ade5a39ea97faabd534e1015482c480fc2cb02c6481983eb163'),
+        'encoder.onnx': ('onnx/encoder_model_quantized.onnx', 52899742,
+                         '03434edd1147e6c49e22066e9dc5888235e99cc35a6711d1c4ea5b06455d5da9'),
+        'decoder.onnx': ('onnx/decoder_model_quantized.onnx', 59842102,
+                         '2b45074cc819f1d901e40510d7bc0781d99327d16c7eca04518c4ee0c3d6ba10'),
+    }),
+    'es-en': ('Xenova/opus-mt-es-en', 'eadfd7c658a9d8929ac3b8e996b68a68e2c7d480', {
+        'config.json': ('config.json', 1433,
+                        'fab3a7f93185bc5aa7b419f6a1e6e74d98c8f2a506c94493d3019bf46da3478d'),
+        'source.spm': ('source.spm', 825924,
+                       'e236ee6d866b635c0142114f8647f39831f9d92534aa2aad75c942f6a78ad0e3'),
+        'target.spm': ('target.spm', 801636,
+                       '4dd547c24816a335e7b0b2e63376a8f1b3cbfc671eda5ab808dd44fdadaa8791'),
+        'vocab.json': ('vocab.json', 1720044,
+                       'b074b4cca0036ade5a39ea97faabd534e1015482c480fc2cb02c6481983eb163'),
+        'encoder.onnx': ('onnx/encoder_model_quantized.onnx', 52899742,
+                         'c01e70f8455efc350831aa2af7ed187b16829241f0018ba07d1ba643a391bc18'),
+        'decoder.onnx': ('onnx/decoder_model_quantized.onnx', 59842102,
+                         'd518f1f0041b2831f0aeb5a087cf899742cd9d4b574f6b98ad9f816b8c06925b'),
+    }),
+}
+
+# ---------------------------------------------------------------------------------------------
+# Text handling (no engine needed; tested in tests/test_translate.py)
+# ---------------------------------------------------------------------------------------------
+
+ES_WORDS = set('el la los las de del que y en un una unos unas es son está están por para con '
+               'no se su sus al lo le les como más pero muy también hay ser fue era este esta '
+               'estos estas ese esa eso yo tú usted nosotros ellos ellas qué cuándo dónde cómo '
+               'porque cuando donde sí hola gracias bueno buena buenos buenas mi mis tu tus nos '
+               'hasta desde sobre entre sin todo todos toda todas otro otra ya aquí ahora'.split())
+EN_WORDS = set('the a an of to and in is are was were be been it that this these those for on '
+               'with as at by from or not but you your we our they their he she his her i my me '
+               'have has had do does did will would can could should what when where why how '
+               'there here all any some more very also just about into over than then if so no '
+               'yes hello thanks thank please good'.split())
+
+
+def detect(text):
+    """'es' or 'en', from common words and Spanish letters. Ties go to English."""
+    words = re.findall(r"[a-záéíóúüñ']+", text.lower())
+    es = sum(w in ES_WORDS for w in words) + 2 * len(re.findall(r'[ñ¿¡]', text.lower()))
+    es += 0.5 * len(re.findall(r'[áéíóú]', text.lower()))
+    en = sum(w in EN_WORDS for w in words)
+    return 'es' if es > en else 'en'
+
+
+def target_for(source, ui_lang=None):
+    """Into the other language; the person's own language decides when that's ambiguous."""
+    other = 'en' if source == 'es' else 'es'
+    return other
+
+
+def split_text(text):
+    """[(sentence, what follows it)]: paragraphs and sentences, so each piece fits the model
+    and the layout comes back as it was."""
+    out = []
+    for para, gap in re.findall(r'(.*?)(\n\s*|$)', text, flags=re.S):
+        if not para.strip():
+            if gap and out:
+                s, g = out[-1]
+                out[-1] = (s, g + gap)
+            continue
+        lead = para[:len(para) - len(para.lstrip())]
+        if lead and out:
+            s, g = out[-1]
+            out[-1] = (s, g + lead)
+        para = para.strip()
+        parts = re.split(r'(?<=[.!?…])\s+(?=[¿¡"“«(\[]?[A-ZÁÉÍÓÚÑ0-9])', para)
+        for i, part in enumerate(parts):
+            out.append((part, ' ' if i < len(parts) - 1 else gap))
+        if not gap:
+            break
+    return out
+
+
+def join_text(pieces):
+    return ''.join(t + g for t, g in pieces).rstrip()
+
+
+def sha256_of(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def model_dir(pair):
+    return os.path.join(DATA, pair)
+
+
+def model_present(pair):
+    files = MODELS[pair][2]
+    return all(os.path.isfile(os.path.join(model_dir(pair), n)) and
+               os.path.getsize(os.path.join(model_dir(pair), n)) == files[n][1] for n in files)
+
+
+def engine_present():
+    return subprocess.run([sys.executable, '-c', 'import onnxruntime, numpy, sentencepiece'],
+                          capture_output=True).returncode == 0
+
+
+def status():
+    if not engine_present():
+        return 'no-engine'
+    if not all(model_present(p) for p in MODELS):
+        return 'no-model'
+    return 'ready'
+
+
+def total_download():
+    return sum(size for _r, _v, files in MODELS.values() for _p, size, _s in files.values())
+
+
+def download(progress=None, base='https://huggingface.co/'):
+    """Fetches what is missing; every file is checked before it is kept."""
+    done, total = 0, total_download()
+    for pair, (repo, rev, files) in MODELS.items():
+        folder = model_dir(pair)
+        os.makedirs(folder, exist_ok=True)
+        for name, (remote, size, want) in files.items():
+            dest = os.path.join(folder, name)
+            if os.path.isfile(dest) and os.path.getsize(dest) == size and sha256_of(dest) == want:
+                done += size
+                continue
+            tmp = dest + '.part'
+            with urllib.request.urlopen(f'{base}{repo}/resolve/{rev}/{remote}', timeout=60) as r, \
+                    open(tmp, 'wb') as out:
+                while True:
+                    block = r.read(1 << 20)
+                    if not block:
+                        break
+                    out.write(block)
+                    done += len(block)
+                    if progress:
+                        progress(done, total)
+            if os.path.getsize(tmp) != size or sha256_of(tmp) != want:
+                os.remove(tmp)
+                raise RuntimeError(f'{pair}/{name} failed its check and was discarded')
+            os.replace(tmp, dest)
+
+
+# ---------------------------------------------------------------------------------------------
+# The model
+# ---------------------------------------------------------------------------------------------
+
+class Model:
+    """One direction of Opus-MT (a Marian model): sentencepiece in, beam search, sentencepiece out."""
+
+    def __init__(self, pair, beams=4):
+        import numpy as np
+        import onnxruntime as ort
+        import sentencepiece as spm
+        self.np = np
+        folder = model_dir(pair)
+        with open(os.path.join(folder, 'config.json'), encoding='utf-8') as f:
+            config = json.load(f)
+        with open(os.path.join(folder, 'vocab.json'), encoding='utf-8') as f:
+            self.vocab = json.load(f)
+        self.pieces = {i: p for p, i in self.vocab.items()}
+        self.src = spm.SentencePieceProcessor(model_file=os.path.join(folder, 'source.spm'))
+        self.tgt = spm.SentencePieceProcessor(model_file=os.path.join(folder, 'target.spm'))
+        self.eos = config.get('eos_token_id', 0)
+        self.pad = config.get('pad_token_id', 65000)
+        self.start = config.get('decoder_start_token_id', self.pad)
+        self.unk = self.vocab.get('<unk>', 1)
+        self.beams = beams
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = max(1, min(4, os.cpu_count() or 1))
+        cpu = ['CPUExecutionProvider']
+        self.encoder = ort.InferenceSession(os.path.join(folder, 'encoder.onnx'), opts, providers=cpu)
+        self.decoder = ort.InferenceSession(os.path.join(folder, 'decoder.onnx'), opts, providers=cpu)
+
+    def encode(self, text):
+        ids = [self.vocab.get(p, self.unk) for p in self.src.encode(text, out_type=str)]
+        return ids[:510] + [self.eos]
+
+    def decode(self, ids):
+        pieces = [self.pieces.get(i, '') for i in ids if i not in (self.eos, self.pad)]
+        return self.tgt.decode_pieces([p for p in pieces if p and not p.startswith('<')])
+
+    def translate(self, text):
+        np = self.np
+        src = self.encode(text)
+        ids = np.array([src], dtype=np.int64)
+        mask = np.ones_like(ids)
+        hidden = self.encoder.run(None, {'input_ids': ids, 'attention_mask': mask})[0]
+        max_len = min(512, 2 * len(src) + 10)
+        beams = [([self.start], 0.0)]
+        finished = []
+        for _step in range(max_len):
+            live = [b for b in beams]
+            if not live:
+                break
+            inp = np.array([b[0] for b in live], dtype=np.int64)
+            n = len(live)
+            logits = self.decoder.run(['logits'], {
+                'input_ids': inp,
+                'encoder_hidden_states': np.repeat(hidden, n, axis=0),
+                'encoder_attention_mask': np.repeat(mask, n, axis=0)})[0][:, -1, :]
+            logits[:, self.pad] = -1e9
+            logits = logits - logits.max(axis=1, keepdims=True)
+            logp = logits - np.log(np.exp(logits).sum(axis=1, keepdims=True))
+            candidates = []
+            for i, (seq, score) in enumerate(live):
+                top = np.argpartition(-logp[i], self.beams)[:self.beams]
+                for t in top:
+                    candidates.append((seq + [int(t)], score + float(logp[i, t])))
+            candidates.sort(key=lambda c: c[1], reverse=True)
+            beams = []
+            for seq, score in candidates:
+                if seq[-1] == self.eos:
+                    finished.append((seq, score / (len(seq) - 1)))
+                else:
+                    beams.append((seq, score))
+                if len(beams) == self.beams:
+                    break
+            if len(finished) >= self.beams:
+                best_live = beams[0][1] / len(beams[0][0]) if beams else -1e9
+                if max(f[1] for f in finished) >= best_live:
+                    break
+        if not finished:
+            finished = [(b[0], b[1] / len(b[0])) for b in beams]
+        best = max(finished, key=lambda f: f[1])[0]
+        return self.decode(best[1:])
+
+
+_models = {}
+
+
+def translate(text, to=None):
+    """(from, to, translation)."""
+    source = detect(text)
+    if to not in LANGS:
+        to = target_for(source)
+    if to == source:
+        source = 'en' if to == 'es' else 'es'
+    pair = f'{source}-{to}'
+    if pair not in _models:
+        _models[pair] = Model(pair)
+    model = _models[pair]
+    pieces = [(model.translate(s) if s.strip() else s, g) for s, g in split_text(text)]
+    return source, to, join_text(pieces)
+
+
+def main(argv):
+    if argv[:1] == ['status']:
+        print(status())
+        return 0
+    if argv[:1] == ['remove']:
+        shutil.rmtree(DATA, ignore_errors=True)
+        return 0
+    if argv[:1] == ['setup']:
+        if not engine_present():
+            print('step engine', flush=True)
+            if subprocess.run(['pkexec', INSTALL_ENGINE]).returncode != 0 or not engine_present():
+                print('error engine', flush=True)
+                return 1
+        print('step download', flush=True)
+        last = [-1]
+
+        def progress(done, total):
+            pct = int(100 * done / total)
+            if pct != last[0]:
+                last[0] = pct
+                print(f'progress {pct}', flush=True)
+        try:
+            download(progress)
+        except (OSError, RuntimeError) as err:
+            print(f'error download {err}', flush=True)
+            return 1
+        print('ready', flush=True)
+        return 0
+    ap = argparse.ArgumentParser(prog='parchaos-translate')
+    ap.add_argument('--to', choices=LANGS)
+    ap.add_argument('--json', action='store_true')
+    ap.add_argument('text', nargs='*')
+    args = ap.parse_args(argv)
+    text = ' '.join(args.text) if args.text else sys.stdin.read()
+    if not text.strip():
+        return 0
+    state = status()
+    if state != 'ready':
+        print(json.dumps({'error': state}) if args.json else
+              f'parchaos-translate: not set up ({state}); run: parchaos-translate setup', file=sys.stdout if args.json else sys.stderr)
+        return 2
+    source, to, out = translate(text.strip(), args.to)
+    print(json.dumps({'from': source, 'to': to, 'text': out}, ensure_ascii=False) if args.json else out)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

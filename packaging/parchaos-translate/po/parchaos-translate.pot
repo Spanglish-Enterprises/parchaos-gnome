@@ -1,0 +1,115 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-translate package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-translate\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-14 17:07-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:34
+msgid "Spanish"
+msgstr ""
+
+#: extension.js:34
+msgid "English"
+msgstr ""
+
+#: extension.js:65
+msgid "Translate"
+msgstr ""
+
+#: extension.js:65
+msgid "Select some text first, then press the shortcut."
+msgstr ""
+
+#: extension.js:76
+msgid "Translating…"
+msgstr ""
+
+#: extension.js:97
+msgid "Could not translate this text."
+msgstr ""
+
+#: extension.js:195
+#, javascript-format
+msgid "%s → %s"
+msgstr ""
+
+#. Translators: for when the language was guessed wrong, e.g. "Translate from Spanish instead".
+#: extension.js:201
+#, javascript-format
+msgid "Translate from %s instead"
+msgstr ""
+
+#: extension.js:215
+msgid "Copy"
+msgstr ""
+
+#: extension.js:217
+msgid "Copied"
+msgstr ""
+
+#: extension.js:224
+msgid "Translated on this computer"
+msgstr ""
+
+#: extension.js:235
+msgid "Set Up Translation"
+msgstr ""
+
+#: extension.js:237
+msgid ""
+"Translation between English and Spanish runs on this computer, so nothing "
+"you translate is sent anywhere. It needs a one-time download of about 230 MB."
+msgstr ""
+
+#: extension.js:239
+msgid "You will be asked for your password to add the translation engine."
+msgstr ""
+
+#: extension.js:243
+msgid "Not Now"
+msgstr ""
+
+#: extension.js:244
+msgid "Set Up"
+msgstr ""
+
+#: extension.js:251
+msgid "Getting ready…"
+msgstr ""
+
+#: extension.js:271
+msgid "Adding the translation engine…"
+msgstr ""
+
+#: extension.js:273
+msgid "Downloading the translation models…"
+msgstr ""
+
+#. Translators: download progress, e.g. "Downloading… 42%"
+#: extension.js:276
+#, javascript-format
+msgid "Downloading… %d%%"
+msgstr ""
+
+#: extension.js:287
+msgid "The translation engine was not added. Press the shortcut to try again."
+msgstr ""
+
+#: extension.js:289
+msgid ""
+"The download did not finish. Check the internet connection and press the "
+"shortcut to try again."
+msgstr ""

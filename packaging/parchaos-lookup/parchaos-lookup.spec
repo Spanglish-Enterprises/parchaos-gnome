@@ -9,7 +9,7 @@
 
 Name:           parchaos-lookup
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Look up the text in any part of the screen on ParchaOS
 
 License:        GPL-3.0-or-later
@@ -72,6 +72,12 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-lookup.
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-lookup.mo
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 1.0.0-3
+- Ticket #152: a Translate action, when Translate Selection is installed: the
+  text read from the screen is shown in the other language (English and
+  Spanish, translated on this computer), and Copy, Search and Ask then work
+  on the translation.
+
 * Fri Nov 13 2026 ParchaOS packaging - 1.0.0-2
 - Ticket #185: parchaos-name-suggest prints up to three names for a file from
   its content (a receipt's shop and date via the same OCR, a document's

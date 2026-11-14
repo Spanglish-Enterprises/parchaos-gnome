@@ -210,6 +210,8 @@ PROFILE_REPO_PACKAGES=(
     parchaos-policy
     # Send files to nearby computers and phones (packaging/parchaos-nearby/, ticket #149).
     parchaos-nearby
+    # Translate the selection on this computer (packaging/parchaos-translate/, ticket #152).
+    parchaos-translate
 
     # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
     # controller rules and the Game Mode session; launchers come from Flathub.
