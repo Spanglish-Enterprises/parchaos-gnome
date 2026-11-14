@@ -1,0 +1,792 @@
+ParchaOS: file piles and the desktop menu (ticket #175)
+
+Desktop files are grouped into piles by kind (Pictures, Screenshots, Screen
+Recordings, Documents, ...), by a date (last opened, added, modified, created)
+or by Parcher's colour tag, chosen under Sort Piles By. A pile is drawn as its
+three newest files fanned; clicking opens it in place and clicking again closes
+it. The desktop menu gains Properties, Change Wallpaper, Group Files into Piles,
+Sort Piles By and Icon Options, and menu check marks follow settings changed
+elsewhere. Builds on DING's own stacks (keep-stacked, unstackedtypes).
+
+Original code for ParchaOS, GPL-3.0.
+
+diff --git a/app/desktopManager.js b/app/desktopManager.js
+index 7c12212..d131d5a 100644
+--- a/app/desktopManager.js
++++ b/app/desktopManager.js
+@@ -28,6 +28,7 @@ import Adw from 'gi://Adw?version=1';
+ import * as dndClipboardUtils from './dndClipboardUtils.js';
+ import * as FileItem from './fileItem.js';
+ import * as stackItem from './stackItem.js';
++import * as Piles from './piles.js';
+ import * as DesktopGrid from './desktopGrid.js';
+ import * as DesktopIconsUtil from './desktopIconsUtil.js';
+ import * as Prefs from './preferences.js';
+@@ -95,6 +96,11 @@ export var DesktopManager = class {
+         this._dragList = null;
+         this.dragItem = null;
+         this.thumbnailLoader = new Thumbnails.ThumbnailLoader(this, codePath);
++        // ParchaOS piles (#175): Parcher's colour tags, for piles grouped by tag.
++        this._tagStore = new Piles.TagStore(() => {
++            if (this.keepStacked && Prefs.getPileMode() === 'tags')
++                this.doStacks(true);
++        });
+         this._codePath = codePath;
+         this._asDesktop = asDesktop;
+         this._desktopList = desktopList;
+@@ -153,6 +159,14 @@ export var DesktopManager = class {
+ 
+                 return;
+             }
++            if (key === 'pile-by') {
++                // A new grouping: every pile starts closed.
++                Prefs.setUnstackList([]);
++                if (this.keepStacked)
++                    this.doStacks(true);
++
++                return;
++            }
+             if (key === 'unstackedtypes') {
+                 if (this.keepStacked)
+                     this.doStacks(true);
+@@ -1718,17 +1732,26 @@ export var DesktopManager = class {
+         this.stackInitialCoordinates = null;
+     }
+ 
+-    _makeStackTopMarkerFolder(type, list) {
+-        const stackAttribute = type.split('/')[1];
++    _makeStackTopMarkerFolder(type, list, members = []) {
+         const fileItem = new stackItem.stackItem(
+             this,
+-            stackAttribute,
++            Piles.pileLabel(type),
+             type,
+-            Enums.FileType.STACK_TOP
++            Enums.FileType.STACK_TOP,
++            members
+         );
+         list.push(fileItem);
+     }
+ 
++    // The pile each file belongs to (ParchaOS, #175), set before stacking.
++    _assignPileKeys(fileList) {
++        const mode = Prefs.getPileMode();
++        for (const fileItem of fileList) {
++            if (!fileItem.isStackMarker && fileItem._fileInfo)
++                fileItem.pileKey = Piles.pileKey(fileItem._fileInfo, fileItem.uri, mode, this._tagStore.tags);
++        }
++    }
++
+     _sortAllFilesFromGridsByKindStacked(restack) {
+         /**
+          *
+@@ -1737,7 +1760,7 @@ export var DesktopManager = class {
+             for (const item of otherFiles) {
+                 if (item.isStackMarker) {
+                     for (const unstackitem of stackedFiles) {
+-                        if (item.attributeContentType === unstackitem.attributeContentType) {
++                        if (item.pileKey === unstackitem.pileKey) {
+                             item.size = unstackitem.fileSize;
+                             item.time = unstackitem.modifiedTime;
+                             break;
+@@ -1758,6 +1781,9 @@ export var DesktopManager = class {
+         if (this._allFileList && restack)
+             this._fileList = this._allFileList;
+ 
++        // Stack markers from a previous pass are rebuilt below.
++        this._fileList = this._fileList.filter(fileItem => !fileItem.isStackMarker);
++        this._assignPileKeys(this._fileList);
+         this._sortByName(this._fileList);
+         for (const fileItem of this._fileList) {
+             if (fileItem.isSpecial) {
+@@ -1772,10 +1798,10 @@ export var DesktopManager = class {
+                 validDesktopFiles.push(fileItem);
+                 continue;
+             } else {
+-                const type = fileItem.attributeContentType;
++                const type = fileItem.pileKey;
+                 let stacked = false;
+                 for (const item of otherFiles) {
+-                    if (type === item.attributeContentType) {
++                    if (type === item.pileKey) {
+                         stackedFiles.push(fileItem);
+                         stacked = true;
+                     }
+@@ -1790,7 +1816,7 @@ export var DesktopManager = class {
+         for (const a of otherFiles) {
+             let instack = false;
+             for (const c of stackedFiles) {
+-                if (c.attributeContentType === a.attributeContentType) {
++                if (c.pileKey === a.pileKey) {
+                     instack = true;
+                     break;
+                 }
+@@ -1802,7 +1828,10 @@ export var DesktopManager = class {
+         }
+         for (const item of otherFiles) {
+             if (!item.stackUnique) {
+-                this._makeStackTopMarkerFolder(item.attributeContentType, stackTopMarkerFolderList);
++                // The newest files are drawn on top of the pile.
++                const members = [item, ...stackedFiles.filter(f => f.pileKey === item.pileKey)]
++                    .sort((x, y) => y.modifiedTime - x.modifiedTime);
++                this._makeStackTopMarkerFolder(item.pileKey, stackTopMarkerFolderList, members);
+                 item.isStackTop = false;
+                 stackedFiles.push(item);
+             }
+@@ -1865,9 +1894,9 @@ export var DesktopManager = class {
+         }
+         for (const item of otherFiles) {
+             newFileList.push(item);
+-            const itemtype = item.attributeContentType;
++            const itemtype = item.pileKey;
+             for (const unstackitem of stackedFiles) {
+-                if (unstackList.includes(unstackitem.attributeContentType) && (unstackitem.attributeContentType === itemtype))
++                if (unstackList.includes(unstackitem.pileKey) && (unstackitem.pileKey === itemtype))
+                     newFileList.push(unstackitem);
+             }
+         }
+@@ -1899,7 +1928,7 @@ export var DesktopManager = class {
+          * @param {FileItem} b
+          */
+         function byKindByName(a, b) {
+-            return a.attributeContentType.localeCompare(b.attributeContentType) ||
++            return Piles.compareKeys(a.pileKey ?? a.attributeContentType, b.pileKey ?? b.attributeContentType) ||
+                 a._label.get_text().localeCompare(b._label.get_text(), {sensitivity: 'accent', numeric: 'true', localeMatcher: 'lookup'});
+         }
+         fileList.sort(byKindByName);
+diff --git a/app/desktopMenu.js b/app/desktopMenu.js
+index be42d2d..eab9d49 100644
+--- a/app/desktopMenu.js
++++ b/app/desktopMenu.js
+@@ -114,6 +114,10 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         this._addNewActionBoolean('keep-stacked');
+         this._addNewActionBoolean('sort-special-folders');
+         this._addNewActionSelection('arrangeorder');
++        this._addNewActionSelection('pile-by');
++        this._addNewAction('desktop-properties', null, () => {
++            DBusUtils.RemoteFileOperations.ShowItemPropertiesRemote([this._desktopDir.get_uri()], Gdk.CURRENT_TIME);
++        });
+         this._addNewAction('show-in-files', null, () => this._onOpenDesktopInFilesClicked());
+         this._addNewAction('open-in-terminal-desktop', null, () => {
+             DesktopIconsUtil.launchTerminal(this._desktopDir.get_path(), null);
+@@ -182,7 +186,6 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+ 
+         const section = this._newSection(arrangeSubMenu);
+         this._newMenuElement(_('Keep Arranged...'), 'keep-arranged', section);
+-        this._newMenuElement(_('Keep Stacked by type...'), 'keep-stacked', section);
+         this._newMenuElement(_('Sort Home/Drives/Trash...'), 'sort-special-folders', section);
+ 
+         this._newMenuElement(_('Sort by Name'), 'arrangeorder', section, GLib.Variant.new_string('NAME'));
+@@ -194,6 +197,19 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         return arrangeSubMenu;
+     }
+ 
++    // ParchaOS (#175): the desktop menu, with piles.
++    _addPilesSubMenu() {
++        const pilesSubMenu = new Gio.Menu();
++        const section = this._newSection(pilesSubMenu);
++        this._newMenuElement(_('Type'), 'pile-by', section, GLib.Variant.new_string('kind'));
++        this._newMenuElement(_('Last Opened'), 'pile-by', section, GLib.Variant.new_string('last-opened'));
++        this._newMenuElement(_('Date Added'), 'pile-by', section, GLib.Variant.new_string('date-added'));
++        this._newMenuElement(_('Date Modified'), 'pile-by', section, GLib.Variant.new_string('date-modified'));
++        this._newMenuElement(_('Date Created'), 'pile-by', section, GLib.Variant.new_string('date-created'));
++        this._newMenuElement(_('Tags'), 'pile-by', section, GLib.Variant.new_string('tags'));
++        return pilesSubMenu;
++    }
++
+     _createDesktopBackgroundMenu() {
+         const menuContainer = new Gio.Menu();
+         let section = this._newSection(menuContainer);
+@@ -203,6 +219,8 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         if (templates !== null)
+             section.append_submenu(_('New Document'), templates);
+ 
++        this._newMenuElement(_('Properties'), 'desktop-properties', section);
++        this._newMenuElement(_('Change Wallpaper…'), 'change-background', section);
+ 
+         section = this._newSection(menuContainer);
+         this._newMenuElement(_('Paste'), 'paste', section);
+@@ -213,23 +231,18 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         if (undoredo.redo)
+             this._newMenuElement(_('Redo'), 'redo', section);
+ 
+-
+-        section = this._newSection(menuContainer);
+         this._newMenuElement(_('Select All'), 'select-all', section);
+ 
+         section = this._newSection(menuContainer);
++        this._newMenuElement(_('Group Files into Piles'), 'keep-stacked', section);
++        section.append_submenu(_('Sort Piles By'), this._addPilesSubMenu());
+         this._newMenuElement(_('Arrange Icons'), 'arrange-icons', section);
+         section.append_submenu(_('Arrange By...'), this._addSortingSubMenu());
++        this._newMenuElement(_('Icon Options…'), 'show-settings', section);
+ 
+         section = this._newSection(menuContainer);
+         this._newMenuElement(_('Show Desktop in Files'), 'show-in-files', section);
+         this._newMenuElement(_('Open in Terminal'), 'open-in-terminal-desktop', section);
+-
+-        section = this._newSection(menuContainer);
+-        this._newMenuElement(_('Change Background…'), 'change-background', section);
+-
+-        section = this._newSection(menuContainer);
+-        this._newMenuElement(_('Desktop Icons Settings'), 'show-settings', section);
+         this._newMenuElement(_('Display Settings'), 'display-settings', section);
+ 
+         return menuContainer;
+diff --git a/app/enums.js b/app/enums.js
+index f77ea5f..ee04393 100644
+--- a/app/enums.js
++++ b/app/enums.js
+@@ -108,7 +108,8 @@ export var MIME_TYPES = [DndTargetInfo.DING_ICON_LIST,
+     DndTargetInfo.TEXT_PLAIN_UTF8,
+     DndTargetInfo.TEXT_PLAIN];
+ 
+-export var DEFAULT_ATTRIBUTES = 'metadata::*,standard::*,access::*,time::modified,unix::mode';
++// ParchaOS (#175): all file times, for piles grouped by date.
++export var DEFAULT_ATTRIBUTES = 'metadata::*,standard::*,access::*,time::*,unix::mode';
+ export var TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
+ export var SCHEMA_NAUTILUS = 'org.gnome.nautilus.preferences';
+ export var SCHEMA_NAUTILUS_COMPRESSION = 'org.gnome.nautilus.compression';
+diff --git a/app/fileItemMenu.js b/app/fileItemMenu.js
+index 3bce6dc..dc3d176 100644
+--- a/app/fileItemMenu.js
++++ b/app/fileItemMenu.js
+@@ -240,12 +240,12 @@ export var FileItemMenu = class extends MenuHelper.MenuHelper {
+         if (keepStacked && !fileItem.stackUnique) {
+             if (!fileItem.isSpecial && !fileItem.isDirectory && !fileItem.isValidDesktopFile) {
+                 const unstackList = Prefs.getUnstackList();
+-                const typeInList = unstackList.includes(fileItem.attributeContentType);
++                const typeInList = unstackList.includes(fileItem.pileKey);
+                 this._newMenuElement(
+-                    typeInList ? _('Stack This Type') : _('Unstack This Type'),
++                    typeInList ? _('Close Pile') : _('Open Pile'),
+                     'toggle-stack',
+                     section,
+-                    GLib.Variant.new('s', fileItem.attributeContentType)
++                    GLib.Variant.new('s', fileItem.pileKey)
+                 );
+                 addedElement = true;
+             }
+diff --git a/app/menuHelper.js b/app/menuHelper.js
+index 67607bd..a20b4ba 100644
+--- a/app/menuHelper.js
++++ b/app/menuHelper.js
+@@ -65,6 +65,9 @@ export var MenuHelper = class {
+             action.set_state(newState);
+             Prefs.desktopSettings.set_boolean(name, newState.get_boolean());
+         });
++        // Follow changes made elsewhere too, so the check mark is right (ParchaOS).
++        Prefs.desktopSettings.connect(`changed::${name}`, () =>
++            newAction.set_state(GLib.Variant.new_boolean(Prefs.desktopSettings.get_boolean(name))));
+         this._mainApp.add_action(newAction);
+         if (accels !== null)
+             this._mainApp.set_accels_for_action(name, accels);
+@@ -78,6 +81,8 @@ export var MenuHelper = class {
+             Prefs.desktopSettings.set_string(name, parameter.get_string()[0]);
+             action.set_state(parameter);
+         });
++        Prefs.desktopSettings.connect(`changed::${name}`, () =>
++            newAction.set_state(GLib.Variant.new_string(Prefs.desktopSettings.get_string(name))));
+         this._mainApp.add_action(newAction);
+         if (accels !== null)
+             this._mainApp.set_accels_for_action(name, accels);
+diff --git a/app/meson.build b/app/meson.build
+index 23ad6c3..53f7517 100644
+--- a/app/meson.build
++++ b/app/meson.build
+@@ -27,6 +27,7 @@ install_data([
+     'fileUtils.js',
+     'menuHelper.js',
+     'notifyX11UnderWayland.js',
++    'piles.js',
+     'preferences.js',
+     'prefswindow.js',
+     'promiseUtils.js',
+diff --git a/app/piles.js b/app/piles.js
+new file mode 100644
+index 0000000..555b865
+--- /dev/null
++++ b/app/piles.js
+@@ -0,0 +1,169 @@
++/* ParchaOS piles (ticket #175)
++ *
++ * Copyright (C) 2026 ParchaOS contributors
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, version 3 of the License.
++ */
++// SPDX-License-Identifier: GPL-3.0-only
++// Which pile a desktop file belongs to. DING already stacks files that share a content
++// type; ParchaOS groups them instead by what people think of as one kind (Pictures,
++// Screenshots, Recordings, Documents...), or by a date, or by Parcher's colour tag, as
++// chosen in the desktop menu (pile-by). A pile key is a plain string such as
++// "kind:pictures", "date-modified:today" or "tags:red"; pileLabel() names it.
++'use strict';
++import Gio from 'gi://Gio';
++import GLib from 'gi://GLib';
++
++const Gettext = imports.gettext.domain('ding');
++
++const _ = Gettext.gettext;
++
++export const MODES = ['kind', 'last-opened', 'date-added', 'date-modified', 'date-created', 'tags'];
++
++// The file time each date mode reads. "Added" has no record of its own on Linux; the
++// status-change time is updated when a file is moved, copied or saved into the folder.
++const TIME_ATTRIBUTE = {
++    'last-opened': 'time::access',
++    'date-added': 'time::changed',
++    'date-modified': 'time::modified',
++    'date-created': 'time::created',
++};
++
++const SCREENSHOT = /^(screenshot|screen shot|captura de pantalla|captura)\b/i;
++const RECORDING = /^(screencast|screen recording|grabaci[oó]n de pantalla)\b/i;
++const ARCHIVE = /(zip|tar|compressed|7z|rar|xz|gzip|bzip|zstd|lzma|cpio)/;
++const SPREADSHEET = /(spreadsheet|ms-excel|csv)/;
++const PRESENTATION = /(presentation|powerpoint)/;
++const DOCUMENT = /^(text\/|application\/(pdf|rtf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml|vnd\.oasis\.opendocument\.text|epub|x-tex|json|xml))/;
++const PACKAGE = /(x-rpm|vnd\.appimage|vnd\.flatpak|x-executable|x-shellscript|x-iso9660|x-cd-image|x-raw-disk-image)/;
++
++/** The kind of a file from its content type and name: pictures, screenshots, ... */
++export function kindOf(contentType, name) {
++    const type = contentType ?? '';
++    if (type.startsWith('image/'))
++        return SCREENSHOT.test(name) ? 'screenshots' : 'pictures';
++    if (type.startsWith('video/'))
++        return RECORDING.test(name) ? 'recordings' : 'videos';
++    if (type.startsWith('audio/'))
++        return 'music';
++    if (SPREADSHEET.test(type))
++        return 'spreadsheets';
++    if (PRESENTATION.test(type))
++        return 'presentations';
++    if (ARCHIVE.test(type))
++        return 'archives';
++    if (PACKAGE.test(type))
++        return 'installers';
++    if (DOCUMENT.test(type))
++        return 'documents';
++    return 'other';
++}
++
++/** today, yesterday, week, month, year or older for a time in seconds, seen from `now`. */
++export function dateBucket(seconds, now = GLib.DateTime.new_now_local()) {
++    if (!seconds)
++        return 'none';
++    const then = GLib.DateTime.new_from_unix_local(seconds);
++    const startOfToday = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0);
++    if (then.compare(startOfToday) >= 0)
++        return 'today';
++    // Whole calendar days before today: anything yesterday is 1.
++    const days = Math.ceil(startOfToday.difference(then) / GLib.TIME_SPAN_DAY);
++    if (days === 1)
++        return 'yesterday';
++    if (days <= 7)
++        return 'week';
++    if (days <= 30)
++        return 'month';
++    if (then.get_year() === now.get_year())
++        return 'year';
++    return 'older';
++}
++
++/** The pile key of a file (its Gio.FileInfo and URI) in `mode`; `tags` maps URIs to colours. */
++export function pileKey(fileInfo, uri, mode, tags) {
++    if (mode === 'tags')
++        return `tags:${tags?.get(uri) ?? 'none'}`;
++    const attribute = TIME_ATTRIBUTE[mode];
++    if (attribute)
++        return `${mode}:${dateBucket(fileInfo.get_attribute_uint64(attribute))}`;
++    return `kind:${kindOf(fileInfo.get_content_type(), fileInfo.get_display_name())}`;
++}
++
++// Labels, and the order piles are shown in.
++const LABELS = {
++    'pictures': () => _('Pictures'),
++    'screenshots': () => _('Screenshots'),
++    'recordings': () => _('Screen Recordings'),
++    'videos': () => _('Videos'),
++    'music': () => _('Music'),
++    'documents': () => _('Documents'),
++    'spreadsheets': () => _('Spreadsheets'),
++    'presentations': () => _('Presentations'),
++    'archives': () => _('Archives'),
++    'installers': () => _('Installers and Disk Images'),
++    'other': () => _('Other Files'),
++    'today': () => _('Today'),
++    'yesterday': () => _('Yesterday'),
++    'week': () => _('Previous 7 Days'),
++    'month': () => _('Previous 30 Days'),
++    'year': () => _('Earlier This Year'),
++    'older': () => _('Older'),
++    'none': () => _('No Date'),
++};
++const TAG_LABELS = {
++    'red': () => _('Red'), 'orange': () => _('Orange'), 'yellow': () => _('Yellow'),
++    'green': () => _('Green'), 'blue': () => _('Blue'), 'purple': () => _('Purple'),
++    'grey': () => _('Grey'), 'gray': () => _('Grey'), 'none': () => _('No Tag'),
++};
++const ORDER = [...Object.keys(LABELS), ...Object.keys(TAG_LABELS)];
++
++export function pileLabel(key) {
++    const [mode, value] = key.split(':');
++    const label = mode === 'tags' ? TAG_LABELS[value] : LABELS[value];
++    return label ? label() : value;
++}
++
++/** Sorts pile keys in reading order (Pictures before Documents, Today before Older). */
++export function compareKeys(a, b) {
++    const ia = ORDER.indexOf(a.split(':')[1]), ib = ORDER.indexOf(b.split(':')[1]);
++    return (ia < 0 ? ORDER.length : ia) - (ib < 0 ? ORDER.length : ib) || a.localeCompare(b);
++}
++
++/** Parcher's colour tags (uri -> colour), from its store, kept up to date. */
++export class TagStore {
++    constructor(onChanged) {
++        this.tags = new Map();
++        this._file = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_data_dir(), 'nautilus', 'folder-colors.conf']));
++        this._load();
++        try {
++            this._monitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
++            this._monitor.connect('changed', () => {
++                this._load();
++                onChanged?.();
++            });
++        } catch (e) {
++            this._monitor = null;
++        }
++    }
++
++    _load() {
++        this.tags.clear();
++        const keyfile = new GLib.KeyFile();
++        try {
++            keyfile.load_from_file(this._file.get_path(), GLib.KeyFileFlags.NONE);
++            const [keys] = keyfile.get_keys('FolderColors');
++            for (const uri of keys)
++                this.tags.set(uri, keyfile.get_string('FolderColors', uri));
++        } catch (e) {
++            // no tags yet
++        }
++    }
++
++    destroy() {
++        this._monitor?.cancel();
++        this._monitor = null;
++    }
++}
+diff --git a/app/preferences.js b/app/preferences.js
+index acf788b..65e298c 100644
+--- a/app/preferences.js
++++ b/app/preferences.js
+@@ -173,6 +173,13 @@ export function setSortOrder(order) {
+     desktopSettings.set_enum(Enums.SortOrder.ORDER, x);
+ }
+ 
++/**
++ *
++ */
++export function getPileMode() {
++    return desktopSettings.get_string('pile-by');
++}
++
+ /**
+  *
+  */
+diff --git a/app/stackItem.js b/app/stackItem.js
+index 9845527..d60191a 100644
+--- a/app/stackItem.js
++++ b/app/stackItem.js
+@@ -22,6 +22,8 @@
+ 'use strict';
+ import Gtk from 'gi://Gtk?version=4.0';
+ import Gio from 'gi://Gio';
++import GLib from 'gi://GLib';
++import Graphene from 'gi://Graphene';
+ 
+ import * as desktopIconItem from './desktopIconItem.js';
+ 
+@@ -34,10 +36,14 @@ const _ = Gettext.gettext;
+ 
+ 
+ export var stackItem = class extends desktopIconItem.desktopIconItem {
+-    constructor(desktopManager, file, attributeContentType, fileExtra) {
++    constructor(desktopManager, file, attributeContentType, fileExtra, members = []) {
+         super(desktopManager, fileExtra);
+         this._isSpecial = false;
+         this._file = file;
++        // ParchaOS piles (#175): the key names the pile; the members draw its icon.
++        this.pileKey = attributeContentType;
++        this._members = members;
++        this._memberSignals = [];
+         this.isStackTop = true;
+         this.stackUnique = false;
+         this._size = null;
+@@ -50,17 +56,74 @@ export var stackItem = class extends desktopIconItem.desktopIconItem {
+     }
+ 
+     _getEmblem() {
+-        if (!this.stackUnique)
+-            return Gio.ThemedIcon.new('list-add');
+         return null;
+     }
+ 
+     _createStackTopIcon() {
+-        let folder = 'folder';
+-        if (Prefs.getUnstackList().includes(this._attributeContentType))
+-            folder = 'folder-open';
+-
+-        this._icon.set_paintable(this._createEmblemedIcon(null, folder));
++        // Up to three of the newest files, fanned; an open pile fans wider.
++        const icons = this._members.slice(0, 3)
++            .map(member => member._icon?.get_paintable())
++            .filter(paintable => paintable);
++        if (!icons.length) {
++            const open = Prefs.getUnstackList().includes(this._attributeContentType);
++            this._icon.set_paintable(this._createEmblemedIcon(null, open ? 'folder-open' : 'folder'));
++            return;
++        }
++        this._watchMembers();
++        const open = Prefs.getUnstackList().includes(this._attributeContentType);
++        const size = Prefs.getIconSize();
++        const card = Math.round(size * 0.78);
++        const angles = icons.length === 1 ? [0] : (open ? [-16, 16, 0] : [-9, 9, 0]).slice(3 - icons.length);
++        const shifts = icons.length === 1 ? [0] : (open ? [-0.16, 0.16, 0] : [-0.08, 0.08, 0]).slice(3 - icons.length);
++        const snapshot = new Gtk.Snapshot();
++        // Bottom of the pile first: the newest file is drawn last, on top.
++        for (let i = icons.length - 1; i >= 0; i--) {
++            const paintable = icons[i];
++            const k = icons.length - 1 - i;
++            const ratio = paintable.get_intrinsic_aspect_ratio() || 1;
++            const w = ratio >= 1 ? card : Math.round(card * ratio);
++            const h = ratio >= 1 ? Math.round(card / ratio) : card;
++            snapshot.save();
++            snapshot.translate(new Graphene.Point({x: size / 2 + shifts[k] * size, y: size / 2 + 2}));
++            snapshot.rotate(angles[k]);
++            snapshot.translate(new Graphene.Point({x: -w / 2, y: -h / 2}));
++            paintable.snapshot(snapshot, w, h);
++            snapshot.restore();
++        }
++        const pile = snapshot.to_paintable(new Graphene.Size({width: size, height: size}));
++        this._icon.set_paintable(null);
++        this._icon.set_paintable(pile);
++    }
++
++    // Thumbnails arrive after the pile is made: redraw when a member's icon changes.
++    _watchMembers() {
++        if (this._memberSignals.length)
++            return;
++        for (const member of this._members.slice(0, 3)) {
++            if (!member._icon)
++                continue;
++            const id = member._icon.connect('notify::paintable', () => {
++                if (this._redrawId)
++                    return;
++                this._redrawId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
++                    this._redrawId = 0;
++                    if (!this._destroyed)
++                        this._createStackTopIcon();
++                    return GLib.SOURCE_REMOVE;
++                });
++            });
++            this._memberSignals.push([member._icon, id]);
++        }
++    }
++
++    _onDestroy() {
++        for (const [icon, id] of this._memberSignals)
++            icon.disconnect(id);
++        this._memberSignals = [];
++        if (this._redrawId)
++            GLib.source_remove(this._redrawId);
++        this._redrawId = 0;
++        super._onDestroy?.();
+     }
+ 
+     doOpen() {
+diff --git a/po/es.po b/po/es.po
+index a338508..0b434fc 100644
+--- a/po/es.po
++++ b/po/es.po
+@@ -1062,3 +1062,155 @@ msgstr ""
+ 
+ #~ msgid "Shows the Pictures folder in the desktop."
+ #~ msgstr "Muestra la carpeta Imágenes en el escritorio."
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Pictures"
++msgstr "Imágenes"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Screenshots"
++msgstr "Capturas de pantalla"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Screen Recordings"
++msgstr "Grabaciones de pantalla"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Videos"
++msgstr "Vídeos"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Music"
++msgstr "Música"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Documents"
++msgstr "Documentos"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Spreadsheets"
++msgstr "Hojas de cálculo"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Presentations"
++msgstr "Presentaciones"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Archives"
++msgstr "Archivos comprimidos"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Installers and Disk Images"
++msgstr "Instaladores e imágenes de disco"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Other Files"
++msgstr "Otros archivos"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Today"
++msgstr "Hoy"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Yesterday"
++msgstr "Ayer"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Previous 7 Days"
++msgstr "Últimos 7 días"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Previous 30 Days"
++msgstr "Últimos 30 días"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Earlier This Year"
++msgstr "Antes este año"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Older"
++msgstr "Más antiguos"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "No Date"
++msgstr "Sin fecha"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Red"
++msgstr "Rojo"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Orange"
++msgstr "Naranja"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Yellow"
++msgstr "Amarillo"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Green"
++msgstr "Verde"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Blue"
++msgstr "Azul"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Purple"
++msgstr "Morado"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Grey"
++msgstr "Gris"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "No Tag"
++msgstr "Sin etiqueta"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Close Pile"
++msgstr "Cerrar montón"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Open Pile"
++msgstr "Abrir montón"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Type"
++msgstr "Tipo"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Last Opened"
++msgstr "Última apertura"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Date Added"
++msgstr "Fecha de incorporación"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Date Modified"
++msgstr "Fecha de modificación"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Date Created"
++msgstr "Fecha de creación"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Tags"
++msgstr "Etiquetas"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Change Wallpaper…"
++msgstr "Cambiar fondo de escritorio…"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Group Files into Piles"
++msgstr "Agrupar archivos en montones"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Sort Piles By"
++msgstr "Ordenar montones por"
++
++#: app/piles.js app/desktopMenu.js app/fileItemMenu.js
++msgid "Icon Options…"
++msgstr "Opciones de iconos…"
+diff --git a/schemas/org.gnome.shell.extensions.ding.gschema.xml b/schemas/org.gnome.shell.extensions.ding.gschema.xml
+index 54b21ca..3f6df15 100644
+--- a/schemas/org.gnome.shell.extensions.ding.gschema.xml
++++ b/schemas/org.gnome.shell.extensions.ding.gschema.xml
+@@ -85,6 +85,19 @@
+         <summary>Keep Icons Stacked</summary>
+         <description>Always keep Icons Stacked, Similar types are grouped</description>
+     </key>
++    <key name="pile-by" type="s">
++        <choices>
++            <choice value="kind"/>
++            <choice value="last-opened"/>
++            <choice value="date-added"/>
++            <choice value="date-modified"/>
++            <choice value="date-created"/>
++            <choice value="tags"/>
++        </choices>
++        <default>'kind'</default>
++        <summary>Group piles by</summary>
++        <description>What desktop files are grouped into piles by (ParchaOS): their kind, a date, or Parcher's colour tag.</description>
++    </key>
+     <key type="as" name="unstackedtypes">
+         <default>[]</default>
+         <summary>Type of Files to not Stack</summary>

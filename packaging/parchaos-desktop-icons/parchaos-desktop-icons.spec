@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -49,6 +49,8 @@ Source0:        %{url}/-/archive/%{commit}/desktop-icons-ng-%{commit}.tar.gz
 Patch0:         0001-snap-to-grid-setting.patch
 Patch1:         0002-drag-icon.patch
 Patch2:         0003-desktop-proportions-and-micro-drag.patch
+# Ticket #175: file piles and the desktop menu (see the patch header).
+Patch3:         0004-file-piles.patch
 
 BuildArch:      noarch
 BuildRequires:  meson
@@ -106,6 +108,14 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 50-7
+- Ticket #175: file piles. Group Files into Piles in the desktop menu groups
+  desktop files by kind (Pictures, Screenshots, Screen Recordings,
+  Documents, ...), or under Sort Piles By by a date or by Parcher's colour
+  tag. A pile shows its three newest files fanned; click opens it in place,
+  click again closes it. The menu also gains Properties, Change Wallpaper
+  and Icon Options. Spanish strings included.
+
 * Thu Oct 01 2026 ParchaOS packaging - 50-6
 - Ticket #127: make desktop window border and shadow invisible, adjust icon
   buffer padding and corner radius to match standard desktop proportions, and

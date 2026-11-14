@@ -1,7 +1,8 @@
 #!/bin/bash
 # Usage: scripts/devshot/run.sh PLAN.json [seconds] (steps: wait, shot, spawn, move, press, type, combo, showApps, menu, ...); env: EXTS="uuid uuid" (repo extensions to load),
 # SETTINGS="dconf-path value;..." (written before the shell starts), FAKE_POWER="percent state" (a private system bus with a
-# fake laptop battery and power profiles, see fake-power.py), VSIZE="WxH [WxH...]" (one virtual monitor each, default 1600x900). Output in $OUT (default /tmp/devshot-out).
+# fake laptop battery and power profiles, see fake-power.py), VSIZE="WxH [WxH...]" (one virtual monitor each, default 1600x900), EXTDIRS="dir..." (built extension
+# directories copied in as user extensions; name their uuids in SYSEXTS to enable them). Output in $OUT (default /tmp/devshot-out).
 # Runs a throwaway headless shell in a private session bus and HOME. Never touches the real desktop.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
@@ -14,6 +15,7 @@ for u in ${EXTS:-}; do
   d=$H/.local/share/gnome-shell/extensions/$u; mkdir -p "$d"; cp -r "$src/." "$d/"
   if ls "$d"/*.gschema.xml >/dev/null 2>&1; then mkdir -p "$d/schemas"; mv "$d"/*.gschema.xml "$d/schemas/"; glib-compile-schemas "$d/schemas"; fi
 done
+for d in ${EXTDIRS:-}; do cp -r "$d" "$H/.local/share/gnome-shell/extensions/"; cp "$d"/schemas/*.gschema.xml "$W/schemas/" 2>/dev/null; done
 cp -r scripts/devshot/devshot@parchaos.test "$H/.local/share/gnome-shell/extensions/"
 cp packaging/parchaos-desktop/files/org.parchaos.desktop.gschema.xml "$W/schemas/"
 true
