@@ -14,8 +14,7 @@
      border-color: rgba(0, 0, 0, 0);
  }
  
-@@ -36,7 +36,9 @@
- /* Must put some alpha, never zero, to ensure that Gtk4 doesn't
+@@ -37,6 +37,8 @@
     ignore a "fully empty and transparent window" */
  window.desktopwindow {
      background-color: rgba(0, 0, 0, 0.005);
