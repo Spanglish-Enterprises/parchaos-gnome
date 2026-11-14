@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Nearby Devices
+Name[es]=Dispositivos cercanos
+Comment=Send files to computers and phones nearby, and receive them
+Comment[es]=Envía archivos a computadoras y teléfonos cercanos, y recíbelos
+Exec=parchaos-nearby %F
+Icon=folder-publicshare
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=share;send;nearby;transfer;phone;localsend;compartir;enviar;cercano;teléfono;
+StartupNotify=true

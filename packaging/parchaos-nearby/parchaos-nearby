@@ -1,0 +1,1347 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Nearby (ticket #149): send files to nearby computers and phones, and receive them,
+# over the local network, with no account and no internet.
+#
+#   parchaos-nearby [FILE...]   the window: nearby devices, click one to send the files
+#   parchaos-nearby --service   the part that stays running for the session (a systemd --user
+#                               service) so others can find this computer and send to it
+#
+# It speaks the LocalSend protocol v2 (https://github.com/localsend/protocol), so it works
+# with the LocalSend apps for phones and other computers, and with other ParchaOS computers.
+# This is our own implementation, written from the protocol description:
+#   - discovery: a JSON announcement to the multicast group 224.0.0.167, port 53317; others
+#     answer with POST /api/localsend/v2/register (or a multicast reply). When nothing answers,
+#     the local network is asked address by address, as the protocol suggests.
+#   - sending: POST /prepare-upload with the file list; the receiver decides; then one
+#     POST /upload per accepted file.
+#   - HTTPS with a self-signed certificate made on first use; a device is known by the SHA-256
+#     of its certificate (its fingerprint), which is checked before anything is sent to it.
+#
+# Receiving always asks first (a notification with Accept and Decline, also shown in the
+# window); accepted files go to Downloads. "Let nearby devices send me files" turns it off.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import configparser
+import gettext
+import hashlib
+import http.client
+import http.server
+import ipaddress
+import json
+import locale
+import mimetypes
+import os
+import secrets
+import shutil
+import socket
+import socketserver
+import ssl
+import struct
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
+
+DOMAIN = 'parchaos-nearby'
+gettext.bindtextdomain(DOMAIN, os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain(DOMAIN)
+_ = gettext.gettext
+ngettext = gettext.ngettext
+
+APP_ID = 'org.parchaos.Nearby'
+PROTOCOL_VERSION = '2.2'
+DEFAULT_PORT = 53317
+GROUP = '224.0.0.167'
+API = '/api/localsend/v2'
+HOME = os.path.expanduser('~')
+DATA = os.environ.get('PARCHAOS_NEARBY_DATA') or os.path.join(
+    os.environ.get('XDG_DATA_HOME') or os.path.join(HOME, '.local', 'share'), 'parchaos', 'nearby')
+CONFIG = os.environ.get('PARCHAOS_NEARBY_CONFIG') or os.path.join(
+    os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'), 'parchaos', 'nearby.ini')
+
+ANSWER_SECONDS = 60          # how long an offer waits for Accept or Decline
+SEEN_SECONDS = 30            # a device that stops answering drops off the list
+ANNOUNCE_EVERY = 5           # while the window is open
+IDLE_SESSION_SECONDS = 300   # an accepted transfer that stops sending is dropped
+MAX_JSON = 16 * 1024 * 1024
+CHUNK = 64 * 1024
+VIRTUAL_IFACES = ('lo', 'docker', 'veth', 'virbr', 'podman', 'br-', 'tun', 'tap', 'vnet', 'cni')
+
+
+# ---------------------------------------------------------------------------------------------
+# Small pieces (tested in tests/test_nearby.py)
+# ---------------------------------------------------------------------------------------------
+
+def downloads_dir():
+    """The Downloads folder from user-dirs.dirs, as GLib reads it."""
+    env = os.environ.get('PARCHAOS_NEARBY_DOWNLOADS')
+    if env:
+        return env
+    conf = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'),
+                        'user-dirs.dirs')
+    try:
+        with open(conf, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('XDG_DOWNLOAD_DIR='):
+                    value = line.split('=', 1)[1].strip().strip('"')
+                    value = value.replace('$HOME', HOME)
+                    if os.path.isabs(value):
+                        return value
+    except OSError:
+        pass
+    return os.path.join(HOME, 'Downloads')
+
+
+def safe_parts(name):
+    """A received file name as safe path parts, or None. LocalSend sends folders as
+    "Folder/sub/file"; nothing may climb out of the destination."""
+    if not isinstance(name, str):
+        return None
+    parts = []
+    for part in name.replace('\\', '/').split('/'):
+        part = part.strip().replace('\0', '')
+        if part in ('', '.', '..'):
+            continue
+        parts.append(part[:200])
+    return parts or None
+
+
+def free_name(folder, name):
+    """name, or "name (2).ext", "name (3).ext"... whichever isn't taken in folder."""
+    if not os.path.lexists(os.path.join(folder, name)):
+        return name
+    stem, ext = os.path.splitext(name)
+    if stem.endswith('.tar'):
+        stem, ext = stem[:-4], '.tar' + ext
+    n = 2
+    while os.path.lexists(os.path.join(folder, f'{stem} ({n}){ext}')):
+        n += 1
+    return f'{stem} ({n}){ext}'
+
+
+def collect_files(paths):
+    """The files to send: [(id, path, name sent, size, type)]. A folder is sent with what is
+    inside it, as "Folder/inside/file"; hidden files inside it are left out."""
+    out = []
+
+    def add(path, name):
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            return
+        mime = mimetypes.guess_type(name)[0] or 'application/octet-stream'
+        out.append((secrets.token_hex(8), path, name, size, mime))
+
+    for path in paths:
+        path = os.path.abspath(path)
+        if os.path.isdir(path):
+            top = os.path.basename(path.rstrip('/')) or 'Folder'
+            for root, dirs, files in os.walk(path):
+                dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+                rel = os.path.relpath(root, path)
+                for name in sorted(files):
+                    if name.startswith('.'):
+                        continue
+                    full = os.path.join(root, name)
+                    if not os.path.isfile(full):
+                        continue
+                    sent = '/'.join(p for p in (top, '' if rel == '.' else rel, name) if p)
+                    add(full, sent)
+        elif os.path.isfile(path):
+            add(path, os.path.basename(path))
+    return out
+
+
+def parse_device(msg, ip):
+    """A device from an announcement or a register body, or None if it doesn't look like one."""
+    if not isinstance(msg, dict):
+        return None
+    alias = msg.get('alias')
+    fp = msg.get('fingerprint')
+    if not isinstance(alias, str) or not alias.strip() or not isinstance(fp, str) or not fp:
+        return None
+    port = msg.get('port', DEFAULT_PORT)
+    if not isinstance(port, int) or not 0 < port < 65536:
+        return None
+    protocol = msg.get('protocol', 'https')
+    if protocol not in ('http', 'https'):
+        return None
+    kind = msg.get('deviceType')
+    if kind not in ('mobile', 'desktop', 'web', 'headless', 'server'):
+        kind = 'desktop'
+    model = msg.get('deviceModel')
+    return {'alias': alias.strip()[:64], 'fingerprint': fp, 'ip': ip, 'port': port,
+            'protocol': protocol, 'type': kind,
+            'model': model.strip()[:64] if isinstance(model, str) and model.strip() else '',
+            'seen': time.monotonic()}
+
+
+def is_message(files):
+    """A LocalSend text message: one text/plain "file" whose text is in preview."""
+    if len(files) != 1:
+        return None
+    f = next(iter(files.values()))
+    if isinstance(f, dict) and f.get('fileType') == 'text/plain' and isinstance(f.get('preview'), str):
+        return f['preview']
+    return None
+
+
+def format_size(n):
+    for unit, size in ((_('GB'), 1e9), (_('MB'), 1e6), (_('kB'), 1e3)):
+        if n >= size:
+            # Translators: a file size, e.g. "4.2 MB"
+            return _('{number} {unit}').format(number=locale.format_string('%.1f', n / size), unit=unit)
+    return ngettext('{n} byte', '{n} bytes', n).format(n=n)
+
+
+def names_text(names):
+    """photo.jpg / photo.jpg and notes.pdf / photo.jpg, notes.pdf and 3 more"""
+    names = list(names)
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return _('{a} and {b}').format(a=names[0], b=names[1])
+    more = len(names) - 2
+    return ngettext('{a}, {b} and {n} more', '{a}, {b} and {n} more', more).format(
+        a=names[0], b=names[1], n=more)
+
+
+def top_names(names):
+    """What a transfer is, by its top-level items: a folder counts once."""
+    seen = []
+    for name in names:
+        top = name.split('/', 1)[0]
+        if top not in seen:
+            seen.append(top)
+    return seen
+
+
+def offer_text(alias, files):
+    """("Pixel 8 wants to send you 3 files", "photo.jpg, b.jpg and 1 more · 4.2 MB")"""
+    names = [f.get('fileName', '?') for f in files.values()]
+    total = sum(f.get('size', 0) for f in files.values() if isinstance(f.get('size'), int))
+    title = ngettext('{device} wants to send you a file', '{device} wants to send you {n} files',
+                     len(names)).format(device=alias, n=len(names))
+    return title, f'{names_text(top_names(names))} · {format_size(total)}'
+
+
+def error_text(status, alias):
+    """Plain words for a receiver's answer."""
+    return {
+        403: _('{device} declined.'),
+        409: _('{device} is busy with another transfer. Try again in a moment.'),
+        429: _('{device} asked to wait. Try again in a moment.'),
+        401: _('{device} asks for a PIN. Turn off the PIN in its LocalSend settings and try again.'),
+        422: _('A file arrived damaged on {device}. Try again.'),
+    }.get(status, _('{device} could not take the files (error {code}).')).format(device=alias, code=status)
+
+
+def fingerprint_of(der):
+    return hashlib.sha256(der).hexdigest().upper()
+
+
+def ipv4_interfaces():
+    """[(name, address, prefix)] of the IPv4 addresses that are up, without loopback."""
+    try:
+        out = subprocess.run(['ip', '-j', '-4', 'addr', 'show', 'up'], capture_output=True,
+                             text=True, timeout=5).stdout
+        data = json.loads(out or '[]')
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    result = []
+    for iface in data:
+        name = iface.get('ifname', '')
+        if name == 'lo':
+            continue
+        for a in iface.get('addr_info', []):
+            if a.get('family') == 'inet' and a.get('local'):
+                result.append((name, a['local'], int(a.get('prefixlen', 24))))
+    return result
+
+
+def scan_targets(interfaces, limit=1024):
+    """The other addresses on the real (not virtual) local networks, for the address-by-address
+    search when multicast is blocked. Networks bigger than /22 are only searched near us."""
+    out = []
+    for name, addr, prefix in interfaces:
+        if name.startswith(VIRTUAL_IFACES):
+            continue
+        net = ipaddress.ip_network(f'{addr}/{max(prefix, 22)}', strict=False)
+        for host in net.hosts():
+            if str(host) != addr:
+                out.append(str(host))
+            if len(out) >= limit:
+                return out
+    return out
+
+
+def pretty_hostname():
+    try:
+        with open('/etc/machine-info', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('PRETTY_HOSTNAME='):
+                    name = line.split('=', 1)[1].strip().strip('"').strip("'")
+                    if name:
+                        return name
+    except OSError:
+        pass
+    return socket.gethostname().split('.')[0] or 'ParchaOS'
+
+
+def read_body(rfile, headers, sink, limit):
+    """Reads a request body (Content-Length or chunked) into sink(bytes). Returns the size.
+    Raises ValueError if it is bigger than limit."""
+    total = 0
+    if 'chunked' in headers.get('Transfer-Encoding', '').lower():
+        while True:
+            line = rfile.readline(1024)
+            if not line:
+                raise EOFError('body ended early')
+            size = int(line.split(b';', 1)[0].strip() or b'0', 16)
+            if size == 0:
+                while rfile.readline(1024) not in (b'\r\n', b'\n', b''):
+                    pass
+                return total
+            total += size
+            if total > limit:
+                raise ValueError('too big')
+            while size:
+                data = rfile.read(min(CHUNK, size))
+                if not data:
+                    raise EOFError('body ended early')
+                sink(data)
+                size -= len(data)
+            rfile.readline(4)
+    length = int(headers.get('Content-Length') or 0)
+    if length > limit:
+        raise ValueError('too big')
+    while total < length:
+        data = rfile.read(min(CHUNK, length - total))
+        if not data:
+            raise EOFError('body ended early')
+        sink(data)
+        total += len(data)
+    return total
+
+
+# ---------------------------------------------------------------------------------------------
+# Settings and identity
+# ---------------------------------------------------------------------------------------------
+
+def load_config():
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.read(CONFIG, encoding='utf-8')
+    sec = cp['Nearby'] if cp.has_section('Nearby') else {}
+    receive = str(sec.get('Receive', 'true')).lower() not in ('false', 'no', '0', 'off')
+    return {'receive': receive, 'alias': (sec.get('Alias') or '').strip()}
+
+
+def save_config(conf):
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.optionxform = str
+    cp['Nearby'] = {'Receive': 'true' if conf['receive'] else 'false'}
+    if conf.get('alias'):
+        cp['Nearby']['Alias'] = conf['alias']
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    tmp = CONFIG + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        cp.write(f)
+    os.replace(tmp, CONFIG)
+
+
+def ensure_identity(folder=None):
+    """This computer's certificate and key (made once), and its fingerprint."""
+    folder = folder or DATA
+    cert, key = os.path.join(folder, 'cert.pem'), os.path.join(folder, 'key.pem')
+    if not (os.path.exists(cert) and os.path.exists(key)):
+        os.makedirs(folder, mode=0o700, exist_ok=True)
+        old = os.umask(0o077)
+        try:
+            subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-sha256', '-nodes',
+                            '-days', '3650', '-subj', '/CN=ParchaOS Nearby',
+                            '-keyout', key + '.tmp', '-out', cert + '.tmp'],
+                           check=True, capture_output=True, timeout=60)
+        finally:
+            os.umask(old)
+        os.replace(key + '.tmp', key)
+        os.replace(cert + '.tmp', cert)
+    with open(cert, encoding='ascii') as f:
+        der = ssl.PEM_cert_to_DER_cert(f.read())
+    return cert, key, fingerprint_of(der)
+
+
+# ---------------------------------------------------------------------------------------------
+# The network part: discovery, the receiving server, sending. No GTK here.
+# ---------------------------------------------------------------------------------------------
+
+class Incoming:
+    """An accepted transfer to this computer."""
+
+    def __init__(self, ip, alias, files, folder):
+        self.id = secrets.token_hex(12)
+        self.ip = ip
+        self.alias = alias
+        self.files = files                       # id -> metadata from the sender
+        self.tokens = {fid: secrets.token_hex(16) for fid in files}
+        self.folder = folder
+        self.tops = {}                           # top-level name sent -> name used here
+        self.saved = []                          # paths of finished items, top level
+        self.done = set()
+        self.failed = 0
+        self.last = time.monotonic()
+
+    def finished(self):
+        return len(self.done) + self.failed >= len(self.files)
+
+
+class Node:
+    """One Nearby device on the network. The front end passes callbacks, all called from
+    other threads:
+      on_devices()                       the device list changed
+      ask(offer) -> bool                 an offer arrived: offer = {id, alias, files, ip};
+                                         block until answered (False on timeout)
+      on_received(alias, paths, failed)  a transfer to this computer ended
+      on_message(alias, text)            a text message arrived
+      on_cancelled(alias)                the sender stopped a transfer
+    """
+
+    def __init__(self, conf=None, port=None, identity=None, folder=None, **callbacks):
+        self.conf = conf or load_config()
+        self.cert, self.key, self.fingerprint = identity or ensure_identity()
+        self.folder = folder or downloads_dir()
+        self.want_port = port or int(os.environ.get('PARCHAOS_NEARBY_PORT') or DEFAULT_PORT)
+        self.port = None
+        self.cb = callbacks
+        self.devices = {}
+        self.lock = threading.Lock()
+        self.session = None
+        self.pending = None
+        self.declined = {}                       # ip -> time of the last decline
+        self.discovering = False
+        self.server = None
+        self.msock = None
+        self.joined = set()
+        self.alive = True
+
+    # -- identity --------------------------------------------------------------------------
+    def alias(self):
+        return self.conf.get('alias') or pretty_hostname()
+
+    def info(self, announce=None):
+        d = {'alias': self.alias(), 'version': PROTOCOL_VERSION, 'deviceModel': 'ParchaOS',
+             'deviceType': 'desktop', 'fingerprint': self.fingerprint, 'port': self.port,
+             'protocol': 'https', 'download': False}
+        if announce is not None:
+            d['announce'] = announce
+        return d
+
+    def visible(self):
+        """Others may find this computer: receiving is on, or the window is looking."""
+        return self.conf['receive'] or self.discovering
+
+    def _call(self, name, *args):
+        fn = self.cb.get(name)
+        if fn:
+            return fn(*args)
+        return None
+
+    # -- start / stop ----------------------------------------------------------------------
+    def start(self):
+        self._start_server()
+        self._start_multicast()
+        threading.Thread(target=self._housekeeping, daemon=True).start()
+        if self.conf['receive']:
+            self.announce()
+
+    def stop(self):
+        self.alive = False
+        if self.server:
+            self.server.shutdown()
+            self.server.server_close()
+        if self.msock:
+            self.msock.close()
+
+    def _start_server(self):
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(self.cert, self.key)
+        ctx.set_alpn_protocols(['http/1.1'])      # what LocalSend offers
+        node = self
+
+        class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+            daemon_threads = True
+            allow_reuse_address = True
+
+            def get_request(self):
+                sock, addr = self.socket.accept()
+                sock.settimeout(120)
+                return ctx.wrap_socket(sock, server_side=True, do_handshake_on_connect=False), addr
+
+            def handle_error(self, request, client_address):
+                pass                              # a dropped connection is not news
+
+        last = None
+        for port in [self.want_port] + list(range(self.want_port + 1, self.want_port + 20)):
+            try:
+                self.server = Server(('0.0.0.0', port), make_handler(node))
+                self.port = port
+                break
+            except OSError as e:
+                last = e
+        if self.server is None:
+            raise last
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def _start_multicast(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, 'SO_REUSEPORT'):
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        s.bind(('', DEFAULT_PORT))
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 1)
+        self.msock = s
+        self.join_groups()
+        threading.Thread(target=self._listen, daemon=True).start()
+
+    def join_groups(self):
+        """Joins the multicast group on every network (call again when networks change)."""
+        for _name, addr, _prefix in ipv4_interfaces():
+            if addr in self.joined:
+                continue
+            try:
+                self.msock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                                      socket.inet_aton(GROUP) + socket.inet_aton(addr))
+                self.joined.add(addr)
+            except OSError:
+                pass
+
+    # -- discovery -------------------------------------------------------------------------
+    def _send_multicast(self, msg):
+        data = json.dumps(msg).encode()
+        addrs = [a for _n, a, _p in ipv4_interfaces()] or ['0.0.0.0']
+        for addr in addrs:
+            try:
+                out = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+                out.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 1)
+                if addr != '0.0.0.0':
+                    out.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(addr))
+                out.sendto(data, (GROUP, DEFAULT_PORT))
+                out.close()
+            except OSError:
+                pass
+
+    def announce(self):
+        self._send_multicast(self.info(announce=True))
+
+    def _listen(self):
+        while self.alive:
+            try:
+                data, (ip, _port) = self.msock.recvfrom(65536)
+            except OSError:
+                if not self.alive:
+                    return
+                time.sleep(1)
+                continue
+            try:
+                msg = json.loads(data)
+            except ValueError:
+                continue
+            dev = parse_device(msg, ip)
+            if dev is None or dev['fingerprint'] == self.fingerprint:
+                continue
+            self.add_device(dev)
+            if msg.get('announce') and self.visible():
+                threading.Thread(target=self._answer, args=(dev,), daemon=True).start()
+
+    def _answer(self, dev):
+        """Answer an announcement: register over HTTP, or reply by multicast if that fails."""
+        try:
+            self.register_with(dev['ip'], dev['port'], dev['protocol'], timeout=3)
+        except (OSError, ValueError, http.client.HTTPException, ssl.SSLError):
+            self._send_multicast(self.info(announce=False))
+
+    def register_with(self, ip, port, protocol='https', timeout=2):
+        """POST /register to ip:port. Adds and returns the device that answers."""
+        conn = self._connection(ip, port, protocol, timeout)
+        try:
+            body = json.dumps(self.info()).encode()
+            conn.request('POST', API + '/register', body, {'Content-Type': 'application/json'})
+            resp = conn.getresponse()
+            data = resp.read(MAX_JSON)
+            if resp.status != 200:
+                raise ValueError(f'status {resp.status}')
+            msg = json.loads(data)
+            if protocol == 'https':
+                msg['fingerprint'] = fingerprint_of(conn.sock.getpeercert(binary_form=True))
+            msg.setdefault('port', port)
+            msg.setdefault('protocol', protocol)
+            dev = parse_device(msg, ip)
+            if dev and dev['fingerprint'] != self.fingerprint:
+                self.add_device(dev)
+            return dev
+        finally:
+            conn.close()
+
+    def add_device(self, dev):
+        with self.lock:
+            old = self.devices.get(dev['fingerprint'])
+            self.devices[dev['fingerprint']] = dev
+            changed = old is None or any(old[k] != dev[k] for k in ('alias', 'ip', 'port', 'model'))
+        if changed:
+            self._call('on_devices')
+
+    def device_list(self):
+        with self.lock:
+            return sorted(self.devices.values(), key=lambda d: d['alias'].lower())
+
+    def start_discovery(self):
+        """While the window is open: announce now and every few seconds; if nothing answers
+        multicast, ask the local network address by address."""
+        if self.discovering:
+            self.announce()
+            return
+        self.discovering = True
+        with self.lock:
+            self.devices.clear()
+        self._call('on_devices')
+
+        def loop():
+            started = time.monotonic()
+            scanned = False
+            while self.discovering and self.alive:
+                self.announce()
+                for _ in range(ANNOUNCE_EVERY * 4):
+                    if not self.discovering:
+                        return
+                    time.sleep(0.25)
+                    if not scanned and time.monotonic() - started > 3 and not self.devices:
+                        scanned = True
+                        threading.Thread(target=self.scan, daemon=True).start()
+        threading.Thread(target=loop, daemon=True).start()
+
+    def stop_discovery(self):
+        self.discovering = False
+
+    def scan(self):
+        targets = scan_targets(ipv4_interfaces())
+
+        def one(ip):
+            try:
+                self.register_with(ip, DEFAULT_PORT, 'https', timeout=1)
+            except Exception:        # noqa: BLE001 - nothing there
+                pass
+        with ThreadPoolExecutor(max_workers=48) as pool:
+            list(pool.map(one, targets))
+
+    def _housekeeping(self):
+        while self.alive:
+            time.sleep(2)
+            now = time.monotonic()
+            if self.discovering:
+                with self.lock:
+                    gone = [fp for fp, d in self.devices.items() if now - d['seen'] > SEEN_SECONDS]
+                    for fp in gone:
+                        del self.devices[fp]
+                if gone:
+                    self._call('on_devices')
+            s = self.session
+            if s and now - s.last > IDLE_SESSION_SECONDS:
+                self._end_session(s, cancelled=True)
+
+    # -- sending ---------------------------------------------------------------------------
+    def _connection(self, ip, port, protocol, timeout):
+        if protocol == 'http':
+            return http.client.HTTPConnection(ip, port, timeout=timeout)
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE           # self-signed: checked by fingerprint instead
+        ctx.load_cert_chain(self.cert, self.key)  # newer LocalSend asks for one
+        ctx.set_alpn_protocols(['http/1.1'])
+        return http.client.HTTPSConnection(ip, port, timeout=timeout, context=ctx)
+
+    def send(self, dev, files, progress, cancel):
+        """Sends files ([(id, path, name, size, type)]) to dev. progress(stage, done, total)
+        with stage 'waiting' or 'sending'; cancel is a threading.Event. Returns None when
+        everything was sent, or a message for the person."""
+        alias = dev['alias']
+        conn = self._connection(dev['ip'], dev['port'], dev['protocol'], 10)
+        session = None
+        try:
+            try:
+                conn.connect()
+            except (OSError, ssl.SSLError):
+                return _('Could not reach {device}. Check that it is on the same network.').format(device=alias)
+            if dev['protocol'] == 'https':
+                got = fingerprint_of(conn.sock.getpeercert(binary_form=True))
+                if got != dev['fingerprint'].upper():
+                    return _('Could not confirm that this is really {device}. Nothing was sent.').format(device=alias)
+            meta = {fid: {'id': fid, 'fileName': name, 'size': size, 'fileType': mime,
+                          'sha256': None, 'preview': None}
+                    for fid, _path, name, size, mime in files}
+            body = json.dumps({'info': self.info(), 'files': meta}).encode()
+            progress('waiting', 0, 0)
+            conn.sock.settimeout(ANSWER_SECONDS + 30)
+            conn.request('POST', API + '/prepare-upload', body, {'Content-Type': 'application/json'})
+            resp = conn.getresponse()
+            data = resp.read(MAX_JSON)
+            if cancel.is_set():
+                return _('Cancelled.')
+            if resp.status == 204:
+                return None
+            if resp.status != 200:
+                return error_text(resp.status, alias)
+            answer = json.loads(data)
+            session = answer['sessionId']
+            tokens = answer.get('files') or {}
+            todo = [f for f in files if f[0] in tokens]
+            total = sum(f[3] for f in todo)
+            sent = 0
+            conn.sock.settimeout(60)
+            for fid, path, _name, size, _mime in todo:
+                query = urllib.parse.urlencode({'sessionId': session, 'fileId': fid, 'token': tokens[fid]})
+                conn.putrequest('POST', f'{API}/upload?{query}')
+                conn.putheader('Content-Type', 'application/octet-stream')
+                conn.putheader('Content-Length', str(size))
+                conn.endheaders()
+                with open(path, 'rb') as f:
+                    left = size
+                    while left > 0:
+                        if cancel.is_set():
+                            raise InterruptedError
+                        chunk = f.read(min(CHUNK, left))
+                        if not chunk:
+                            raise OSError(_('{name} got shorter while it was being sent.').format(name=_name))
+                        conn.send(chunk)
+                        left -= len(chunk)
+                        sent += len(chunk)
+                        progress('sending', sent, total)
+                resp = conn.getresponse()
+                resp.read()
+                if resp.status != 200:
+                    return error_text(resp.status, alias)
+            session = None
+            return None
+        except InterruptedError:
+            return _('Cancelled.')
+        except (OSError, ssl.SSLError, http.client.HTTPException, ValueError, KeyError) as e:
+            if cancel.is_set():
+                return _('Cancelled.')
+            if isinstance(e, socket.timeout):
+                return _('{device} did not answer.').format(device=alias)
+            return _('The transfer to {device} stopped: {error}').format(device=alias, error=e)
+        finally:
+            conn.close()
+            if session:                           # tell the receiver we stopped
+                try:
+                    c = self._connection(dev['ip'], dev['port'], dev['protocol'], 3)
+                    c.request('POST', f'{API}/cancel?sessionId={urllib.parse.quote(session)}')
+                    c.getresponse().read()
+                    c.close()
+                except Exception:      # noqa: BLE001
+                    pass
+
+    # -- receiving -------------------------------------------------------------------------
+    def offer(self, ip, body):
+        """prepare-upload: returns (status, json or None)."""
+        if not self.conf['receive']:
+            return 403, None
+        info, files = body.get('info'), body.get('files')
+        if not isinstance(info, dict) or not isinstance(files, dict) or not files:
+            return 400, None
+        alias = info.get('alias') if isinstance(info.get('alias'), str) else ip
+        alias = alias.strip()[:64] or ip
+        clean = {}
+        for fid, f in files.items():
+            if not isinstance(f, dict) or not isinstance(f.get('size', 0), int) or f.get('size', 0) < 0:
+                return 400, None
+            if safe_parts(f.get('fileName')) is None:
+                return 400, None
+            clean[str(fid)] = f
+        text = is_message(clean)
+        if text is not None:
+            self._call('on_message', alias, text)
+            return 204, None
+        if time.monotonic() - self.declined.get(ip, -1e9) < 30:
+            return 429, None
+        with self.lock:
+            if self.session or self.pending:
+                return 409, None
+            self.pending = {'id': secrets.token_hex(6), 'alias': alias, 'files': clean, 'ip': ip}
+            offer = self.pending
+        try:
+            accepted = bool(self._call('ask', offer))
+        finally:
+            with self.lock:
+                self.pending = None
+        if not accepted:
+            self.declined[ip] = time.monotonic()
+            return 403, None
+        need = sum(f.get('size', 0) for f in clean.values())
+        os.makedirs(self.folder, exist_ok=True)
+        if shutil.disk_usage(self.folder).free < need + 64 * 1024 * 1024:
+            self._call('on_received', alias, [], len(clean))
+            return 403, None
+        s = Incoming(ip, alias, clean, self.folder)
+        with self.lock:
+            self.session = s
+        return 200, {'sessionId': s.id, 'files': s.tokens}
+
+    def receive(self, ip, query, rfile, headers):
+        """upload: returns the status."""
+        s = self.session
+        sid, fid, token = (query.get(k, [''])[0] for k in ('sessionId', 'fileId', 'token'))
+        if not sid or not fid or not token:
+            return 400
+        if s is None or s.id != sid or s.ip != ip:
+            return 409 if s else 403
+        if s.tokens.get(fid) != token or fid in s.done:
+            return 403
+        meta = s.files[fid]
+        parts = safe_parts(meta.get('fileName'))
+        top = parts[0]
+        if top not in s.tops:
+            s.tops[top] = free_name(s.folder, top)
+            s.saved.append(os.path.join(s.folder, s.tops[top]))
+        dest = os.path.join(s.folder, s.tops[top], *parts[1:])
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        part = os.path.join(os.path.dirname(dest), '.' + os.path.basename(dest) + '.part')
+        digest = hashlib.sha256()
+        size = meta.get('size', 0)
+        try:
+            with open(part, 'wb') as f:
+                def sink(data):
+                    f.write(data)
+                    digest.update(data)
+                    s.last = time.monotonic()
+                got = read_body(rfile, headers, sink, size)
+            if got != size:
+                raise EOFError('short')
+            want = meta.get('sha256')
+            if isinstance(want, str) and want and want.lower() != digest.hexdigest():
+                os.unlink(part)
+                s.failed += 1
+                self._maybe_end(s)
+                return 422
+            os.replace(part, dest)
+            mtime = (meta.get('metadata') or {}).get('modified') if isinstance(meta.get('metadata'), dict) else None
+            if isinstance(mtime, str):
+                try:
+                    t = time.mktime(time.strptime(mtime[:19], '%Y-%m-%dT%H:%M:%S')) - time.timezone
+                    os.utime(dest, (t, t))
+                except (ValueError, OverflowError, OSError):
+                    pass
+        except (OSError, EOFError, ValueError):
+            try:
+                os.unlink(part)
+            except OSError:
+                pass
+            s.failed += 1
+            self._maybe_end(s)
+            return 500
+        s.done.add(fid)
+        self._maybe_end(s)
+        return 200
+
+    def _maybe_end(self, s):
+        if s.finished():
+            self._end_session(s)
+
+    def _end_session(self, s, cancelled=False):
+        with self.lock:
+            if self.session is not s:
+                return
+            self.session = None
+        if cancelled:
+            self._call('on_cancelled', s.alias)
+        saved = [p for p in s.saved if os.path.exists(p)]
+        if saved or s.failed:
+            self._call('on_received', s.alias, saved, s.failed + (len(s.files) - len(s.done) - s.failed
+                                                                  if cancelled else 0))
+
+    def cancel_from(self, ip, sid):
+        s = self.session
+        if s and s.id == sid and s.ip == ip:
+            self._end_session(s, cancelled=True)
+            return 200
+        return 403
+
+
+def make_handler(node):
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = 'HTTP/1.1'
+        server_version = 'ParchaOS-Nearby'
+        sys_version = ''
+
+        def log_message(self, *args):
+            pass
+
+        def reply(self, status, obj=None):
+            body = json.dumps(obj).encode() if obj is not None else b''
+            self.send_response(status)
+            if obj is not None:
+                self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            if body:
+                self.wfile.write(body)
+
+        def json_body(self):
+            buf = bytearray()
+            read_body(self.rfile, self.headers, buf.extend, MAX_JSON)
+            return json.loads(buf or b'{}')
+
+        def do_GET(self):
+            path = urllib.parse.urlsplit(self.path).path
+            if path == API + '/info' and node.visible():
+                info = node.info()
+                info.pop('port')
+                info.pop('protocol')
+                self.reply(200, info)
+            else:
+                self.reply(404)
+
+        def do_POST(self):
+            url = urllib.parse.urlsplit(self.path)
+            query = urllib.parse.parse_qs(url.query)
+            ip = self.client_address[0]
+            try:
+                if url.path == API + '/register':
+                    body = self.json_body()
+                    if not node.visible():
+                        return self.reply(403)
+                    dev = parse_device(body, ip)
+                    if dev and dev['fingerprint'] != node.fingerprint:
+                        node.add_device(dev)
+                    info = node.info()
+                    info.pop('port')
+                    info.pop('protocol')
+                    return self.reply(200, info)
+                if url.path == API + '/prepare-upload':
+                    body = self.json_body()
+                    status, answer = node.offer(ip, body if isinstance(body, dict) else {})
+                    return self.reply(status, answer)
+                if url.path == API + '/upload':
+                    status = node.receive(ip, query, self.rfile, self.headers)
+                    if status != 200:
+                        self.close_connection = True
+                    return self.reply(status)
+                if url.path == API + '/cancel':
+                    return self.reply(node.cancel_from(ip, query.get('sessionId', [''])[0]))
+            except (ValueError, EOFError):
+                self.close_connection = True
+                return self.reply(400)
+            self.reply(404)
+    return Handler
+
+
+# ---------------------------------------------------------------------------------------------
+# The window and the notifications (GTK)
+# ---------------------------------------------------------------------------------------------
+
+def run_app(argv, service):
+    import gi
+    gi.require_version('Gtk', '4.0')
+    gi.require_version('Adw', '1')
+    from gi.repository import Adw, Gio, GLib, Gtk
+
+    TYPE_ICONS = {'mobile': 'phone-symbolic', 'web': 'web-browser-symbolic',
+                  'headless': 'network-server-symbolic', 'server': 'network-server-symbolic'}
+
+    def idle(fn, *args):
+        GLib.idle_add(lambda: (fn(*args), False)[1])
+
+    class DeviceRow(Adw.ActionRow):
+        def __init__(self, win, dev):
+            super().__init__(activatable=True)
+            self.win = win
+            self.dev = dev
+            self.cancel = None
+            self.icon = Gtk.Image(icon_name=TYPE_ICONS.get(dev['type'], 'computer-symbolic'))
+            self.add_prefix(self.icon)
+            self.bar = Gtk.ProgressBar(valign=Gtk.Align.CENTER, width_request=90, visible=False)
+            self.state = Gtk.Image(visible=False)
+            self.stop = Gtk.Button(icon_name='process-stop-symbolic', valign=Gtk.Align.CENTER,
+                                   tooltip_text=_('Stop'), visible=False, css_classes=['flat', 'circular'])
+            self.stop.connect('clicked', lambda *_: self.cancel and self.cancel.set())
+            for w in (self.bar, self.state, self.stop):
+                self.add_suffix(w)
+            self.connect('activated', lambda *_: self.win.send_to(self))
+            self.update(dev)
+
+        def update(self, dev):
+            self.dev = dev
+            self.set_title(GLib.markup_escape_text(dev['alias']))
+            if self.cancel is None and not self.state.get_visible():
+                self.set_subtitle(GLib.markup_escape_text(dev['model'] or
+                                  (_('Phone') if dev['type'] == 'mobile' else _('Computer'))))
+
+        def progress(self, stage, done, total):
+            if stage == 'waiting':
+                self.set_subtitle(_('Waiting for {device} to accept…').format(
+                    device=GLib.markup_escape_text(self.dev['alias'])))
+                self.bar.set_visible(True)
+                self.bar.pulse()
+            else:
+                self.bar.set_fraction(done / total if total else 1)
+                self.set_subtitle(_('{done} of {total}').format(done=format_size(done), total=format_size(total)))
+
+        def finished(self, error):
+            self.cancel = None
+            self.bar.set_visible(False)
+            self.stop.set_visible(False)
+            self.state.set_visible(True)
+            if error:
+                self.state.set_from_icon_name('dialog-warning-symbolic')
+                self.set_subtitle(GLib.markup_escape_text(error))
+            else:
+                self.state.set_from_icon_name('object-select-symbolic')
+                self.set_subtitle(_('Sent'))
+
+    class Window(Adw.ApplicationWindow):
+        def __init__(self, app):
+            super().__init__(application=app, title=_('Nearby Devices'), default_width=440,
+                             default_height=600)
+            self.app = app
+            self.files = []
+            self.rows = {}
+            view = Adw.ToolbarView()
+            view.add_top_bar(Adw.HeaderBar())
+            self.page = Adw.PreferencesPage()
+            view.set_content(self.page)
+            self.toasts = Adw.ToastOverlay(child=view)
+            self.set_content(self.toasts)
+
+            # What is being sent
+            self.what = Adw.PreferencesGroup()
+            self.what_row = Adw.ActionRow()
+            self.what_row.add_prefix(Gtk.Image(icon_name='document-send-symbolic'))
+            choose = Gtk.Button(label=_('Choose Files…'), valign=Gtk.Align.CENTER)
+            choose.connect('clicked', lambda *_: self.choose_files())
+            self.what_row.add_suffix(choose)
+            self.what.add(self.what_row)
+            self.page.add(self.what)
+
+            # Offers and messages for this computer
+            self.incoming = Adw.PreferencesGroup(title=_('For This Computer'), visible=False)
+            self.offer_row = Adw.ActionRow(visible=False)
+            self.offer_row.add_prefix(Gtk.Image(icon_name='folder-download-symbolic'))
+            decline = Gtk.Button(label=_('Decline'), valign=Gtk.Align.CENTER)
+            accept = Gtk.Button(label=_('Accept'), valign=Gtk.Align.CENTER, css_classes=['suggested-action'])
+            decline.connect('clicked', lambda *_: self.app.answer(False))
+            accept.connect('clicked', lambda *_: self.app.answer(True))
+            self.offer_row.add_suffix(decline)
+            self.offer_row.add_suffix(accept)
+            self.incoming.add(self.offer_row)
+            self.message_row = Adw.ActionRow(visible=False, subtitle_lines=6)
+            self.message_row.add_prefix(Gtk.Image(icon_name='mail-unread-symbolic'))
+            copy = Gtk.Button(label=_('Copy'), valign=Gtk.Align.CENTER)
+            copy.connect('clicked', lambda *_: self.copy_message())
+            self.message_row.add_suffix(copy)
+            self.incoming.add(self.message_row)
+            self.page.add(self.incoming)
+
+            # Nearby devices
+            self.group = Adw.PreferencesGroup(title=_('Nearby Devices'))
+            spinner = Adw.Spinner()
+            self.group.set_header_suffix(spinner)
+            self.empty = Adw.ActionRow(
+                title=_('Looking for devices…'),
+                subtitle=_('Devices on the same network show up here. On a phone or another '
+                           'computer, open LocalSend. Other ParchaOS computers show up by themselves.'),
+                subtitle_lines=4)
+            self.group.add(self.empty)
+            self.page.add(self.group)
+
+            # Receiving
+            me = Adw.PreferencesGroup(title=_('This Computer'))
+            self.receive = Adw.SwitchRow(title=_('Let Nearby Devices Send Me Files'), subtitle_lines=3)
+            self.receive.set_active(app.node.conf['receive'])
+            self.receive.connect('notify::active', self.receive_changed)
+            me.add(self.receive)
+            self.page.add(me)
+            self.receive_subtitle()
+
+            self.set_files([])
+            self.connect('close-request', self.closing)
+            self.refresh_devices()
+            self.show_incoming()
+
+        def receive_subtitle(self):
+            name = GLib.markup_escape_text(self.app.node.alias())
+            if self.receive.get_active():
+                text = _('Shows up as “{name}”. You are always asked first; files go to Downloads.')
+            else:
+                text = _('Off. Others can see “{name}” only while this window is open.')
+            self.receive.set_subtitle(text.format(name=name))
+
+        def receive_changed(self, *_):
+            self.app.node.conf['receive'] = self.receive.get_active()
+            save_config(self.app.node.conf)
+            self.receive_subtitle()
+            if self.receive.get_active():
+                self.app.node.announce()
+
+        def set_files(self, paths):
+            self.files = collect_files(paths)
+            if self.files:
+                names = top_names(f[2] for f in self.files)
+                total = sum(f[3] for f in self.files)
+                self.what_row.set_title(GLib.markup_escape_text(names_text(names)))
+                self.what_row.set_subtitle(ngettext('{n} file · {size}', '{n} files · {size}',
+                                                    len(self.files)).format(n=len(self.files), size=format_size(total)))
+                self.what.set_title(_('Send'))
+            else:
+                self.what.set_title('')
+                self.what_row.set_title(_('Choose what to send'))
+                self.what_row.set_subtitle(_('Then click a device below.'))
+            for row in self.rows.values():
+                if row.cancel is None:
+                    row.state.set_visible(False)
+                    row.update(row.dev)
+
+        def choose_files(self, then=None):
+            dialog = Gtk.FileDialog(title=_('Choose Files to Send'), modal=True)
+
+            def done(d, res):
+                try:
+                    files = d.open_multiple_finish(res)
+                except GLib.Error:
+                    return
+                paths = [f.get_path() for f in files if f.get_path()]
+                if paths:
+                    self.set_files(paths)
+                    if then:
+                        then()
+            dialog.open_multiple(self, None, done)
+
+        def refresh_devices(self):
+            devs = {d['fingerprint']: d for d in self.app.node.device_list()}
+            for fp in list(self.rows):
+                if fp not in devs and self.rows[fp].cancel is None:
+                    self.group.remove(self.rows.pop(fp))
+            for fp, dev in devs.items():
+                if fp in self.rows:
+                    self.rows[fp].update(dev)
+                else:
+                    self.rows[fp] = DeviceRow(self, dev)
+                    self.group.add(self.rows[fp])
+            self.empty.set_visible(not self.rows)
+
+        def send_to(self, row):
+            if row.cancel is not None:
+                return
+            if not self.files:
+                self.choose_files(lambda: self.send_to(row))
+                return
+            row.cancel = threading.Event()
+            row.state.set_visible(False)
+            row.stop.set_visible(True)
+            row.bar.set_fraction(0)
+            files, dev, cancel = list(self.files), dict(row.dev), row.cancel
+
+            def work():
+                err = self.app.node.send(dev, files, lambda *a: idle(row.progress, *a), cancel)
+                idle(row.finished, err)
+            threading.Thread(target=work, daemon=True).start()
+
+        def show_incoming(self):
+            offer = self.app.offer
+            if offer:
+                title, detail = offer_text(offer['alias'], offer['files'])
+                self.offer_row.set_title(GLib.markup_escape_text(title))
+                self.offer_row.set_subtitle(GLib.markup_escape_text(detail))
+            self.offer_row.set_visible(bool(offer))
+            msg = self.app.message
+            if msg:
+                self.message_row.set_title(GLib.markup_escape_text(_('Message from {device}').format(device=msg[0])))
+                self.message_row.set_subtitle(GLib.markup_escape_text(msg[1][:600]))
+            self.message_row.set_visible(bool(msg))
+            self.incoming.set_visible(bool(offer or msg))
+
+        def copy_message(self):
+            if self.app.message:
+                self.get_clipboard().set(self.app.message[1])
+                self.toasts.add_toast(Adw.Toast(title=_('Copied')))
+
+        def closing(self, *_):
+            self.app.node.stop_discovery()
+            self.app.win = None
+            return False
+
+    class App(Adw.Application):
+        def __init__(self):
+            super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_OPEN)
+            self.node = None
+            self.win = None
+            self.offer = None
+            self.answer_event = None
+            self.answer_value = False
+            self.message = None
+            self.skip_activate = service      # the service starts without a window
+            for name, kind, fn in (('answer', 's', self.on_answer_action),
+                                   ('show-items', 's', self.on_show_items),
+                                   ('show-window', None, lambda *_: self.present_window()),
+                                   ('copy-message', None, self.on_copy_message)):
+                act = Gio.SimpleAction.new(name, GLib.VariantType.new(kind) if kind else None)
+                act.connect('activate', fn)
+                self.add_action(act)
+
+        def do_startup(self):
+            Adw.Application.do_startup(self)
+            self.node = Node(on_devices=lambda: idle(self.devices_changed),
+                             ask=self.ask, on_received=lambda *a: idle(self.received, *a),
+                             on_message=lambda *a: idle(self.got_message, *a),
+                             on_cancelled=lambda a: idle(self.cancelled, a))
+            try:
+                self.node.start()
+            except OSError as e:
+                print(f'parchaos-nearby: could not start: {e}', file=sys.stderr)
+            Gio.NetworkMonitor.get_default().connect('network-changed', lambda *_: self.network_changed())
+            if service:
+                self.hold()
+
+        def network_changed(self):
+            threading.Thread(target=self._rejoin, daemon=True).start()
+
+        def _rejoin(self):
+            time.sleep(2)
+            self.node.join_groups()
+            if self.node.visible():
+                self.node.announce()
+
+        def present_window(self, paths=None):
+            if self.win is None:
+                self.win = Window(self)
+            if paths:
+                self.win.set_files(paths)
+            self.win.present()
+            self.node.start_discovery()
+
+        def do_activate(self):
+            if self.skip_activate:
+                self.skip_activate = False
+                return
+            self.present_window()
+
+        def do_open(self, files, n_files, hint):
+            self.present_window([f.get_path() for f in files if f.get_path()])
+
+        def devices_changed(self):
+            if self.win:
+                self.win.refresh_devices()
+
+        # An offer: called in a server thread; waits for the person.
+        def ask(self, offer):
+            event = threading.Event()
+
+            def show():
+                self.offer, self.answer_event, self.answer_value = offer, event, False
+                title, detail = offer_text(offer['alias'], offer['files'])
+                n = Gio.Notification.new(title)
+                n.set_body(detail)
+                n.set_icon(Gio.ThemedIcon.new('folder-download-symbolic'))
+                n.set_priority(Gio.NotificationPriority.HIGH)
+                n.set_default_action('app.show-window')
+                n.add_button_with_target(_('Decline'), 'app.answer', GLib.Variant('s', offer['id'] + ':no'))
+                n.add_button_with_target(_('Accept'), 'app.answer', GLib.Variant('s', offer['id'] + ':yes'))
+                self.send_notification('offer', n)
+                if self.win:
+                    self.win.show_incoming()
+            idle(show)
+            event.wait(ANSWER_SECONDS)
+            value = self.answer_value if event.is_set() else False
+            idle(self.offer_over, offer)
+            return value
+
+        def offer_over(self, offer):
+            if self.offer is offer:
+                self.offer = None
+                self.answer_event = None
+                self.withdraw_notification('offer')
+                if self.win:
+                    self.win.show_incoming()
+
+        def answer(self, yes):
+            if self.answer_event:
+                self.answer_value = yes
+                self.answer_event.set()
+
+        def on_answer_action(self, _act, param):
+            oid, _sep, what = param.get_string().partition(':')
+            if self.offer and self.offer['id'] == oid:
+                self.answer(what == 'yes')
+
+        def received(self, alias, paths, failed):
+            if paths:
+                n = Gio.Notification.new(ngettext('Received {n} item from {device}',
+                                                  'Received {n} items from {device}',
+                                                  len(paths)).format(n=len(paths), device=alias))
+                body = names_text(os.path.basename(p) for p in paths)
+                if failed:
+                    body += ' · ' + ngettext('{n} file did not arrive', '{n} files did not arrive',
+                                             failed).format(n=failed)
+                n.set_body(body)
+                uris = json.dumps([Gio.File.new_for_path(p).get_uri() for p in paths])
+                n.set_default_action_and_target('app.show-items', GLib.Variant('s', uris))
+                n.add_button_with_target(_('Show in Files'), 'app.show-items', GLib.Variant('s', uris))
+            else:
+                n = Gio.Notification.new(_('Files from {device} did not arrive').format(device=alias))
+                n.set_body(_('There may not be enough space in Downloads, or the connection dropped.'))
+            n.set_icon(Gio.ThemedIcon.new('folder-download-symbolic'))
+            self.send_notification(None, n)
+
+        def cancelled(self, alias):
+            n = Gio.Notification.new(_('{device} stopped sending').format(device=alias))
+            n.set_icon(Gio.ThemedIcon.new('folder-download-symbolic'))
+            self.send_notification(None, n)
+
+        def got_message(self, alias, text):
+            self.message = (alias, text)
+            n = Gio.Notification.new(_('Message from {device}').format(device=alias))
+            n.set_body(text[:300])
+            n.set_icon(Gio.ThemedIcon.new('mail-unread-symbolic'))
+            n.set_default_action('app.show-window')
+            n.add_button(_('Copy'), 'app.copy-message')
+            self.send_notification('message', n)
+            if self.win:
+                self.win.show_incoming()
+
+        def on_copy_message(self, *_):
+            # Wayland only lets a focused window set the clipboard: show the window, then copy.
+            self.present_window()
+            GLib.timeout_add(300, lambda: (self.win and self.win.copy_message(), False)[1])
+
+        def on_show_items(self, _act, param):
+            uris = json.loads(param.get_string())
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+            try:
+                bus.call_sync('org.freedesktop.FileManager1', '/org/freedesktop/FileManager1',
+                              'org.freedesktop.FileManager1', 'ShowItems',
+                              GLib.Variant('(ass)', (uris, '')), None, Gio.DBusCallFlags.NONE, 5000)
+            except GLib.Error:
+                Gio.AppInfo.launch_default_for_uri(Gio.File.new_for_path(downloads_dir()).get_uri())
+
+    app = App()
+    if service:
+        app.register(None)
+        if app.get_is_remote():
+            return 0                  # already running for this session
+    return app.run(argv)
+
+
+def main(argv):
+    try:
+        locale.setlocale(locale.LC_ALL, '')
+    except locale.Error:
+        pass
+    service = '--service' in argv
+    argv = [a for a in argv if a != '--service']
+    return run_app(argv, service)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

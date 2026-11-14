@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        94%{?dist}
+Release:        95%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -128,6 +128,8 @@ Requires:       parchaos-widgets
 Requires:       parchaos-automations
 # Organisations' managed settings (ticket #168); idle until /etc/parchaos/policy.toml exists.
 Requires:       parchaos-policy
+# Send files to nearby computers and phones (LocalSend protocol), ticket #149.
+Requires:       parchaos-nearby
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
 # Not nautilus-gsconnect: it runs on nautilus-python 4.1, which needs the
@@ -304,6 +306,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-95
+- Ticket #149: Requires parchaos-nearby (Nearby Devices: send files to nearby
+  computers and phones from Parcher's Share button, and receive them).
+
 * Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-94
 - Ticket #168: Requires parchaos-policy (one file sets and locks settings for a
   school or office; does nothing until /etc/parchaos/policy.toml exists).

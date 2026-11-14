@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        40%{?dist}
+Release:        41%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -100,6 +100,9 @@ Patch11:        0012-photo-search.patch
 # Suggested names in the rename box (ticket #185), from the file's content, by
 # parchaos-name-suggest (parchaos-lookup). Without it nothing changes.
 Patch12:        0013-name-suggestions.patch
+# Share button and right-click menu: "Send to Nearby Device…" (ticket #149),
+# which hands the files to Parcha Nearby. Hidden when it isn't installed.
+Patch13:        0014-share-nearby.patch
 # ParchaOS's own look for the sidebar (appended to the stylesheet in %prep).
 Source1:        parcher-own-layout.css
 # Spanish for the strings ParchaOS adds (merged into Nautilus's es.po in %prep).
@@ -369,6 +372,11 @@ msgfmt --check -o /dev/null po/es.po
 %{_datadir}/nautilus/
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 48.7-41
+- Ticket #149: the Share button is a menu with "Send to Nearby Device…" and
+  "Email…"; the right-click menu also has "Send to Nearby Device…". Both hand
+  the selected files and folders to Parcha Nearby (org.parchaos.Nearby).
+
 * Fri Nov 13 2026 ParchaOS packaging - 48.7-40
 - Ticket #156: Provides (and Obsoletes) nautilus-extensions, whose library
   Parcher already ships, so nautilus-python and the extensions built on it

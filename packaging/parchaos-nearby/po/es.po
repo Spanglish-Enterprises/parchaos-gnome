@@ -1,0 +1,269 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-nearby package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-nearby\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-14 16:45-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: parchaos-nearby:195
+msgid "GB"
+msgstr "GB"
+
+#: parchaos-nearby:195
+msgid "MB"
+msgstr "MB"
+
+#: parchaos-nearby:195
+msgid "kB"
+msgstr "kB"
+
+#. Translators: a file size, e.g. "4.2 MB"
+#: parchaos-nearby:198
+#, python-brace-format
+msgid "{number} {unit}"
+msgstr "{number} {unit}"
+
+#: parchaos-nearby:199
+#, python-brace-format
+msgid "{n} byte"
+msgid_plural "{n} bytes"
+msgstr[0] "{n} byte"
+msgstr[1] "{n} bytes"
+
+#: parchaos-nearby:208
+#, python-brace-format
+msgid "{a} and {b}"
+msgstr "{a} y {b}"
+
+#: parchaos-nearby:210
+#, python-brace-format
+msgid "{a}, {b} and {n} more"
+msgid_plural "{a}, {b} and {n} more"
+msgstr[0] "{a}, {b} y {n} más"
+msgstr[1] "{a}, {b} y {n} más"
+
+#: parchaos-nearby:228
+#, python-brace-format
+msgid "{device} wants to send you a file"
+msgid_plural "{device} wants to send you {n} files"
+msgstr[0] "{device} quiere enviarte un archivo"
+msgstr[1] "{device} quiere enviarte {n} archivos"
+
+#: parchaos-nearby:236
+#, python-brace-format
+msgid "{device} declined."
+msgstr "{device} rechazó el envío."
+
+#: parchaos-nearby:237
+#, python-brace-format
+msgid "{device} is busy with another transfer. Try again in a moment."
+msgstr "{device} está ocupado con otro envío. Vuelve a intentarlo en un momento."
+
+#: parchaos-nearby:238
+#, python-brace-format
+msgid "{device} asked to wait. Try again in a moment."
+msgstr "{device} pidió esperar. Vuelve a intentarlo en un momento."
+
+#: parchaos-nearby:239
+#, python-brace-format
+msgid ""
+"{device} asks for a PIN. Turn off the PIN in its LocalSend settings and try "
+"again."
+msgstr "{device} pide un PIN. Desactiva el PIN en los ajustes de LocalSend de ese dispositivo y vuelve a intentarlo."
+
+#: parchaos-nearby:240
+#, python-brace-format
+msgid "A file arrived damaged on {device}. Try again."
+msgstr "Un archivo llegó dañado a {device}. Vuelve a intentarlo."
+
+#: parchaos-nearby:241
+#, python-brace-format
+msgid "{device} could not take the files (error {code})."
+msgstr "{device} no pudo recibir los archivos (error {code})."
+
+#: parchaos-nearby:675
+#, python-brace-format
+msgid "Could not reach {device}. Check that it is on the same network."
+msgstr "No se pudo conectar con {device}. Comprueba que esté en la misma red."
+
+#: parchaos-nearby:679
+#, python-brace-format
+msgid "Could not confirm that this is really {device}. Nothing was sent."
+msgstr "No se pudo confirmar que de verdad sea {device}. No se envió nada."
+
+#: parchaos-nearby:690 parchaos-nearby:727 parchaos-nearby:730
+msgid "Cancelled."
+msgstr "Cancelado."
+
+#: parchaos-nearby:715
+#, python-brace-format
+msgid "{name} got shorter while it was being sent."
+msgstr "{name} se acortó mientras se enviaba."
+
+#: parchaos-nearby:732
+#, python-brace-format
+msgid "{device} did not answer."
+msgstr "{device} no respondió."
+
+#: parchaos-nearby:733
+#, python-brace-format
+msgid "The transfer to {device} stopped: {error}"
+msgstr "El envío a {device} se detuvo: {error}"
+
+#: parchaos-nearby:966
+msgid "Stop"
+msgstr "Detener"
+
+#: parchaos-nearby:978
+msgid "Phone"
+msgstr "Teléfono"
+
+#: parchaos-nearby:978
+msgid "Computer"
+msgstr "Computadora"
+
+#: parchaos-nearby:982
+#, python-brace-format
+msgid "Waiting for {device} to accept…"
+msgstr "Esperando a que {device} acepte…"
+
+#: parchaos-nearby:988
+#, python-brace-format
+msgid "{done} of {total}"
+msgstr "{done} de {total}"
+
+#: parchaos-nearby:1000
+msgid "Sent"
+msgstr "Enviado"
+
+#. Nearby devices
+#: parchaos-nearby:1004 parchaos-nearby:1046
+msgid "Nearby Devices"
+msgstr "Dispositivos cercanos"
+
+#: parchaos-nearby:1020
+msgid "Choose Files…"
+msgstr "Elegir archivos…"
+
+#. Offers and messages for this computer
+#: parchaos-nearby:1027
+msgid "For This Computer"
+msgstr "Para esta computadora"
+
+#: parchaos-nearby:1030 parchaos-nearby:1247
+msgid "Decline"
+msgstr "Rechazar"
+
+#: parchaos-nearby:1031 parchaos-nearby:1248
+msgid "Accept"
+msgstr "Aceptar"
+
+#: parchaos-nearby:1039 parchaos-nearby:1306
+msgid "Copy"
+msgstr "Copiar"
+
+#: parchaos-nearby:1050
+msgid "Looking for devices…"
+msgstr "Buscando dispositivos…"
+
+#: parchaos-nearby:1051
+msgid ""
+"Devices on the same network show up here. On a phone or another computer, "
+"open LocalSend. Other ParchaOS computers show up by themselves."
+msgstr "Aquí aparecen los dispositivos de la misma red. En un teléfono u otra computadora, abre LocalSend. Las otras computadoras con ParchaOS aparecen solas."
+
+#. Receiving
+#: parchaos-nearby:1058
+msgid "This Computer"
+msgstr "Esta computadora"
+
+#: parchaos-nearby:1059
+msgid "Let Nearby Devices Send Me Files"
+msgstr "Permitir que dispositivos cercanos me envíen archivos"
+
+#: parchaos-nearby:1074
+#, python-brace-format
+msgid ""
+"Shows up as “{name}”. You are always asked first; files go to Downloads."
+msgstr "Aparece como «{name}». Siempre se te pregunta antes; los archivos van a Descargas."
+
+#: parchaos-nearby:1076
+#, python-brace-format
+msgid "Off. Others can see “{name}” only while this window is open."
+msgstr "Desactivado. Los demás solo ven «{name}» mientras esta ventana está abierta."
+
+#: parchaos-nearby:1092
+#, python-brace-format
+msgid "{n} file · {size}"
+msgid_plural "{n} files · {size}"
+msgstr[0] "{n} archivo · {size}"
+msgstr[1] "{n} archivos · {size}"
+
+#: parchaos-nearby:1094
+msgid "Send"
+msgstr "Enviar"
+
+#: parchaos-nearby:1097
+msgid "Choose what to send"
+msgstr "Elige qué enviar"
+
+#: parchaos-nearby:1098
+msgid "Then click a device below."
+msgstr "Luego haz clic en un dispositivo de abajo."
+
+#: parchaos-nearby:1105
+msgid "Choose Files to Send"
+msgstr "Elegir archivos para enviar"
+
+#: parchaos-nearby:1158 parchaos-nearby:1302
+#, python-brace-format
+msgid "Message from {device}"
+msgstr "Mensaje de {device}"
+
+#: parchaos-nearby:1166
+msgid "Copied"
+msgstr "Copiado"
+
+#: parchaos-nearby:1278
+#, python-brace-format
+msgid "Received {n} item from {device}"
+msgid_plural "Received {n} items from {device}"
+msgstr[0] "Recibiste {n} elemento de {device}"
+msgstr[1] "Recibiste {n} elementos de {device}"
+
+#: parchaos-nearby:1283
+#, python-brace-format
+msgid "{n} file did not arrive"
+msgid_plural "{n} files did not arrive"
+msgstr[0] "{n} archivo no llegó"
+msgstr[1] "{n} archivos no llegaron"
+
+#: parchaos-nearby:1288
+msgid "Show in Files"
+msgstr "Mostrar en Archivos"
+
+#: parchaos-nearby:1290
+#, python-brace-format
+msgid "Files from {device} did not arrive"
+msgstr "Los archivos de {device} no llegaron"
+
+#: parchaos-nearby:1291
+msgid "There may not be enough space in Downloads, or the connection dropped."
+msgstr "Puede que no haya espacio suficiente en Descargas, o que se cortara la conexión."
+
+#: parchaos-nearby:1296
+#, python-brace-format
+msgid "{device} stopped sending"
+msgstr "{device} dejó de enviar"

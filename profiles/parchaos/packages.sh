@@ -208,6 +208,8 @@ PROFILE_REPO_PACKAGES=(
     parchaos-automations
     # Managed settings for schools and offices, one file (packaging/parchaos-policy/, ticket #168).
     parchaos-policy
+    # Send files to nearby computers and phones (packaging/parchaos-nearby/, ticket #149).
+    parchaos-nearby
 
     # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
     # controller rules and the Game Mode session; launchers come from Flathub.

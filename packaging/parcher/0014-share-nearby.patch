@@ -1,0 +1,162 @@
+diff --git a/src/nautilus-files-view.c b/src/nautilus-files-view.c
+index 3486eb4..7fbf925 100644
+--- a/src/nautilus-files-view.c
++++ b/src/nautilus-files-view.c
+@@ -31,6 +31,7 @@
+ #include <gdk/gdkkeysyms.h>
+ #include <gdk/gdk.h>
+ #include <gio/gio.h>
++#include <gio/gdesktopappinfo.h>
+ #include <glib/gi18n.h>
+ #include <glib/gstdio.h>
+ #include <gtk/gtk.h>
+@@ -6814,6 +6815,77 @@ action_send_email (GSimpleAction *action,
+     }
+ }
+ 
++/* ParchaOS: send the selection to a nearby computer or phone (ticket #149).
++ * Parcha Nearby (org.parchaos.Nearby) lists the devices and does the sending;
++ * folders are sent with what is inside them. */
++#define PARCHAOS_NEARBY_APP "org.parchaos.Nearby.desktop"
++
++static void
++action_send_nearby (GSimpleAction *action,
++                    GVariant      *state,
++                    gpointer       user_data)
++{
++    NautilusFilesView *view = user_data;
++    g_autolist (NautilusFile) selection = NULL;
++    g_autolist (GFile) files = NULL;
++    g_autoptr (GDesktopAppInfo) app_info = NULL;
++    g_autoptr (GAppLaunchContext) context = NULL;
++    g_autoptr (GError) error = NULL;
++
++    app_info = g_desktop_app_info_new (PARCHAOS_NEARBY_APP);
++    if (app_info == NULL)
++    {
++        return;
++    }
++
++    selection = nautilus_files_view_get_selection (NAUTILUS_VIEW (view));
++    for (GList *l = selection; l != NULL; l = l->next)
++    {
++        if (nautilus_file_has_local_path (l->data))
++        {
++            files = g_list_prepend (files, nautilus_file_get_activation_location (l->data));
++        }
++    }
++    if (files == NULL)
++    {
++        return;
++    }
++    files = g_list_reverse (files);
++
++    context = G_APP_LAUNCH_CONTEXT (gdk_display_get_app_launch_context (gtk_widget_get_display (GTK_WIDGET (view))));
++    if (!g_app_info_launch (G_APP_INFO (app_info), files, context, &error))
++    {
++        show_dialog (_("Could not open Nearby Devices."),
++                     error->message,
++                     nautilus_files_view_get_containing_window (view),
++                     GTK_MESSAGE_ERROR);
++    }
++}
++
++static gboolean
++can_send_nearby (GList *selection)
++{
++    static gint installed = -1;
++
++    if (installed < 0)
++    {
++        g_autoptr (GDesktopAppInfo) app_info = g_desktop_app_info_new (PARCHAOS_NEARBY_APP);
++        installed = app_info != NULL;
++    }
++    if (!installed || selection == NULL)
++    {
++        return FALSE;
++    }
++    for (GList *l = selection; l != NULL; l = l->next)
++    {
++        if (!nautilus_file_has_local_path (l->data))
++        {
++            return FALSE;
++        }
++    }
++    return TRUE;
++}
++
+ static gboolean
+ can_run_in_terminal (GList *selection)
+ {
+@@ -7362,6 +7434,7 @@ const GActionEntry view_entries[] =
+     { .name = "extract-to", .activate = action_extract_to },
+     { .name = "compress", .activate = action_compress },
+     { .name = "send-email", .activate = action_send_email },
++    { .name = "send-nearby", .activate = action_send_nearby },
+     { .name = "console", .activate = action_open_console },
+     { .name = "current-directory-console", .activate = action_current_dir_open_console },
+     { .name = "properties", .activate = action_properties},
+@@ -7983,6 +8056,12 @@ real_update_actions_state (NautilusFilesView *view)
+     g_simple_action_set_enabled (G_SIMPLE_ACTION (action),
+                                  mode == NAUTILUS_MODE_BROWSE &&
+                                  app_info_mailto != NULL);
++    action = g_action_map_lookup_action (G_ACTION_MAP (view_action_group),
++                                         "send-nearby");
++    g_simple_action_set_enabled (G_SIMPLE_ACTION (action),
++                                 mode == NAUTILUS_MODE_BROWSE &&
++                                 !selection_all_in_trash &&
++                                 can_send_nearby (selection));
+     action = g_action_map_lookup_action (G_ACTION_MAP (view_action_group),
+                                          "copy-to");
+     g_simple_action_set_enabled (G_SIMPLE_ACTION (action),
+diff --git a/src/resources/ui/nautilus-files-view-context-menus.ui b/src/resources/ui/nautilus-files-view-context-menus.ui
+index 6387b33..4d9070f 100644
+--- a/src/resources/ui/nautilus-files-view-context-menus.ui
++++ b/src/resources/ui/nautilus-files-view-context-menus.ui
+@@ -222,6 +222,11 @@
+         <attribute name="action">view.send-email</attribute>
+         <attribute name="hidden-when">action-disabled</attribute>
+       </item>
++      <item>
++        <attribute name="label" translatable="yes">Send to Nearby Device…</attribute>
++        <attribute name="action">view.send-nearby</attribute>
++        <attribute name="hidden-when">action-disabled</attribute>
++      </item>
+       <item>
+         <attribute name="label" translatable="yes">Mo_ve to Trash</attribute>
+         <attribute name="action">view.move-to-trash</attribute>
+diff --git a/src/resources/ui/nautilus-toolbar.ui b/src/resources/ui/nautilus-toolbar.ui
+index 6ce0450..f792287 100644
+--- a/src/resources/ui/nautilus-toolbar.ui
++++ b/src/resources/ui/nautilus-toolbar.ui
+@@ -255,10 +255,11 @@
+               <class name="finder-pill-segmented"/>
+             </style>
+             <child>
+-              <object class="GtkButton" id="share_button">
++              <object class="GtkMenuButton" id="share_button">
+                 <property name="icon-name">emblem-shared-symbolic</property>
+                 <property name="tooltip-text" translatable="yes">Share</property>
+-                <property name="action-name">view.send-email</property>
++                <property name="menu-model">share_menu</property>
++                <property name="always-show-arrow">false</property>
+                 <property name="focus-on-click">false</property>
+                 <style>
+                   <class name="flat"/>
+@@ -294,4 +295,16 @@
+       </object>
+     </child>
+   </template>
++  <menu id="share_menu">
++    <section>
++      <item>
++        <attribute name="label" translatable="yes">Send to Nearby Device…</attribute>
++        <attribute name="action">view.send-nearby</attribute>
++      </item>
++      <item>
++        <attribute name="label" translatable="yes">Email…</attribute>
++        <attribute name="action">view.send-email</attribute>
++      </item>
++    </section>
++  </menu>
+ </interface>

@@ -74,3 +74,9 @@ msgstr "Fotos: %s"
 #. Translators: heading over names Parcher suggests in the rename box, read from the file.
 msgid "Suggestions"
 msgstr "Sugerencias"
+
+msgid "Send to Nearby Device…"
+msgstr "Enviar a un dispositivo cercano…"
+
+msgid "Could not open Nearby Devices."
+msgstr "No se pudo abrir Dispositivos cercanos."
