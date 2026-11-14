@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        91%{?dist}
+Release:        92%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -124,6 +124,7 @@ Requires:       parchaos-dictation
 Requires:       parchaos-speak
 Requires:       parchaos-lookup
 Requires:       parchaos-reader
+Requires:       parchaos-widgets
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
 # Not nautilus-gsconnect: it runs on nautilus-python 4.1, which needs the
@@ -228,7 +229,7 @@ ln -s ../parchaos-phone-guard.service \
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org', 'parchaos-lookup@parchaos.org', 'gsconnect@andyholmes.github.io']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org', 'parchaos-lookup@parchaos.org', 'gsconnect@andyholmes.github.io', 'parchaos-widgets@parchaos.org']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -300,6 +301,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-92
+- Ticket #165: desktop widgets on by default (parchaos-widgets) and the
+  desktop-widgets and widgets-editing settings they use.
+
 * Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-91
 - Ticket #156: drop nautilus-gsconnect again and remove it (and
   nautilus-python) on upgrade. nautilus-python 4.1 needs Nautilus 49's

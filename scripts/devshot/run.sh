@@ -10,7 +10,7 @@ cd "$(dirname "$0")/../.." || exit 1
 REPO=$PWD
 OUT=${OUT:-/tmp/devshot-out}; mkdir -p "$OUT"; rm -f "$OUT"/done "$OUT"/*.png
 cp "$1" "$OUT/plan.json"
-W=$(mktemp -d); H=$W/home; mkdir -p "$H/.local/share/gnome-shell/extensions" "$W/run" "$W/schemas"; chmod 700 "$W/run"
+W=$(mktemp -d); H=$W/home; mkdir -p "$H/.local/share/gnome-shell/extensions" "$H/Desktop" "$W/run" "$W/schemas"; chmod 700 "$W/run"
 for u in ${EXTS:-}; do
   pkg=${u%@*}; src=$REPO/packaging/$pkg/files; [ -f "$src/metadata.json" ] || src=$REPO/packaging/$pkg; [ -f "$src/metadata.json" ] || src=$REPO/scripts/glass-demo/$u
   d=$H/.local/share/gnome-shell/extensions/$u; mkdir -p "$d"; cp -r "$src/." "$d/"

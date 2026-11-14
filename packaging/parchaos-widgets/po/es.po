@@ -1,0 +1,65 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-widgets package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-widgets\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-13 23:58-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:36 extension.js:158 extension.js:163
+msgid "Weather"
+msgstr "Tiempo"
+
+#: extension.js:37
+msgid "Calendar"
+msgstr "Calendario"
+
+#: extension.js:38
+msgid "Note"
+msgstr "Nota"
+
+#: extension.js:39
+msgid "Clock"
+msgstr "Reloj"
+
+#: extension.js:69
+msgid "Remove Widget"
+msgstr "Quitar widget"
+
+#: extension.js:160
+msgid "Waiting for the weather…"
+msgstr "Esperando el tiempo…"
+
+#: extension.js:203
+msgid "Today, %B %-e"
+msgstr "Hoy, %-e de %B"
+
+#: extension.js:217
+msgid "No more events today"
+msgstr "No hay más eventos hoy"
+
+#: extension.js:224
+msgid "All day"
+msgstr "Todo el día"
+
+#: extension.js:246
+msgid "Write a note"
+msgstr "Escribe una nota"
+
+#: extension.js:448
+msgid "Add a widget:"
+msgstr "Añadir un widget:"
+
+#: extension.js:457
+msgid "Done"
+msgstr "Listo"

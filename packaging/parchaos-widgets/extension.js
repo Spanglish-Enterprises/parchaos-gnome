@@ -70,12 +70,11 @@ class Widget {
         });
         this.remove.connect('clicked', () => owner.removeWidget(spec.id));
         this.body = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true});
-        const top = new St.Widget({layout_manager: new Clutter.BinLayout()});
-        top.add_child(this.body);
-        top.add_child(this.remove);
+        // In edit mode, a row above the content with the remove button at its end.
         this.remove.set_x_align(Clutter.ActorAlign.END);
-        this.remove.set_y_align(Clutter.ActorAlign.START);
-        this.actor.add_child(top);
+        this.remove.x_expand = true;
+        this.actor.add_child(this.remove);
+        this.actor.add_child(this.body);
         this.actor.connect('button-press-event', (_a, event) => this._onPress(event));
     }
 
@@ -199,9 +198,12 @@ class CalendarWidget extends Widget {
     }
 
     refresh() {
+        // Asking for the day's range can answer at once with 'changed': no second pass then.
+        if (this._refreshing)
+            return;
+        this._refreshing = true;
         const now = GLib.DateTime.new_now_local();
         this._title.text = now.format(_('Today, %B %-e'));
-        this._list.destroy_all_children();
         const start = new Date();
         start.setHours(0, 0, 0, 0);
         const end = new Date(start.getTime() + 24 * 3600 * 1000);
@@ -212,6 +214,8 @@ class CalendarWidget extends Widget {
         } catch (e) {
             events = [];
         }
+        this._refreshing = false;
+        this._list.destroy_all_children();
         events = events.filter(e => e.end >= new Date()).slice(0, MAX_EVENTS);
         if (!events.length) {
             this._list.add_child(new St.Label({text: _('No more events today'), style_class: 'parchaos-widget-detail'}));
@@ -326,7 +330,8 @@ export default class WidgetsExtension extends Extension {
         this._layer = new St.Widget({style_class: 'parchaos-widgets-layer', reactive: false});
         global.window_group.add_child(this._layer);
         this._restack();
-        global.display.connectObject('restacked', () => this._restack(), this);
+        global.display.connectObject('restacked', () => this._queueRestack(), this);
+        global.window_manager.connectObject('map', () => this._queueRestack(), this);
         this._desktop.connectObject(
             'changed::desktop-widgets', () => this._sync(),
             'changed::widgets-editing', () => this._setEditing(this._desktop.get_boolean('widgets-editing')),
@@ -344,6 +349,10 @@ export default class WidgetsExtension extends Extension {
         this._unfocusNote();
         this._setEditing(false);
         global.display.disconnectObject(this);
+        global.window_manager.disconnectObject(this);
+        if (this._restackId)
+            GLib.source_remove(this._restackId);
+        this._restackId = 0;
         this._desktop.disconnectObject(this);
         this.interface.disconnectObject(this);
         for (const widget of this._widgets.values())
@@ -359,16 +368,28 @@ export default class WidgetsExtension extends Extension {
         this.interface = null;
     }
 
-    // Just above the desktop window (the icons), below every app window.
+    // Just above the desktop windows (the icons), below every app window. The wallpaper is a
+    // child of the window group too, at the bottom; with no desktop window, just above it.
     _restack() {
         if (!this._layer)
             return;
-        const actors = global.get_window_actors();
-        const desktop = actors.filter(a => a.meta_window?.get_window_type() === Meta.WindowType.DESKTOP).pop();
-        if (desktop && desktop.get_parent() === global.window_group)
-            global.window_group.set_child_above_sibling(this._layer, desktop);
-        else
-            global.window_group.set_child_below_sibling(this._layer, null);
+        const isDesktop = a => a.meta_window?.get_window_type() === Meta.WindowType.DESKTOP ||
+            a.meta_window?.get_title()?.startsWith('Desktop Icons ');
+        const desktops = global.get_window_actors().filter(a => isDesktop(a) && a.get_parent() === global.window_group);
+        const below = desktops.length ? desktops[desktops.length - 1] : Main.layoutManager._backgroundGroup;
+        if (below?.get_parent() === global.window_group)
+            global.window_group.set_child_above_sibling(this._layer, below);
+    }
+
+    // The desktop windows become desktop windows only once they are shown: look again then.
+    _queueRestack() {
+        if (this._restackId)
+            return;
+        this._restackId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._restackId = 0;
+            this._restack();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _applyStyle() {

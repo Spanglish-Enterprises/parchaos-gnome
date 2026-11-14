@@ -114,6 +114,19 @@
         parchaos-theme-sync picks the matching dark or light icon theme.
       </description>
     </key>
+    <key name="desktop-widgets" type="s">
+      <default>'[]'</default>
+      <summary>Desktop widgets</summary>
+      <description>
+        The widgets on the desktop and where they are, as JSON:
+        [{"id", "kind" (weather, calendar, note or clock), "x", "y"}].
+      </description>
+    </key>
+    <key name="widgets-editing" type="b">
+      <default>false</default>
+      <summary>Editing the desktop widgets</summary>
+      <description>Shows the bar to add widgets and lets them be moved and removed.</description>
+    </key>
     <key name="phone-link" type="b">
       <default>true</default>
       <summary>Phone connection</summary>

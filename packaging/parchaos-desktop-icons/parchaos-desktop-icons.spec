@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -51,6 +51,8 @@ Patch1:         0002-drag-icon.patch
 Patch2:         0003-desktop-proportions-and-micro-drag.patch
 # Ticket #175: file piles and the desktop menu (see the patch header).
 Patch3:         0004-file-piles.patch
+# Ticket #165: Edit Widgets in the desktop menu.
+Patch4:         0005-edit-widgets.patch
 
 BuildArch:      noarch
 BuildRequires:  meson
@@ -108,6 +110,10 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 50-9
+- Ticket #165: Edit Widgets… in the desktop menu turns on the desktop
+  widgets' edit mode (shown only when the widgets' setting exists).
+
 * Sat Nov 14 2026 ParchaOS packaging - 50-8
 - Fix the desktop restarting every 6 seconds and taking focus from windows
   on computers with more than one monitor. 50-6 (ticket #127) lowered the

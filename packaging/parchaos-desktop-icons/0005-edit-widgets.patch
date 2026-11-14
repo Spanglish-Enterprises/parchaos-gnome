@@ -1,0 +1,57 @@
+ParchaOS: Edit Widgets in the desktop menu (ticket #165)
+
+When the ParchaOS desktop settings have widgets, the desktop menu offers Edit Widgets,
+which turns on their edit mode (org.parchaos.desktop widgets-editing).
+
+Original code for ParchaOS, GPL-3.0.
+
+diff --git a/app/desktopMenu.js b/app/desktopMenu.js
+index eab9d49..152ffe8 100644
+--- a/app/desktopMenu.js
++++ b/app/desktopMenu.js
+@@ -115,6 +115,9 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         this._addNewActionBoolean('sort-special-folders');
+         this._addNewActionSelection('arrangeorder');
+         this._addNewActionSelection('pile-by');
++        // ParchaOS desktop widgets (ticket #165): edit mode is a setting the widgets extension follows.
++        this._parchaosDesktop = this._parchaosSettings();
++        this._addNewAction('edit-widgets', null, () => this._parchaosDesktop?.set_boolean('widgets-editing', true));
+         this._addNewAction('desktop-properties', null, () => {
+             DBusUtils.RemoteFileOperations.ShowItemPropertiesRemote([this._desktopDir.get_uri()], Gdk.CURRENT_TIME);
+         });
+@@ -197,6 +200,14 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+         return arrangeSubMenu;
+     }
+ 
++    _parchaosSettings() {
++        const source = Gio.SettingsSchemaSource.get_default();
++        const schema = source?.lookup('org.parchaos.desktop', true);
++        if (!schema || !schema.has_key('widgets-editing'))
++            return null;
++        return new Gio.Settings({settings_schema: schema});
++    }
++
+     // ParchaOS (#175): the desktop menu, with piles.
+     _addPilesSubMenu() {
+         const pilesSubMenu = new Gio.Menu();
+@@ -221,6 +232,8 @@ export var DesktopMenu = class extends MenuHelper.MenuHelper {
+ 
+         this._newMenuElement(_('Properties'), 'desktop-properties', section);
+         this._newMenuElement(_('Change Wallpaper…'), 'change-background', section);
++        if (this._parchaosDesktop)
++            this._newMenuElement(_('Edit Widgets…'), 'edit-widgets', section);
+ 
+         section = this._newSection(menuContainer);
+         this._newMenuElement(_('Paste'), 'paste', section);
+diff --git a/po/es.po b/po/es.po
+index 0b434fc..d61f268 100644
+--- a/po/es.po
++++ b/po/es.po
+@@ -1214,3 +1214,7 @@ msgstr "Ordenar montones por"
+ #: app/piles.js app/desktopMenu.js app/fileItemMenu.js
+ msgid "Icon Options…"
+ msgstr "Opciones de iconos…"
++
++#: app/desktopMenu.js
++msgid "Edit Widgets…"
++msgstr "Editar widgets…"
