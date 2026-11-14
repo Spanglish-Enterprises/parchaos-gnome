@@ -1,0 +1,92 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-reader package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-reader\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-13 23:37-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. name: (label, background, text, highlight)
+#: parchaos-reader:53
+msgid "Paper"
+msgstr "Papel"
+
+#: parchaos-reader:54
+msgid "Sepia"
+msgstr "Sepia"
+
+#: parchaos-reader:55
+msgid "Night"
+msgstr "Noche"
+
+#: parchaos-reader:57
+msgid "Sans"
+msgstr "Sans"
+
+#: parchaos-reader:57
+msgid "Serif"
+msgstr "Serif"
+
+#: parchaos-reader:57
+msgid "Monospace"
+msgstr "Monoespaciada"
+
+#: parchaos-reader:195
+msgid "Reader"
+msgstr "Lector"
+
+#: parchaos-reader:208 parchaos-reader:347
+msgid "Read Aloud"
+msgstr "Leer en voz alta"
+
+#: parchaos-reader:222
+msgid "Text to read"
+msgstr "Texto para leer"
+
+#: parchaos-reader:260
+msgid "Smaller text"
+msgstr "Texto más pequeño"
+
+#: parchaos-reader:260
+msgid "Larger text"
+msgstr "Texto más grande"
+
+#: parchaos-reader:267
+msgid "Font"
+msgstr "Tipo de letra"
+
+#: parchaos-reader:267
+msgid "Colours"
+msgstr "Colores"
+
+#: parchaos-reader:282
+msgid "Line spacing"
+msgstr "Interlineado"
+
+#: parchaos-reader:289
+msgid "Text and colours"
+msgstr "Texto y colores"
+
+#: parchaos-reader:347
+msgid "Pause"
+msgstr "Pausa"
+
+#: parchaos-reader:358
+msgid "The voice is not installed"
+msgstr "La voz no está instalada"
+
+#: parchaos-reader:477
+msgid ""
+"Select some text in any app and press Ctrl+Alt+R to read it here. You can "
+"also paste text into this window with Ctrl+V."
+msgstr "Selecciona texto en cualquier app y pulsa Ctrl+Alt+R para leerlo aquí. También puedes pegar texto en esta ventana con Ctrl+V."

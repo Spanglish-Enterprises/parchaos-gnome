@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.reader" path="/org/parchaos/reader/">
+    <key name="font" type="s">
+      <choices>
+        <choice value="sans"/>
+        <choice value="serif"/>
+        <choice value="mono"/>
+      </choices>
+      <default>'serif'</default>
+      <summary>Reader font</summary>
+    </key>
+    <key name="colours" type="s">
+      <choices>
+        <choice value="paper"/>
+        <choice value="sepia"/>
+        <choice value="night"/>
+      </choices>
+      <default>'paper'</default>
+      <summary>Reader colours</summary>
+    </key>
+    <key name="font-size" type="d">
+      <range min="12" max="48"/>
+      <default>22</default>
+      <summary>Reader text size, in pixels</summary>
+    </key>
+    <key name="line-spacing" type="d">
+      <range min="1.2" max="2.4"/>
+      <default>1.7</default>
+      <summary>Reader line spacing, as a multiple of the text size</summary>
+    </key>
+  </schema>
+</schemalist>

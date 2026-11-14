@@ -1,0 +1,488 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Reader (ticket #184): any text in a calm reading window, read aloud with the
+# current word highlighted.
+#
+#   parchaos-reader                 open with the text on standard input, or else the
+#                                   text of the focused app's document (accessibility)
+#   parchaos-reader --text TEXT     open with TEXT
+#
+# Ctrl+Alt+R (Parcha Speak's extension) passes the selected text in. The window has large
+# text in a chosen font, spacing and colours; Read Aloud uses the same on-device voice as
+# Speak (espeak-ng, through its library so each word's moment in the audio is known) and
+# highlights each word as it is spoken. Nothing leaves the computer.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import ctypes
+import gettext
+import importlib.machinery
+import importlib.util
+import os
+import re
+import sys
+import tempfile
+import threading
+import wave
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+gi.require_version('Gst', '1.0')
+from gi.repository import Adw, Gdk, Gio, GLib, Gst, Gtk, Pango  # noqa: E402
+
+APP_ID = 'org.parchaos.Reader'
+gettext.bindtextdomain('parchaos-reader', os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain('parchaos-reader')
+_ = gettext.gettext
+
+SAY = os.environ.get('PARCHAOS_SPEAK_SAY', '/usr/libexec/parchaos-speak/parchaos-speak-say')
+MAX_CHARS = 200000
+CHUNK_CHARS = 1200      # synthesised ahead one piece at a time, so reading starts at once
+
+
+
+def N_(message):
+    """Marks a string for translation; _() translates it where it is shown."""
+    return message
+
+
+THEMES = {
+    # name: (label, background, text, highlight)
+    'paper': (N_('Paper'), '#fbfaf7', '#1f1f1f', 'rgba(255, 196, 0, 0.45)'),
+    'sepia': (N_('Sepia'), '#f4ecd8', '#3b2f1e', 'rgba(214, 140, 40, 0.40)'),
+    'night': (N_('Night'), '#1b1b1f', '#e6e6e6', 'rgba(120, 160, 255, 0.40)'),
+}
+FONTS = {'sans': (N_('Sans'), 'Sans'), 'serif': (N_('Serif'), 'Serif'), 'mono': (N_('Monospace'), 'Monospace')}
+
+
+def load_speak():
+    """Parcha Speak's helper module, for its voice choice (Spanish or English by the text)."""
+    try:
+        loader = importlib.machinery.SourceFileLoader('parchaos_speak_say', SAY)
+        spec = importlib.util.spec_from_loader('parchaos_speak_say', loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        return module
+    except (OSError, ImportError, SyntaxError):
+        return None
+
+
+def chunks(text, start=0, size=CHUNK_CHARS):
+    """(offset, piece) pieces of text from `start`, cut at paragraph or sentence ends."""
+    out = []
+    pos = start
+    while pos < len(text):
+        end = min(len(text), pos + size)
+        if end < len(text):
+            # Just after the last paragraph break, sentence end or line break in reach.
+            cut = max(text.rfind(mark, pos, end - len(mark) + 1) + len(mark) for mark in ('\n\n', '. ', '\n'))
+            if cut > pos + size // 4:
+                end = cut
+        piece = text[pos:end]
+        if piece.strip():
+            out.append((pos, piece))
+        pos = end
+    return out
+
+
+class Voice:
+    """espeak-ng's library: speech for a piece of text plus each word's place and moment."""
+
+    class _Id(ctypes.Union):
+        _fields_ = [('number', ctypes.c_int), ('name', ctypes.c_char_p), ('string', ctypes.c_char * 8)]
+
+    class _Event(ctypes.Structure):
+        pass
+
+    _Event._fields_ = [('type', ctypes.c_int), ('unique_identifier', ctypes.c_uint), ('text_position', ctypes.c_int),
+                       ('length', ctypes.c_int), ('audio_position', ctypes.c_int), ('sample', ctypes.c_int),
+                       ('user_data', ctypes.c_void_p), ('id', _Id)]
+    _CALLBACK = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(ctypes.c_short), ctypes.c_int, ctypes.POINTER(_Event))
+    EVENT_WORD = 1
+    AUDIO_OUTPUT_SYNCHRONOUS = 2
+    CHARS_UTF8 = 1
+
+    def __init__(self):
+        self._lib = ctypes.CDLL(os.environ.get('PARCHAOS_ESPEAK_LIB', 'libespeak-ng.so.1'))
+        self.rate = self._lib.espeak_Initialize(self.AUDIO_OUTPUT_SYNCHRONOUS, 0, None, 0)
+        if self.rate <= 0:
+            raise OSError('espeak-ng did not start')
+        self._samples, self._words = [], []
+        self._callback = self._CALLBACK(self._on_synth)
+        self._lib.espeak_SetSynthCallback(self._callback)
+
+    def _on_synth(self, wav, count, events):
+        if wav and count > 0:
+            self._samples.append(ctypes.string_at(wav, count * 2))
+        i = 0
+        while events[i].type != 0:
+            event = events[i]
+            if event.type == self.EVENT_WORD:
+                self._words.append((event.text_position - 1, event.length, event.audio_position))
+            i += 1
+        return 0
+
+    def speak_to_file(self, text, voice, speed, path):
+        """Writes the speech for `text` to the WAV file `path`; returns [(start, length, ms)]."""
+        self._samples, self._words = [], []
+        self._lib.espeak_SetVoiceByName(voice.encode())
+        self._lib.espeak_SetParameter(1, int(speed), 0)    # espeakRATE
+        data = text.encode('utf-8')
+        self._lib.espeak_Synth(data, len(data) + 1, 0, 0, 0, self.CHARS_UTF8, None, None)
+        self._lib.espeak_Synchronize()
+        with wave.open(path, 'wb') as out:
+            out.setnchannels(1)
+            out.setsampwidth(2)
+            out.setframerate(self.rate)
+            out.writeframes(b''.join(self._samples))
+        return list(self._words)
+
+
+def word_at(words, ms):
+    """The (start, length) of the word being spoken `ms` into the audio, or None."""
+    current = None
+    for start, length, at in words:
+        if at > ms:
+            break
+        current = (start, length)
+    return current
+
+
+def accessible_text():
+    """The text of the focused app's document, read through the accessibility tree."""
+    try:
+        gi.require_version('Atspi', '2.0')
+        from gi.repository import Atspi
+    except (ImportError, ValueError):
+        return ''
+    roles = {Atspi.Role.DOCUMENT_WEB, Atspi.Role.DOCUMENT_TEXT, Atspi.Role.DOCUMENT_FRAME, Atspi.Role.TEXT}
+
+    def walk(node, depth=0):
+        if node is None or depth > 40:
+            return ''
+        try:
+            if node.get_role() in roles:
+                text = node.get_text_iface()
+                if text is not None:
+                    value = text.get_text(0, text.get_character_count())
+                    if len((value or '').strip()) > 40:
+                        return value
+            for i in range(min(node.get_child_count(), 200)):
+                found = walk(node.get_child_at_index(i), depth + 1)
+                if found:
+                    return found
+        except GLib.Error:
+            return ''
+        return ''
+
+    desktop = Atspi.get_desktop(0)
+    for i in range(desktop.get_child_count()):
+        app = desktop.get_child_at_index(i)
+        for j in range(app.get_child_count() if app else 0):
+            window = app.get_child_at_index(j)
+            try:
+                if window.get_state_set().contains(Atspi.StateType.ACTIVE):
+                    return walk(window)
+            except GLib.Error:
+                continue
+    return ''
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app, text):
+        super().__init__(application=app, title=_('Reader'), default_width=760, default_height=820)
+        self._settings = Gio.Settings.new('org.parchaos.reader') if self._has_schema() else None
+        self._speak = load_speak()
+        self._voice = None
+        self._player = None
+        self._queue = []
+        self._worker = None
+        self._stop = threading.Event()
+        self._tmp = tempfile.TemporaryDirectory(prefix='parchaos-reader-')
+        self._poll_id = 0
+
+        view = Adw.ToolbarView(css_classes=['parchaos-reader-page'])
+        header = Adw.HeaderBar()
+        self._play = Gtk.Button(icon_name='media-playback-start-symbolic', tooltip_text=_('Read Aloud'))
+        self._play.add_css_class('suggested-action')
+        self._play.connect('clicked', lambda *_a: self._toggle())
+        header.pack_start(self._play)
+        header.pack_end(self._style_button())
+        view.add_top_bar(header)
+
+        self._buffer = Gtk.TextBuffer()
+        self._buffer.set_text(text[:MAX_CHARS])
+        self._spoken = self._buffer.create_tag('spoken')
+        self._text = Gtk.TextView(buffer=self._buffer, editable=False, cursor_visible=False,
+                                  wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=40, bottom_margin=80,
+                                  left_margin=12, right_margin=12)
+        self._text.add_css_class('parchaos-reader-text')
+        self._text.update_property([Gtk.AccessibleProperty.LABEL], [_('Text to read')])
+        clamp = Adw.Clamp(maximum_size=720, child=self._text, css_classes=['parchaos-reader-page'])
+        scroller = Gtk.ScrolledWindow(child=clamp, vexpand=True, css_classes=['parchaos-reader-page'])
+        view.set_content(scroller)
+        self.set_content(view)
+
+        self._css = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self._css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._apply_style()
+        keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        keys.connect('key-pressed', self._on_key)
+        self.add_controller(keys)
+        self.connect('close-request', self._on_close)
+
+    @staticmethod
+    def _has_schema():
+        source = Gio.SettingsSchemaSource.get_default()
+        return source is not None and source.lookup('org.parchaos.reader', True) is not None
+
+    def _get(self, key, default):
+        if self._settings is None:
+            return default
+        value = self._settings.get_value(key).unpack()
+        return value
+
+    def _set(self, key, value):
+        if self._settings is not None:
+            self._settings.set_value(key, GLib.Variant('s' if isinstance(value, str) else 'd', value))
+        self._apply_style()
+
+    # --- Look ---
+
+    def _style_button(self):
+        menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=12, margin_bottom=12,
+                       margin_start=12, margin_end=12)
+
+        sizes = Gtk.Box(spacing=6, homogeneous=True)
+        for label, delta, tip in (('A−', -2, _('Smaller text')), ('A+', 2, _('Larger text'))):
+            button = Gtk.Button(label=label, tooltip_text=tip)
+            button.connect('clicked', lambda *_a, d=delta: self._set(
+                'font-size', max(12.0, min(48.0, self._get('font-size', 22.0) + d))))
+            sizes.append(button)
+        menu.append(sizes)
+
+        for key, choices, title in (('font', FONTS, _('Font')), ('colours', THEMES, _('Colours'))):
+            menu.append(Gtk.Label(label=title, xalign=0, css_classes=['heading']))
+            row = Gtk.Box(spacing=6, homogeneous=True)
+            first = None
+            for value, entry in choices.items():
+                check = Gtk.ToggleButton(label=_(entry[0]))
+                if first is None:
+                    first = check
+                else:
+                    check.set_group(first)
+                check.set_active(self._get(key, next(iter(choices))) == value)
+                check.connect('toggled', lambda b, k=key, v=value: b.get_active() and self._set(k, v))
+                row.append(check)
+            menu.append(row)
+
+        menu.append(Gtk.Label(label=_('Line spacing'), xalign=0, css_classes=['heading']))
+        spacing = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1.2, 2.4, 0.1)
+        spacing.set_value(self._get('line-spacing', 1.7))
+        spacing.connect('value-changed', lambda s: self._set('line-spacing', round(s.get_value(), 1)))
+        menu.append(spacing)
+
+        popover = Gtk.Popover(child=menu)
+        return Gtk.MenuButton(icon_name='font-x-generic-symbolic', popover=popover, tooltip_text=_('Text and colours'))
+
+    def _apply_style(self):
+        _label, bg, fg, mark = THEMES.get(self._get('colours', 'paper'), THEMES['paper'])
+        family = FONTS.get(self._get('font', 'serif'), FONTS['serif'])[1]
+        size = self._get('font-size', 22.0)
+        self._css.load_from_string(
+            f'.parchaos-reader-text, .parchaos-reader-text text {{ background-color: {bg}; color: {fg}; '
+            f'font-family: "{family}"; font-size: {size}px; }}'
+            f' .parchaos-reader-page {{ background-color: {bg}; }}')
+        self._spoken.props.background_rgba = self._rgba(mark)
+        # Line spacing in pixels around each wrapped line.
+        gap = int(size * (self._get('line-spacing', 1.7) - 1) / 2)
+        self._text.set_pixels_above_lines(gap)
+        self._text.set_pixels_below_lines(gap)
+        self._text.set_pixels_inside_wrap(gap * 2)
+
+    def _on_paste(self, clipboard, result):
+        """Ctrl+V puts the copied text in the window in place of what was there."""
+        try:
+            text = clipboard.read_text_finish(result)
+        except GLib.Error:
+            return
+        if text and text.strip():
+            self._stop_reading()
+            self._buffer.set_text(text[:MAX_CHARS])
+            self._buffer.place_cursor(self._buffer.get_start_iter())
+
+    @staticmethod
+    def _rgba(value):
+        rgba = Gdk.RGBA()
+        rgba.parse(value)
+        return rgba
+
+    # --- Reading aloud ---
+
+    def _on_key(self, _controller, keyval, _keycode, state):
+        if keyval == Gdk.KEY_space and not state & Gdk.ModifierType.CONTROL_MASK:
+            self._toggle()
+            return True
+        if keyval in (Gdk.KEY_v, Gdk.KEY_V) and state & Gdk.ModifierType.CONTROL_MASK:
+            self.get_clipboard().read_text_async(None, self._on_paste)
+            return True
+        if keyval == Gdk.KEY_Escape:
+            self._stop_reading()
+            return True
+        return False
+
+    def _toggle(self):
+        if self._player is not None:
+            playing = self._player.get_state(0)[1] == Gst.State.PLAYING
+            self._player.set_state(Gst.State.PAUSED if playing else Gst.State.PLAYING)
+            self._set_playing(not playing)
+            return
+        self._start_reading()
+
+    def _set_playing(self, playing):
+        self._play.set_icon_name('media-playback-pause-symbolic' if playing else 'media-playback-start-symbolic')
+        self._play.set_tooltip_text(_('Pause') if playing else _('Read Aloud'))
+
+    def _start_reading(self):
+        text = self._buffer.get_text(self._buffer.get_start_iter(), self._buffer.get_end_iter(), False)
+        if not text.strip():
+            return
+        if self._voice is None:
+            try:
+                self._voice = Voice()
+            except OSError:
+                self._play.set_sensitive(False)
+                self._play.set_tooltip_text(_('The voice is not installed'))
+                return
+        # From the paragraph the reader clicked in, or from the top.
+        cursor = self._buffer.get_iter_at_mark(self._buffer.get_insert()).get_offset()
+        start = text.rfind('\n', 0, cursor) + 1 if cursor else 0
+        voice = self._speak.voice_for(text) if self._speak else 'en-us'
+        speed = self._speed()
+        self._stop.clear()
+        self._queue = []
+        pieces = chunks(text, start)
+        self._worker = threading.Thread(target=self._synthesise, args=(pieces, voice, speed), daemon=True)
+        self._worker.start()
+        self._next = 0
+        self._set_playing(True)
+        GLib.timeout_add(50, self._wait_for_piece)
+
+    def _speed(self):
+        source = Gio.SettingsSchemaSource.get_default()
+        if source and source.lookup('org.parchaos.speak', True):
+            return Gio.Settings.new('org.parchaos.speak').get_int('speed')
+        return 165
+
+    def _synthesise(self, pieces, voice, speed):
+        for i, (offset, piece) in enumerate(pieces):
+            if self._stop.is_set():
+                return
+            path = os.path.join(self._tmp.name, f'piece-{i}.wav')
+            words = self._voice.speak_to_file(piece, voice, speed, path)
+            self._queue.append((offset, path, words))
+        self._queue.append(None)    # the end
+
+    def _wait_for_piece(self):
+        if self._stop.is_set():
+            return GLib.SOURCE_REMOVE
+        if self._next >= len(self._queue):
+            return GLib.SOURCE_CONTINUE
+        item = self._queue[self._next]
+        if item is None:
+            self._stop_reading()
+            return GLib.SOURCE_REMOVE
+        self._play_piece(*item)
+        return GLib.SOURCE_REMOVE
+
+    def _play_piece(self, offset, path, words):
+        if self._player is None:
+            self._player = Gst.ElementFactory.make('playbin', 'reader')
+            sink = os.environ.get('PARCHAOS_READER_AUDIO_SINK')     # tests: a silent sink
+            if sink:
+                element = Gst.ElementFactory.make(sink)
+                if element.find_property('sync'):
+                    element.set_property('sync', True)       # in real time, like a speaker
+                self._player.set_property('audio-sink', element)
+            bus = self._player.get_bus()
+            bus.add_signal_watch()
+            bus.connect('message::eos', lambda *_a: self._piece_done())
+            bus.connect('message::error', lambda *_a: self._stop_reading())
+        self._player.set_state(Gst.State.NULL)
+        self._player.set_property('uri', GLib.filename_to_uri(path, None))
+        self._player.set_state(Gst.State.PLAYING)
+        self._current = (offset, words)
+        if not self._poll_id:
+            self._poll_id = GLib.timeout_add(40, self._follow)
+
+    def _piece_done(self):
+        self._next += 1
+        GLib.timeout_add(20, self._wait_for_piece)
+
+    def _follow(self):
+        """Highlights the word being spoken now and keeps it in view."""
+        if self._player is None:
+            self._poll_id = 0
+            return GLib.SOURCE_REMOVE
+        ok, position = self._player.query_position(Gst.Format.TIME)
+        if ok:
+            offset, words = self._current
+            word = word_at(words, position // Gst.MSECOND)
+            self._buffer.remove_tag(self._spoken, self._buffer.get_start_iter(), self._buffer.get_end_iter())
+            if word:
+                start = self._buffer.get_iter_at_offset(offset + word[0])
+                end = self._buffer.get_iter_at_offset(offset + word[0] + word[1])
+                self._buffer.apply_tag(self._spoken, start, end)
+                # Scroll only when the word is about to leave the view.
+                where = self._text.get_iter_location(start)
+                seen = self._text.get_visible_rect()
+                if where.y < seen.y or where.y + where.height > seen.y + seen.height * 0.85:
+                    self._text.scroll_to_iter(start, 0.2, True, 0, 0.3)
+        return GLib.SOURCE_CONTINUE
+
+    def _stop_reading(self):
+        self._stop.set()
+        if self._player is not None:
+            self._player.set_state(Gst.State.NULL)
+            self._player = None
+        if self._poll_id:
+            GLib.source_remove(self._poll_id)
+            self._poll_id = 0
+        self._buffer.remove_tag(self._spoken, self._buffer.get_start_iter(), self._buffer.get_end_iter())
+        self._set_playing(False)
+
+    def _on_close(self, *_args):
+        self._stop_reading()
+        self._tmp.cleanup()
+        return False
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE |
+                         Gio.ApplicationFlags.NON_UNIQUE)
+        self.add_main_option('text', 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING, 'Open with TEXT', 'TEXT')
+
+    def do_command_line(self, command_line):
+        options = command_line.get_options_dict().end().unpack()
+        text = options.get('text')
+        if text is None and not sys.stdin.isatty():
+            text = sys.stdin.read(MAX_CHARS * 4)
+        if not (text or '').strip():
+            text = accessible_text()
+        if not (text or '').strip():
+            text = _('Select some text in any app and press Ctrl+Alt+R to read it here. You can also paste text into this window with Ctrl+V.')
+        Window(self, text).present()
+        return 0
+
+
+def main():
+    Gst.init(None)
+    return App().run(sys.argv)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Reader
+Name[es]=Lector
+Comment=Read any text in a calm window, aloud if you like
+Comment[es]=Lee cualquier texto en una ventana tranquila, en voz alta si quieres
+Exec=parchaos-reader
+Icon=accessories-text-editor
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=read;aloud;speak;dyslexia;accessibility;leer;voz;
+StartupNotify=true

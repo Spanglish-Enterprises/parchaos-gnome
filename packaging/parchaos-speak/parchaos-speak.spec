@@ -7,7 +7,7 @@
 
 Name:           parchaos-speak
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Read the selected text aloud on the ParchaOS desktop
 
 License:        GPL-3.0-or-later
@@ -58,6 +58,10 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-speak.m
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-speak.mo
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-3
+- Ticket #184: Ctrl+Alt+R opens the selected text in Parcha Reader (when
+  installed); with nothing selected the Reader reads the focused app's page.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-2
 - Tickets #146/#53: translatable (gettext domain parchaos-speak) with a Spanish translation of the "select some text first" hint.
 
