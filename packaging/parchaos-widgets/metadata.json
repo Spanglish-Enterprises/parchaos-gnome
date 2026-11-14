@@ -1,0 +1,7 @@
+{
+  "uuid": "parchaos-widgets@parchaos.org",
+  "name": "Desktop Widgets",
+  "description": "Weather, today's calendar, sticky notes and a clock on the desktop, under the windows. Right-click the desktop and choose Edit Widgets to add, move or remove them.",
+  "shell-version": ["48", "49", "50", "51"],
+  "url": "https://parchaos.org"
+}

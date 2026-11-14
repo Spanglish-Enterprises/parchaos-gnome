@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Desktop widgets (ticket #165). Glass by default; Classic and light variants below. */
+
+.parchaos-widget {
+  min-width: 220px;
+  max-width: 300px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  spacing: 4px;
+  color: #ffffff;
+  background-color: rgba(28, 28, 34, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
+}
+.parchaos-widgets-light .parchaos-widget {
+  color: #1d1d22;
+  background-color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+.parchaos-widgets-classic .parchaos-widget {
+  border-radius: 14px;
+  background-color: rgba(36, 36, 42, 0.88);
+}
+.parchaos-widgets-classic.parchaos-widgets-light .parchaos-widget {
+  background-color: rgba(250, 250, 252, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.parchaos-widget:editing {
+  border: 1px dashed rgba(255, 255, 255, 0.7);
+}
+.parchaos-widgets-light .parchaos-widget:editing { border: 1px dashed rgba(0, 0, 0, 0.45); }
+.parchaos-widget:dragging { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35); }
+.parchaos-widget:writing { border: 1px solid -st-accent-color; }
+
+.parchaos-widget-remove {
+  padding: 4px;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  margin: -22px -24px 0 0;
+}
+.parchaos-widget-remove StIcon { icon-size: 12px; }
+
+.parchaos-widget-title { font-weight: 700; font-size: 11pt; }
+.parchaos-widget-detail { font-size: 10pt; opacity: 0.8; }
+
+.parchaos-widget-clock-time { font-size: 40pt; font-weight: 300; }
+.parchaos-widget-clock-date { font-size: 11pt; opacity: 0.85; }
+
+.parchaos-widget-weather-row { spacing: 10px; padding: 4px 0; }
+.parchaos-widget-weather-icon { icon-size: 40px; }
+.parchaos-widget-weather-temp { font-size: 30pt; font-weight: 300; }
+
+.parchaos-widget-events { spacing: 6px; padding-top: 6px; }
+.parchaos-widget-event { spacing: 10px; }
+.parchaos-widget-event-time { font-size: 10pt; font-weight: 700; min-width: 64px; color: -st-accent-color; }
+.parchaos-widget-event-name { font-size: 10pt; }
+
+.parchaos-widget-note { background-color: rgba(255, 214, 102, 0.82); color: #3a2e05; border: 1px solid rgba(255, 255, 255, 0.5); }
+.parchaos-widgets-light .parchaos-widget-note,
+.parchaos-widgets-classic .parchaos-widget-note { background-color: rgba(255, 220, 110, 0.95); color: #3a2e05; }
+.parchaos-widget-note-text {
+  min-height: 110px;
+  padding: 2px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: #3a2e05;
+  font-size: 11pt;
+  caret-color: #3a2e05;
+}
+.parchaos-widget-note-text StLabel.hint-text { color: rgba(58, 46, 5, 0.55); }
+
+.parchaos-widgets-bar {
+  spacing: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background-color: rgba(28, 28, 34, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+.parchaos-widgets-bar-title { padding: 0 6px; font-weight: 700; }
+.parchaos-widgets-bar-button, .parchaos-widgets-bar-done {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.parchaos-widgets-bar-button:hover { background-color: rgba(255, 255, 255, 0.22); }
+.parchaos-widgets-bar-item { spacing: 6px; }
+.parchaos-widgets-bar-done { background-color: -st-accent-color; font-weight: 700; }
