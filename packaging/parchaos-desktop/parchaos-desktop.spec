@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        88%{?dist}
+Release:        89%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -87,6 +87,9 @@ Source6:        80-parchaos-copr.repo
 # Keeps the GTK, window and Shell themes matching light/dark and the style.
 Source7:        parchaos-theme-sync
 Source8:        parchaos-theme-sync.service
+# Phone connection only on trusted networks (ticket #156).
+Source30:       parchaos-phone-guard
+Source31:       parchaos-phone-guard.service
 # Safe mode: all extensions off for a boot that has parchaos.safe-mode on
 # the kernel command line (ticket #115).
 Source9:        parchaos-safe-mode
@@ -121,6 +124,8 @@ Requires:       parchaos-dictation
 Requires:       parchaos-speak
 Requires:       parchaos-lookup
 Requires:       parchaos-reader
+# Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
+Requires:       gnome-shell-extension-gsconnect
 Requires:       parchaos-glass
 Requires:       sushi
 Requires:       parchaos-snapshots
@@ -189,6 +194,8 @@ install -Dm0755 %{SOURCE4} %{buildroot}%{_libexecdir}/parchaos-extensions-migrat
 install -Dm0644 %{SOURCE6} %{buildroot}%{_datadir}/dnf5/repos.override.d/80-parchaos-copr.repo
 install -Dm0755 %{SOURCE7} %{buildroot}%{_libexecdir}/parchaos-theme-sync
 install -Dm0644 %{SOURCE8} %{buildroot}%{_userunitdir}/parchaos-theme-sync.service
+install -Dm0755 %{SOURCE30} %{buildroot}%{_libexecdir}/parchaos-phone-guard
+install -Dm0644 %{SOURCE31} %{buildroot}%{_userunitdir}/parchaos-phone-guard.service
 install -Dm0644 %{SOURCE5} %{buildroot}%{_userunitdir}/parchaos-extensions-migrate.service
 install -Dm0755 %{SOURCE9} %{buildroot}%{_libexecdir}/parchaos-safe-mode
 install -Dm0644 %{SOURCE10} %{buildroot}%{_unitdir}/parchaos-safe-mode.service
@@ -203,6 +210,8 @@ ln -s ../parchaos-extensions-migrate.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 ln -s ../parchaos-theme-sync.service \
     %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
+ln -s ../parchaos-phone-guard.service \
+    %{buildroot}%{_userunitdir}/graphical-session.target.wants/parchaos-phone-guard.service
 # Desktop defaults that must also reach existing installs over OTA
 # (profiles/parchaos/customize.sh only affects freshly built ISOs).
 # Default extensions for new user accounts. Previously written only by the
@@ -214,7 +223,7 @@ ln -s ../parchaos-theme-sync.service \
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org', 'parchaos-lookup@parchaos.org']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org', 'parchaos-lookup@parchaos.org', 'gsconnect@andyholmes.github.io']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -275,6 +284,9 @@ fi
 %{_libexecdir}/parchaos-theme-sync
 %{_userunitdir}/parchaos-theme-sync.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-theme-sync.service
+%{_libexecdir}/parchaos-phone-guard
+%{_userunitdir}/parchaos-phone-guard.service
+%{_userunitdir}/graphical-session.target.wants/parchaos-phone-guard.service
 %{_userunitdir}/parchaos-extensions-migrate.service
 %{_userunitdir}/graphical-session.target.wants/parchaos-extensions-migrate.service
 %{_libexecdir}/parchaos-safe-mode
@@ -283,6 +295,12 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-89
+- Ticket #156: phone connection. Requires GSConnect and turns it on by default;
+  parchaos-phone-guard (user service) lets it run only while it is turned
+  on and the computer is on a network marked as trusted in ParchaOS
+  Settings > Phone (phone-link, phone-trusted-networks).
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-88
 - Ticket #184: Requires parchaos-reader (Ctrl+Alt+R opens the selected text
   in Parcha Reader).

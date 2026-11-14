@@ -259,7 +259,145 @@ class Window(Adw.ApplicationWindow):
         sound = self._sound_page()
         if sound:
             self.add(sound, 'sound')
+        phone = self._phone_page()
+        if phone:
+            self.add(phone, 'phone')
         self._list.select_row(self._list.get_row_at_index(0))
+
+    # Phone connection (ticket #156): GSConnect, kept to trusted networks by parchaos-phone-guard.
+    GSCONNECT = 'org.gnome.Shell.Extensions.GSConnect'
+
+    def _phone_page(self):
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = source.lookup('org.parchaos.desktop', True) if source else None
+        gsconnect = source.lookup(self.GSCONNECT, True) if source else None
+        if schema is None or gsconnect is None or 'phone-link' not in schema.list_keys():
+            return None
+        desktop = Gio.Settings(settings_schema=schema)
+        self._gsconnect = Gio.Settings(settings_schema=gsconnect)
+        page = Adw.PreferencesPage(title=_('Phone'), icon_name='phone-symbolic')
+
+        group = Adw.PreferencesGroup(
+            title=_('Phone Connection'),
+            description=_("See your phone's notifications here, share the clipboard both ways, and send "
+                          'files and texts. The phone needs the free KDE Connect app and must be on the '
+                          'same network.'))
+        page.add(group)
+        switch = Adw.SwitchRow(title=_('Phone Connection'))
+        desktop.bind('phone-link', switch, 'active', Gio.SettingsBindFlags.DEFAULT)
+        group.add(switch)
+
+        # Trusted networks: the phone connection listens on the network, so only where the user says so.
+        nets = Adw.PreferencesGroup(
+            title=_('Trusted networks'),
+            description=_('The phone connection only runs on networks you trust, such as your home. '
+                          'At a cafe or an airport it stays off.'))
+        page.add(nets)
+        current = Adw.SwitchRow(title=_('This network'))
+        nets.add(current)
+        trusted_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'],
+                                   margin_top=12)
+        nets.add(trusted_list)
+
+        client = None
+        try:
+            gi.require_version('NM', '1.0')
+            from gi.repository import NM
+            client = NM.Client.new(None)
+        except (ImportError, ValueError, GLib.Error):
+            client = None
+
+        def name_of(uuid):
+            connection = client.get_connection_by_uuid(uuid) if client else None
+            return connection.get_id() if connection else _('A network not saved any more')
+
+        def refresh(*_a):
+            active = client.get_primary_connection() if client else None
+            trusted = desktop.get_strv('phone-trusted-networks')
+            current.handler_block_by_func(toggled)
+            if active is None:
+                current.set_title(_('Not connected'))
+                current.set_subtitle('')
+                current.set_sensitive(False)
+                current.set_active(False)
+            else:
+                current.set_title(active.get_id())
+                current.set_sensitive(True)
+                current.set_active(active.get_uuid() in trusted)
+                current.set_subtitle(_('Trusted: your phone can connect here') if current.get_active()
+                                     else _('Not trusted: the phone connection is off on this network'))
+            current.handler_unblock_by_func(toggled)
+            while (row := trusted_list.get_first_child()) is not None:
+                trusted_list.remove(row)
+            # The other trusted networks; the current one is the switch above.
+            others = [uuid for uuid in trusted if active is None or uuid != active.get_uuid()]
+            for uuid in others:
+                row = Adw.ActionRow(title=name_of(uuid))
+                forget = Gtk.Button(icon_name='user-trash-symbolic', valign=Gtk.Align.CENTER,
+                                    tooltip_text=_('Stop trusting this network'), css_classes=['flat'])
+                forget.connect('clicked', lambda *_b, u=uuid: desktop.set_strv(
+                    'phone-trusted-networks', [x for x in desktop.get_strv('phone-trusted-networks') if x != u]))
+                row.add_suffix(forget)
+                trusted_list.append(row)
+            trusted_list.set_visible(bool(others))
+
+        def toggled(row, _pspec):
+            active = client.get_primary_connection() if client else None
+            if active is None:
+                return
+            trusted = [x for x in desktop.get_strv('phone-trusted-networks') if x != active.get_uuid()]
+            if row.get_active():
+                trusted.append(active.get_uuid())
+            desktop.set_strv('phone-trusted-networks', trusted)
+
+        current.connect('notify::active', toggled)
+        desktop.connect('changed::phone-trusted-networks', refresh)
+        if client is not None:
+            client.connect('notify::primary-connection', refresh)
+        refresh()
+
+        # Phones: the devices GSConnect knows, and pairing a new one.
+        phones = Adw.PreferencesGroup(
+            title=_('Phones'),
+            description=_('On the phone, open KDE Connect: this computer appears there. Pair from the phone '
+                          'or with the button here.'))
+        page.add(phones)
+        pair = Gtk.Button(label=_('Pair a Phone…'), valign=Gtk.Align.CENTER)
+        pair.connect('clicked', lambda *_a: self._launch('org.gnome.Shell.Extensions.GSConnect.Preferences.desktop'))
+        phones.set_header_suffix(pair)
+        device_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'])
+        phones.add(device_list)
+
+        def refresh_devices(*_a):
+            while (row := device_list.get_first_child()) is not None:
+                device_list.remove(row)
+            devices = self._gsconnect.get_strv('devices')
+            device_schema = source.lookup(f'{self.GSCONNECT}.Device', True)
+            for device_id in devices:
+                if device_schema is None:
+                    break
+                device = Gio.Settings.new_full(device_schema, None,
+                                               f'/org/gnome/shell/extensions/gsconnect/device/{device_id}/')
+                kind = device.get_string('type')
+                row = Adw.ActionRow(title=device.get_string('name') or _('Phone'),
+                                    subtitle=_('Paired') if device.get_boolean('paired') else _('Not paired'))
+                row.add_prefix(Gtk.Image(icon_name='computer-symbolic' if kind in ('desktop', 'laptop')
+                                         else 'phone-symbolic'))
+                device_list.append(row)
+            if not devices:
+                device_list.append(Adw.ActionRow(title=_('No phones yet'),
+                                                 subtitle=_('Paired phones appear here.')))
+
+        self._gsconnect.connect('changed::devices', refresh_devices)
+        refresh_devices()
+        return page
+
+    def _launch(self, desktop_id):
+        app = next((a for a in Gio.AppInfo.get_all() if a.get_id() == desktop_id), None)
+        if app is None:
+            self._toasts.add_toast(Adw.Toast(title=_('That window could not be opened.')))
+            return
+        app.launch([], Gdk.Display.get_default().get_app_launch_context())
 
     # Ambient Sounds (ticket #183): parchaos-ambient plays, these rows set what and how.
     def _sound_page(self):
@@ -403,7 +541,7 @@ class Window(Adw.ApplicationWindow):
         self._list.append(row)
         self._pages.append(page)
 
-    # `parchaos-settings sound` (or appearance, desktop, privacy, backups, keyboard) opens that page.
+    # `parchaos-settings sound` (or appearance, desktop, privacy, backups, keyboard, phone) opens that page.
     def show_page(self, page_id):
         for index, page in enumerate(self._pages):
             if getattr(page, 'page_id', None) == page_id:

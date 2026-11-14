@@ -1,0 +1,11 @@
+[Unit]
+Description=ParchaOS phone connection: only on trusted networks
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/libexec/parchaos-phone-guard
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

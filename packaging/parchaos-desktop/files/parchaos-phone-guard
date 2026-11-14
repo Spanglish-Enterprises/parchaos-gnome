@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-phone-guard: the phone connection only on networks the user trusts (ticket #156).
+#
+# The phone connection is GSConnect (KDE Connect for GNOME). Its service listens on the local
+# network so a paired phone can reach the computer. ParchaOS ships no firewall to limit
+# that to some networks, so this guard does it instead: GSConnect runs only while Phone
+# Link is on (org.parchaos.desktop phone-link) and the computer's main connection is one
+# the user marked as trusted in ParchaOS Settings > Phone (phone-trusted-networks, by
+# NetworkManager connection UUID). Anywhere else, at a cafe or an airport, it is stopped.
+#
+#   parchaos-phone-guard            run as a user service
+#   parchaos-phone-guard --once     decide once and exit
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import sys
+
+import gi
+
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib  # noqa: E402
+
+GSCONNECT = 'org.gnome.Shell.Extensions.GSConnect'
+
+
+def settings(schema_id):
+    source = Gio.SettingsSchemaSource.get_default()
+    found = source.lookup(schema_id, True) if source else None
+    return Gio.Settings(settings_schema=found) if found else None
+
+
+def wanted(phone_link, trusted, connection_uuid):
+    """Whether GSConnect should run: the phone connection on and the current network trusted."""
+    return bool(phone_link and connection_uuid and connection_uuid in trusted)
+
+
+class Guard:
+    def __init__(self):
+        self.desktop = settings('org.parchaos.desktop')
+        self.gsconnect = settings(GSCONNECT)
+        self.client = None
+        try:
+            gi.require_version('NM', '1.0')
+            from gi.repository import NM
+            self.client = NM.Client.new(None)
+        except (ImportError, ValueError, GLib.Error):
+            self.client = None
+
+    def usable(self):
+        return (self.desktop is not None and self.gsconnect is not None
+                and 'phone-link' in self.desktop.props.settings_schema.list_keys())
+
+    def current_uuid(self):
+        if self.client is None:
+            return ''
+        active = self.client.get_primary_connection()
+        return active.get_uuid() if active is not None else ''
+
+    def apply(self, *_args):
+        if not self.usable():
+            return
+        on = wanted(self.desktop.get_boolean('phone-link'),
+                    self.desktop.get_strv('phone-trusted-networks'), self.current_uuid())
+        if self.gsconnect.get_boolean('enabled') != on:
+            self.gsconnect.set_boolean('enabled', on)
+            Gio.Settings.sync()
+
+    def watch(self):
+        if not self.usable():
+            return
+        self.desktop.connect('changed::phone-link', self.apply)
+        self.desktop.connect('changed::phone-trusted-networks', self.apply)
+        # Someone turning GSConnect on from its own menu on an untrusted network is put back.
+        self.gsconnect.connect('changed::enabled', self.apply)
+        if self.client is not None:
+            self.client.connect('notify::primary-connection', self.apply)
+
+
+def main(argv):
+    guard = Guard()
+    guard.apply()
+    if '--once' in argv:
+        return 0
+    guard.watch()
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

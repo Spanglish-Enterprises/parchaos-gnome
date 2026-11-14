@@ -114,6 +114,19 @@
         parchaos-theme-sync picks the matching dark or light icon theme.
       </description>
     </key>
+    <key name="phone-link" type="b">
+      <default>true</default>
+      <summary>Phone connection</summary>
+      <description>
+        Lets a paired phone reach this computer (GSConnect), on trusted
+        networks only. parchaos-phone-guard starts and stops it.
+      </description>
+    </key>
+    <key name="phone-trusted-networks" type="as">
+      <default>[]</default>
+      <summary>Networks where the phone connection may run</summary>
+      <description>NetworkManager connection UUIDs the user trusts for the phone connection.</description>
+    </key>
     <key name="icon-style" type="s">
       <choices>
         <choice value="standard"/>

@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        36%{?dist}
+Release:        37%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-37
+- Ticket #156: Settings > Phone. Turn the phone connection (GSConnect) on or
+  off, trust the current network (it only runs on trusted ones), forget
+  trusted networks, see paired phones and open pairing. Spanish strings.
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-36
 - Ticket #177: Appearance > Colours and icons. GNOME's nine accent colours as
   swatches, an icon style (Standard, Dark, Glass, Mono) and a preview card of
