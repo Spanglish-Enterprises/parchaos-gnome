@@ -8,7 +8,7 @@
 
 Name:           parchaos-policy
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Set and lock ParchaOS settings for a school or office from one file
 
 License:        GPL-3.0-or-later
@@ -79,6 +79,10 @@ fi
 %dir %{_sharedstatedir}/parchaos-policy
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 1.0.0-2
+- Without systemd-analyze (build machines), check the update time against the
+  shapes systemd accepts instead of letting any words through.
+
 * Sat Nov 14 2026 ParchaOS packaging - 1.0.0-1
 - Initial package (ticket #168): the policy file (organisation, appearance,
   screen, privacy, extensions, apps, updates, browser, any setting), with

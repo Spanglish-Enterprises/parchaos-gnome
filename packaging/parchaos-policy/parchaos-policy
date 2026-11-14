@@ -312,7 +312,11 @@ def plan(data, schemas=None):
 
 def calendar_ok(text):
     if shutil.which('systemd-analyze') is None:
-        return bool(re.fullmatch(r'[\w:*,./ -]+', text))
+        # Without systemd (a bare build machine): the shapes systemd accepts, roughly.
+        day = r'(mon|tue|wed|thu|fri|sat|sun)[a-z]*'
+        token = (rf'({day})((\.\.|,){day})*|[\d*][\d*,./~:-]*|'
+                 r'minutely|hourly|daily|weekly|monthly|yearly|annually|quarterly|semiannually')
+        return all(re.fullmatch(token, t, re.I) for t in text.split())
     r = subprocess.run(['systemd-analyze', 'calendar', text], capture_output=True, text=True)
     return r.returncode == 0
 
