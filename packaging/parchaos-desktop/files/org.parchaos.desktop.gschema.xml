@@ -72,6 +72,32 @@
         readable only by the user. Turning it off deletes the file.
       </description>
     </key>
+    <key name="focus-mode" type="s">
+      <choices>
+        <choice value=""/>
+        <choice value="work"/>
+        <choice value="sleep"/>
+        <choice value="personal"/>
+      </choices>
+      <default>''</default>
+      <summary>Focus mode</summary>
+      <description>
+        The focus mode in use (ticket #154): while one is on, only the apps listed for it in
+        focus-mode-apps show banners (urgent ones, such as alarms, always do); the rest go
+        straight to the notification list. Empty is no mode. Do Not Disturb is GNOME's own
+        show-banners switch and silences every app.
+      </description>
+    </key>
+    <key name="focus-mode-apps" type="a{sas}">
+      <default>{'work': ['org.gnome.Calendar.desktop', 'org.gnome.Evolution.desktop', 'org.gnome.Geary.desktop'], 'sleep': ['org.gnome.clocks.desktop'], 'personal': ['org.gnome.Calls.desktop', 'org.gnome.Contacts.desktop']}</default>
+      <summary>Apps allowed to show banners in each focus mode</summary>
+      <description>Desktop file ids, per mode.</description>
+    </key>
+    <key name="focus-mode-dark" type="as">
+      <default>['sleep']</default>
+      <summary>Focus modes that switch to the dark appearance</summary>
+      <description>The appearance goes back to what it was when the mode ends.</description>
+    </key>
     <key name="folder-colour" type="s">
       <choices>
         <choice value="passion"/>

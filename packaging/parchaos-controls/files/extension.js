@@ -31,6 +31,7 @@ import {ScreenshotThumbnail} from './thumbnail.js';
 import {addActivityButton} from './activity.js';
 import {CATALOG, CATALOG_APPS, addCatalogControls, resetCatalog} from './catalog.js';
 import {PrivacyLog} from './privacy.js';
+import {FocusModes, FocusState} from './focus.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -1442,13 +1443,26 @@ const ControlsPanel = GObject.registerClass({
     _focusTile(dnd) {
         const t = tile(2, 1, 'parchaos-controls-focus');
         const row = new St.BoxLayout({x_expand: true, y_align: Clutter.ActorAlign.CENTER});
-        row.add_child(circleFor(dnd, 32));
         const {box, t: title, s} = labels(_('Focus'), '');
-        const sync = () => (s.text = dnd.checked ? _('Do Not Disturb') : _('Off'));
-        dnd.connectObject('notify::checked', sync, row);
-        sync();
         const text = new St.Button({child: box, x_expand: true, style_class: 'parchaos-controls-row-text'});
-        text.connect('clicked', () => clickToggle(dnd));
+        // Focus modes (ticket #154): the circle turns focus on and off, the name steps through
+        // Do Not Disturb, Work, Sleep and Personal. Without the setting, plain Do Not Disturb.
+        if (this._desktop?.settings_schema.has_key('focus-mode')) {
+            const focus = new FocusState(this._desktop);
+            const names = {off: _('Off'), dnd: _('Do Not Disturb'), work: _('Work'), sleep: _('Sleep'), personal: _('Personal')};
+            row.add_child(circleFor(focus, 32, () => focus.toggle()));
+            const sync = () => (s.text = names[focus.state] ?? names.off);
+            focus.connect('changed', sync);
+            sync();
+            text.connect('clicked', () => focus.next());
+            t.connect('destroy', () => focus.destroy());
+        } else {
+            row.add_child(circleFor(dnd, 32));
+            const sync = () => (s.text = dnd.checked ? _('Do Not Disturb') : _('Off'));
+            dnd.connectObject('notify::checked', sync, row);
+            sync();
+            text.connect('clicked', () => clickToggle(dnd));
+        }
         row.add_child(text);
         t.add_child(row);
         void title;
@@ -2633,6 +2647,11 @@ export default class ParchaControlsExtension extends Extension {
         this._thumbnail = new ScreenshotThumbnail(_);
         recentActivity = new RecentActivity();
         privacyLog = new PrivacyLog(styleSettings());
+        const desktop = styleSettings();
+        if (desktop?.settings_schema.has_key('focus-mode')) {
+            this._focusInjections = new InjectionManager();
+            this._focusModes = new FocusModes(desktop, this._focusInjections);
+        }
         usageLearner = new UsageLearner();
         this._injections = new InjectionManager();
         this._waitId = 0;
@@ -2739,6 +2758,10 @@ export default class ParchaControlsExtension extends Extension {
         recentActivity = null;
         privacyLog?.destroy();
         privacyLog = null;
+        this._focusModes?.destroy();
+        this._focusModes = null;
+        this._focusInjections?.clear();
+        this._focusInjections = null;
         usageLearner?.destroy();
         usageLearner = null;
         this._injections?.clear();

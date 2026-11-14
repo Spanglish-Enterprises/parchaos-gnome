@@ -452,6 +452,8 @@ class Window(Adw.ApplicationWindow):
 
         if settings is not None:
             page.add(self._focus_group(settings))
+            if settings.props.settings_schema.has_key('focus-mode'):
+                page.add(self._focus_modes_group(settings))
         return page
 
     # Desktop icons (Desktop Icons NG keeps these keys).
@@ -506,7 +508,9 @@ class Window(Adw.ApplicationWindow):
         group = Adw.PreferencesGroup(
             title=_('Focus'),
             description=_('Silence notification popups at the same time every day.'))
-        switch = Adw.SwitchRow(title=_('Scheduled Do Not Disturb'))
+        modes = settings.props.settings_schema.has_key('focus-mode')
+        switch = Adw.SwitchRow(title=_('Scheduled Sleep') if modes else _('Scheduled Do Not Disturb'),
+                               subtitle=_('Turns on the Sleep focus mode every night.') if modes else '')
         settings.bind('focus-schedule', switch, 'active', Gio.SettingsBindFlags.DEFAULT)
         group.add(switch)
         self._focus_start_row = self._time_row(settings, 'focus-start', 'From')
@@ -517,6 +521,109 @@ class Window(Adw.ApplicationWindow):
         self._focus_settings = settings
         self._update_focus_hint()
         return group
+
+    # Focus modes (ticket #154): which apps may still show banners in each mode, and whether the
+    # mode switches to the dark appearance. Control Center switches between the modes.
+    FOCUS_MODES = (('work', _('Work'), 'x-office-calendar-symbolic'),
+                   ('sleep', _('Sleep'), 'weather-clear-night-symbolic'),
+                   ('personal', _('Personal'), 'avatar-default-symbolic'))
+
+    def _focus_modes_group(self, settings):
+        group = Adw.PreferencesGroup(
+            title=_('Focus modes'),
+            description=_('Switch modes from Focus in Control Center. In a mode, only the apps '
+                          'listed here show notification popups; the rest wait in the notification '
+                          'list. Urgent notifications, such as alarms, always show.'))
+        for mode, title, icon in self.FOCUS_MODES:
+            expander = Adw.ExpanderRow(title=title)
+            expander.add_prefix(Gtk.Image(icon_name=icon))
+            group.add(expander)
+            dark = Adw.SwitchRow(title=_('Dark appearance while on'))
+
+            def dark_from(*_a, row=dark, mode=mode):
+                active = mode in settings.get_strv('focus-mode-dark')
+                if row.get_active() != active:
+                    row.set_active(active)
+
+            def dark_to(row, _p, mode=mode):
+                modes = [m for m in settings.get_strv('focus-mode-dark') if m != mode]
+                if row.get_active():
+                    modes.append(mode)
+                if modes != settings.get_strv('focus-mode-dark'):
+                    settings.set_strv('focus-mode-dark', modes)
+
+            dark_from()
+            dark.connect('notify::active', dark_to)
+            settings.connect('changed::focus-mode-dark', dark_from)
+            expander.add_row(dark)
+            rows = []
+
+            def fill(*_a, expander=expander, rows=rows, mode=mode):
+                for row in rows:
+                    expander.remove(row)
+                rows.clear()
+                installed = {a.get_id(): a for a in Gio.AppInfo.get_all()}
+                # Apps from the defaults that are not installed stay in the setting but are not listed.
+                apps = [a for a in settings.get_value('focus-mode-apps').unpack().get(mode, []) if a in installed]
+                count = len(apps)
+                expander.set_subtitle(gettext.ngettext('%d app can show popups', '%d apps can show popups',
+                                                       count) % count)
+                for app_id in apps:
+                    info = installed[app_id]
+                    row = Adw.ActionRow(title=GLib.markup_escape_text(info.get_name()))
+                    if info.get_icon():
+                        row.add_prefix(Gtk.Image(gicon=info.get_icon(), pixel_size=24))
+                    remove = Gtk.Button(icon_name='list-remove-symbolic', valign=Gtk.Align.CENTER,
+                                        tooltip_text=_('Remove'), css_classes=['flat'])
+                    remove.connect('clicked', lambda _b, a=app_id, m=mode: self._focus_app(settings, m, a, False))
+                    row.add_suffix(remove)
+                    rows.append(row)
+                    expander.add_row(row)
+                add = Adw.ButtonRow(title=_('Add an App…')) if hasattr(Adw, 'ButtonRow') \
+                    else Adw.ActionRow(title=_('Add an App…'), activatable=True)
+                add.connect('activated', lambda _r, m=mode: self._choose_focus_app(settings, m))
+                rows.append(add)
+                expander.add_row(add)
+
+            fill()
+            settings.connect('changed::focus-mode-apps', fill)
+        return group
+
+    def _focus_app(self, settings, mode, app_id, add):
+        table = settings.get_value('focus-mode-apps').unpack()
+        apps = [a for a in table.get(mode, []) if a != app_id]
+        if add:
+            apps.append(app_id)
+        table[mode] = apps
+        settings.set_value('focus-mode-apps', GLib.Variant('a{sas}', table))
+
+    def _choose_focus_app(self, settings, mode):
+        dialog = Adw.Dialog(title=_('Add an App'), content_width=380, content_height=520)
+        view = Adw.ToolbarView()
+        view.add_top_bar(Adw.HeaderBar())
+        search = Gtk.SearchEntry(placeholder_text=_('Find an app'), margin_start=12, margin_end=12,
+                                 margin_top=6, margin_bottom=6)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(search)
+        listbox = Gtk.ListBox(css_classes=['boxed-list'], margin_start=12, margin_end=12, margin_bottom=12,
+                              selection_mode=Gtk.SelectionMode.NONE)
+        box.append(Gtk.ScrolledWindow(child=listbox, vexpand=True))
+        view.set_content(box)
+        dialog.set_child(view)
+        have = set(settings.get_value('focus-mode-apps').unpack().get(mode, []))
+        apps = sorted((a for a in Gio.AppInfo.get_all() if a.should_show() and a.get_id() not in have),
+                      key=lambda a: a.get_name().lower())
+        for app in apps:
+            row = Adw.ActionRow(title=GLib.markup_escape_text(app.get_name()), activatable=True)
+            if app.get_icon():
+                row.add_prefix(Gtk.Image(gicon=app.get_icon(), pixel_size=24))
+            row.app_id = app.get_id()
+            row.search_name = app.get_name().lower()
+            row.connect('activated', lambda r: (self._focus_app(settings, mode, r.app_id, True), dialog.close()))
+            listbox.append(row)
+        listbox.set_filter_func(lambda row: search.get_text().lower() in row.search_name)
+        search.connect('search-changed', lambda *_a: listbox.invalidate_filter())
+        dialog.present(self)
 
     def _update_focus_hint(self):
         try:

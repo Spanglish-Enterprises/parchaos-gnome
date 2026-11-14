@@ -19,6 +19,11 @@
 # user already had Do Not Disturb on when focus time began, it's left on
 # at the end. The marker file records that it's this service's doing.
 #
+# With focus modes (ticket #154, the focus-mode key) the schedule turns on
+# the Sleep mode instead, so the apps allowed in Sleep still show banners
+# and Sleep's dark appearance applies. The same rule holds: it only turns
+# off a Sleep it turned on, and leaves any focus the user chose alone.
+#
 # Original code for ParchaOS, GPL-3.0-or-later.
 
 import os
@@ -106,8 +111,19 @@ class FocusSchedule:
         self.sync()
         return GLib.SOURCE_REMOVE
 
+    def uses_modes(self):
+        return self.settings.props.settings_schema.has_key('focus-mode')
+
     def start_focus(self):
         if os.path.exists(MARKER):
+            return
+        if self.uses_modes():
+            # Only when no focus is on: a mode or Do Not Disturb the user chose stays as it is.
+            if self.settings.get_string('focus-mode') == '' and self.notifications.get_boolean('show-banners'):
+                self.settings.set_string('focus-mode', 'sleep')
+                os.makedirs(os.path.dirname(MARKER), exist_ok=True)
+                with open(MARKER, 'w') as f:
+                    f.write('sleep\n')
             return
         if self.notifications.get_boolean('show-banners'):
             self.notifications.set_boolean('show-banners', False)
@@ -117,7 +133,15 @@ class FocusSchedule:
     def end_focus(self):
         if not os.path.exists(MARKER):
             return
-        self.notifications.set_boolean('show-banners', True)
+        with open(MARKER) as f:
+            started_sleep = f.read().strip() == 'sleep'
+        if started_sleep:
+            # Ended only if it is still the Sleep this service started.
+            if self.settings.get_string('focus-mode') == 'sleep':
+                self.settings.set_string('focus-mode', '')
+        else:
+            # Marked by Do Not Disturb (no focus modes, or before they existed).
+            self.notifications.set_boolean('show-banners', True)
         os.remove(MARKER)
 
 

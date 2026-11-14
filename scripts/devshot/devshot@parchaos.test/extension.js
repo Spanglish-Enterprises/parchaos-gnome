@@ -3,7 +3,7 @@
 // writes screenshots there. Steps: wait, shot, move [x,y], press n, release n, drag [x0,y0,x1,y1],
 // type "text", combo ["KEY_A",...], log, screenshotTaken "name", slowdown N, record "name", stoprecord, spawn [argv],
 // menu "status-area-name" (open or close that menu-bar menu), indicators N (add N tray-like status icons),
-// screenshotUI (open GNOME's screenshot tool), moveWindow [n, x, y, w, h] (the nth normal window, oldest first), windows "label" (log every window's monitor and frame). Test tool only; never run against a real session.
+// scroll N (wheel clicks at the pointer, negative = up), screenshotUI (open GNOME's screenshot tool), moveWindow [n, x, y, w, h] (the nth normal window, oldest first), windows "label" (log every window's monitor and frame). Test tool only; never run against a real session.
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -81,6 +81,13 @@ export default class X extends Extension {
                     Main.screenshotUI.emit('screenshot-taken', Gio.File.new_for_path(`${OUT}/${step.screenshotTaken}.png`));
                 }
                 else if (step.move) dev.notify_absolute_motion(t(), step.move[0], step.move[1]);
+                else if (step.scroll) {
+                    for (let i = 0; i < Math.abs(step.scroll); i++) {
+                        dev.notify_discrete_scroll(t(), step.scroll > 0 ? Clutter.ScrollDirection.DOWN : Clutter.ScrollDirection.UP,
+                            Clutter.ScrollSource.WHEEL);
+                        await wait(40);
+                    }
+                }
                 else if (step.press) dev.notify_button(t(), step.press, Clutter.ButtonState.PRESSED);
                 else if (step.release) {
                     dev.notify_button(t(), step.release, Clutter.ButtonState.RELEASED);

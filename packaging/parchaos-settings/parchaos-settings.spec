@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        34%{?dist}
+Release:        35%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-35
+- Ticket #154: Desktop > Focus modes: each mode's allowed apps (add and remove) and a dark appearance switch; the schedule is now Scheduled Sleep when focus modes are available. Spanish: Focus is Enfoque, as in Control Center. Spanish strings added.
+
 * Tue Nov 10 2026 ParchaOS packaging - 1.0.0-34
 - Ticket #159: Privacy > Recently used lists the apps that used the microphone, camera, location or screen sharing in the last seven days (kind, last use, how many times), says plainly what it cannot see, and has a switch to stop keeping the report. Spanish strings added.
 

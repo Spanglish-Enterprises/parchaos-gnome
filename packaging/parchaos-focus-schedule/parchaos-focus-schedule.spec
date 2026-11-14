@@ -24,7 +24,7 @@
 
 Name:           parchaos-focus-schedule
 Version:        1.1.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Recurring nightly Do Not Disturb schedule (22:00-08:00 by default)
 
 License:        GPL-3.0-or-later
@@ -73,6 +73,9 @@ rm -f %{_sysconfdir}/systemd/user/timers.target.wants/parchaos-focus-start.timer
 %{_userunitdir}/graphical-session.target.wants/parchaos-focus-schedule.service
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.1.0-5
+- Ticket #154: with focus modes the nightly schedule turns on Sleep instead of plain Do Not Disturb, and only ends a Sleep it started; a marker from the older Do Not Disturb behaviour is still undone correctly.
+
 * Sat Sep 26 2026 ParchaOS packaging - 1.1.0-4
 - Rewrite the spec banner: the package is GNOME-only now (toggles
   show-banners), so lead with that instead of the old KDE/timers
