@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: parchaos-launcher\n"
 "Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
-"POT-Creation-Date: 2026-11-08 18:56-0600\n"
+"POT-Creation-Date: 2026-11-13 23:52-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,97 +16,99 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: files/extension.js:140
+#: files/extension.js:142
 msgid "Games"
 msgstr "Juegos"
 
-#: files/extension.js:140
+#: files/extension.js:142
 msgid "Developer"
 msgstr "Desarrollo"
 
-#: files/extension.js:140
+#: files/extension.js:142
 msgid "Creativity"
 msgstr "Creatividad"
 
-#: files/extension.js:141
+#: files/extension.js:143
 msgid "Entertainment"
 msgstr "Entretenimiento"
 
-#: files/extension.js:141
+#: files/extension.js:143
 msgid "Productivity"
 msgstr "Productividad"
 
-#: files/extension.js:141
+#: files/extension.js:143
 msgid "Education"
 msgstr "Educación"
 
-#: files/extension.js:142
+#: files/extension.js:144
 msgid "Internet"
 msgstr "Internet"
 
-#: files/extension.js:142
+#: files/extension.js:144
 msgid "Science"
 msgstr "Ciencia"
 
-#: files/extension.js:142 files/extension.js:143
+#: files/extension.js:144 files/extension.js:145
 msgid "System"
 msgstr "Sistema"
 
-#: files/extension.js:143
+#: files/extension.js:145
 msgid "Utilities"
 msgstr "Utilidades"
 
 #. The folder keeps the name in the language it was made in; the user can rename it.
-#: files/extension.js:150
+#: files/extension.js:152
 msgid "Folder"
 msgstr "Carpeta"
 
-#: files/extension.js:464
-msgid "Search Applications"
-msgstr "Buscar aplicaciones"
+#: files/extension.js:466
+msgid "Search apps, files and settings"
+msgstr "Buscar apps, archivos y ajustes"
 
-#: files/extension.js:1147
+#: files/extension.js:1289
 #, javascript-format
 msgid "Uninstall “%s”?"
 msgstr "¿Desinstalar «%s»?"
 
-#: files/extension.js:1150
+#: files/extension.js:1292
 msgid ""
 "The app will be removed from this computer. Your own files stay where they "
 "are."
-msgstr "La aplicación se quitará de esta computadora. Tus archivos se quedan donde están."
+msgstr ""
+"La aplicación se quitará de esta computadora. Tus archivos se quedan donde "
+"están."
 
-#: files/extension.js:1153
+#: files/extension.js:1295
 msgid "Checking what will be removed…"
 msgstr "Revisando qué se va a quitar…"
 
-#: files/extension.js:1159
+#: files/extension.js:1301
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: files/extension.js:1160
+#: files/extension.js:1302
 msgid "Uninstall"
 msgstr "Desinstalar"
 
-#: files/extension.js:1179 files/extension.js:1183
+#: files/extension.js:1321 files/extension.js:1325
 msgid "Couldn’t check what would be removed."
 msgstr "No se pudo revisar qué se quitaría."
 
-#: files/extension.js:1187
+#: files/extension.js:1329
 #, javascript-format
 msgid "This also removes: %s."
 msgstr "También se quita: %s."
 
-#: files/extension.js:1227
+#: files/extension.js:1369
 #, javascript-format
 msgid "%s was uninstalled"
 msgstr "Se desinstaló %s"
 
-#: files/extension.js:1229
+#: files/extension.js:1371
 msgid "The removal was cancelled or failed."
 msgstr "Se canceló la desinstalación o falló."
 
-#: files/extension.js:1230
+#: files/extension.js:1372
 #, javascript-format
 msgid "Couldn’t uninstall %s"
 msgstr "No se pudo desinstalar %s"

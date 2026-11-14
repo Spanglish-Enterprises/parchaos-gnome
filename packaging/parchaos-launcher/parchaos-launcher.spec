@@ -12,7 +12,7 @@
 
 Name:           parchaos-launcher
 Version:        1.0.0
-Release:        17%{?dist}
+Release:        18%{?dist}
 Summary:        ParchaOS's full-screen app launcher for GNOME Shell
 
 License:        GPL-3.0-or-later
@@ -22,6 +22,8 @@ Source1:        metadata.json
 Source2:        stylesheet.css
 Source3:        parchaos-launcher-apps
 Source4:        es.po
+# Results from GNOME's search providers (tickets #34/#150).
+Source5:        search.js
 Source90:       LICENSE
 
 BuildArch:      noarch
@@ -43,7 +45,7 @@ in place. Replaces the overview app grid (dock Show Apps button, Super+A).
 %prep
 mkdir -p src
 cd src
-cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} .
+cp %{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE5} .
 # %%prep works in src/; %%license reads from the build directory.
 cp -p %{SOURCE90} ..
 
@@ -54,6 +56,7 @@ UUID=parchaos-launcher@parchaos.org
 DEST=%{buildroot}%{_datadir}/gnome-shell/extensions/$UUID
 mkdir -p "$DEST"
 install -m 0644 src/extension.js "$DEST/"
+install -m 0644 src/search.js "$DEST/"
 install -m 0644 src/metadata.json "$DEST/"
 install -m 0644 src/stylesheet.css "$DEST/"
 install -m 0755 src/parchaos-launcher-apps "$DEST/"
@@ -67,6 +70,13 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-launche
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-launcher.mo
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-18
+- Tickets #34/#150: the launcher's search (Super+Space) also asks GNOME's
+  search providers: files (Parcher), Settings, the calculator (sums and
+  conversions), Photo search, and any other installed provider, each in its
+  own group under one row of apps. Up and Down walk the results, Enter opens
+  the top hit. GNOME Settings > Search still chooses which providers answer.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-17
 - Tickets #146/#53: the launcher is translatable (gettext domain parchaos-launcher) with a Spanish translation in Puerto Rican usage: search hint, new folder names, the uninstall dialog and its notifications.
 

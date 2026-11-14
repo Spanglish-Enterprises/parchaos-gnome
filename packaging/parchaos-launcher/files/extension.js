@@ -20,6 +20,7 @@ import * as Background from 'resource:///org/gnome/shell/ui/background.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as OverviewControls from 'resource:///org/gnome/shell/ui/overviewControls.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {ProviderSearch} from './search.js';
 import Gettext from 'gettext';
 
 // Translations (tickets #146/#53), bound to the domain directly like the menu bar.
@@ -35,6 +36,7 @@ const ROWS = 5;
 const FADE_IN = 120;
 const FADE_OUT = 200;
 const PAGE_TIME = 320;
+const SEARCH_DELAY = 150;   // ms after the last key before asking the search providers
 const DOCK_UUID = 'parcha-dock@parchaos.org';
 
 function folderName(settings) {
@@ -461,7 +463,7 @@ const Launcher = GObject.registerClass({
         // Search field, horizontally centered near the top.
         this._entry = new St.Entry({
             style_class: 'parchaos-launcher-search',
-            hint_text: _('Search Applications'),
+            hint_text: _('Search apps, files and settings'),
             can_focus: true,
             width: 330 * scale,
         });
@@ -502,6 +504,25 @@ const Launcher = GObject.registerClass({
 
         this._dots = new St.BoxLayout({style_class: 'parchaos-launcher-dots'});
         this.add_child(this._dots);
+
+        // Results from the search providers (files, settings, calculator...), under the apps.
+        this._search = new ProviderSearch();
+        this._sections = [];
+        this._results = [];
+        this._resultIndex = -1;
+        this._searchId = 0;
+        this._searchCancellable = null;
+        this._resultsBox = new St.BoxLayout({
+            style_class: 'parchaos-launcher-results', orientation: Clutter.Orientation.VERTICAL,
+            visible: false, reactive: true,
+        });
+        // Clicks between results must not close the launcher.
+        this._resultsBox.connect('button-release-event', () => Clutter.EVENT_STOP);
+        this.add_child(this._resultsBox);
+        this.connect('destroy', () => {
+            this._cancelProviderSearch();
+            this._search.destroy();
+        });
 
         this._items = loadItems();
         this._buildPages(this._items);
@@ -997,6 +1018,13 @@ const Launcher = GObject.registerClass({
             this._setPage(this._page - 1);
             return Clutter.EVENT_STOP;
         }
+        // Down from the apps (or with none) walks into the other results; Up walks back.
+        if (this._results.length && (sym === Clutter.KEY_Down || sym === Clutter.KEY_Up)) {
+            if (this._resultIndex >= 0 || sym === Clutter.KEY_Down) {
+                this._selectResult(this._resultIndex + (sym === Clutter.KEY_Down ? 1 : -1));
+                return Clutter.EVENT_STOP;
+            }
+        }
         if (arrows.includes(sym)) {
             this._moveSelection(sym);
             return Clutter.EVENT_STOP;
@@ -1008,10 +1036,17 @@ const Launcher = GObject.registerClass({
         const text = this._entry.get_text().trim();
         if (this._folderView)
             this._closeFolder();
+        this._cancelProviderSearch();
+        this._showSections([]);
         if (text === '') {
             this._buildPages(this._items);
             return;
         }
+        this._searchId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, SEARCH_DELAY, () => {
+            this._searchId = 0;
+            this._startProviderSearch(text);
+            return GLib.SOURCE_REMOVE;
+        });
         const appSys = Shell.AppSystem.get_default();
         const seen = new Set();
         const results = [];
@@ -1025,9 +1060,110 @@ const Launcher = GObject.registerClass({
             }
         }
         this._page = 0;
-        this._buildPages(results);
+        // One row of apps while searching, so the other results have room below.
+        this._appResults = results.slice(0, COLUMNS);
+        this._buildPages(this._appResults);
         if (results.length > 0)
             this._select(0);
+    }
+
+    // --- Results from the search providers ---
+
+    _cancelProviderSearch() {
+        if (this._searchId) {
+            GLib.source_remove(this._searchId);
+            this._searchId = 0;
+        }
+        this._searchCancellable?.cancel();
+        this._searchCancellable = null;
+    }
+
+    _startProviderSearch(text) {
+        const cancellable = new Gio.Cancellable();
+        this._searchCancellable = cancellable;
+        const sections = [];
+        this._search.search(text, cancellable, section => {
+            if (this._destroyed || cancellable !== this._searchCancellable)
+                return;
+            sections.push(section);
+            sections.sort((a, b) => a.rank - b.rank);
+            this._showSections(sections);
+        });
+    }
+
+    _showSections(sections) {
+        this._sections = sections;
+        this._resultsBox.destroy_all_children();
+        this._results = [];
+        this._resultIndex = -1;
+        if (!sections.length) {
+            this._resultsBox.hide();
+            return;
+        }
+        const scale = this._scale;
+        const width = Math.min(720 * scale, this._gridArea.width);
+        const appRows = this._tiles.length ? 1 : 0;
+        const top = this._gridArea.y + appRows * this._cellH + (appRows ? 8 * scale : 0);
+        const room = this._gridArea.y + this._gridArea.height - top;
+        const rowHeight = 52 * scale, headerHeight = 30 * scale;
+        let used = 0;
+        for (const {provider, metas, terms} of sections) {
+            if (used + headerHeight + rowHeight > room)
+                break;
+            const header = new St.BoxLayout({style_class: 'parchaos-launcher-results-header'});
+            const appIcon = provider.appInfo.get_icon();
+            if (appIcon)
+                header.add_child(new St.Icon({gicon: appIcon, icon_size: 16}));
+            header.add_child(new St.Label({text: provider.appInfo.get_name(), y_align: Clutter.ActorAlign.CENTER}));
+            this._resultsBox.add_child(header);
+            used += headerHeight;
+            for (const meta of metas) {
+                if (used + rowHeight > room)
+                    break;
+                const row = this._resultRow(provider, meta, terms);
+                this._resultsBox.add_child(row);
+                this._results.push(row);
+                used += rowHeight;
+            }
+        }
+        this._resultsBox.set_position(Math.round((this._monitor.width - width) / 2), Math.round(top));
+        this._resultsBox.width = width;
+        this._resultsBox.show();
+    }
+
+    _resultRow(provider, meta, terms) {
+        const content = new St.BoxLayout({style_class: 'parchaos-launcher-result-content', x_expand: true,
+            x_align: Clutter.ActorAlign.FILL});
+        const icon = meta.createIcon?.(32) ?? null;
+        content.add_child(icon ?? new St.Icon({gicon: provider.appInfo.get_icon(), icon_size: 32}));
+        const text = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, y_align: Clutter.ActorAlign.CENTER, x_expand: true});
+        text.add_child(new St.Label({text: meta.name ?? '', style_class: 'parchaos-launcher-result-name'}));
+        if (meta.description) {
+            text.add_child(new St.Label({
+                text: meta.description.replace(/\s+/g, ' '),
+                style_class: 'parchaos-launcher-result-description',
+            }));
+        }
+        content.add_child(text);
+        const row = new St.Button({style_class: 'parchaos-launcher-result', child: content, x_expand: true,
+            x_align: Clutter.ActorAlign.FILL, can_focus: false});
+        row.activate = () => {
+            provider.activateResult(meta.id, terms);
+            this.close();
+        };
+        row.connect('clicked', () => row.activate());
+        return row;
+    }
+
+    _selectResult(index) {
+        this._results[this._resultIndex]?.remove_style_pseudo_class('selected');
+        this._resultIndex = Math.max(-1, Math.min(this._results.length - 1, index));
+        if (this._resultIndex >= 0) {
+            this._select(-1);
+            this._results[this._resultIndex].add_style_pseudo_class('selected');
+        } else if (this._tiles.length) {
+            this._select(0);
+        }
     }
 
     // Arrow keys inside an open folder move a selection of its own.
@@ -1064,6 +1200,10 @@ const Launcher = GObject.registerClass({
                 this._activateItem(tile.item, tile);
             return;
         }
+        if (this._resultIndex >= 0) {
+            this._results[this._resultIndex].activate();
+            return;
+        }
         const selected = this._tiles[this._selected];
         if (selected) {
             this._activateItem(selected.item, selected);
@@ -1072,6 +1212,8 @@ const Launcher = GObject.registerClass({
         const first = this._tiles.find(t => t.item.type === 'app');
         if (this._entry.get_text().trim() !== '' && first)
             this._activateItem(first.item, first);
+        else if (this._entry.get_text().trim() !== '' && this._results.length)
+            this._results[0].activate();      // no app matches: the top other result
     }
 
     _wireTile(tile, item) {

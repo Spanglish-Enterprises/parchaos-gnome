@@ -217,3 +217,29 @@ StEntry.parchaos-launcher-folder-title:focus {
   background-color: rgba(255, 255, 255, 0.28);
   border-radius: 24px;
 }
+
+/* Results from the search providers (tickets #34/#150). */
+.parchaos-launcher-results {
+  padding: 10px;
+  border-radius: 22px;
+  background-color: rgba(30, 30, 36, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.parchaos-launcher-results-header {
+  spacing: 8px;
+  padding: 8px 10px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+}
+.parchaos-launcher-result {
+  padding: 6px 10px;
+  border-radius: 14px;
+  color: #ffffff;
+  transition-duration: 100ms;
+}
+.parchaos-launcher-result:hover { background-color: rgba(255, 255, 255, 0.10); }
+.parchaos-launcher-result:selected { background-color: rgba(255, 255, 255, 0.18); }
+.parchaos-launcher-result-content { spacing: 12px; }
+.parchaos-launcher-result-name { font-size: 14px; font-weight: 600; }
+.parchaos-launcher-result-description { font-size: 12px; color: rgba(255, 255, 255, 0.65); }
