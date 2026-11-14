@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Automations
+Name[es]=Automatizaciones
+Comment=Let the computer do things for you at a time or when something happens
+Comment[es]=Que la computadora haga cosas por ti a una hora o cuando pase algo
+Exec=parchaos-automations
+Icon=alarm-timer
+Terminal=false
+Categories=Utility;Settings;
+Keywords=automation;shortcut;trigger;schedule;focus;automatizar;atajo;horario;
+StartupNotify=true

@@ -1,0 +1,1398 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Parcha Automations (ticket #186): "when this happens, do that".
+#
+#   parchaos-automations            the window: the list, switches, templates, the editor
+#   parchaos-automations --service  the part that watches and runs them (a systemd --user
+#                                   service for the whole session)
+#   parchaos-automations --run FILE run one automation's actions now
+#   parchaos-automations --edit FILE / --new   the window with the editor open
+#
+# Each automation is a plain file in ~/.config/parchaos/automations/, one per file:
+#
+#   [Automation]
+#   Name=Work Focus on weekday mornings
+#   Enabled=true
+#
+#   [Trigger]
+#   Kind=time            time | display | network | app | folder
+#   At=09:00
+#   Until=17:00          optional: while it lasts, then the actions are undone
+#   Days=mon,tue,wed,thu,fri
+#
+#   [Action]             more as [Action 2], [Action 3]...
+#   Kind=focus           open | focus | appearance | setting | command | move | rename
+#   Mode=work
+#
+# Triggers that last (a display or a network while connected, an app while open, a time
+# with Until) undo what their actions changed when they end (Undo=false keeps it), and only
+# when the value is still the one they set: a change the user made meanwhile stays.
+# A time without Until that passed while the computer was off or asleep runs once when it is
+# back, if it is less than a week late.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import configparser
+import datetime
+import fnmatch
+import gettext
+import json
+import locale
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+DOMAIN = 'parchaos-automations'
+gettext.bindtextdomain(DOMAIN, os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain(DOMAIN)
+_ = gettext.gettext
+
+
+def N_(s):
+    return s
+
+
+APP_ID = 'org.parchaos.Automations'
+HOME = os.path.expanduser('~')
+CONFIG = os.environ.get('PARCHAOS_AUTOMATIONS_DIR') or os.path.join(
+    os.environ.get('XDG_CONFIG_HOME') or os.path.join(HOME, '.config'), 'parchaos', 'automations')
+STATE = os.environ.get('PARCHAOS_AUTOMATIONS_STATE') or os.path.join(
+    os.environ.get('XDG_STATE_HOME') or os.path.join(HOME, '.local', 'state'), 'parchaos', 'automations.json')
+
+DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+DAY_NAMES = [N_('Mon'), N_('Tue'), N_('Wed'), N_('Thu'), N_('Fri'), N_('Sat'), N_('Sun')]
+DAYS_PLURAL = [N_('Mondays'), N_('Tuesdays'), N_('Wednesdays'), N_('Thursdays'), N_('Fridays'), N_('Saturdays'),
+               N_('Sundays')]
+TRIGGERS = ['time', 'display', 'network', 'app', 'folder']
+ACTIONS = ['open', 'focus', 'appearance', 'setting', 'command', 'move', 'rename']
+LASTING = {'display', 'network', 'app'}       # plus time with Until
+FOCUS_MODES = ['work', 'personal', 'sleep', 'dnd', 'off']
+TRIGGER_KEYS = {
+    'time': ('At', 'Until', 'Days', 'Undo'), 'display': ('Match', 'Label', 'Ignore', 'Undo'),
+    'network': ('Name', 'Undo'), 'app': ('App', 'Exec', 'Label', 'Undo'), 'folder': ('Folder', 'Pattern'),
+}
+ACTION_KEYS = {
+    'open': ('Target', 'Label'), 'focus': ('Mode',), 'appearance': ('Style',),
+    'setting': ('Schema', 'Key', 'Value'), 'command': ('Command', 'PassFile'),
+    'move': ('From', 'Pattern', 'To', 'OlderThan'), 'rename': ('Name',),
+}
+CATCH_UP = datetime.timedelta(days=7)
+SHELL_SCREENSHOTS = 'Screenshots'      # translated by GNOME Shell's own catalogue, not ours
+PARTIAL = ('.part', '.crdownload', '.download', '.tmp', '.partial', '~')
+
+
+# --- Files ---------------------------------------------------------------------------------
+
+def parser():
+    p = configparser.ConfigParser(interpolation=None, strict=False)
+    p.optionxform = str           # keep the keys' capitals
+    return p
+
+
+def load(path):
+    """An automation from its file: {id, path, name, enabled, trigger, actions}, or None."""
+    p = parser()
+    try:
+        if not p.read(path, encoding='utf-8'):
+            return None
+    except configparser.Error:
+        return None
+    if not p.has_section('Trigger'):
+        return None
+    head = p['Automation'] if p.has_section('Automation') else {}
+    actions = []
+    names = sorted((s for s in p.sections() if re.fullmatch(r'Action( \d+)?', s)),
+                   key=lambda s: int(s.split()[1]) if ' ' in s else 1)
+    for s in names:
+        actions.append(dict(p[s]))
+    return {
+        'id': os.path.splitext(os.path.basename(path))[0],
+        'path': path,
+        'name': head.get('Name', '') or os.path.splitext(os.path.basename(path))[0],
+        'enabled': str(head.get('Enabled', 'true')).lower() not in ('false', '0', 'no', 'off'),
+        'trigger': dict(p['Trigger']),
+        'actions': actions,
+    }
+
+
+def load_all(folder=None):
+    folder = folder or CONFIG
+    out = []
+    try:
+        names = sorted(os.listdir(folder))
+    except OSError:
+        return out
+    for name in names:
+        if name.endswith('.ini') and not name.startswith('.'):
+            a = load(os.path.join(folder, name))
+            if a:
+                out.append(a)
+    return out
+
+
+def dump(automation):
+    """The file text for an automation."""
+    lines = ['[Automation]', f"Name={automation['name']}",
+             f"Enabled={'true' if automation.get('enabled', True) else 'false'}", '', '[Trigger]']
+    lines += [f'{k}={v}' for k, v in automation['trigger'].items() if v != '']
+    for i, action in enumerate(automation['actions'], 1):
+        lines += ['', '[Action]' if i == 1 else f'[Action {i}]']
+        lines += [f'{k}={v}' for k, v in action.items() if v != '']
+    return '\n'.join(lines) + '\n'
+
+
+def tidy(automation):
+    """Drops the keys a trigger or action of another kind left behind (the editor switches kinds)."""
+    t = automation['trigger']
+    automation['trigger'] = {'Kind': t.get('Kind', '')} | {
+        k: t[k] for k in TRIGGER_KEYS.get(t.get('Kind'), ()) if k in t and t[k] != ''}
+    automation['actions'] = [{'Kind': a.get('Kind', '')} | {
+        k: a[k] for k in ACTION_KEYS.get(a.get('Kind'), ()) if k in a and a[k] != ''} for a in automation['actions']]
+    return automation
+
+
+def slug(name):
+    s = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    return s[:48] or 'automation'
+
+
+def save(automation, folder=None):
+    """Writes the automation; a new one gets a file named after it. Returns the path."""
+    folder = folder or CONFIG
+    os.makedirs(folder, exist_ok=True)
+    path = automation.get('path')
+    if not path:
+        base = slug(automation['name'])
+        path = os.path.join(folder, base + '.ini')
+        n = 2
+        while os.path.exists(path):
+            path = os.path.join(folder, f'{base}-{n}.ini')
+            n += 1
+    tmp = path + '.new'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        f.write(dump(automation))
+    os.replace(tmp, path)
+    automation['path'] = path
+    automation['id'] = os.path.splitext(os.path.basename(path))[0]
+    return path
+
+
+def read_state():
+    try:
+        with open(STATE, encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def write_state(state):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    tmp = STATE + '.new'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(state, f, indent=1, sort_keys=True)
+    os.replace(tmp, STATE)
+
+
+# --- Time ----------------------------------------------------------------------------------
+
+def parse_hhmm(text):
+    m = re.fullmatch(r'\s*(\d{1,2})[:.](\d{2})\s*', text or '')
+    if not m:
+        return None
+    h, mi = int(m[1]), int(m[2])
+    return (h, mi) if h < 24 and mi < 60 else None
+
+
+def days_of(trigger):
+    raw = (trigger.get('Days') or '').strip().lower()
+    if not raw or raw in ('every day', 'daily', 'all'):
+        return set(range(7))
+    out = set()
+    for part in re.split(r'[,\s]+', raw):
+        if part[:3] in DAYS:
+            out.add(DAYS.index(part[:3]))
+    return out or set(range(7))
+
+
+def occurrences(trigger, start, end, key='At'):
+    """Every At (or Until) time of `trigger` in [start, end), oldest first."""
+    hm = parse_hhmm(trigger.get(key))
+    if not hm:
+        return []
+    days = days_of(trigger)
+    out = []
+    day = start.date() - datetime.timedelta(days=1)
+    while day <= end.date():
+        t = datetime.datetime.combine(day, datetime.time(*hm))
+        if day.weekday() in days and start <= t < end:
+            out.append(t)
+        day += datetime.timedelta(days=1)
+    return out
+
+
+def next_time(trigger, now, key='At'):
+    found = occurrences(trigger, now + datetime.timedelta(seconds=1), now + datetime.timedelta(days=8), key)
+    return found[0] if found else None
+
+
+def last_time(trigger, now, key='At'):
+    found = occurrences(trigger, now - datetime.timedelta(days=8), now + datetime.timedelta(seconds=1), key)
+    return found[-1] if found else None
+
+
+def time_active(trigger, now):
+    """For a time with Until: whether now is inside one of its periods (past midnight is fine)."""
+    start = last_time(trigger, now)
+    until = parse_hhmm(trigger.get('Until'))
+    if start is None or until is None:
+        return False
+    end = datetime.datetime.combine(start.date(), datetime.time(*until))
+    if end <= start:
+        end += datetime.timedelta(days=1)
+    return start <= now < end
+
+
+def missed(trigger, now, last_seen):
+    """For a time without Until: the run that came due while nothing was watching, or None."""
+    if not last_seen:
+        return None
+    due = last_time(trigger, now)
+    if due and last_seen < due <= now and now - due <= CATCH_UP:
+        return due
+    return None
+
+
+# --- Matching ------------------------------------------------------------------------------
+
+def display_matches(trigger, monitor):
+    """monitor: {connector, vendor, product, serial, name, builtin}."""
+    if monitor.get('builtin'):
+        return False
+    ignore = {s.strip() for s in (trigger.get('Ignore') or '').split(',') if s.strip()}
+    if monitor_key(monitor) in ignore or monitor.get('connector') in ignore:
+        return False
+    want = (trigger.get('Match') or '').strip().lower()
+    if not want:
+        return True
+    hay = ' '.join(str(monitor.get(k, '')) for k in ('connector', 'vendor', 'product', 'name')).lower()
+    return want in hay
+
+
+def monitor_key(monitor):
+    return f"{monitor.get('vendor', '')}:{monitor.get('product', '')}:{monitor.get('serial', '')}"
+
+
+def network_matches(trigger, active_names):
+    want = (trigger.get('Name') or '').strip()
+    return bool(want) and want in active_names
+
+
+def app_matches(trigger, processes):
+    """processes: list of (comm, argv) of running processes."""
+    exe = (trigger.get('Exec') or '').strip()
+    app = (trigger.get('App') or '').strip()
+    flat = app[:-8] if app.endswith('.desktop') else app
+    for comm, argv in processes:
+        if exe and (os.path.basename(argv[0]) == exe if argv else False):
+            return True
+        if exe and comm == exe[:15]:
+            return True
+        if flat and argv and os.path.basename(argv[0]) in ('flatpak', 'bwrap') and flat in argv:
+            return True
+    return False
+
+
+def file_matches(trigger, name):
+    if name.startswith('.') or name.endswith(PARTIAL):
+        return False
+    pattern = (trigger.get('Pattern') or '*').strip() or '*'
+    return any(fnmatch.fnmatch(name.lower(), p.strip().lower()) for p in pattern.split(';') if p.strip())
+
+
+# --- Paths ---------------------------------------------------------------------------------
+
+def expand(path):
+    path = os.path.expanduser((path or '').strip())
+    if path.startswith('xdg:'):            # xdg:PICTURES/Screenshots
+        what, _sep, rest = path[4:].partition('/')
+        base = xdg_dir(what) or HOME
+        path = os.path.join(base, rest)
+    return path
+
+
+def xdg_dir(what):
+    try:
+        from gi.repository import GLib
+    except ImportError:
+        return None
+    kinds = {'DESKTOP': GLib.UserDirectory.DIRECTORY_DESKTOP, 'DOCUMENTS': GLib.UserDirectory.DIRECTORY_DOCUMENTS,
+             'DOWNLOAD': GLib.UserDirectory.DIRECTORY_DOWNLOAD, 'MUSIC': GLib.UserDirectory.DIRECTORY_MUSIC,
+             'PICTURES': GLib.UserDirectory.DIRECTORY_PICTURES, 'VIDEOS': GLib.UserDirectory.DIRECTORY_VIDEOS}
+    return GLib.get_user_special_dir(kinds[what]) if what in kinds else None
+
+
+def fill(template, path, when):
+    """{name} {ext} {year} {month} {day} {date} in a file or folder name."""
+    stem, ext = os.path.splitext(os.path.basename(path)) if path else ('', '')
+    try:
+        mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path)) if path else when
+    except OSError:
+        mtime = when
+    values = {'name': stem, 'ext': ext.lstrip('.'), 'year': f'{mtime:%Y}', 'month': f'{mtime:%m}',
+              'day': f'{mtime:%d}', 'date': f'{mtime:%Y-%m-%d}', 'today': f'{when:%Y-%m-%d}'}
+    return re.sub(r'\{(\w+)\}', lambda m: values.get(m[1], m[0]), template)
+
+
+def free_path(path):
+    """`path`, or `name 2.ext`, `name 3.ext`... when it is taken."""
+    if not os.path.lexists(path):
+        return path
+    stem, ext = os.path.splitext(path)
+    n = 2
+    while os.path.lexists(f'{stem} {n}{ext}'):
+        n += 1
+    return f'{stem} {n}{ext}'
+
+
+def move_files(action, files, when):
+    """Moves `files` (or, with none, the matching files in From) into To. Returns how many."""
+    to = expand(action.get('To'))
+    if not to:
+        raise ValueError(_('No destination folder'))
+    if not files:
+        src = expand(action.get('From'))
+        if not src or not os.path.isdir(src):
+            return 0
+        older = action.get('OlderThan', '').strip()
+        cutoff = when - datetime.timedelta(days=int(older)) if older.isdigit() else None
+        files = []
+        for name in sorted(os.listdir(src)):
+            path = os.path.join(src, name)
+            if not os.path.isfile(path) or not file_matches(action, name):
+                continue
+            if cutoff and datetime.datetime.fromtimestamp(os.path.getmtime(path)) > cutoff:
+                continue
+            files.append(path)
+    moved = 0
+    for path in files:
+        folder = fill(to, path, when)
+        if os.path.abspath(folder) == os.path.abspath(os.path.dirname(path)):
+            continue
+        os.makedirs(folder, exist_ok=True)
+        shutil.move(path, free_path(os.path.join(folder, os.path.basename(path))))
+        moved += 1
+    return moved
+
+
+def rename_file(action, path, when):
+    pattern = (action.get('Name') or '').strip()
+    if not pattern or not path:
+        return None
+    new = fill(pattern, path, when).replace('/', '-').strip()
+    if not new:
+        return None
+    stem, ext = os.path.splitext(path)
+    if not os.path.splitext(new)[1] and ext:
+        new += ext
+    target = os.path.join(os.path.dirname(path), new)
+    if target == path:
+        return path
+    target = free_path(target)
+    os.rename(path, target)
+    return target
+
+
+# --- Words ---------------------------------------------------------------------------------
+
+def days_text(trigger):
+    days = days_of(trigger)
+    if days == set(range(7)):
+        return _('every day')
+    if days == set(range(5)):
+        return _('on weekdays')
+    if days == {5, 6}:
+        return _('at weekends')
+    if len(days) == 1:
+        return _('on {days}').format(days=_(DAYS_PLURAL[min(days)]))
+    return _('on {days}').format(days=', '.join(_(DAY_NAMES[d]) for d in sorted(days)))
+
+
+def and_list(items):
+    if len(items) < 2:
+        return ''.join(items)
+    return _('{list} and {last}').format(list=', '.join(items[:-1]), last=items[-1])
+
+
+def files_text(pattern):
+    """'*.png;*.jpg' -> 'PNG and JPG files'; anything else as written."""
+    parts = [p.strip() for p in (pattern or '*').split(';') if p.strip()]
+    if all(re.fullmatch(r'\*\.\w+', p) for p in parts):
+        return _('{kinds} files').format(kinds=and_list([p[2:].upper() for p in parts]))
+    if parts in ([], ['*']):
+        return _('files')
+    return _('files like {pattern}').format(pattern=and_list(parts))
+
+
+def folder_text(path):
+    if re.search(r'\{year\}.*\{month\}|\{month\}', path or ''):
+        return _('into a folder for each month')
+    if '{year}' in (path or ''):
+        return _('into a folder for each year')
+    return _('to {folder}').format(folder=short_path(path))
+
+
+def describe_trigger(t):
+    kind = t.get('Kind', '')
+    if kind == 'time':
+        if t.get('Until'):
+            return _('From {at} to {until} {days}').format(at=t.get('At', '?'), until=t['Until'], days=days_text(t))
+        return _('At {at} {days}').format(at=t.get('At', '?'), days=days_text(t))
+    if kind == 'display':
+        if t.get('Match'):
+            return _('While “{name}” is connected').format(name=t.get('Label') or t['Match'])
+        return _('While a display I don’t usually use is connected')
+    if kind == 'network':
+        return _('While connected to “{name}”').format(name=t.get('Name', '?'))
+    if kind == 'app':
+        return _('While {app} is open').format(app=t.get('Label') or t.get('App') or t.get('Exec', '?'))
+    if kind == 'folder':
+        return _('When a file appears in {folder}').format(folder=short_path(t.get('Folder', '?')))
+    return _('Unknown trigger')
+
+
+def describe_action(a):
+    kind = a.get('Kind', '')
+    if kind == 'open':
+        return _('Open {what}').format(what=a.get('Label') or a.get('Target', '?'))
+    if kind == 'focus':
+        mode = a.get('Mode', '')
+        return {'work': _('Turn on Work Focus'), 'personal': _('Turn on Personal Focus'),
+                'sleep': _('Turn on Sleep Focus'), 'dnd': _('Turn on Do Not Disturb'),
+                'off': _('Turn Focus off')}.get(mode, _('Focus'))
+    if kind == 'appearance':
+        return _('Switch to dark mode') if a.get('Style') == 'dark' else _('Switch to light mode')
+    if kind == 'setting':
+        return _('Set {key} to {value}').format(key=a.get('Key', '?'), value=a.get('Value', '?'))
+    if kind == 'command':
+        return _('Run “{command}”').format(command=a.get('Command', '?'))
+    if kind == 'move':
+        if a.get('From'):
+            return _('Move {files} from {src} {dst}').format(
+                files=files_text(a.get('Pattern')), src=short_path(a['From']), dst=folder_text(a.get('To')))
+        return _('Move it {dst}').format(dst=folder_text(a.get('To')))
+    if kind == 'rename':
+        return _('Rename it to {name}').format(name=a.get('Name', '?'))
+    return _('Unknown action')
+
+
+def short_path(path):
+    path = path or ''
+    if path.startswith('xdg:'):
+        return path[4:].replace('PICTURES', _('Pictures')).replace('DOWNLOAD', _('Downloads')).replace(
+            'DOCUMENTS', _('Documents')).replace('DESKTOP', _('Desktop'))
+    if path.startswith(HOME):
+        path = '~' + path[len(HOME):]
+    return path
+
+
+def lasting(trigger):
+    return trigger.get('Kind') in LASTING or (trigger.get('Kind') == 'time' and bool(parse_hhmm(trigger.get('Until'))))
+
+
+def undo_wanted(automation):
+    return lasting(automation['trigger']) and str(automation['trigger'].get('Undo', 'true')).lower() != 'false'
+
+
+# --- Templates -----------------------------------------------------------------------------
+
+def screenshots_folder():
+    """Where GNOME saves screenshots: Pictures/<"Screenshots" in GNOME Shell's language>."""
+    return 'xdg:PICTURES/' + gettext.dgettext('gnome-shell', SHELL_SCREENSHOTS)
+
+
+def templates(current_displays=()):
+    """The ready-made automations the window offers."""
+    shots = screenshots_folder()
+    return [
+        {'name': _('Work Focus on weekdays'), 'enabled': True,
+         'trigger': {'Kind': 'time', 'At': '09:00', 'Until': '17:00', 'Days': 'mon,tue,wed,thu,fri'},
+         'actions': [{'Kind': 'focus', 'Mode': 'work'}]},
+        {'name': _('Tidy screenshots every week'), 'enabled': True,
+         'trigger': {'Kind': 'time', 'At': '17:00', 'Days': 'fri'},
+         'actions': [{'Kind': 'move', 'From': shots, 'Pattern': '*.png;*.jpg;*.webm;*.mp4',
+                      'To': shots + '/{year}-{month}', 'OlderThan': '1'}]},
+        {'name': _('Dark mode with a projector'), 'enabled': True,
+         'trigger': {'Kind': 'display', 'Ignore': ','.join(monitor_key(m) for m in current_displays if not m.get('builtin'))},
+         'actions': [{'Kind': 'appearance', 'Style': 'dark'}]},
+    ]
+
+
+# --- Running actions -----------------------------------------------------------------------
+
+class Runner:
+    """Runs actions and undoes them. Needs GLib/Gio (imported lazily so the tests need none)."""
+
+    def __init__(self):
+        from gi.repository import Gio
+        self.Gio = Gio
+        self._settings = {}
+
+    def settings(self, schema):
+        if schema not in self._settings:
+            source = self.Gio.SettingsSchemaSource.get_default()
+            if source.lookup(schema, True) is None:
+                raise ValueError(_('Unknown settings group {schema}').format(schema=schema))
+            self._settings[schema] = self.Gio.Settings.new(schema)
+        return self._settings[schema]
+
+    def set_value(self, schema, key, text):
+        """Sets a key from its text form; returns (before, after) as text, for undoing."""
+        from gi.repository import GLib
+        s = self.settings(schema)
+        if not s.props.settings_schema.has_key(key):
+            raise ValueError(_('Unknown setting {key}').format(key=key))
+        vtype = s.props.settings_schema.get_key(key).get_value_type()
+        try:
+            value = GLib.Variant.parse(vtype, text, None, None)
+        except GLib.Error:
+            value = GLib.Variant.parse(vtype, GLib.Variant('s', text).print_(False), None, None)
+        before = s.get_value(key).print_(False)
+        s.set_value(key, value)
+        return before, value.print_(False)
+
+    def run(self, action, files=(), when=None):
+        """Runs one action. Returns an undo record or None."""
+        when = when or datetime.datetime.now()
+        kind = action.get('Kind')
+        if kind == 'open':
+            target = (action.get('Target') or '').strip()
+            if target.endswith('.desktop'):
+                info = self.Gio.DesktopAppInfo.new(target)
+                if info is None:
+                    raise ValueError(_('No app {app}').format(app=target))
+                info.launch([self.Gio.File.new_for_path(f) for f in files], None)
+            elif target:
+                uri = target if re.match(r'^[a-z][a-z0-9+.-]*:', target) else self.Gio.File.new_for_path(expand(target)).get_uri()
+                self.Gio.AppInfo.launch_default_for_uri(uri, None)
+            return None
+        if kind == 'focus':
+            mode = action.get('Mode', 'off')
+            records = []
+            if mode == 'dnd':
+                records.append(['org.gnome.desktop.notifications', 'show-banners', *self.set_value('org.gnome.desktop.notifications', 'show-banners', 'false')])
+            else:
+                value = '' if mode == 'off' else mode
+                records.append(['org.parchaos.desktop', 'focus-mode', *self.set_value('org.parchaos.desktop', 'focus-mode', f"'{value}'")])
+            return records
+        if kind == 'appearance':
+            style = "'prefer-dark'" if action.get('Style') == 'dark' else "'default'"
+            return [['org.gnome.desktop.interface', 'color-scheme', *self.set_value('org.gnome.desktop.interface', 'color-scheme', style)]]
+        if kind == 'setting':
+            return [[action.get('Schema', ''), action.get('Key', ''),
+                     *self.set_value(action.get('Schema', ''), action.get('Key', ''), action.get('Value', ''))]]
+        if kind == 'command':
+            argv = shlex.split(action.get('Command', ''))
+            if not argv:
+                raise ValueError(_('No command'))
+            env = dict(os.environ)
+            if files:
+                env['PARCHAOS_FILE'] = files[0]
+            subprocess.Popen(argv + list(files) if action.get('PassFile', 'false') == 'true' else argv,
+                             env=env, cwd=HOME, start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return None
+        if kind == 'move':
+            move_files(action, list(files), when)
+            return None
+        if kind == 'rename':
+            for f in files:
+                rename_file(action, f, when)
+            return None
+        raise ValueError(_('Unknown action'))
+
+    def undo(self, records):
+        """Puts each value back, unless it was changed again since (then the newer choice stays)."""
+        for schema, key, before, after in records or []:
+            try:
+                s = self.settings(schema)
+                if s.get_value(key).print_(False) == after:
+                    self.set_value(schema, key, before)
+            except (ValueError, Exception) as e:   # noqa: B014 - a broken record must not stop the rest
+                print(f'parchaos-automations: could not undo {schema} {key}: {e}', file=sys.stderr)
+
+
+# --- The service ---------------------------------------------------------------------------
+
+def running_processes():
+    out = []
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            with open(f'/proc/{pid}/comm', encoding='utf-8', errors='replace') as f:
+                comm = f.read().strip()
+            with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                argv = [a.decode('utf-8', 'replace') for a in f.read().split(b'\0') if a]
+        except OSError:
+            continue
+        out.append((comm, argv))
+    return out
+
+
+def active_networks():
+    try:
+        out = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active'],
+                             capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    return {line.replace('\\:', ':') for line in out.splitlines() if line and line != 'lo'}
+
+
+def current_displays(bus=None):
+    """The connected displays from Mutter: [{connector, vendor, product, serial, name, builtin}]."""
+    from gi.repository import Gio, GLib
+    try:
+        bus = bus or Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        reply = bus.call_sync('org.gnome.Mutter.DisplayConfig', '/org/gnome/Mutter/DisplayConfig',
+                              'org.gnome.Mutter.DisplayConfig', 'GetCurrentState', None, None,
+                              Gio.DBusCallFlags.NONE, 5000, None)
+    except GLib.Error:
+        return []
+    _serial, monitors, _logical, _props = reply.unpack()
+    out = []
+    for (connector, vendor, product, serial), _modes, props in monitors:
+        out.append({'connector': connector, 'vendor': vendor, 'product': product, 'serial': serial,
+                    'name': props.get('display-name', product), 'builtin': bool(props.get('is-builtin', False))})
+    return out
+
+
+class Service:
+    def __init__(self):
+        from gi.repository import Gio, GLib
+        self.Gio, self.GLib = Gio, GLib
+        self.runner = Runner()
+        self.state = read_state()
+        self.automations = []
+        self.timers = []
+        self.folder_monitors = []
+        self.poll_id = 0
+        self.reload_id = 0
+        self.fresh = {}            # folder -> set of names created but not finished writing
+        self.ours = set()          # paths the actions just made, not new files to act on
+        self.displays = []
+        self.networks = set()
+        self.processes = []
+
+        os.makedirs(CONFIG, exist_ok=True)
+        self.dir_monitor = Gio.File.new_for_path(CONFIG).monitor_directory(Gio.FileMonitorFlags.NONE, None)
+        self.dir_monitor.connect('changed', lambda *_a: self.queue_reload())
+
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.bus.signal_subscribe('org.gnome.Mutter.DisplayConfig', 'org.gnome.Mutter.DisplayConfig',
+                                  'MonitorsChanged', '/org/gnome/Mutter/DisplayConfig', None,
+                                  Gio.DBusSignalFlags.NONE, lambda *_a: self.on_displays())
+        self.netmon = Gio.NetworkMonitor.get_default()
+        self.netmon.connect('network-changed', lambda *_a: GLib.timeout_add_seconds(2, self.on_networks))
+        try:
+            system = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            system.signal_subscribe('org.freedesktop.login1', 'org.freedesktop.login1.Manager', 'PrepareForSleep',
+                                    '/org/freedesktop/login1', None, Gio.DBusSignalFlags.NONE, self.on_sleep)
+        except GLib.Error as e:
+            print(f'parchaos-automations: not watching for resume: {e.message}', file=sys.stderr)
+        self.reload()
+
+    # Bookkeeping
+
+    def entry(self, automation):
+        return self.state.setdefault(automation['id'], {})
+
+    def save_state(self):
+        try:
+            write_state(self.state)
+        except OSError as e:
+            print(f'parchaos-automations: could not save state: {e}', file=sys.stderr)
+
+    def queue_reload(self):
+        if self.reload_id:
+            self.GLib.source_remove(self.reload_id)
+        self.reload_id = self.GLib.timeout_add(400, self.reload)
+
+    def reload(self):
+        self.reload_id = 0
+        for t in self.timers:
+            self.GLib.source_remove(t)
+        self.timers = []
+        for m in self.folder_monitors:
+            m.cancel()
+        self.folder_monitors = []
+        if self.poll_id:
+            self.GLib.source_remove(self.poll_id)
+            self.poll_id = 0
+
+        self.automations = load_all()
+        live = {a['id'] for a in self.automations if a['enabled']}
+        # Removed or switched off while it was on: undo it, forget it.
+        for key in list(self.state):
+            if key not in live and self.state[key].get('active'):
+                self.runner.undo(self.state[key].get('undo'))
+                self.state[key]['active'] = False
+                self.state[key]['undo'] = None
+            if key not in {a['id'] for a in self.automations}:
+                del self.state[key]
+
+        kinds = {a['trigger'].get('Kind') for a in self.automations if a['enabled']}
+        self.displays = current_displays(self.bus) if 'display' in kinds else []
+        self.networks = active_networks() if 'network' in kinds else set()
+        if 'app' in kinds:
+            self.processes = running_processes()
+            self.poll_id = self.GLib.timeout_add_seconds(3, self.on_poll)
+        for a in self.automations:
+            if a['enabled'] and a['trigger'].get('Kind') == 'folder':
+                self.watch_folder(a)
+        self.check_all(catch_up=True)
+        self.schedule()
+        self.save_state()
+        return self.GLib.SOURCE_REMOVE
+
+    # Deciding
+
+    def condition(self, a, now):
+        t = a['trigger']
+        kind = t.get('Kind')
+        if kind == 'time':
+            return time_active(t, now) if lasting(t) else None
+        if kind == 'display':
+            return any(display_matches(t, m) for m in self.displays)
+        if kind == 'network':
+            return network_matches(t, self.networks)
+        if kind == 'app':
+            return app_matches(t, self.processes)
+        return None
+
+    def check_all(self, catch_up=False):
+        now = datetime.datetime.now()
+        for a in self.automations:
+            if not a['enabled']:
+                continue
+            st = self.entry(a)
+            on = self.condition(a, now)
+            if on is None:
+                t = a['trigger']
+                if t.get('Kind') == 'time' and catch_up:
+                    last = st.get('seen')
+                    due = missed(t, now, datetime.datetime.fromisoformat(last) if last else None)
+                    if due:
+                        self.fire(a, note=_('late, the computer was off at {time}').format(time=f'{due:%H:%M}'))
+                st['seen'] = now.isoformat(timespec='seconds')
+                continue
+            if on and not st.get('active'):
+                st['active'] = True
+                st['undo'] = self.fire(a)
+            elif not on and st.get('active'):
+                st['active'] = False
+                if undo_wanted(a):
+                    self.runner.undo(st.get('undo'))
+                st['undo'] = None
+        self.save_state()
+
+    def fire(self, a, files=(), note=None):
+        """Runs every action of `a`; returns the undo records."""
+        st = self.entry(a)
+        records, errors = [], []
+        for action in a['actions']:
+            try:
+                r = self.runner.run(action, files)
+                if r:
+                    records += r
+            except Exception as e:      # noqa: BLE001 - one failing action must not stop the rest
+                errors.append(f"{describe_action(action)}: {e}")
+        st['last_run'] = datetime.datetime.now().isoformat(timespec='seconds')
+        st['last_error'] = '; '.join(errors) or None
+        print(f"parchaos-automations: ran “{a['name']}”" + (f' ({note})' if note else '')
+              + (f" with errors: {st['last_error']}" if errors else ''), file=sys.stderr)
+        if errors:
+            self.notify(a, st['last_error'])
+        self.save_state()
+        return records
+
+    def notify(self, a, text):
+        try:
+            self.bus.call_sync('org.freedesktop.Notifications', '/org/freedesktop/Notifications',
+                               'org.freedesktop.Notifications', 'Notify',
+                               self.GLib.Variant('(susssasa{sv}i)', (
+                                   _('Automations'), 0, 'preferences-system-time-symbolic',
+                                   _('“{name}” did not finish').format(name=a['name']), text, [],
+                                   {'desktop-entry': self.GLib.Variant('s', APP_ID)}, -1)),
+                               None, self.Gio.DBusCallFlags.NONE, 5000, None)
+        except self.GLib.Error:
+            pass
+
+    # Clocks
+
+    def schedule(self):
+        now = datetime.datetime.now()
+        soonest = None
+        for a in self.automations:
+            t = a['trigger']
+            if not a['enabled'] or t.get('Kind') != 'time':
+                continue
+            for key in ('At', 'Until') if lasting(t) else ('At',):
+                n = next_time(t, now, key)
+                if n and (soonest is None or n < soonest):
+                    soonest = n
+        if soonest:
+            seconds = max(1, int((soonest - now).total_seconds()) + 1)
+            self.timers.append(self.GLib.timeout_add_seconds(seconds, self.on_clock))
+
+    def on_clock(self):
+        self.timers = []
+        now = datetime.datetime.now()
+        for a in self.automations:
+            t = a['trigger']
+            if a['enabled'] and t.get('Kind') == 'time' and not lasting(t):
+                due = last_time(t, now)
+                if due and now - due < datetime.timedelta(minutes=2):
+                    st = self.entry(a)
+                    if st.get('last_run', '') < due.isoformat(timespec='seconds'):
+                        self.fire(a)
+        self.check_all()
+        self.schedule()
+        return self.GLib.SOURCE_REMOVE
+
+    def on_sleep(self, _c, _s, _p, _i, _sig, params):
+        going, = params.unpack()
+        if not going:
+            self.GLib.timeout_add_seconds(5, lambda: (self.reload(), False)[1])
+
+    # The world
+
+    def on_displays(self):
+        self.displays = current_displays(self.bus)
+        self.check_all()
+
+    def on_networks(self):
+        self.networks = active_networks()
+        self.check_all()
+        return self.GLib.SOURCE_REMOVE
+
+    def on_poll(self):
+        self.processes = running_processes()
+        self.check_all()
+        return self.GLib.SOURCE_CONTINUE
+
+    def watch_folder(self, a):
+        Gio = self.Gio
+        folder = expand(a['trigger'].get('Folder'))
+        if not folder or not os.path.isdir(folder):
+            print(f"parchaos-automations: “{a['name']}”: no folder {folder}", file=sys.stderr)
+            return
+        mon = Gio.File.new_for_path(folder).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
+        fresh = self.fresh.setdefault(folder, set())
+
+        def changed(_m, file, other, event):
+            E = Gio.FileMonitorEvent
+            if event == E.MOVED_IN:
+                self.new_file(a, file.get_path())
+            elif event == E.RENAMED and other is not None:
+                # A download finishing ("x.pdf.part" -> "x.pdf") is a new file; the user
+                # renaming one already there is not.
+                if not file_matches(a['trigger'], file.get_basename()):
+                    self.new_file(a, other.get_path())
+            elif event == E.CREATED:
+                fresh.add(file.get_path())
+            elif event == E.CHANGES_DONE_HINT and file.get_path() in fresh:
+                fresh.discard(file.get_path())
+                self.new_file(a, file.get_path())
+        mon.connect('changed', changed)
+        self.folder_monitors.append(mon)
+
+    def new_file(self, a, path):
+        if not path or path in self.ours or not os.path.isfile(path):
+            return
+        if file_matches(a['trigger'], os.path.basename(path)):
+            folder = os.path.dirname(path)
+            before = set(os.listdir(folder))
+            self.fire(a, files=[path])
+            # What the actions put in the folder is not a new file to act on again.
+            try:
+                made = {os.path.join(folder, n) for n in set(os.listdir(folder)) - before}
+            except OSError:
+                made = set()
+            self.ours |= made
+            self.GLib.timeout_add_seconds(10, lambda: (self.ours.difference_update(made), False)[1])
+
+
+# --- The window ----------------------------------------------------------------------------
+
+def run_app(argv):
+    import gi
+    gi.require_version('Gtk', '4.0')
+    gi.require_version('Adw', '1')
+    from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+
+    class Editor(Adw.Dialog):
+        """One automation: its name, what starts it, and what it does."""
+
+        def __init__(self, window, automation):
+            super().__init__(title=_('Edit Automation') if automation.get('path') else _('New Automation'),
+                             content_width=560, content_height=640)
+            self.window = window
+            self.a = json.loads(json.dumps(automation))
+            if not self.a['actions']:
+                self.a['actions'] = [{'Kind': 'open'}]
+            view = Adw.ToolbarView()
+            header = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
+            cancel = Gtk.Button(label=_('Cancel'))
+            cancel.connect('clicked', lambda *_a: self.close())
+            header.pack_start(cancel)
+            self.save_button = Gtk.Button(label=_('Save'), css_classes=['suggested-action'])
+            self.save_button.connect('clicked', self.on_save)
+            header.pack_end(self.save_button)
+            view.add_top_bar(header)
+            self.page = Adw.PreferencesPage()
+            view.set_content(self.page)
+            self.set_child(view)
+
+            top = Adw.PreferencesGroup()
+            self.name = Adw.EntryRow(title=_('Name'), text=self.a.get('name', ''))
+            self.name.connect('changed', lambda *_a: self.validate())
+            top.add(self.name)
+            self.page.add(top)
+            self.trigger_group = Adw.PreferencesGroup(title=_('When'))
+            self.page.add(self.trigger_group)
+            self.action_group = Adw.PreferencesGroup(title=_('Do'))
+            self.page.add(self.action_group)
+            self.trigger_rows = []
+            self.action_rows = []
+            self.build_trigger()
+            self.build_action()
+
+        # Helpers that read and write the dict as the rows change.
+        def entry(self, group, rows, title, data, key, placeholder=''):
+            row = Adw.EntryRow(title=title, text=data.get(key, ''))
+            if placeholder and not data.get(key):
+                row.set_tooltip_text(placeholder)
+            row.connect('changed', lambda r: (data.__setitem__(key, r.get_text().strip()), self.validate()))
+            group.add(row)
+            rows.append(row)
+            return row
+
+        def combo(self, group, rows, title, data, key, choices, on_change=None):
+            """choices: [(value, label)]."""
+            model = Gtk.StringList.new([label for _v, label in choices])
+            row = Adw.ComboRow(title=title, model=model, enable_search=len(choices) > 12)
+            values = [v for v, _l in choices]
+            current = data.get(key, values[0] if values else '')
+            if current in values:
+                row.set_selected(values.index(current))
+            elif values:
+                data[key] = values[0]
+
+            def picked(r, _p):
+                i = r.get_selected()
+                if 0 <= i < len(values):
+                    data[key] = values[i]
+                    if on_change:
+                        on_change()
+                    self.validate()
+            row.connect('notify::selected', picked)
+            group.add(row)
+            rows.append(row)
+            return row
+
+        def folder(self, group, rows, title, data, key):
+            row = Adw.ActionRow(title=title, subtitle=short_path(data.get(key, '')) or _('Not chosen'))
+            button = Gtk.Button(icon_name='folder-open-symbolic', valign=Gtk.Align.CENTER,
+                                css_classes=['flat'], tooltip_text=_('Choose Folder'))
+
+            def choose(*_a):
+                dialog = Gtk.FileDialog(title=title)
+                start = expand(data.get(key, '')) if data.get(key) and '{' not in data.get(key, '') else HOME
+                if os.path.isdir(start):
+                    dialog.set_initial_folder(Gio.File.new_for_path(start))
+
+                def done(d, res):
+                    try:
+                        f = d.select_folder_finish(res)
+                    except GLib.Error:
+                        return
+                    data[key] = f.get_path()
+                    row.set_subtitle(short_path(data[key]))
+                    self.validate()
+                dialog.select_folder(self.window, None, done)
+            button.connect('clicked', choose)
+            row.add_suffix(button)
+            row.set_activatable_widget(button)
+            group.add(row)
+            rows.append(row)
+            return row
+
+        def clear(self, group, rows):
+            for r in rows:
+                group.remove(r)
+            rows.clear()
+
+        def build_trigger(self):
+            g, rows, t = self.trigger_group, self.trigger_rows, self.a['trigger']
+            self.clear(g, rows)
+            self.combo(g, rows, _('Starts'), t, 'Kind', [
+                ('time', _('At a time')), ('display', _('A display connects')),
+                ('network', _('Joining a network')), ('app', _('An app opens')),
+                ('folder', _('A new file in a folder'))], self.build_trigger)
+            kind = t.get('Kind')
+            if kind == 'time':
+                self.entry(g, rows, _('At (HH:MM)'), t, 'At')
+                self.entry(g, rows, _('Until (HH:MM, optional; then it is undone)'), t, 'Until')
+                row = Adw.ActionRow(title=_('Days'))
+                box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
+                chosen = days_of(t)
+                buttons = []
+
+                def toggled(*_a):
+                    t['Days'] = ','.join(DAYS[i] for i, b in enumerate(buttons) if b.get_active())
+                    self.validate()
+                for i, name in enumerate(DAY_NAMES):
+                    b = Gtk.ToggleButton(label=_(name)[:2], active=i in chosen, css_classes=['circular', 'day'])
+                    b.connect('toggled', toggled)
+                    buttons.append(b)
+                    box.append(b)
+                row.add_suffix(box)
+                g.add(row)
+                rows.append(row)
+            elif kind == 'display':
+                displays = [m for m in current_displays() if not m.get('builtin')]
+                choices = [('', _('Any display I don’t usually use'))]
+                choices += [(monitor_key(m), m['name']) for m in displays]
+                if t.get('Match') and t['Match'] not in [c[0] for c in choices]:
+                    choices.append((t['Match'], t.get('Label') or t['Match']))
+
+                def chose_display():
+                    match = t.get('Match', '')
+                    if match:
+                        t['Label'] = next((m['name'] for m in displays if monitor_key(m) == match), t.get('Label', ''))
+                        t.pop('Ignore', None)
+                    else:
+                        t.pop('Label', None)
+                        t['Ignore'] = ','.join(monitor_key(m) for m in displays)
+                self.combo(g, rows, _('Display'), t, 'Match', choices, chose_display)
+                chose_display()
+                if not t.get('Match'):
+                    hint = Adw.ActionRow(subtitle=_('The displays connected now count as your usual ones.'))
+                    g.add(hint)
+                    rows.append(hint)
+            elif kind == 'network':
+                names = sorted(active_networks())
+                if names and not t.get('Name'):
+                    t['Name'] = names[0]
+                self.entry(g, rows, _('Network name'), t, 'Name')
+            elif kind == 'app':
+                apps = sorted((a for a in Gio.AppInfo.get_all() if a.should_show() and a.get_id()),
+                              key=lambda a: a.get_display_name().lower())
+
+                def chose_app():
+                    info = next((a for a in apps if a.get_id() == t.get('App')), None)
+                    if info:
+                        t['Label'] = info.get_display_name()
+                        exe = os.path.basename(info.get_executable() or '')
+                        t['Exec'] = '' if exe in ('flatpak', 'env', 'sh', 'bash') else exe
+                self.combo(g, rows, _('App'), t, 'App', [(a.get_id(), a.get_display_name()) for a in apps], chose_app)
+                chose_app()
+            elif kind == 'folder':
+                self.folder(g, rows, _('Folder'), t, 'Folder')
+                self.entry(g, rows, _('Only files like (e.g. *.pdf)'), t, 'Pattern')
+            if lasting(t):
+                sw = Adw.SwitchRow(title=_('Undo when it ends'),
+                                   subtitle=_('Put back what the actions changed'),
+                                   active=str(t.get('Undo', 'true')).lower() != 'false')
+                sw.connect('notify::active', lambda r, _p: t.__setitem__('Undo', 'true' if r.get_active() else 'false'))
+                g.add(sw)
+                rows.append(sw)
+            self.build_action()
+
+        def build_action(self):
+            g, rows = self.action_group, self.action_rows
+            if not hasattr(self, 'name'):
+                return
+            self.clear(g, rows)
+            a = self.a['actions'][0]
+            file_trigger = self.a['trigger'].get('Kind') == 'folder'
+            kinds = [('open', _('Open an app or file')), ('focus', _('Change Focus')),
+                     ('appearance', _('Light or dark mode')), ('setting', _('Change a setting')),
+                     ('command', _('Run a command')), ('move', _('Move files'))]
+            if file_trigger:
+                kinds.append(('rename', _('Rename the file')))
+            self.combo(g, rows, _('Action'), a, 'Kind', kinds, self.build_action)
+            kind = a.get('Kind')
+            if kind == 'open':
+                apps = sorted((x for x in Gio.AppInfo.get_all() if x.should_show() and x.get_id()),
+                              key=lambda x: x.get_display_name().lower())
+
+                def chose():
+                    info = next((x for x in apps if x.get_id() == a.get('Target')), None)
+                    if info:
+                        a['Label'] = info.get_display_name()
+                self.combo(g, rows, _('App'), a, 'Target', [(x.get_id(), x.get_display_name()) for x in apps], chose)
+                chose()
+            elif kind == 'focus':
+                self.combo(g, rows, _('Focus'), a, 'Mode', [
+                    ('work', _('Work')), ('personal', _('Personal')), ('sleep', _('Sleep')),
+                    ('dnd', _('Do Not Disturb')), ('off', _('Off'))])
+            elif kind == 'appearance':
+                self.combo(g, rows, _('Style'), a, 'Style', [('dark', _('Dark')), ('light', _('Light'))])
+            elif kind == 'setting':
+                self.entry(g, rows, _('Settings group (e.g. org.gnome.desktop.interface)'), a, 'Schema')
+                self.entry(g, rows, _('Key'), a, 'Key')
+                self.entry(g, rows, _('Value'), a, 'Value')
+            elif kind == 'command':
+                self.entry(g, rows, _('Command'), a, 'Command')
+            elif kind == 'move':
+                if not file_trigger:
+                    self.folder(g, rows, _('From'), a, 'From')
+                    self.entry(g, rows, _('Only files like (e.g. *.png)'), a, 'Pattern')
+                self.folder(g, rows, _('To'), a, 'To')
+                hint = Adw.ActionRow(subtitle=_('In names, {year}, {month} and {date} are filled in from the file.'))
+                g.add(hint)
+                rows.append(hint)
+            elif kind == 'rename':
+                self.entry(g, rows, _('New name, e.g. {date} {name}'), a, 'Name')
+            self.validate()
+
+        def problem(self):
+            t, a = self.a['trigger'], self.a['actions'][0]
+            if not self.name.get_text().strip():
+                return _('Give it a name')
+            kind = t.get('Kind')
+            if kind == 'time':
+                if not parse_hhmm(t.get('At')):
+                    return _('Write the time as HH:MM')
+                if t.get('Until') and not parse_hhmm(t['Until']):
+                    return _('Write the time as HH:MM')
+                if not t.get('Days'):
+                    return _('Choose at least one day')
+            if kind == 'network' and not t.get('Name'):
+                return _('Write the network name')
+            if kind == 'folder' and not t.get('Folder'):
+                return _('Choose a folder')
+            k = a.get('Kind')
+            if k == 'setting' and not (a.get('Schema') and a.get('Key')):
+                return _('Write the settings group and key')
+            if k == 'command' and not a.get('Command', '').strip():
+                return _('Write the command')
+            if k == 'move' and not a.get('To'):
+                return _('Choose where to move them')
+            if k == 'rename' and not a.get('Name'):
+                return _('Write the new name')
+            return None
+
+        def validate(self):
+            if hasattr(self, 'save_button'):
+                p = self.problem()
+                self.save_button.set_sensitive(p is None)
+                self.save_button.set_tooltip_text(p)
+
+        def on_save(self, *_a):
+            if self.problem():
+                return
+            self.a['name'] = self.name.get_text().strip()
+            save(tidy(self.a))
+            self.close()
+            self.window.refresh()
+
+    class Window(Adw.ApplicationWindow):
+        def __init__(self, app):
+            super().__init__(application=app, title=_('Automations'), default_width=640, default_height=560)
+            self.toasts = Adw.ToastOverlay()
+            view = Adw.ToolbarView()
+            header = Adw.HeaderBar()
+            add = Gtk.MenuButton(icon_name='list-add-symbolic', tooltip_text=_('New Automation'))
+            menu = Gio.Menu()
+            for i, tpl in enumerate(templates()):
+                menu.append(tpl['name'], f'win.template({i})')
+            blank = Gio.Menu()
+            blank.append(_('Start from Scratch…'), 'win.blank')
+            menu.append_section(None, blank)
+            add.set_menu_model(menu)
+            header.pack_start(add)
+            view.add_top_bar(header)
+            self.banner = Adw.Banner(title=_('Automations are not running'), button_label=_('Start'))
+            self.banner.connect('button-clicked', self.start_service)
+            view.add_top_bar(self.banner)
+            self.stack = Gtk.Stack()
+            self.empty = Adw.StatusPage(icon_name='preferences-system-time-symbolic', title=_('No Automations'),
+                                        description=_('Let the computer do things for you: turn on Focus at a '
+                                                      'time, tidy a folder, change the look when a display '
+                                                      'connects. Start with + above.'))
+            self.stack.add_named(self.empty, 'empty')
+            self.page = Adw.PreferencesPage()
+            self.group = Adw.PreferencesGroup()
+            self.page.add(self.group)
+            self.stack.add_named(self.page, 'list')
+            view.set_content(self.stack)
+            self.toasts.set_child(view)
+            self.set_content(self.toasts)
+            self.rows = []
+
+            t = Gio.SimpleAction.new('template', GLib.VariantType('i'))
+            t.connect('activate', lambda _a, v: self.from_template(v.get_int32()))
+            self.add_action(t)
+            b = Gio.SimpleAction.new('blank', None)
+            b.connect('activate', lambda *_a: Editor(self, {
+                'name': '', 'enabled': True, 'trigger': {'Kind': 'time', 'At': '09:00', 'Days': ''},
+                'actions': [{'Kind': 'open'}]}).present(self))
+            self.add_action(b)
+
+            os.makedirs(CONFIG, exist_ok=True)
+            self.monitor = Gio.File.new_for_path(CONFIG).monitor_directory(Gio.FileMonitorFlags.NONE, None)
+            self.monitor.connect('changed', lambda *_a: self.queue_refresh())
+            self.refresh_id = 0
+            self.refresh()
+            GLib.timeout_add_seconds(5, lambda: (self.check_service(), True)[1])
+
+        def queue_refresh(self):
+            if self.refresh_id:
+                GLib.source_remove(self.refresh_id)
+            self.refresh_id = GLib.timeout_add(300, lambda: (self.refresh(), False)[1])
+
+        def check_service(self):
+            try:
+                r = subprocess.run(['systemctl', '--user', 'is-active', 'parchaos-automations.service'],
+                                   capture_output=True, text=True, timeout=5)
+                running = r.stdout.strip() == 'active'
+            except (OSError, subprocess.TimeoutExpired):
+                running = True
+            self.banner.set_revealed(not running and bool(self.rows))
+
+        def start_service(self, *_a):
+            subprocess.run(['systemctl', '--user', 'enable', '--now', 'parchaos-automations.service'],
+                           capture_output=True, timeout=15)
+            self.check_service()
+
+        def from_template(self, i):
+            tpl = templates(current_displays())[i]
+            Editor(self, tpl).present(self)
+
+        def refresh(self):
+            self.refresh_id = 0
+            for r in self.rows:
+                self.group.remove(r)
+            self.rows = []
+            state = read_state()
+            items = load_all()
+            for a in items:
+                self.group.add(self.row(a, state.get(a['id'], {})))
+            self.stack.set_visible_child_name('list' if items else 'empty')
+            self.check_service()
+
+        def row(self, a, st):
+            subtitle = describe_trigger(a['trigger']) + ' → ' + ', '.join(describe_action(x) for x in a['actions'])
+            if st.get('last_error'):
+                subtitle += '\n' + _('Last time: {error}').format(error=st['last_error'])
+            elif st.get('active'):
+                subtitle += '\n' + _('On now')
+            elif st.get('last_run'):
+                when = datetime.datetime.fromisoformat(st['last_run'])
+                subtitle += '\n' + _('Last ran {when}').format(when=f'{when:%a %d %b, %H:%M}')
+            row = Adw.ActionRow(title=GLib.markup_escape_text(a['name']), subtitle=GLib.markup_escape_text(subtitle),
+                                subtitle_lines=3, activatable=True)
+            row.connect('activated', lambda *_x: Editor(self, a).present(self))
+            sw = Gtk.Switch(active=a['enabled'], valign=Gtk.Align.CENTER, tooltip_text=_('On or off'))
+
+            def flip(s, _p):
+                a['enabled'] = s.get_active()
+                save(a)
+            sw.connect('notify::active', flip)
+            more = Gtk.MenuButton(icon_name='view-more-symbolic', valign=Gtk.Align.CENTER, css_classes=['flat'],
+                                  tooltip_text=_('More'))
+            pop = Gtk.Popover()
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            for label, cb in ((_('Run Now'), lambda: self.run_now(a)), (_('Edit…'), lambda: Editor(self, a).present(self)),
+                              (_('Delete'), lambda: self.delete(a))):
+                b = Gtk.Button(label=label, css_classes=['flat'])
+                b.get_child().set_halign(Gtk.Align.START)
+                b.connect('clicked', lambda _b, cb=cb: (pop.popdown(), cb()))
+                box.append(b)
+            pop.set_child(box)
+            more.set_popover(pop)
+            row.add_suffix(sw)
+            row.add_suffix(more)
+            self.rows.append(row)
+            return row
+
+        def run_now(self, a):
+            try:
+                subprocess.Popen([sys.argv[0], '--run', a['path']], start_new_session=True)
+                self.toasts.add_toast(Adw.Toast(title=_('Ran “{name}”').format(name=a['name'])))
+            except OSError as e:
+                self.toasts.add_toast(Adw.Toast(title=str(e)))
+
+        def delete(self, a):
+            try:
+                os.remove(a['path'])
+            except OSError:
+                return
+            toast = Adw.Toast(title=_('“{name}” deleted').format(name=a['name']), button_label=_('Undo'))
+            toast.connect('button-clicked', lambda *_x: (a.pop('path', None), save(a), self.refresh()))
+            self.toasts.add_toast(toast)
+            self.refresh()
+
+    class App(Adw.Application):
+        def __init__(self):
+            super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+
+        def do_startup(self):
+            Adw.Application.do_startup(self)
+            css = Gtk.CssProvider()
+            css.load_from_string('.day:checked { background: var(--accent-bg-color); color: var(--accent-fg-color); }')
+            Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
+                                                      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        def do_activate(self):
+            win = self.props.active_window or Window(self)
+            win.present()
+            if len(argv) > 2 and argv[1] == '--edit':
+                a = load(argv[2])
+                if a:
+                    Editor(win, a).present(win)
+            elif len(argv) > 1 and argv[1] == '--new':
+                win.activate_action('blank', None)
+
+    return App().run(argv[:1])
+
+
+def run_once(path):
+    a = load(path)
+    if not a:
+        print(f'parchaos-automations: cannot read {path}', file=sys.stderr)
+        return 1
+    runner = Runner()
+    status = 0
+    for action in a['actions']:
+        try:
+            runner.run(action)
+        except Exception as e:     # noqa: BLE001
+            print(f'parchaos-automations: {describe_action(action)}: {e}', file=sys.stderr)
+            status = 1
+    return status
+
+
+def main(argv):
+    try:
+        locale.setlocale(locale.LC_ALL, '')
+    except locale.Error:
+        pass
+    if len(argv) > 1 and argv[1] == '--service':
+        from gi.repository import GLib
+        Service()
+        GLib.MainLoop().run()
+        return 0
+    if len(argv) > 2 and argv[1] == '--run':
+        return run_once(argv[2])
+    return run_app(argv)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

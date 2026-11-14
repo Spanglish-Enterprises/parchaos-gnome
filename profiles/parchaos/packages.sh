@@ -204,6 +204,8 @@ PROFILE_REPO_PACKAGES=(
     parchaos-lookup
     # Read any text in a calm window, aloud, Ctrl+Alt+R (packaging/parchaos-reader/).
     parchaos-reader
+    # "When this happens, do that" (packaging/parchaos-automations/, ticket #186).
+    parchaos-automations
 
     # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
     # controller rules and the Game Mode session; launchers come from Flathub.

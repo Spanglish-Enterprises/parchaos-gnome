@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        92%{?dist}
+Release:        93%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -125,6 +125,7 @@ Requires:       parchaos-speak
 Requires:       parchaos-lookup
 Requires:       parchaos-reader
 Requires:       parchaos-widgets
+Requires:       parchaos-automations
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
 # Not nautilus-gsconnect: it runs on nautilus-python 4.1, which needs the
@@ -301,6 +302,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-93
+- Ticket #186: Requires parchaos-automations (the Automations app and the
+  user service that runs them).
+
 * Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-92
 - Ticket #165: desktop widgets on by default (parchaos-widgets) and the
   desktop-widgets and widgets-editing settings they use.

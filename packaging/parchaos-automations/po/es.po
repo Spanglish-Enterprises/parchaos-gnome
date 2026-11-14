@@ -1,0 +1,607 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-automations package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-automations\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-14 09:07-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: parchaos-automations:66
+msgid "Mon"
+msgstr "lun"
+
+#: parchaos-automations:66
+msgid "Tue"
+msgstr "mar"
+
+#: parchaos-automations:66
+msgid "Wed"
+msgstr "mié"
+
+#: parchaos-automations:66
+msgid "Thu"
+msgstr "jue"
+
+#: parchaos-automations:66
+msgid "Fri"
+msgstr "vie"
+
+#: parchaos-automations:66
+msgid "Sat"
+msgstr "sáb"
+
+#: parchaos-automations:66
+msgid "Sun"
+msgstr "dom"
+
+#: parchaos-automations:67
+msgid "Mondays"
+msgstr "lunes"
+
+#: parchaos-automations:67
+msgid "Tuesdays"
+msgstr "martes"
+
+#: parchaos-automations:67
+msgid "Wednesdays"
+msgstr "miércoles"
+
+#: parchaos-automations:67
+msgid "Thursdays"
+msgstr "jueves"
+
+#: parchaos-automations:67
+msgid "Fridays"
+msgstr "viernes"
+
+#: parchaos-automations:67
+msgid "Saturdays"
+msgstr "sábados"
+
+#: parchaos-automations:68
+msgid "Sundays"
+msgstr "domingos"
+
+#: parchaos-automations:365
+msgid "No destination folder"
+msgstr "No hay carpeta de destino"
+
+#: parchaos-automations:414
+msgid "every day"
+msgstr "todos los días"
+
+#: parchaos-automations:416
+msgid "on weekdays"
+msgstr "de lunes a viernes"
+
+#: parchaos-automations:418
+msgid "at weekends"
+msgstr "los fines de semana"
+
+#: parchaos-automations:420 parchaos-automations:421
+#, python-brace-format
+msgid "on {days}"
+msgstr "los {days}"
+
+#: parchaos-automations:427
+#, python-brace-format
+msgid "{list} and {last}"
+msgstr "{list} y {last}"
+
+#: parchaos-automations:434
+#, python-brace-format
+msgid "{kinds} files"
+msgstr "archivos {kinds}"
+
+#: parchaos-automations:436
+msgid "files"
+msgstr "archivos"
+
+#: parchaos-automations:437
+#, python-brace-format
+msgid "files like {pattern}"
+msgstr "archivos como {pattern}"
+
+#: parchaos-automations:442
+msgid "into a folder for each month"
+msgstr "a una carpeta por mes"
+
+#: parchaos-automations:444
+msgid "into a folder for each year"
+msgstr "a una carpeta por año"
+
+#: parchaos-automations:445
+#, python-brace-format
+msgid "to {folder}"
+msgstr "a {folder}"
+
+#: parchaos-automations:452
+#, python-brace-format
+msgid "From {at} to {until} {days}"
+msgstr "De {at} a {until} {days}"
+
+#: parchaos-automations:453
+#, python-brace-format
+msgid "At {at} {days}"
+msgstr "A las {at} {days}"
+
+#: parchaos-automations:456
+#, python-brace-format
+msgid "While “{name}” is connected"
+msgstr "Mientras «{name}» esté conectada"
+
+#: parchaos-automations:457
+msgid "While a display I don’t usually use is connected"
+msgstr "Mientras haya conectada una pantalla que no suelo usar"
+
+#: parchaos-automations:459
+#, python-brace-format
+msgid "While connected to “{name}”"
+msgstr "Mientras esté conectada a «{name}»"
+
+#: parchaos-automations:461
+#, python-brace-format
+msgid "While {app} is open"
+msgstr "Mientras {app} esté abierta"
+
+#: parchaos-automations:463
+#, python-brace-format
+msgid "When a file appears in {folder}"
+msgstr "Cuando aparezca un archivo en {folder}"
+
+#: parchaos-automations:464
+msgid "Unknown trigger"
+msgstr "Disparador desconocido"
+
+#: parchaos-automations:470
+#, python-brace-format
+msgid "Open {what}"
+msgstr "Abrir {what}"
+
+#: parchaos-automations:473
+msgid "Turn on Work Focus"
+msgstr "Activar el enfoque Trabajo"
+
+#: parchaos-automations:473
+msgid "Turn on Personal Focus"
+msgstr "Activar el enfoque Personal"
+
+#: parchaos-automations:474
+msgid "Turn on Sleep Focus"
+msgstr "Activar el enfoque Dormir"
+
+#: parchaos-automations:474
+msgid "Turn on Do Not Disturb"
+msgstr "Activar No molestar"
+
+#: parchaos-automations:475
+msgid "Turn Focus off"
+msgstr "Desactivar el enfoque"
+
+#: parchaos-automations:475 parchaos-automations:1141
+msgid "Focus"
+msgstr "Enfoque"
+
+#: parchaos-automations:477
+msgid "Switch to dark mode"
+msgstr "Cambiar al modo oscuro"
+
+#: parchaos-automations:477
+msgid "Switch to light mode"
+msgstr "Cambiar al modo claro"
+
+#: parchaos-automations:479
+#, python-brace-format
+msgid "Set {key} to {value}"
+msgstr "Poner {key} en {value}"
+
+#: parchaos-automations:481
+#, python-brace-format
+msgid "Run “{command}”"
+msgstr "Ejecutar «{command}»"
+
+#: parchaos-automations:484
+#, python-brace-format
+msgid "Move {files} from {src} {dst}"
+msgstr "Mover {files} de {src} {dst}"
+
+#: parchaos-automations:486
+#, python-brace-format
+msgid "Move it {dst}"
+msgstr "Moverlo {dst}"
+
+#: parchaos-automations:488
+#, python-brace-format
+msgid "Rename it to {name}"
+msgstr "Renombrarlo a {name}"
+
+#: parchaos-automations:489 parchaos-automations:615
+msgid "Unknown action"
+msgstr "Acción desconocida"
+
+#: parchaos-automations:495
+msgid "Pictures"
+msgstr "Imágenes"
+
+#: parchaos-automations:495
+msgid "Downloads"
+msgstr "Descargas"
+
+#: parchaos-automations:496
+msgid "Documents"
+msgstr "Documentos"
+
+#: parchaos-automations:496
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: parchaos-automations:521
+msgid "Work Focus on weekdays"
+msgstr "Enfoque Trabajo de lunes a viernes"
+
+#: parchaos-automations:524
+msgid "Tidy screenshots every week"
+msgstr "Ordenar las capturas cada semana"
+
+#: parchaos-automations:528
+msgid "Dark mode with a projector"
+msgstr "Modo oscuro con un proyector"
+
+#: parchaos-automations:548
+#, python-brace-format
+msgid "Unknown settings group {schema}"
+msgstr "Grupo de ajustes desconocido: {schema}"
+
+#: parchaos-automations:557
+#, python-brace-format
+msgid "Unknown setting {key}"
+msgstr "Ajuste desconocido: {key}"
+
+#: parchaos-automations:576
+#, python-brace-format
+msgid "No app {app}"
+msgstr "No existe la app {app}"
+
+#: parchaos-automations:600
+msgid "No command"
+msgstr "No hay comando"
+
+#: parchaos-automations:789
+#, python-brace-format
+msgid "late, the computer was off at {time}"
+msgstr "con retraso, la computadora estaba apagada a las {time}"
+
+#: parchaos-automations:827 parchaos-automations:1207
+msgid "Automations"
+msgstr "Automatizaciones"
+
+#: parchaos-automations:828
+#, python-brace-format
+msgid "“{name}” did not finish"
+msgstr "«{name}» no terminó"
+
+#: parchaos-automations:941
+msgid "Edit Automation"
+msgstr "Editar automatización"
+
+#: parchaos-automations:941 parchaos-automations:1211
+msgid "New Automation"
+msgstr "Nueva automatización"
+
+#: parchaos-automations:949
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: parchaos-automations:952
+msgid "Save"
+msgstr "Guardar"
+
+#: parchaos-automations:961
+msgid "Name"
+msgstr "Nombre"
+
+#: parchaos-automations:965
+msgid "When"
+msgstr "Cuándo"
+
+#: parchaos-automations:967
+msgid "Do"
+msgstr "Hacer"
+
+#: parchaos-automations:1008
+msgid "Not chosen"
+msgstr "Sin elegir"
+
+#: parchaos-automations:1010
+msgid "Choose Folder"
+msgstr "Elegir carpeta"
+
+#: parchaos-automations:1042
+msgid "Starts"
+msgstr "Empieza"
+
+#: parchaos-automations:1043
+msgid "At a time"
+msgstr "A una hora"
+
+#: parchaos-automations:1043
+msgid "A display connects"
+msgstr "Se conecta una pantalla"
+
+#: parchaos-automations:1044
+msgid "Joining a network"
+msgstr "Al conectarse a una red"
+
+#: parchaos-automations:1044
+msgid "An app opens"
+msgstr "Se abre una app"
+
+#: parchaos-automations:1045
+msgid "A new file in a folder"
+msgstr "Un archivo nuevo en una carpeta"
+
+#: parchaos-automations:1048
+msgid "At (HH:MM)"
+msgstr "A las (HH:MM)"
+
+#: parchaos-automations:1049
+msgid "Until (HH:MM, optional; then it is undone)"
+msgstr "Hasta (HH:MM, opcional; entonces se deshace)"
+
+#: parchaos-automations:1050
+msgid "Days"
+msgstr "Días"
+
+#: parchaos-automations:1068
+msgid "Any display I don’t usually use"
+msgstr "Cualquier pantalla que no suelo usar"
+
+#: parchaos-automations:1081
+msgid "Display"
+msgstr "Pantalla"
+
+#: parchaos-automations:1084
+msgid "The displays connected now count as your usual ones."
+msgstr "Las pantallas conectadas ahora cuentan como las de siempre."
+
+#: parchaos-automations:1091
+msgid "Network name"
+msgstr "Nombre de la red"
+
+#: parchaos-automations:1102 parchaos-automations:1138
+msgid "App"
+msgstr "App"
+
+#: parchaos-automations:1105
+msgid "Folder"
+msgstr "Carpeta"
+
+#: parchaos-automations:1106
+msgid "Only files like (e.g. *.pdf)"
+msgstr "Solo archivos como (p. ej. *.pdf)"
+
+#: parchaos-automations:1108
+msgid "Undo when it ends"
+msgstr "Deshacer al terminar"
+
+#: parchaos-automations:1109
+msgid "Put back what the actions changed"
+msgstr "Devolver lo que cambiaron las acciones"
+
+#: parchaos-automations:1123
+msgid "Open an app or file"
+msgstr "Abrir una app o un archivo"
+
+#: parchaos-automations:1123
+msgid "Change Focus"
+msgstr "Cambiar el enfoque"
+
+#: parchaos-automations:1124
+msgid "Light or dark mode"
+msgstr "Modo claro u oscuro"
+
+#: parchaos-automations:1124
+msgid "Change a setting"
+msgstr "Cambiar un ajuste"
+
+#: parchaos-automations:1125
+msgid "Run a command"
+msgstr "Ejecutar un comando"
+
+#: parchaos-automations:1125
+msgid "Move files"
+msgstr "Mover archivos"
+
+#: parchaos-automations:1127
+msgid "Rename the file"
+msgstr "Renombrar el archivo"
+
+#: parchaos-automations:1128
+msgid "Action"
+msgstr "Acción"
+
+#: parchaos-automations:1142
+msgid "Work"
+msgstr "Trabajo"
+
+#: parchaos-automations:1142
+msgid "Personal"
+msgstr "Personal"
+
+#: parchaos-automations:1142
+msgid "Sleep"
+msgstr "Dormir"
+
+#: parchaos-automations:1143
+msgid "Do Not Disturb"
+msgstr "No molestar"
+
+#: parchaos-automations:1143
+msgid "Off"
+msgstr "Desactivado"
+
+#: parchaos-automations:1145
+msgid "Style"
+msgstr "Estilo"
+
+#: parchaos-automations:1145
+msgid "Dark"
+msgstr "Oscuro"
+
+#: parchaos-automations:1145
+msgid "Light"
+msgstr "Claro"
+
+#: parchaos-automations:1147
+msgid "Settings group (e.g. org.gnome.desktop.interface)"
+msgstr "Grupo de ajustes (p. ej. org.gnome.desktop.interface)"
+
+#: parchaos-automations:1148
+msgid "Key"
+msgstr "Clave"
+
+#: parchaos-automations:1149
+msgid "Value"
+msgstr "Valor"
+
+#: parchaos-automations:1151
+msgid "Command"
+msgstr "Comando"
+
+#: parchaos-automations:1154
+msgid "From"
+msgstr "Desde"
+
+#: parchaos-automations:1155
+msgid "Only files like (e.g. *.png)"
+msgstr "Solo archivos como (p. ej. *.png)"
+
+#: parchaos-automations:1156
+msgid "To"
+msgstr "A"
+
+#: parchaos-automations:1157
+#, python-brace-format
+msgid "In names, {year}, {month} and {date} are filled in from the file."
+msgstr "En los nombres, {year}, {month} y {date} se rellenan con los del archivo."
+
+#: parchaos-automations:1161
+#, python-brace-format
+msgid "New name, e.g. {date} {name}"
+msgstr "Nombre nuevo, p. ej. {date} {name}"
+
+#: parchaos-automations:1167
+msgid "Give it a name"
+msgstr "Ponle un nombre"
+
+#: parchaos-automations:1171 parchaos-automations:1173
+msgid "Write the time as HH:MM"
+msgstr "Escribe la hora como HH:MM"
+
+#: parchaos-automations:1175
+msgid "Choose at least one day"
+msgstr "Elige al menos un día"
+
+#: parchaos-automations:1177
+msgid "Write the network name"
+msgstr "Escribe el nombre de la red"
+
+#: parchaos-automations:1179
+msgid "Choose a folder"
+msgstr "Elige una carpeta"
+
+#: parchaos-automations:1182
+msgid "Write the settings group and key"
+msgstr "Escribe el grupo de ajustes y la clave"
+
+#: parchaos-automations:1184
+msgid "Write the command"
+msgstr "Escribe el comando"
+
+#: parchaos-automations:1186
+msgid "Choose where to move them"
+msgstr "Elige adónde moverlos"
+
+#: parchaos-automations:1188
+msgid "Write the new name"
+msgstr "Escribe el nombre nuevo"
+
+#: parchaos-automations:1216
+msgid "Start from Scratch…"
+msgstr "Empezar desde cero…"
+
+#: parchaos-automations:1221
+msgid "Automations are not running"
+msgstr "Las automatizaciones no se están ejecutando"
+
+#: parchaos-automations:1221
+msgid "Start"
+msgstr "Iniciar"
+
+#: parchaos-automations:1225
+msgid "No Automations"
+msgstr "No hay automatizaciones"
+
+#: parchaos-automations:1226
+msgid ""
+"Let the computer do things for you: turn on Focus at a time, tidy a folder, "
+"change the look when a display connects. Start with + above."
+msgstr "Deja que la computadora haga cosas por ti: activar un enfoque a una hora, ordenar una carpeta, cambiar el aspecto al conectar una pantalla. Empieza con + arriba."
+
+#: parchaos-automations:1293
+#, python-brace-format
+msgid "Last time: {error}"
+msgstr "La última vez: {error}"
+
+#: parchaos-automations:1295
+msgid "On now"
+msgstr "Activa ahora"
+
+#: parchaos-automations:1298
+#, python-brace-format
+msgid "Last ran {when}"
+msgstr "Se ejecutó por última vez el {when}"
+
+#: parchaos-automations:1302
+msgid "On or off"
+msgstr "Activar o desactivar"
+
+#: parchaos-automations:1309
+msgid "More"
+msgstr "Más"
+
+#: parchaos-automations:1312
+msgid "Run Now"
+msgstr "Ejecutar ahora"
+
+#: parchaos-automations:1312
+msgid "Edit…"
+msgstr "Editar…"
+
+#: parchaos-automations:1313
+msgid "Delete"
+msgstr "Eliminar"
+
+#: parchaos-automations:1328
+#, python-brace-format
+msgid "Ran “{name}”"
+msgstr "Se ejecutó «{name}»"
+
+#: parchaos-automations:1337
+#, python-brace-format
+msgid "“{name}” deleted"
+msgstr "«{name}» eliminada"
+
+#: parchaos-automations:1337
+msgid "Undo"
+msgstr "Deshacer"

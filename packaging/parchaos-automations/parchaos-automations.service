@@ -1,0 +1,12 @@
+[Unit]
+Description=Parcha Automations (runs the automations in ~/.config/parchaos/automations)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/parchaos-automations --service
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
