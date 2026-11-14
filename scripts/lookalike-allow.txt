@@ -70,3 +70,4 @@ image/usr/lib64/nautilus/*                   | apple | fact: an IANA media type 
 image/usr/bin/parchaos-cloud                 | onedrive | fact: a cloud service the tool can mount
 image/usr/bin/parchaos-cloud                 | google drive | fact: a cloud service the tool can mount
 image/usr/share/applications/parchaos-cloud.desktop | onedrive | fact: a cloud service the tool can mount
+packaging/parchaos-bring/*                 | *     | fact: Bring Your Stuff reads files and bookmarks from other systems and names the browsers and folders it imports from

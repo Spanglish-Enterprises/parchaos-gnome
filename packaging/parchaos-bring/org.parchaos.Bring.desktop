@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Bring Your Stuff
+Name[es]=Trae tus cosas
+Comment=Copy your files and bookmarks from another computer's disk, a backup drive or a share
+Comment[es]=Copia tus archivos y marcadores desde el disco de otra computadora, un disco de copia o una carpeta compartida
+Exec=parchaos-bring %F
+Icon=drive-removable-media
+Terminal=false
+Categories=Utility;System;
+Keywords=migrate;move;transfer;import;windows;mac;bookmarks;old computer;migrar;mover;importar;marcadores;
+StartupNotify=true

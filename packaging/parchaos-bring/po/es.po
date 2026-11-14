@@ -1,0 +1,355 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-bring package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-bring\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-14 17:25-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: parchaos-bring:37
+msgid "Documents"
+msgstr "Documentos"
+
+#: parchaos-bring:38
+msgid "Pictures"
+msgstr "Imágenes"
+
+#: parchaos-bring:39
+msgid "Music"
+msgstr "Música"
+
+#: parchaos-bring:40
+msgid "Videos"
+msgstr "Videos"
+
+#: parchaos-bring:41
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: parchaos-bring:42
+msgid "Downloads"
+msgstr "Descargas"
+
+#: parchaos-bring:44
+msgid "Windows"
+msgstr "Windows"
+
+#: parchaos-bring:44
+msgid "Mac"
+msgstr "Mac"
+
+#: parchaos-bring:44
+msgid "Linux"
+msgstr "Linux"
+
+#: parchaos-bring:44
+msgid "Folder"
+msgstr "Carpeta"
+
+#: parchaos-bring:65 parchaos-bring:104
+msgid "Bring Your Stuff"
+msgstr "Trae tus cosas"
+
+#: parchaos-bring:89
+msgid ""
+"Copy your files and bookmarks from another computer: plug in its disk or a "
+"backup drive, or open a network share in Files. Nothing on it is changed."
+msgstr "Copia tus archivos y marcadores desde otra computadora: conecta su disco o un disco de copia, o abre una carpeta compartida de la red en Archivos. No se cambia nada en ella."
+
+#: parchaos-bring:91
+msgid "Drives and Shares"
+msgstr "Discos y carpetas compartidas"
+
+#: parchaos-bring:94
+msgid "Choose a Folder…"
+msgstr "Elegir una carpeta…"
+
+#: parchaos-bring:95
+msgid "Another person’s folder, a copy of an old computer, or a share"
+msgstr "La carpeta de otra persona, una copia de una computadora vieja o una carpeta compartida"
+
+#: parchaos-bring:119
+msgid "Not opened yet; it will be opened read-only"
+msgstr "Aún no está abierto; se abrirá solo para lectura"
+
+#: parchaos-bring:139
+msgid "Nothing plugged in"
+msgstr "No hay nada conectado"
+
+#: parchaos-bring:140
+msgid ""
+"Connect the old computer’s disk or a backup drive. A network share opened in "
+"Files shows up here too."
+msgstr "Conecta el disco de la computadora vieja o un disco de copia. Una carpeta compartida abierta en Archivos también aparece aquí."
+
+#: parchaos-bring:152
+#, python-brace-format
+msgid "{name} can’t be opened here."
+msgstr "{name} no se puede abrir aquí."
+
+#: parchaos-bring:169
+#, python-brace-format
+msgid "{name} could not be opened: {error}"
+msgstr "No se pudo abrir {name}: {error}"
+
+#: parchaos-bring:174
+msgid "Choose the Folder with Your Stuff"
+msgstr "Elige la carpeta con tus cosas"
+
+#: parchaos-bring:187
+#, python-brace-format
+msgid "Looking at {name}…"
+msgstr "Revisando {name}…"
+
+#: parchaos-bring:202
+#, python-brace-format
+msgid ""
+"No Documents, Pictures or similar folders were found on {name}. Choose the "
+"folder that holds them."
+msgstr "No se encontraron carpetas como Documentos o Imágenes en {name}. Elige la carpeta que las contiene."
+
+#: parchaos-bring:211
+#, python-brace-format
+msgid "These people had folders on {name}. Whose stuff do you want?"
+msgstr "Estas personas tenían carpetas en {name}. ¿De quién son las cosas que quieres?"
+
+#: parchaos-bring:221
+msgid "Whose Stuff?"
+msgstr "¿De quién?"
+
+#: parchaos-bring:229
+#, python-brace-format
+msgid ""
+"From {name} ({kind}) on {source}. Files are added to your folders here; "
+"nothing here is replaced."
+msgstr "De {name} ({kind}) en {source}. Los archivos se añaden a tus carpetas; no se reemplaza nada de lo que ya tienes."
+
+#: parchaos-bring:233
+msgid "Files"
+msgstr "Archivos"
+
+#: parchaos-bring:237
+msgid "Counting…"
+msgstr "Contando…"
+
+#: parchaos-bring:250
+msgid "Bookmarks"
+msgstr "Marcadores"
+
+#: parchaos-bring:251
+#, python-brace-format
+msgid ""
+"Added to Parcha Browser in a folder called “{label}”, under Other bookmarks."
+msgstr "Se añaden a Parcha Browser en una carpeta llamada «{label}», dentro de Otros marcadores."
+
+#: parchaos-bring:260
+#, python-brace-format
+msgid "{n} bookmark"
+msgid_plural "{n} bookmarks"
+msgstr[0] "{n} marcador"
+msgstr[1] "{n} marcadores"
+
+#: parchaos-bring:261
+msgid "Could not be read"
+msgstr "No se pudo leer"
+
+#: parchaos-bring:268
+msgid "Not Brought Over"
+msgstr "Lo que no se trae"
+
+#: parchaos-bring:269
+msgid "Saved passwords"
+msgstr "Contraseñas guardadas"
+
+#: parchaos-bring:270
+msgid ""
+"Browsers lock them with the old computer’s own keys. On the old computer, "
+"export them from the browser’s password settings as a file, then import that "
+"file in Parcha Browser’s password settings."
+msgstr "Los navegadores las protegen con las claves propias de la computadora vieja. En la computadora vieja, expórtalas como archivo desde los ajustes de contraseñas del navegador y luego importa ese archivo en los ajustes de contraseñas de Parcha Browser."
+
+#: parchaos-bring:276
+#, python-brace-format
+msgid "{n} Wi-Fi network"
+msgid_plural "{n} Wi-Fi networks"
+msgstr[0] "{n} red Wi-Fi"
+msgstr[1] "{n} redes Wi-Fi"
+
+#: parchaos-bring:277
+#, python-brace-format
+msgid ""
+"{names}. Their passwords are locked to the old computer; you’ll be asked for "
+"each one the first time you connect."
+msgstr "{names}. Sus contraseñas están protegidas en la computadora vieja; se te pedirá cada una la primera vez que te conectes."
+
+#: parchaos-bring:283
+msgid "Apps and settings"
+msgstr "Apps y ajustes"
+
+#: parchaos-bring:284
+msgid ""
+"Programs from another system don’t run here. Parcha Store has apps for most "
+"things."
+msgstr "Los programas de otro sistema no funcionan aquí. Parcha Store tiene apps para casi todo."
+
+#: parchaos-bring:291
+msgid "Bring It Over"
+msgstr "Traerlo"
+
+#: parchaos-bring:295
+msgid "What to Bring"
+msgstr "Qué traer"
+
+#: parchaos-bring:309
+#, python-brace-format
+msgid "From {name} ({kind})"
+msgstr "De {name} ({kind})"
+
+#: parchaos-bring:313
+#, python-brace-format
+msgid "{n} file · {size} → {dest}"
+msgid_plural "{n} files · {size} → {dest}"
+msgstr[0] "{n} archivo · {size} → {dest}"
+msgstr[1] "{n} archivos · {size} → {dest}"
+
+#: parchaos-bring:324
+msgid "Counting what to copy…"
+msgstr "Contando lo que hay que copiar…"
+
+#: parchaos-bring:326
+#, python-brace-format
+msgid "{need} to copy · {free} free here"
+msgstr "{need} por copiar · {free} libres aquí"
+
+#: parchaos-bring:331
+#, python-brace-format
+msgid "Not enough space: {need} to copy, {free} free."
+msgstr "No hay espacio suficiente: {need} por copiar, {free} libres."
+
+#: parchaos-bring:340
+msgid "Bringing Your Stuff Over"
+msgstr "Trayendo tus cosas"
+
+#: parchaos-bring:344
+msgid "Stop"
+msgstr "Detener"
+
+#: parchaos-bring:349
+msgid "Copying"
+msgstr "Copiando"
+
+#: parchaos-bring:364
+#, python-brace-format
+msgid "{done} of {total}"
+msgstr "{done} de {total}"
+
+#: parchaos-bring:374
+msgid "Adding bookmarks…"
+msgstr "Añadiendo marcadores…"
+
+#: parchaos-bring:390
+msgid "Stopped"
+msgstr "Detenido"
+
+#: parchaos-bring:390
+msgid "Your Stuff Is Here"
+msgstr "Tus cosas ya están aquí"
+
+#: parchaos-bring:404
+#, python-brace-format
+msgid "Copied {n} file ({size})"
+msgid_plural "Copied {n} files ({size})"
+msgstr[0] "Se copió {n} archivo ({size})"
+msgstr[1] "Se copiaron {n} archivos ({size})"
+
+#: parchaos-bring:408
+#, python-brace-format
+msgid "{n} file was already here"
+msgid_plural "{n} files were already here"
+msgstr[0] "{n} archivo ya estaba aquí"
+msgstr[1] "{n} archivos ya estaban aquí"
+
+#: parchaos-bring:409
+msgid "Not copied again."
+msgstr "No se copió otra vez."
+
+#: parchaos-bring:411
+#, python-brace-format
+msgid "{n} file had the same name as one here"
+msgid_plural "{n} files had the same name as one here"
+msgstr[0] "{n} archivo tenía el mismo nombre que uno de aquí"
+msgstr[1] "{n} archivos tenían el mismo nombre que otros de aquí"
+
+#: parchaos-bring:413
+#, python-brace-format
+msgid "Both kept, the copy with a number: {names}"
+msgstr "Se conservan los dos; la copia lleva un número: {names}"
+
+#: parchaos-bring:416
+#, python-brace-format
+msgid "{n} file could not be read"
+msgid_plural "{n} files could not be read"
+msgstr[0] "No se pudo leer {n} archivo"
+msgstr[1] "No se pudieron leer {n} archivos"
+
+#: parchaos-bring:424 parchaos-bring:462
+#, python-brace-format
+msgid "Added {n} bookmark to Parcha Browser"
+msgid_plural "Added {n} bookmarks to Parcha Browser"
+msgstr[0] "Se añadió {n} marcador a Parcha Browser"
+msgstr[1] "Se añadieron {n} marcadores a Parcha Browser"
+
+#: parchaos-bring:426 parchaos-bring:463
+#, python-brace-format
+msgid "In Other bookmarks › {label}"
+msgstr "En Otros marcadores › {label}"
+
+#: parchaos-bring:428
+msgid "Bookmarks not added yet"
+msgstr "Los marcadores aún no se añadieron"
+
+#: parchaos-bring:429
+msgid "Parcha Browser is open. Close it, then press Add."
+msgstr "Parcha Browser está abierto. Ciérralo y pulsa Añadir."
+
+#: parchaos-bring:430
+msgid "Add"
+msgstr "Añadir"
+
+#: parchaos-bring:434
+msgid "Bookmarks could not be added"
+msgstr "No se pudieron añadir los marcadores"
+
+#: parchaos-bring:435
+msgid "Not brought over: saved passwords and Wi-Fi passwords"
+msgstr "No se trajeron: contraseñas guardadas y contraseñas de Wi-Fi"
+
+#: parchaos-bring:436
+msgid ""
+"For browser passwords, export them on the old computer as a file and import "
+"it in Parcha Browser’s password settings. Wi-Fi asks for each password the "
+"first time you connect."
+msgstr "Para las contraseñas del navegador, expórtalas como archivo en la computadora vieja e impórtalo en los ajustes de contraseñas de Parcha Browser. El Wi-Fi pide cada contraseña la primera vez que te conectas."
+
+#: parchaos-bring:442
+msgid "Show in Files"
+msgstr "Mostrar en Archivos"
+
+#: parchaos-bring:446 parchaos-bring:449
+msgid "Done"
+msgstr "Listo"
+
+#: parchaos-bring:455
+msgid "Parcha Browser is still open."
+msgstr "Parcha Browser sigue abierto."

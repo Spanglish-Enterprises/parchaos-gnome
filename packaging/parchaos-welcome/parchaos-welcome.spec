@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -52,6 +52,10 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-welcome.mo
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 1.0.0-11
+- Ticket #157: a "Coming From Another Computer?" step that opens Bring Your
+  Stuff, when it is installed.
+
 * Tue Nov 10 2026 ParchaOS packaging - 1.0.0-10
 - Ticket #161: the tour's "Where Things Are" page mentions Parcha Keys for saved passwords and keys. Spanish string added.
 

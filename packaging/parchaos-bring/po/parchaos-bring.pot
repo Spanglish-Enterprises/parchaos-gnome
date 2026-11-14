@@ -1,0 +1,356 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-bring package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-bring\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-14 17:25-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: parchaos-bring:37
+msgid "Documents"
+msgstr ""
+
+#: parchaos-bring:38
+msgid "Pictures"
+msgstr ""
+
+#: parchaos-bring:39
+msgid "Music"
+msgstr ""
+
+#: parchaos-bring:40
+msgid "Videos"
+msgstr ""
+
+#: parchaos-bring:41
+msgid "Desktop"
+msgstr ""
+
+#: parchaos-bring:42
+msgid "Downloads"
+msgstr ""
+
+#: parchaos-bring:44
+msgid "Windows"
+msgstr ""
+
+#: parchaos-bring:44
+msgid "Mac"
+msgstr ""
+
+#: parchaos-bring:44
+msgid "Linux"
+msgstr ""
+
+#: parchaos-bring:44
+msgid "Folder"
+msgstr ""
+
+#: parchaos-bring:65 parchaos-bring:104
+msgid "Bring Your Stuff"
+msgstr ""
+
+#: parchaos-bring:89
+msgid ""
+"Copy your files and bookmarks from another computer: plug in its disk or a "
+"backup drive, or open a network share in Files. Nothing on it is changed."
+msgstr ""
+
+#: parchaos-bring:91
+msgid "Drives and Shares"
+msgstr ""
+
+#: parchaos-bring:94
+msgid "Choose a Folder…"
+msgstr ""
+
+#: parchaos-bring:95
+msgid "Another person’s folder, a copy of an old computer, or a share"
+msgstr ""
+
+#: parchaos-bring:119
+msgid "Not opened yet; it will be opened read-only"
+msgstr ""
+
+#: parchaos-bring:139
+msgid "Nothing plugged in"
+msgstr ""
+
+#: parchaos-bring:140
+msgid ""
+"Connect the old computer’s disk or a backup drive. A network share opened in "
+"Files shows up here too."
+msgstr ""
+
+#: parchaos-bring:152
+#, python-brace-format
+msgid "{name} can’t be opened here."
+msgstr ""
+
+#: parchaos-bring:169
+#, python-brace-format
+msgid "{name} could not be opened: {error}"
+msgstr ""
+
+#: parchaos-bring:174
+msgid "Choose the Folder with Your Stuff"
+msgstr ""
+
+#: parchaos-bring:187
+#, python-brace-format
+msgid "Looking at {name}…"
+msgstr ""
+
+#: parchaos-bring:202
+#, python-brace-format
+msgid ""
+"No Documents, Pictures or similar folders were found on {name}. Choose the "
+"folder that holds them."
+msgstr ""
+
+#: parchaos-bring:211
+#, python-brace-format
+msgid "These people had folders on {name}. Whose stuff do you want?"
+msgstr ""
+
+#: parchaos-bring:221
+msgid "Whose Stuff?"
+msgstr ""
+
+#: parchaos-bring:229
+#, python-brace-format
+msgid ""
+"From {name} ({kind}) on {source}. Files are added to your folders here; "
+"nothing here is replaced."
+msgstr ""
+
+#: parchaos-bring:233
+msgid "Files"
+msgstr ""
+
+#: parchaos-bring:237
+msgid "Counting…"
+msgstr ""
+
+#: parchaos-bring:250
+msgid "Bookmarks"
+msgstr ""
+
+#: parchaos-bring:251
+#, python-brace-format
+msgid ""
+"Added to Parcha Browser in a folder called “{label}”, under Other bookmarks."
+msgstr ""
+
+#: parchaos-bring:260
+#, python-brace-format
+msgid "{n} bookmark"
+msgid_plural "{n} bookmarks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:261
+msgid "Could not be read"
+msgstr ""
+
+#: parchaos-bring:268
+msgid "Not Brought Over"
+msgstr ""
+
+#: parchaos-bring:269
+msgid "Saved passwords"
+msgstr ""
+
+#: parchaos-bring:270
+msgid ""
+"Browsers lock them with the old computer’s own keys. On the old computer, "
+"export them from the browser’s password settings as a file, then import that "
+"file in Parcha Browser’s password settings."
+msgstr ""
+
+#: parchaos-bring:276
+#, python-brace-format
+msgid "{n} Wi-Fi network"
+msgid_plural "{n} Wi-Fi networks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:277
+#, python-brace-format
+msgid ""
+"{names}. Their passwords are locked to the old computer; you’ll be asked for "
+"each one the first time you connect."
+msgstr ""
+
+#: parchaos-bring:283
+msgid "Apps and settings"
+msgstr ""
+
+#: parchaos-bring:284
+msgid ""
+"Programs from another system don’t run here. Parcha Store has apps for most "
+"things."
+msgstr ""
+
+#: parchaos-bring:291
+msgid "Bring It Over"
+msgstr ""
+
+#: parchaos-bring:295
+msgid "What to Bring"
+msgstr ""
+
+#: parchaos-bring:309
+#, python-brace-format
+msgid "From {name} ({kind})"
+msgstr ""
+
+#: parchaos-bring:313
+#, python-brace-format
+msgid "{n} file · {size} → {dest}"
+msgid_plural "{n} files · {size} → {dest}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:324
+msgid "Counting what to copy…"
+msgstr ""
+
+#: parchaos-bring:326
+#, python-brace-format
+msgid "{need} to copy · {free} free here"
+msgstr ""
+
+#: parchaos-bring:331
+#, python-brace-format
+msgid "Not enough space: {need} to copy, {free} free."
+msgstr ""
+
+#: parchaos-bring:340
+msgid "Bringing Your Stuff Over"
+msgstr ""
+
+#: parchaos-bring:344
+msgid "Stop"
+msgstr ""
+
+#: parchaos-bring:349
+msgid "Copying"
+msgstr ""
+
+#: parchaos-bring:364
+#, python-brace-format
+msgid "{done} of {total}"
+msgstr ""
+
+#: parchaos-bring:374
+msgid "Adding bookmarks…"
+msgstr ""
+
+#: parchaos-bring:390
+msgid "Stopped"
+msgstr ""
+
+#: parchaos-bring:390
+msgid "Your Stuff Is Here"
+msgstr ""
+
+#: parchaos-bring:404
+#, python-brace-format
+msgid "Copied {n} file ({size})"
+msgid_plural "Copied {n} files ({size})"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:408
+#, python-brace-format
+msgid "{n} file was already here"
+msgid_plural "{n} files were already here"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:409
+msgid "Not copied again."
+msgstr ""
+
+#: parchaos-bring:411
+#, python-brace-format
+msgid "{n} file had the same name as one here"
+msgid_plural "{n} files had the same name as one here"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:413
+#, python-brace-format
+msgid "Both kept, the copy with a number: {names}"
+msgstr ""
+
+#: parchaos-bring:416
+#, python-brace-format
+msgid "{n} file could not be read"
+msgid_plural "{n} files could not be read"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:424 parchaos-bring:462
+#, python-brace-format
+msgid "Added {n} bookmark to Parcha Browser"
+msgid_plural "Added {n} bookmarks to Parcha Browser"
+msgstr[0] ""
+msgstr[1] ""
+
+#: parchaos-bring:426 parchaos-bring:463
+#, python-brace-format
+msgid "In Other bookmarks › {label}"
+msgstr ""
+
+#: parchaos-bring:428
+msgid "Bookmarks not added yet"
+msgstr ""
+
+#: parchaos-bring:429
+msgid "Parcha Browser is open. Close it, then press Add."
+msgstr ""
+
+#: parchaos-bring:430
+msgid "Add"
+msgstr ""
+
+#: parchaos-bring:434
+msgid "Bookmarks could not be added"
+msgstr ""
+
+#: parchaos-bring:435
+msgid "Not brought over: saved passwords and Wi-Fi passwords"
+msgstr ""
+
+#: parchaos-bring:436
+msgid ""
+"For browser passwords, export them on the old computer as a file and import "
+"it in Parcha Browser’s password settings. Wi-Fi asks for each password the "
+"first time you connect."
+msgstr ""
+
+#: parchaos-bring:442
+msgid "Show in Files"
+msgstr ""
+
+#: parchaos-bring:446 parchaos-bring:449
+msgid "Done"
+msgstr ""
+
+#: parchaos-bring:455
+msgid "Parcha Browser is still open."
+msgstr ""

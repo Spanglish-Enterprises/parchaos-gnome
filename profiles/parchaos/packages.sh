@@ -212,6 +212,8 @@ PROFILE_REPO_PACKAGES=(
     parchaos-nearby
     # Translate the selection on this computer (packaging/parchaos-translate/, ticket #152).
     parchaos-translate
+    # Bring files and bookmarks from another computer (packaging/parchaos-bring/, ticket #157).
+    parchaos-bring
 
     # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
     # controller rules and the Game Mode session; launchers come from Flathub.

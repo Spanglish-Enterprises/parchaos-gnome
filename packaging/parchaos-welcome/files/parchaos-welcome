@@ -175,6 +175,20 @@ class Window(Adw.ApplicationWindow):
                               _('Off unless you turn it on. You can change this later '
                               'in Settings, under Privacy.'), group))
 
+        # Ticket #157: copy files and bookmarks from the old computer.
+        if GLib.find_program_in_path('parchaos-bring'):
+            bring = Adw.PreferencesGroup()
+            row = Adw.ActionRow(title=_('Bring Your Stuff'), activatable=True,
+                                subtitle=_('Copy files and bookmarks from an old computer’s disk, a backup '
+                                           'drive or a network share.'))
+            row.add_prefix(Gtk.Image(icon_name='drive-removable-media-symbolic'))
+            row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+            row.connect('activated', lambda _row: subprocess.Popen(['parchaos-bring']))
+            bring.add(row)
+            pages.append(page('folder-download-symbolic', _('Coming From Another Computer?'),
+                              _('Bring your files and bookmarks over now, or any time later from the '
+                                'launcher.'), bring))
+
         tour = Adw.PreferencesGroup()
         for icon, title, subtitle in (
             ('view-app-grid-symbolic', _('Launcher'), _('Every app, from the dock\'s last button or Super+A. '

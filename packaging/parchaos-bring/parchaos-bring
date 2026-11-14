@@ -1,0 +1,487 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Bring Your Stuff (ticket #157): copy Documents, Pictures, Music, Videos, the desktop and
+# downloads from another computer's disk (Windows, Mac, Linux), a backup drive or a network
+# share, and its browser bookmarks into Parcha Browser. Opened from Welcome, Settings or the
+# launcher.
+#
+# The old disk is only read. A disk that isn't mounted yet is mounted read-only (udisksctl -o ro),
+# which also lets a Windows disk that was shut down with Fast Startup be read.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import locale
+import os
+import subprocess
+import sys
+import threading
+import time
+
+sys.path.insert(0, os.environ.get('PARCHAOS_BRING_LIB', '/usr/share/parchaos-bring'))
+import bringlib  # noqa: E402
+
+import gi  # noqa: E402
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+DOMAIN = 'parchaos-bring'
+gettext.bindtextdomain(DOMAIN, os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain(DOMAIN)
+_ = gettext.gettext
+ngettext = gettext.ngettext
+
+APP_ID = 'org.parchaos.Bring'
+LABELS = {
+    'DOCUMENTS': (_('Documents'), 'folder-documents-symbolic'),
+    'PICTURES': (_('Pictures'), 'folder-pictures-symbolic'),
+    'MUSIC': (_('Music'), 'folder-music-symbolic'),
+    'VIDEOS': (_('Videos'), 'folder-videos-symbolic'),
+    'DESKTOP': (_('Desktop'), 'user-desktop-symbolic'),
+    'DOWNLOAD': (_('Downloads'), 'folder-download-symbolic'),
+}
+KINDS = {'windows': _('Windows'), 'mac': _('Mac'), 'linux': _('Linux'), 'folder': _('Folder')}
+
+
+def idle(fn, *args):
+    GLib.idle_add(lambda: (fn(*args), False)[1])
+
+
+def size_text(n):
+    return GLib.format_size(n)
+
+
+def short(path):
+    return '~' + path[len(bringlib.HOME):] if path.startswith(bringlib.HOME + '/') else path
+
+
+def esc(text):
+    return GLib.markup_escape_text(text)
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title=_('Bring Your Stuff'), default_width=560, default_height=680)
+        self.nav = Adw.NavigationView()
+        self.toasts = Adw.ToastOverlay(child=self.nav)
+        self.set_content(self.toasts)
+        self.monitor = Gio.VolumeMonitor.get()
+        for signal in ('volume-added', 'volume-removed', 'mount-added', 'mount-removed', 'mount-changed'):
+            self.monitor.connect(signal, lambda *_a: self.fill_sources())
+        self.nav.add(self.sources_page())
+        self.cancel = None
+
+    # -- helpers ----------------------------------------------------------------------------
+    def page(self, title, tag, child, bottom=None):
+        view = Adw.ToolbarView(content=child)
+        view.add_top_bar(Adw.HeaderBar())
+        if bottom is not None:
+            view.add_bottom_bar(bottom)
+        return Adw.NavigationPage(title=title, tag=tag, child=view)
+
+    def toast(self, text):
+        self.toasts.add_toast(Adw.Toast(title=esc(text), timeout=6))
+
+    # -- 1. where ---------------------------------------------------------------------------
+    def sources_page(self):
+        page = Adw.PreferencesPage(
+            description=_('Copy your files and bookmarks from another computer: plug in its disk or a '
+                          'backup drive, or open a network share in Files. Nothing on it is changed.'))
+        self.sources = Adw.PreferencesGroup(title=_('Drives and Shares'))
+        page.add(self.sources)
+        other = Adw.PreferencesGroup()
+        choose = Adw.ActionRow(title=_('Choose a Folder…'),
+                               subtitle=_('Another person’s folder, a copy of an old computer, or a share'),
+                               activatable=True)
+        choose.add_prefix(Gtk.Image(icon_name='folder-open-symbolic'))
+        choose.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+        choose.connect('activated', lambda *_a: self.choose_folder())
+        other.add(choose)
+        page.add(other)
+        self.source_rows = []
+        self.fill_sources()
+        return self.page(_('Bring Your Stuff'), 'sources', page)
+
+    def fill_sources(self):
+        for row in self.source_rows:
+            self.sources.remove(row)
+        self.source_rows = []
+        seen = set()
+        for volume in self.monitor.get_volumes():
+            mount = volume.get_mount()
+            path = mount.get_root().get_path() if mount else None
+            if path in ('/', '/home', '/boot', '/boot/efi'):
+                continue
+            device = volume.get_identifier('unix-device')
+            name = volume.get_name()
+            row = Adw.ActionRow(title=esc(name), activatable=True)
+            row.set_subtitle(esc(short(path) if path else _('Not opened yet; it will be opened read-only')))
+            row.add_prefix(Gtk.Image(gicon=volume.get_symbolic_icon()))
+            row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+            row.connect('activated', lambda _r, v=volume, d=device, n=name: self.open_volume(v, d, n))
+            self.sources.add(row)
+            self.source_rows.append(row)
+            if path:
+                seen.add(path)
+        for mount in self.monitor.get_mounts():
+            root = mount.get_root()
+            path = root.get_path()
+            if mount.get_volume() is not None or not path or path in seen or path in ('/', '/home'):
+                continue
+            row = Adw.ActionRow(title=esc(mount.get_name()), subtitle=esc(short(path)), activatable=True)
+            row.add_prefix(Gtk.Image(gicon=mount.get_symbolic_icon()))
+            row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+            row.connect('activated', lambda _r, p=path, n=mount.get_name(): self.scan(p, n))
+            self.sources.add(row)
+            self.source_rows.append(row)
+        if not self.source_rows:
+            row = Adw.ActionRow(title=_('Nothing plugged in'),
+                                subtitle=_('Connect the old computer’s disk or a backup drive. A network share '
+                                           'opened in Files shows up here too.'), subtitle_lines=3)
+            row.add_prefix(Gtk.Image(icon_name='drive-harddisk-symbolic'))
+            self.sources.add(row)
+            self.source_rows.append(row)
+
+    def open_volume(self, volume, device, name):
+        mount = volume.get_mount()
+        if mount and mount.get_root().get_path():
+            self.scan(mount.get_root().get_path(), name)
+            return
+        if not device:
+            self.toast(_('{name} can’t be opened here.').format(name=name))
+            return
+
+        def work():
+            # Read-only: nothing on the old disk can change, and a Windows disk left in Fast
+            # Startup (hibernated) can still be read.
+            proc = subprocess.run(['udisksctl', 'mount', '-b', device, '-o', 'ro'], capture_output=True, text=True)
+            idle(done, proc)
+
+        def done(proc):
+            mount = volume.get_mount()
+            path = mount.get_root().get_path() if mount else None
+            if not path and proc.returncode == 0 and ' at ' in proc.stdout:
+                path = proc.stdout.strip().rsplit(' at ', 1)[1].rstrip('.')
+            if path:
+                self.scan(path, name)
+            else:
+                self.toast(_('{name} could not be opened: {error}').format(
+                    name=name, error=(proc.stderr.strip().splitlines() or [''])[-1]))
+        threading.Thread(target=work, daemon=True).start()
+
+    def choose_folder(self):
+        dialog = Gtk.FileDialog(title=_('Choose the Folder with Your Stuff'), modal=True)
+
+        def done(d, res):
+            try:
+                folder = d.select_folder_finish(res)
+            except GLib.Error:
+                return
+            if folder.get_path():
+                self.scan(folder.get_path(), folder.get_basename())
+        dialog.select_folder(self, None, done)
+
+    # -- 2. whose ---------------------------------------------------------------------------
+    def scan(self, path, name):
+        spinner = Adw.StatusPage(title=_('Looking at {name}…').format(name=esc(name)), child=Adw.Spinner())
+        waiting = self.page(name, 'scanning', spinner)
+        self.nav.push(waiting)
+
+        def work():
+            profiles = bringlib.detect_profiles(path)
+            idle(found, profiles)
+
+        def found(profiles):
+            if self.nav.get_visible_page() is not waiting:
+                return
+            self.source_root = path
+            self.source_name = name
+            if not profiles:
+                self.nav.pop()
+                self.toast(_('No Documents, Pictures or similar folders were found on {name}. Choose the '
+                             'folder that holds them.').format(name=name))
+            elif len(profiles) == 1:
+                self.nav.replace([self.nav.find_page('sources'), self.choose_page(profiles[0])])
+            else:
+                self.nav.replace([self.nav.find_page('sources'), self.people_page(profiles)])
+        threading.Thread(target=work, daemon=True).start()
+
+    def people_page(self, profiles):
+        page = Adw.PreferencesPage(description=_('These people had folders on {name}. Whose stuff do you want?').format(
+            name=esc(self.source_name)))
+        group = Adw.PreferencesGroup()
+        for profile in profiles:
+            row = Adw.ActionRow(title=esc(profile['name']), subtitle=esc(KINDS[profile['kind']]), activatable=True)
+            row.add_prefix(Gtk.Image(icon_name='avatar-default-symbolic'))
+            row.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+            row.connect('activated', lambda _r, p=profile: self.nav.push(self.choose_page(p)))
+            group.add(row)
+        page.add(group)
+        return self.page(_('Whose Stuff?'), 'people', page)
+
+    # -- 3. what ----------------------------------------------------------------------------
+    def choose_page(self, profile):
+        self.profile = profile
+        self.measure_cancel = threading.Event()
+        page = Adw.PreferencesPage()
+        kind = KINDS[profile['kind']]
+        page.set_description(_('From {name} ({kind}) on {source}. Files are added to your folders here; '
+                               'nothing here is replaced.').format(
+            name=esc(profile['name']), kind=esc(kind), source=esc(self.source_name)))
+
+        files = Adw.PreferencesGroup(title=_('Files'))
+        self.folder_rows = []
+        for folder in bringlib.folders_for(profile):
+            label, icon = LABELS[folder['key']]
+            row = Adw.SwitchRow(title=label, subtitle=_('Counting…'), active=folder['key'] in bringlib.DEFAULT_ON)
+            row.add_prefix(Gtk.Image(icon_name=icon))
+            row.folder = folder
+            row.size = None
+            row.connect('notify::active', lambda *_a: self.update_total())
+            files.add(row)
+            self.folder_rows.append(row)
+        page.add(files)
+
+        self.mark_rows = []
+        sources = bringlib.browser_sources(profile)
+        if sources:
+            marks = Adw.PreferencesGroup(
+                title=_('Bookmarks'),
+                description=_('Added to Parcha Browser in a folder called “{label}”, under Other bookmarks.').format(
+                    label=esc(self.bookmarks_label())))
+            for browser, reader, path in sources:
+                try:
+                    trees = reader(path)
+                except Exception:      # noqa: BLE001 - a damaged or unusual file: say so, carry on
+                    trees = None
+                count = bringlib.count_bookmarks(trees) if trees else 0
+                row = Adw.SwitchRow(title=esc(browser), active=count > 0, sensitive=count > 0)
+                row.set_subtitle(ngettext('{n} bookmark', '{n} bookmarks', count).format(n=count) if trees is not None
+                                 else _('Could not be read'))
+                row.add_prefix(Gtk.Image(icon_name='user-bookmarks-symbolic'))
+                row.browser, row.trees = browser, trees
+                marks.add(row)
+                self.mark_rows.append(row)
+            page.add(marks)
+
+        notes = Adw.PreferencesGroup(title=_('Not Brought Over'))
+        pw = Adw.ActionRow(title=_('Saved passwords'), subtitle_lines=4, subtitle=_(
+            'Browsers lock them with the old computer’s own keys. On the old computer, export them from the '
+            'browser’s password settings as a file, then import that file in Parcha Browser’s password settings.'))
+        pw.add_prefix(Gtk.Image(icon_name='dialog-password-symbolic'))
+        notes.add(pw)
+        wifi = bringlib.wifi_names(self.source_root)
+        if wifi:
+            row = Adw.ActionRow(title=ngettext('{n} Wi-Fi network', '{n} Wi-Fi networks', len(wifi)).format(n=len(wifi)),
+                                subtitle=esc(_('{names}. Their passwords are locked to the old computer; you’ll be asked '
+                                               'for each one the first time you connect.').format(
+                                                   names=', '.join(wifi[:6]) + ('…' if len(wifi) > 6 else ''))),
+                                subtitle_lines=4)
+            row.add_prefix(Gtk.Image(icon_name='network-wireless-symbolic'))
+            notes.add(row)
+        apps = Adw.ActionRow(title=_('Apps and settings'), subtitle_lines=3, subtitle=_(
+            'Programs from another system don’t run here. Parcha Store has apps for most things.'))
+        apps.add_prefix(Gtk.Image(icon_name='application-x-executable-symbolic'))
+        notes.add(apps)
+        page.add(notes)
+
+        bar = Gtk.Box(spacing=12, margin_top=10, margin_bottom=10, margin_start=18, margin_end=18)
+        self.total_label = Gtk.Label(xalign=0, hexpand=True, wrap=True, css_classes=['dim-label'])
+        self.go = Gtk.Button(label=_('Bring It Over'), css_classes=['suggested-action', 'pill'])
+        self.go.connect('clicked', lambda *_a: self.start())
+        bar.append(self.total_label)
+        bar.append(self.go)
+        nav_page = self.page(_('What to Bring'), 'choose', page, bar)
+        nav_page.connect('hidden', lambda *_a: self.measure_cancel.set())
+        self.update_total()
+
+        def measure():
+            for row in self.folder_rows:
+                if self.measure_cancel.is_set():
+                    return
+                n, total = bringlib.measure(row.folder['source'], self.measure_cancel)
+                idle(self.measured, row, n, total)
+        threading.Thread(target=measure, daemon=True).start()
+        return nav_page
+
+    def bookmarks_label(self):
+        return _('From {name} ({kind})').format(name=self.profile['name'], kind=KINDS[self.profile['kind']])
+
+    def measured(self, row, n, total):
+        row.size = (n, total)
+        row.set_subtitle(esc(ngettext('{n} file · {size} → {dest}', '{n} files · {size} → {dest}', n).format(
+            n=n, size=size_text(total), dest=short(row.folder['dest']))))
+        self.update_total()
+
+    def update_total(self):
+        chosen = [r for r in self.folder_rows if r.get_active()]
+        counting = any(r.size is None for r in chosen)
+        need = sum(r.size[1] for r in chosen if r.size)
+        free = Gio.File.new_for_path(bringlib.HOME).query_filesystem_info('filesystem::free', None) \
+            .get_attribute_uint64('filesystem::free')
+        if counting:
+            text = _('Counting what to copy…')
+        else:
+            text = _('{need} to copy · {free} free here').format(need=size_text(need), free=size_text(free))
+        self.total_label.set_label(text)
+        anything = bool(chosen) or any(r.get_active() for r in self.mark_rows)
+        self.go.set_sensitive(anything and not counting and need < free)
+        if not counting and need >= free:
+            self.total_label.set_label(_('Not enough space: {need} to copy, {free} free.').format(
+                need=size_text(need), free=size_text(free)))
+
+    # -- 4. copying -------------------------------------------------------------------------
+    def start(self):
+        folders = [r.folder for r in self.folder_rows if r.get_active()]
+        total = sum(r.size[1] for r in self.folder_rows if r.get_active() and r.size)
+        marks = [(r.browser, r.trees) for r in self.mark_rows if r.get_active() and r.trees]
+        self.cancel = threading.Event()
+        status = Adw.StatusPage(icon_name='folder-download-symbolic', title=_('Bringing Your Stuff Over'))
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        bar = Gtk.ProgressBar(show_text=True)
+        now = Gtk.Label(ellipsize=3, css_classes=['dim-label'])
+        stop = Gtk.Button(label=_('Stop'), halign=Gtk.Align.CENTER, css_classes=['pill'])
+        stop.connect('clicked', lambda *_a: self.cancel.set())
+        for w in (bar, now, stop):
+            box.append(w)
+        status.set_child(Adw.Clamp(maximum_size=420, child=box))
+        page = self.page(_('Copying'), 'copying', status)
+        page.set_can_pop(False)
+        self.nav.push(page)
+        report = bringlib.CopyReport()
+        state = {'done': 0, 'shown': 0.0}
+
+        def progress(rel, size):
+            state['done'] += size
+            t = time.monotonic()
+            if t - state['shown'] > 0.1:
+                state['shown'] = t
+                idle(show, rel, state['done'])
+
+        def show(rel, done):
+            bar.set_fraction(min(1.0, done / total) if total else 1.0)
+            bar.set_text(_('{done} of {total}').format(done=size_text(done), total=size_text(total)))
+            now.set_label(rel)
+
+        def work():
+            for folder in folders:
+                if self.cancel.is_set():
+                    break
+                bringlib.copy_folder(folder['source'], folder['dest'], report, progress, self.cancel)
+            result = None
+            if marks and not self.cancel.is_set():
+                idle(now.set_label, _('Adding bookmarks…'))
+                if bringlib.browser_running():
+                    result = 'running'
+                else:
+                    try:
+                        result = bringlib.import_into_chromium(marks, self.bookmarks_label())
+                    except OSError as e:
+                        result = e
+            idle(self.finished, report, result, marks, folders)
+        threading.Thread(target=work, daemon=True).start()
+
+    # -- 5. done ----------------------------------------------------------------------------
+    def finished(self, report, bookmarks, marks, folders):
+        stopped = self.cancel.is_set()
+        page = Adw.PreferencesPage()
+        head = Adw.StatusPage(icon_name='object-select-symbolic' if not stopped else 'process-stop-symbolic',
+                              title=_('Stopped') if stopped else _('Your Stuff Is Here'))
+        head.add_css_class('compact')
+        group = Adw.PreferencesGroup()
+        group.add(head)
+        page.add(group)
+        summary = Adw.PreferencesGroup()
+
+        def line(icon, title, subtitle=None):
+            row = Adw.ActionRow(title=esc(title), subtitle=esc(subtitle or ''), subtitle_lines=3)
+            row.add_prefix(Gtk.Image(icon_name=icon))
+            summary.add(row)
+            return row
+
+        if folders:
+            line('folder-symbolic', ngettext('Copied {n} file ({size})', 'Copied {n} files ({size})', report.copied).format(
+                n=report.copied, size=size_text(report.bytes)),
+                ', '.join(LABELS[f['key']][0] for f in folders))
+        if report.same:
+            line('object-select-symbolic', ngettext('{n} file was already here', '{n} files were already here',
+                                                    report.same).format(n=report.same), _('Not copied again.'))
+        if report.renamed:
+            line('edit-copy-symbolic', ngettext('{n} file had the same name as one here',
+                                                '{n} files had the same name as one here', len(report.renamed)).format(
+                n=len(report.renamed)), _('Both kept, the copy with a number: {names}').format(
+                names=', '.join(report.renamed[:5]) + ('…' if len(report.renamed) > 5 else '')))
+        if report.failed:
+            row = Adw.ExpanderRow(title=esc(ngettext('{n} file could not be read', '{n} files could not be read',
+                                                     len(report.failed)).format(n=len(report.failed))))
+            row.add_prefix(Gtk.Image(icon_name='dialog-warning-symbolic'))
+            for path, why in report.failed[:50]:
+                row.add_row(Adw.ActionRow(title=esc(os.path.basename(path)), subtitle=esc(why)))
+            summary.add(row)
+        if marks:
+            if isinstance(bookmarks, int):
+                line('user-bookmarks-symbolic', ngettext('Added {n} bookmark to Parcha Browser',
+                                                         'Added {n} bookmarks to Parcha Browser', bookmarks).format(n=bookmarks),
+                     _('In Other bookmarks › {label}').format(label=self.bookmarks_label()))
+            elif bookmarks == 'running':
+                row = line('user-bookmarks-symbolic', _('Bookmarks not added yet'),
+                           _('Parcha Browser is open. Close it, then press Add.'))
+                add = Gtk.Button(label=_('Add'), valign=Gtk.Align.CENTER)
+                add.connect('clicked', lambda *_a: self.retry_bookmarks(marks, row, add))
+                row.add_suffix(add)
+            elif bookmarks is not None:
+                line('dialog-warning-symbolic', _('Bookmarks could not be added'), str(bookmarks))
+        line('dialog-password-symbolic', _('Not brought over: saved passwords and Wi-Fi passwords'),
+             _('For browser passwords, export them on the old computer as a file and import it in Parcha '
+               'Browser’s password settings. Wi-Fi asks for each password the first time you connect.'))
+        page.add(summary)
+
+        bar = Gtk.Box(spacing=12, margin_top=10, margin_bottom=10, margin_start=18, margin_end=18, halign=Gtk.Align.END)
+        if folders:
+            show = Gtk.Button(label=_('Show in Files'), css_classes=['pill'])
+            show.connect('clicked', lambda *_a: Gio.AppInfo.launch_default_for_uri(
+                Gio.File.new_for_path(folders[0]['dest']).get_uri(), None))
+            bar.append(show)
+        done = Gtk.Button(label=_('Done'), css_classes=['suggested-action', 'pill'])
+        done.connect('clicked', lambda *_a: self.close())
+        bar.append(done)
+        result = self.page(_('Done'), 'done', page, bar)
+        result.set_can_pop(False)
+        self.nav.replace([result])
+
+    def retry_bookmarks(self, marks, row, button):
+        if bringlib.browser_running():
+            self.toast(_('Parcha Browser is still open.'))
+            return
+        try:
+            n = bringlib.import_into_chromium(marks, self.bookmarks_label())
+        except OSError as e:
+            row.set_subtitle(esc(str(e)))
+            return
+        row.set_title(esc(ngettext('Added {n} bookmark to Parcha Browser', 'Added {n} bookmarks to Parcha Browser', n).format(n=n)))
+        row.set_subtitle(esc(_('In Other bookmarks › {label}').format(label=self.bookmarks_label())))
+        button.set_visible(False)
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_OPEN)
+
+    def do_activate(self):
+        win = self.props.active_window or Window(self)
+        win.present()
+
+    def do_open(self, files, n_files, hint):
+        win = self.props.active_window or Window(self)
+        win.present()
+        if files and files[0].get_path():
+            win.scan(files[0].get_path(), files[0].get_basename())
+
+
+if __name__ == '__main__':
+    try:
+        locale.setlocale(locale.LC_ALL, '')
+    except locale.Error:
+        pass
+    sys.exit(App().run(sys.argv))

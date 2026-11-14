@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        96%{?dist}
+Release:        97%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -133,6 +133,8 @@ Requires:       parchaos-nearby
 # Ctrl+Alt+T translates the selection on this computer (ticket #152); the engine and
 # models are added on first use, after asking.
 Requires:       parchaos-translate
+# Bring files and bookmarks from another computer (ticket #157).
+Requires:       parchaos-bring
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
 # Not nautilus-gsconnect: it runs on nautilus-python 4.1, which needs the
@@ -309,6 +311,9 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-97
+- Ticket #157: Requires parchaos-bring (Bring Your Stuff).
+
 * Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-96
 - Ticket #152: Requires parchaos-translate (Translate Selection, Ctrl+Alt+T)
   and enables its extension for everyone.
