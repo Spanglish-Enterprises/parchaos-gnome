@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        85%{?dist}
+Release:        86%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -102,7 +102,7 @@ BuildRequires:  systemd-rpm-macros
 Requires:       parcher
 Requires:       parchaos-dock
 Requires:       parchaos-global-menu
-Requires:       parchaos-gtk-theme >= 2026.09.23-25
+Requires:       parchaos-gtk-theme >= 2026.09.23-26
 Requires:       parchaos-icon-theme >= 2026.09.23-25
 Requires:       parchaos-gnome-plymouth-theme
 Requires:       parchaos-gnome-wallpaper
@@ -281,6 +281,11 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-86
+- Ticket #178: theme-sync copies theme assets that are new since an account
+  was created (the new title buttons) into ~/.config/gtk-4.0, where GTK 4
+  looks for them; nothing already there is changed.
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-85
 - Ticket #177: icon-style setting (standard, dark, glass, mono). theme-sync
   now follows GNOME's accent colour too: it switches GTK 3 to the theme

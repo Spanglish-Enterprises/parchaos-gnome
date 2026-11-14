@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        25%{?dist}
+Release:        26%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -59,6 +59,8 @@ Source3:        recolor-titlebuttons.py
 Source4:        parchaos-classic.css
 # Accent colours (ticket #177): see the script's header.
 Source5:        accent-colours.py
+# Window chrome (ticket #178): see the script's header.
+Source6:        window-chrome.py
 Source91:       LICENSE-ARTWORK
 
 BuildArch:      noarch
@@ -303,6 +305,9 @@ done
 python3 %{SOURCE3} %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel
 # GNOME's accent colour: GTK 4 follows it live, GTK 3 gets a theme copy per colour.
 python3 %{SOURCE5} %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel/.config/gtk-4.0
+# ParchaOS title buttons, one 12 px corner radius, dimmed unfocused titles,
+# edge-to-edge sidebars.
+python3 %{SOURCE6} %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel/.config/gtk-4.0
 # Also shipped, so parchaos-theme-sync can recolor the libadwaita copy in
 # accounts that were created before this release (~/.config/gtk-4.0 is a
 # frozen copy of the skeleton).
@@ -317,6 +322,14 @@ install -Dm 0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-recolor-titlebut
 %{_libexecdir}/parchaos-recolor-titlebuttons
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-26
+- Ticket #178: window chrome refresh (window-chrome.py). Title buttons are
+  ParchaOS's own glass discs (SVG, rose / gold / violet, our own glyphs on
+  hover) instead of the upstream PNGs, at half strength in unfocused
+  windows, with a short bounce on hover in GTK 4 apps. Windows have one
+  12 px corner radius (was 24 px) in GTK 3 and GTK 4. Unfocused windows'
+  titles are dimmed to half. Sidebars run to the window's edges.
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-25
 - Ticket #177: GNOME's accent colour reaches every app. The stylesheets
   used to pin one blue, which also overrode libadwaita's accent. Now GTK 4

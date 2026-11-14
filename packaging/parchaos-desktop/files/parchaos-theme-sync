@@ -144,6 +144,30 @@ def gtk4_links(config_dir, themes_dir, theme):
     return changed
 
 
+def gtk4_assets(config_dir, themes_dir, theme):
+    """Add the theme's newer asset files to the account's own copies.
+
+    The GTK 4 stylesheet is linked from ~/.config/gtk-4.0, so the images it
+    names resolve there, in the assets and windows-assets folders a new
+    account copied from /etc/skel. Files the theme gained since (the title
+    buttons of ticket #178) are copied in; nothing already there is changed.
+    Returns the number of files added.
+    """
+    added = 0
+    for name in ('assets', 'windows-assets'):
+        source = os.path.join(themes_dir, theme, 'gtk-4.0', name)
+        target = os.path.join(config_dir, name)
+        if not os.path.isdir(source) or not os.path.isdir(target) or os.path.islink(target):
+            continue
+        for entry in os.listdir(source):
+            src, dst = os.path.join(source, entry), os.path.join(target, entry)
+            if os.path.isfile(src) and not os.path.lexists(dst):
+                with open(src, 'rb') as fin, open(dst, 'wb') as fout:
+                    fout.write(fin.read())
+                added += 1
+    return added
+
+
 class ThemeSync:
     def __init__(self):
         self.interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
@@ -206,6 +230,7 @@ class ThemeSync:
             theme = base
         # The accent copies share the base theme's GTK 4 stylesheet, which follows the accent.
         gtk4_links(os.path.expanduser('~/.config/gtk-4.0'), THEMES_DIR, base)
+        gtk4_assets(os.path.expanduser('~/.config/gtk-4.0'), THEMES_DIR, base)
         for target, key in self.targets:
             current = target.get_string(key)
             if current.startswith('ParchaOS') and current != theme:

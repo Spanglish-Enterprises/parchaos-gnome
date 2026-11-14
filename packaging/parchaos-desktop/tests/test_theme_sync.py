@@ -80,6 +80,22 @@ def main():
         check(ts.migrated('MacTahoe-Light', root) == 'MacTahoe-Light', 'left alone when the twin is missing')
         check(ts.migrated('Adwaita', root) == 'Adwaita', 'other themes are untouched')
 
+    # New theme assets reach the account's own copies; nothing there is overwritten (#178).
+    with tempfile.TemporaryDirectory() as root:
+        src = os.path.join(root, 'themes', 'ParchaOS-Dark', 'gtk-4.0', 'windows-assets')
+        os.makedirs(src)
+        for name, body in (('titlebutton-close.png', 'new'), ('titlebutton-close.svg', 'svg')):
+            with open(os.path.join(src, name), 'w') as f:
+                f.write(body)
+        cfg = os.path.join(root, 'gtk-4.0', 'windows-assets')
+        os.makedirs(cfg)
+        with open(os.path.join(cfg, 'titlebutton-close.png'), 'w') as f:
+            f.write('old')
+        check(ts.gtk4_assets(os.path.dirname(cfg), os.path.join(root, 'themes'), 'ParchaOS-Dark') == 1, 'one file added')
+        check(open(os.path.join(cfg, 'titlebutton-close.svg')).read() == 'svg', 'the new button is copied')
+        check(open(os.path.join(cfg, 'titlebutton-close.png')).read() == 'old', 'existing files are left alone')
+        check(ts.gtk4_assets(os.path.dirname(cfg), os.path.join(root, 'themes'), 'ParchaOS-Dark') == 0, 'a second run adds nothing')
+
     # libadwaita stylesheets follow the style and appearance (ticket #135).
     with tempfile.TemporaryDirectory() as root:
         themes = os.path.join(root, 'themes')
