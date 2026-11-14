@@ -53,6 +53,7 @@ uniform float u_ao;         // inner shadow strength
 uniform float u_aor;        // inner shadow reach, px
 uniform float u_shr;        // drop shadow radius, px
 uniform float u_shi;        // drop shadow strength
+uniform float u_physical;   // 1 = lens offset from the glass thickness (ticket #202), 0 = tuned falloff
 
 // Rounded rectangle whose corners are superellipse quadrants (|x|^n + |y|^n = r^n): n = 2 is
 // the circular corner, n ~ 2.5-3 the reference's continuous corner that eases into the edge.
@@ -165,6 +166,12 @@ void main() {
     }
     float edgeT = clamp(1.0 + d / band, 0.0, 1.0);
     float lens = pow(edgeT, u_falloff);
+    // Physical lens (ticket #202, after quickLiquid's PHYSICS.md, MIT): the sideways shift is the
+    // refracted ray's slope times how much glass it crosses (the bezel height). It is zero at the
+    // rim and in the flat middle and peaks inside the bezel, so the edge has no step and the
+    // falloff needs no tuning. The 2.6 brings its peak to about the tuned lens's strength.
+    if (u_physical > 0.5)
+        lens = clamp(2.6 * height(d, band) / max(u_z, 1.0), 0.0, 1.0);
     vec2 dispPx = disp * lens * lensScale;
     float dl = length(dispPx);
     if (dl > 96.0)
@@ -175,7 +182,12 @@ void main() {
     vec2 cv = cdir * u_chroma * lens;
     vec3 col = backdrop(px + dispPx, stretch);
     // colour fringing only where the lens bends: three blurs per pixel cost too much elsewhere
-    if (length(cv) > 0.05) {
+    if (u_physical > 0.5 && dl > 0.5) {
+        // Dispersion in proportion to the local shift: blue bends more than red, as in crown glass.
+        float ca = clamp(u_chroma / 4.0, 0.0, 1.0);
+        col.r = backdrop(px + dispPx * (1.0 - 0.10 * ca), stretch).r;
+        col.b = backdrop(px + dispPx * (1.0 + 0.14 * ca), stretch).b;
+    } else if (u_physical < 0.5 && length(cv) > 0.05) {
         col.r = backdrop(px + dispPx + cv, stretch).r;
         col.b = backdrop(px + dispPx - cv, stretch).b;
     }
@@ -234,6 +246,9 @@ export const GLASS_DEFAULTS = {
     blur: 8.0, tint: 0.3, tintc: [0.10, 0.07, 0.15], bright: 1.0, contrast: 1.0, sat: 1.2,
     rim: 0.8, rimw: 2.6, rimdir: 1.9, rimpow: 3.0, hair: 0.0, spec: 0.0, shin: 42, sheen: 0.0,
     dim: 0.68, bgblur: 0, light: 135 * Math.PI / 180, ao: 0.08, aor: 12, shr: 22, shi: 0.06, pad: 44,
+    // The physical lens (ticket #202) is off until the owner has compared it on a real desktop;
+    // PARCHAOS_GLASS_PHYSICAL=1 in the session environment turns it on to try.
+    physical: GLib.getenv('PARCHAOS_GLASS_PHYSICAL') === '1' ? 1 : 0,
 };
 
 // ---- Clear to Tinted (ticket #171) ------------------------------------------------------------
@@ -471,6 +486,7 @@ class GlassPane extends St.Widget {
         f('u_rim', p.rim); f('u_rimw', p.rimw); f('u_rimdir', p.rimdir); f('u_rimpow', p.rimpow); f('u_hair', p.hair);
         f('u_spec', p.spec); f('u_shin', p.shin); f('u_sheen', p.sheen); f('u_light', p.light);
         f('u_ao', p.ao); f('u_aor', p.aor); f('u_shr', p.shr); f('u_shi', p.shi);
+        f('u_physical', p.physical ?? 0);
         this._inner.opacity = 255;
         f('u_tr', p.tintc[0]); f('u_tg', p.tintc[1]); f('u_tb', p.tintc[2]);
         this._effect.queue_repaint();

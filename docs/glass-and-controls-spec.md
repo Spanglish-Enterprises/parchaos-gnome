@@ -67,6 +67,25 @@ To do:
 6. **GNOME 51 / Fedora 45**: re-check `Clutter.ShaderEffect`, `global.stage.context`, clone sources; extensions already declare 51.
 7. **GPU cost**: measure (nested shell with `GALLIUM_HUD` or `intel_gpu_top` equivalent); add a switch in Settings if heavy. Refraction stays opt-in (Settings asks when Glass is turned on).
 
+### 4.1a Research: quickLiquid (ticket #202, 2026-11-13)
+
+https://github.com/amarnath3003/quickLiquid (MIT) is a browser library (TypeScript, SVG
+`feDisplacementMap` behind `backdrop-filter`), not a GNOME extension; none of its code fits a Clutter
+shader. Its `PHYSICS.md` is the useful part:
+
+- **Lens profile.** Shift = glass thickness at that point x refracted slope (Snell, quarter-ellipse
+  bezel). It is zero at the rim and in the flat middle and peaks inside the bezel, so there is no
+  step at the edge and no falloff to tune. Our tuned lens is strongest at the rim (`pow(edgeT,
+  falloff)`) and drops to nothing just outside it. Added to `glass.js` as an option (`physical`,
+  `PARCHAOS_GLASS_PHYSICAL=1`), off by default; same GPU cost.
+- **Dispersion.** One shift, scaled per channel (red x(1 - 0.10c), blue x(1 + 0.14c)), so fringing
+  follows the bend; ours offsets red and blue by a fixed amount along it. Used with the physical lens.
+- **Band-limited work.** Only the bezel band needs refraction; the flat middle is a plain blur. Our
+  shader already skips the outside; skipping the lens maths in the middle is a small possible win.
+- Not applicable: its 8-bit map encoding, map cache and Chromium fallbacks (browser-only problems).
+- Comparison render (grid wallpaper, top tuned, bottom physical) is attached to ticket #202.
+- Naming: the word "liquid" stays out of our package names and UI, as in section 1.
+
 ### 4.2 Edit Controls (ticket #148)
 **2026-10-01 late, picker rebuilt from measurements of `edit controls.png`** (logical px): 244 px sidebar (search 206x27, 46 px category rows, 25 px app-style icons), gallery lists *every* control by category (as the reference: placed ones too; drag moves, click lights it up), Suggestions first (controls not in the panel lead), 65 px cells / 11 px gaps, names under tiles, footer over a divider. Window 55% x 88%, 18 px corners, centred left of Control Center (never overlapping), moved by its background. Two spare rows of empty slots. **What's New card hidden for the first release (owner)**; code kept behind `SHOW_WHATS_NEW`. Biggest remaining gap vs the reference: number of controls (reference has ~17 categories: Battery, Clock with alarm/stopwatch/timer, Home, Keyboards, Notes, Calculator, Screen Mirroring, Voice Memo, Quick Note...).
 Done: edit mode, separate movable picker, drag from picker, placeholders, corner resize handle (drag, snaps to allowed sizes), per-connection tiles, icon-only at 1x1.

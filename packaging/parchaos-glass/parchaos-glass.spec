@@ -7,7 +7,7 @@
 
 Name:           parchaos-glass
 Version:        1.0.0
-Release:        16%{?dist}
+Release:        17%{?dist}
 Summary:        ParchaOS's own glass for the desktop
 
 License:        GPL-3.0-or-later AND MIT
@@ -44,6 +44,9 @@ install -Dm0644 %{SOURCE1} %{buildroot}%{_datadir}/parchaos-glass/NOTICE
 %{_datadir}/parchaos-glass/
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-17
+- Ticket #202: optional physical lens profile (shift = glass thickness x refracted slope, zero at the rim, dispersion in proportion to the shift), after quickLiquid's optics notes (MIT, credited in NOTICE). Off by default; PARCHAOS_GLASS_PHYSICAL=1 turns it on. No change to the shipped look.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-16
 - Ticket #37: works on GNOME 51 (Fedora 45). GNOME 51 removed ShaderEffect.set_shader_source, so every glass pane failed to build; the shader is now handed over as a Cogl snippet (vfunc_get_static_snippet) on 51, and GNOME 50 keeps the old call. Checked in a Fedora 45 test tree (dock pane draws, no errors) and on GNOME 50 (screenshots unchanged).
 
