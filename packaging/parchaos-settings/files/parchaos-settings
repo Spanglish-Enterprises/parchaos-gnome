@@ -14,7 +14,8 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
+gi.require_version('GdkPixbuf', '2.0')
+from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk  # noqa: E402
 
 APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
@@ -990,6 +991,9 @@ class Window(Adw.ApplicationWindow):
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
         page.add(self._colours_group(schema))
+        wallpapers = self._wallpaper_group()
+        if wallpapers is not None:
+            page.add(wallpapers)
         if 'menu-bar-background' in schema.list_keys():
             group.add(self._menu_bar_row())
         if 'glass-clarity' in schema.list_keys():
@@ -1022,6 +1026,7 @@ class Window(Adw.ApplicationWindow):
         .parchaos-swatch image { color: white; -gtk-icon-size: 14px; opacity: 0; }
         .parchaos-swatch:checked image { opacity: 1; }
         .parchaos-preview { padding: 14px; }
+        .parchaos-wallpaper-thumb { border-radius: 6px; }
         .parchaos-preview .selected-text { background-color: color-mix(in srgb, var(--accent-bg-color) 30%, transparent);
                                            border-radius: 4px; padding: 0 4px; }
     ''' + ''.join(f'.parchaos-swatch.{name} {{ background-color: var(--accent-{name}); color: var(--accent-{name}); }}\n'
@@ -1093,6 +1098,74 @@ class Window(Adw.ApplicationWindow):
             self._desktop.connect('changed::icon-style', load_style)
             group.add(row)
             follow_lock(row, self._desktop, 'icon-style')
+        return group
+
+    # Wallpapers (ticket #166): ParchaOS's own, including Hills, which can follow the time of day.
+    HILLS = '/usr/share/backgrounds/parchaos/hills'
+    DEFAULT_WALLPAPER = '/usr/share/backgrounds/parchaos/parchaos-wallpaper.png'
+
+    def _wallpaper_group(self):
+        hills = os.environ.get('PARCHAOS_HILLS', self.HILLS)
+        choices = [
+            (_('Hills Through the Day'), _('Dawn, day, dusk and night, following the clock.'),
+             f'{hills}/hills-dusk-thumb.png', (f'{hills}/hills-timed.xml', f'{hills}/hills-timed.xml')),
+            (_('Hills, Light and Dark'), _('The hills by day in light mode and at night in dark mode.'),
+             f'{hills}/hills-night-thumb.png', (f'{hills}/hills-day.jpg', f'{hills}/hills-night.jpg')),
+            (_('ParchaOS'), _('The dark gradient with the logo.'), self.DEFAULT_WALLPAPER,
+             (self.DEFAULT_WALLPAPER, self.DEFAULT_WALLPAPER)),
+        ]
+        choices = [c for c in choices if all(os.path.exists(f) for f in c[3])]
+        if not choices:
+            return None
+        background = Gio.Settings(schema_id='org.gnome.desktop.background')
+        self._background = background      # keep the connection alive with the page
+        group = Adw.PreferencesGroup(title=_('Wallpaper'))
+        first = None
+        buttons = []
+        for title, subtitle, thumb, (light, dark) in choices:
+            check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            if first is None:
+                first = check
+            else:
+                check.set_group(first)
+            row = Adw.ActionRow(title=title, subtitle=subtitle, activatable_widget=check)
+            row.add_prefix(check)
+            try:
+                small = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumb, 96, 54, False)
+                picture = Gtk.Picture(paintable=Gdk.Texture.new_for_pixbuf(small), can_shrink=False,
+                                      valign=Gtk.Align.CENTER, overflow=Gtk.Overflow.HIDDEN,
+                                      css_classes=['parchaos-wallpaper-thumb'])
+                row.add_suffix(picture)
+            except GLib.Error:
+                pass
+            uris = (Gio.File.new_for_path(light).get_uri(), Gio.File.new_for_path(dark).get_uri())
+
+            def chosen(button, uris=uris):
+                if not button.get_active():
+                    return
+                if (background.get_string('picture-uri'), background.get_string('picture-uri-dark')) != uris:
+                    background.set_string('picture-uri', uris[0])
+                    background.set_string('picture-uri-dark', uris[1])
+                    background.set_string('picture-options', 'zoom')
+            check.connect('toggled', chosen)
+            buttons.append((check, uris))
+            group.add(row)
+            follow_lock(row, background, 'picture-uri')
+
+        def load(*_a):
+            now = (background.get_string('picture-uri'), background.get_string('picture-uri-dark'))
+            for check, uris in buttons:
+                if uris == now and not check.get_active():
+                    check.set_active(True)
+        load()
+        background.connect('changed::picture-uri', load)
+        background.connect('changed::picture-uri-dark', load)
+
+        more = Adw.ActionRow(title=_('More Wallpapers'), subtitle=_('Pictures of your own, and GNOME’s.'),
+                             activatable=True)
+        more.add_suffix(Gtk.Image(icon_name='adw-external-link-symbolic'))
+        more.connect('activated', lambda *_a: subprocess.Popen(['gnome-control-center', 'background']))
+        group.add(more)
         return group
 
     def _colour_preview(self):

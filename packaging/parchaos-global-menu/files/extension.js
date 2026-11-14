@@ -35,6 +35,48 @@ import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import Gettext from 'gettext';
 import {Tiling, tile, arrange} from './tiling.js';
 
+/**
+ * The picture a GNOME slideshow XML shows at `now` (a GLib.DateTime): the slides run in turn from
+ * <starttime>, each <static> for its duration and each <transition> fading <from> to <to>
+ * (the nearer one counts), and the whole show repeats. Falls back to the first picture.
+ */
+export function slideNow(xml, now) {
+    const first = /<file>\s*([^<]+?)\s*<\/file>/.exec(xml);
+    const num = (tag, src) => parseInt((new RegExp(`<${tag}>\\s*(\\d+)\\s*</${tag}>`).exec(src) ?? [0, '0'])[1]);
+    const start = /<starttime>([\s\S]*?)<\/starttime>/.exec(xml);
+    const slides = [];
+    const re = /<(static|transition)[^>]*>([\s\S]*?)<\/\1>/g;
+    let m;
+    while ((m = re.exec(xml)) !== null) {
+        const duration = parseFloat((/<duration>\s*([\d.]+)\s*<\/duration>/.exec(m[2]) ?? [0, '0'])[1]);
+        if (m[1] === 'static') {
+            const f = /<file>\s*([^<]+?)\s*<\/file>/.exec(m[2]);
+            if (f)
+                slides.push({duration, from: f[1], to: f[1]});
+        } else {
+            const from = /<from>\s*([^<]+?)\s*<\/from>/.exec(m[2]);
+            const to = /<to>\s*([^<]+?)\s*<\/to>/.exec(m[2]);
+            if (from && to)
+                slides.push({duration, from: from[1], to: to[1]});
+        }
+    }
+    const total = slides.reduce((a, sl) => a + sl.duration, 0);
+    if (!start || !slides.length || total <= 0)
+        return first?.[1] ?? null;
+    const begin = GLib.DateTime.new_local(num('year', start[1]), num('month', start[1]) || 1, num('day', start[1]) || 1,
+        num('hour', start[1]), num('minute', start[1]), num('second', start[1]));
+    let t = (now.to_unix() - begin.to_unix()) % total;
+    if (t < 0)
+        t += total;
+    for (const sl of slides) {
+        if (t < sl.duration)
+            return t < sl.duration / 2 ? sl.from : sl.to;
+        t -= sl.duration;
+    }
+    return slides[slides.length - 1].to;
+}
+
+
 // Translations (ticket #146/#53). Bound to the domain directly, not through the Extension's
 // gettext, because MENU_TABLE is built when the module loads, before the extension object exists.
 const DOMAIN = 'parchaos-global-menu';
@@ -321,6 +363,9 @@ class MenuBarTint {
         this._signals = [];
         this._fileMonitor?.cancel();
         this._fileMonitor = null;
+        if (this._slideTimer)
+            GLib.source_remove(this._slideTimer);
+        this._slideTimer = 0;
         this._panel.remove_style_class_name('parchaos-menubar-light');
     }
 
@@ -359,13 +404,23 @@ class MenuBarTint {
     }
 
     async _loadPixbuf(file) {
-        // GNOME dynamic wallpapers are XML slideshows; use the first image.
+        // GNOME dynamic wallpapers are XML slideshows: use the picture showing now (ticket #166),
+        // and look again in ten minutes, when the slide may have changed.
+        if (this._slideTimer) {
+            GLib.source_remove(this._slideTimer);
+            this._slideTimer = 0;
+        }
         if (file.get_path()?.endsWith('.xml')) {
             const [bytes] = await file.load_contents_async(this._cancellable);
-            const m = /<file>\s*([^<]+?)\s*<\/file>/.exec(new TextDecoder().decode(bytes));
-            if (!m)
+            const path = slideNow(new TextDecoder().decode(bytes), GLib.DateTime.new_now_local());
+            if (!path)
                 return null;
-            file = Gio.File.new_for_path(m[1]);
+            file = Gio.File.new_for_path(path);
+            this._slideTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 600, () => {
+                this._slideTimer = 0;
+                this._queue();
+                return GLib.SOURCE_REMOVE;
+            });
         }
         const stream = await file.read_async(GLib.PRIORITY_DEFAULT, this._cancellable);
         return new Promise((resolve, reject) => {

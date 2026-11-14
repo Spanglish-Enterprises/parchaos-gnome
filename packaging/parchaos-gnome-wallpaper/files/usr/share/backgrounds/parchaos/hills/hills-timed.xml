@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ParchaOS Hills through the day (ticket #166): night until 5:45, dawn 6:30 to 7:45, day
+     8:30 to 17:15, dusk 18:00 to 19:30, night from 20:15, with 45-minute fades between.
+     Made by make-time-of-day.py in this package; artwork CC BY-SA 4.0. -->
+<background>
+  <starttime>
+    <year>2026</year>
+    <month>1</month>
+    <day>1</day>
+    <hour>0</hour>
+    <minute>0</minute>
+    <second>0</second>
+  </starttime>
+  <static>
+    <duration>20700.0</duration>
+    <file>/usr/share/backgrounds/parchaos/hills/hills-night.jpg</file>
+  </static>
+  <transition type="overlay">
+    <duration>2700.0</duration>
+    <from>/usr/share/backgrounds/parchaos/hills/hills-night.jpg</from>
+    <to>/usr/share/backgrounds/parchaos/hills/hills-dawn.jpg</to>
+  </transition>
+  <static>
+    <duration>4500.0</duration>
+    <file>/usr/share/backgrounds/parchaos/hills/hills-dawn.jpg</file>
+  </static>
+  <transition type="overlay">
+    <duration>2700.0</duration>
+    <from>/usr/share/backgrounds/parchaos/hills/hills-dawn.jpg</from>
+    <to>/usr/share/backgrounds/parchaos/hills/hills-day.jpg</to>
+  </transition>
+  <static>
+    <duration>31500.0</duration>
+    <file>/usr/share/backgrounds/parchaos/hills/hills-day.jpg</file>
+  </static>
+  <transition type="overlay">
+    <duration>2700.0</duration>
+    <from>/usr/share/backgrounds/parchaos/hills/hills-day.jpg</from>
+    <to>/usr/share/backgrounds/parchaos/hills/hills-dusk.jpg</to>
+  </transition>
+  <static>
+    <duration>5400.0</duration>
+    <file>/usr/share/backgrounds/parchaos/hills/hills-dusk.jpg</file>
+  </static>
+  <transition type="overlay">
+    <duration>2700.0</duration>
+    <from>/usr/share/backgrounds/parchaos/hills/hills-dusk.jpg</from>
+    <to>/usr/share/backgrounds/parchaos/hills/hills-night.jpg</to>
+  </transition>
+  <static>
+    <duration>13500.0</duration>
+    <file>/usr/share/backgrounds/parchaos/hills/hills-night.jpg</file>
+  </static>
+</background>

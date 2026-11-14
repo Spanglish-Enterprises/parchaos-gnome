@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<!-- ParchaOS wallpapers, listed in GNOME Settings > Appearance (ticket #166). -->
+<wallpapers>
+  <wallpaper deleted="false">
+    <name>Hills Through the Day</name>
+    <filename>/usr/share/backgrounds/parchaos/hills/hills-timed.xml</filename>
+    <options>zoom</options>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Hills</name>
+    <filename>/usr/share/backgrounds/parchaos/hills/hills-day.jpg</filename>
+    <filename-dark>/usr/share/backgrounds/parchaos/hills/hills-night.jpg</filename-dark>
+    <options>zoom</options>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>ParchaOS</name>
+    <filename>/usr/share/backgrounds/parchaos/parchaos-wallpaper.png</filename>
+    <options>zoom</options>
+  </wallpaper>
+</wallpapers>

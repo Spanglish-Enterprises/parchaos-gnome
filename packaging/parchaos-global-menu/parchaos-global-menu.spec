@@ -33,7 +33,7 @@
 
 Name:           parchaos-global-menu
 Version:        2.1.0
-Release:        42%{?dist}
+Release:        43%{?dist}
 Summary:        ParchaOS's global application menu bar for GNOME Shell
 
 License:        GPL-3.0-or-later AND CC-BY-SA-4.0
@@ -115,6 +115,11 @@ msgfmt --check -o %{buildroot}%{_datadir}/locale/es/LC_MESSAGES/parchaos-global-
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-global-menu.mo
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2.1.0-43
+- Ticket #166: with a time-of-day (slideshow) wallpaper, the menu bar tint
+  follows the picture showing now, not the first one, and looks again every
+  ten minutes.
+
 * Mon Nov 09 2026 ParchaOS packaging - 2.1.0-42
 - Ticket #182: window tiling (tiling.js). Drag a window to a left or right edge for a half, a corner for a quarter, the top for fill, with a preview of where it goes; GNOME's own edge tiling is off while this runs. Ctrl+Super+arrows: halves, Up/Down into quarters, Up fills, Down returns to the size before tiling (keys in org.parchaos.globalmenu tile-*). Window menu: Move & Resize (quarters, thirds, two thirds, fill, previous size) and Arrange Windows (two, three, four). One code path for all three; works per monitor. Spanish strings added.
 

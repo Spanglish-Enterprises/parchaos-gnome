@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        39%{?dist}
+Release:        40%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 1.0.0-40
+- Ticket #166: a Wallpaper group in Appearance: Hills Through the Day (follows
+  the clock), Hills light and dark, the ParchaOS default, and More Wallpapers
+  (GNOME Settings). Locked by an organisation's policy like the rest.
+
 * Sat Nov 14 2026 ParchaOS packaging - 1.0.0-39
 - Ticket #168 follow-up: controls for settings an organisation has locked
   (Style, Accent colour, Icon style, Menu bar background, Glass clarity,

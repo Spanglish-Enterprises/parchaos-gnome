@@ -14,33 +14,50 @@
 
 Name:           parchaos-gnome-wallpaper
 Version:        2026.09.23
-Release:        6%{?dist}
-Summary:        ParchaOS (GNOME) default desktop wallpaper
+Release:        7%{?dist}
+Summary:        ParchaOS (GNOME) desktop wallpapers
 
 License:        CC-BY-SA-4.0
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
 Source0:        parchaos-gnome-wallpaper-files.tar.gz
+# Time-of-day "Hills" (ticket #166): drawn at build time, see the script.
+Source1:        make-time-of-day.py
 Source90:       LICENSE-ARTWORK
 BuildArch:      noarch
+BuildRequires:  python3
+BuildRequires:  python3-cairo
+BuildRequires:  ImageMagick
 
 %description
-ParchaOS's default desktop wallpaper: a dark gradient background with
-ParchaOS's real passion-fruit logo as a subtle centered watermark,
-generated from branding/logo/ in this repo.
+ParchaOS's wallpapers, all drawn from scratch: "Hills", the same rolling hills
+at dawn, by day, at dusk and at night, which can follow the time of day or
+light and dark mode; and the default dark gradient with ParchaOS's
+passion-fruit logo as a subtle watermark (generated from branding/logo/).
 
 %prep
 %setup -q -c -n %{name}-%{version}
 cp -p %{SOURCE90} .
 
+%build
+python3 %{SOURCE1} hills
+
 %install
 mkdir -p %{buildroot}
 cp -a usr %{buildroot}/
+install -m 0644 hills/*.jpg hills/*-thumb.png %{buildroot}%{_datadir}/backgrounds/parchaos/hills/
 
 %files
 %license LICENSE-ARTWORK
 %{_datadir}/backgrounds/parchaos/
+%{_datadir}/gnome-background-properties/parchaos-wallpapers.xml
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-7
+- Ticket #166: "Hills" time-of-day wallpapers, drawn at build time by
+  make-time-of-day.py (cairo; CC BY-SA 4.0): dawn, day, dusk and night at
+  3840x2160, a GNOME slideshow that follows the clock with slow fades, and a
+  light/dark pair. Listed in GNOME Settings' wallpapers.
+
 * Sat Sep 26 2026 ParchaOS packaging - 2026.09.23-6
 - Revised ParchaOS logo: the rind has an open gap and the seeds are
   irregular (no radial symmetry), after a WIPO image search.

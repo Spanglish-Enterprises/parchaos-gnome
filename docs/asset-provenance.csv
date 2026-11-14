@@ -29,3 +29,4 @@ packaging/parchaos-sky/files/parchi-*.svgz,traced-from-ai,traced to vectors from
 packaging/parchaos-sky/screenshots/*,screenshot,screenshots of Parcha Sky running in a test shell,CC-BY-SA-4.0,Spanglish Enterprises LLC,unverified,they show the Parchi artwork (see above)
 docs/screenshots/*,screenshot,"screenshots of the 2026.10.02 release ISO running in a VM (Proxmox), taken with the hypervisor's screen capture",CC-BY-SA-4.0,Spanglish Enterprises LLC,verified,"retaken 2026-10-02 from the release image; ParchaOS's own desktop, apps and icons"
 docs/icon-review.png,screenshot,a review sheet showing only ParchaOS's own generated icons (viewed 2026-10-02),CC-BY-SA-4.0,Spanglish Enterprises LLC,verified,shows icons from parchaos-icons/ only
+packaging/parchaos-gnome-wallpaper/make-time-of-day.py,own-generated,Hills time-of-day wallpapers drawn with cairo at build time (no photos or third-party art),CC-BY-SA-4.0,Spanglish Enterprises LLC,verified,ticket #166
