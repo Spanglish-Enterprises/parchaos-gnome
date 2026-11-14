@@ -30,6 +30,8 @@ def check(ok, what):
 def main():
     check(ts.wanted_theme(True, False) == 'ParchaOS-Dark', 'dark theme')
     check(ts.wanted_theme(False, True) == 'ParchaOS-Light-solid', 'classic light theme')
+    check(ts.wanted_theme(True, False, 'blue') == 'ParchaOS-Dark', 'blue is the base theme')
+    check(ts.wanted_theme(False, True, 'teal') == 'ParchaOS-Light-solid-Teal', 'accent copy of the classic light theme')
 
     icon = ts.wanted_icon_theme
     cases = [
@@ -46,6 +48,20 @@ def main():
     ]
     for dark, colour, current, expected in cases:
         got = icon(dark, colour, current)
+        check(got == expected, f'icon theme for dark={dark} colour={colour} current={current}: got {got}, want {expected}')
+    # Icon styles (ticket #177) stack on the folder colour; Mono follows the accent.
+    styles = [
+        # (dark, colour, current, style, accent, expected)
+        (True, 'passion', 'ParchaOS-dark', 'glass', 'blue', 'ParchaOS-dark-Glass'),
+        (False, 'berry', 'ParchaOS-dark', 'dark', 'blue', 'ParchaOS-light-Berry-Dark'),
+        (True, 'passion', 'ParchaOS-dark-Glass', 'mono', 'teal', 'ParchaOS-dark-Mono-Teal'),
+        (True, 'ocean', 'ParchaOS-dark', 'mono', 'pink', 'ParchaOS-dark-Ocean-Mono-Pink'),
+        (True, 'passion', 'ParchaOS-dark-Mono-Teal', 'standard', 'teal', 'ParchaOS-dark'),
+        (True, 'passion', 'ParchaOS-dark', 'standard', 'teal', None),
+        (True, 'passion', 'Papirus', 'glass', 'blue', None),
+    ]
+    for dark, colour, current, style, accent, expected in styles:
+        got = icon(dark, colour, current, style, accent)
         check(got == expected, f'icon theme for dark={dark} colour={colour} current={current}: got {got}, want {expected}')
 
     # Every colour the schema allows has a matching wanted theme name.

@@ -20,6 +20,9 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKELETON = os.environ.get('PARCHAOS_ICON_SKELETON', os.path.join(HERE, 'theme-skeleton.tsv'))
 SECTIONS = os.environ.get('PARCHAOS_ICON_SECTIONS', os.path.join(HERE, 'index-sections.ini'))
+# An icon-style layer (ticket #177) inherits nothing: the theme that stacks it on top of a
+# full ParchaOS theme lists both, and Adwaita must not come before the full theme.
+INHERITS = os.environ.get('PARCHAOS_ICON_INHERITS', 'Adwaita,hicolor')
 EXCLUDED = re.compile(
     r"(?i)^(.*[._-])?(safari|icloud|appstore|app-store|finder|facetime|itunes|"
     r"imessage|keynote|garageband|imovie|xcode|launchpad|siri|photo-?booth|"
@@ -68,7 +71,9 @@ def main(theme_dir, name, sources):
         f.write('[Icon Theme]\n')
         f.write(f'Name={name}\n')
         f.write("Comment=ParchaOS's own icons for apps, folders and file types, over GNOME's Adwaita\n")
-        f.write('Inherits=Adwaita,hicolor\nExample=folder\n')
+        if INHERITS:
+            f.write(f'Inherits={INHERITS}\n')
+        f.write('Example=folder\n')
         f.write('Directories=' + ','.join(d for d in declared if d in dirs) + '\n\n')
         f.write(sections)
     print(f'{name}: {sum(1 for r in rows if r[1] == "F")} drawings, {sum(1 for r in rows if r[1] == "L")} names')

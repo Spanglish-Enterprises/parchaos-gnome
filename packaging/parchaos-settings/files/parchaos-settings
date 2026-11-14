@@ -14,7 +14,7 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 
 APP_ID = 'org.parchaos.Settings'
 KEYBOARD_STYLE = 'parchaos-keyboard-style'
@@ -806,6 +806,7 @@ class Window(Adw.ApplicationWindow):
             check.connect('toggled', self._on_style_toggled, value)
         self._sync_style()
         self._desktop.connect('changed::style', lambda *_: self._sync_style())
+        page.add(self._colours_group(schema))
         if 'menu-bar-background' in schema.list_keys():
             group.add(self._menu_bar_row())
         if 'glass-clarity' in schema.list_keys():
@@ -816,6 +817,120 @@ class Window(Adw.ApplicationWindow):
         if 'folder-colour' in schema.list_keys():
             page.add(self._folder_colour_group())
         return page
+
+    # Accent colour and icon style (ticket #177). The accent is GNOME's own setting: libadwaita
+    # apps and the Shell follow it as soon as it changes, and parchaos-theme-sync switches GTK 3
+    # apps (and the Mono icons) to match. The preview is made of real widgets, so it follows too.
+    ACCENTS = [
+        ('blue', _('Blue')), ('teal', _('Teal')), ('green', _('Green')),
+        ('yellow', _('Yellow')), ('orange', _('Orange')), ('red', _('Red')),
+        ('pink', _('Pink')), ('purple', _('Purple')), ('slate', _('Slate')),
+    ]
+    ICON_STYLES = [
+        ('standard', _('Standard'), _('Each app in its own colours.')),
+        ('dark', _('Dark'), _('The same drawings on dark tiles.')),
+        ('glass', _('Glass'), _('White drawings on smoky, see-through tiles.')),
+        ('mono', _('Mono'), _('Every app in the accent colour.')),
+    ]
+    SWATCH_CSS = '''
+        .parchaos-swatch { min-width: 30px; min-height: 30px; padding: 0; border-radius: 999px;
+                           box-shadow: inset 0 0 0 1px alpha(black, 0.12); }
+        .parchaos-swatch:checked { box-shadow: 0 0 0 2px var(--window-bg-color), 0 0 0 4px currentColor; }
+        .parchaos-swatch image { color: white; -gtk-icon-size: 14px; opacity: 0; }
+        .parchaos-swatch:checked image { opacity: 1; }
+        .parchaos-preview { padding: 14px; }
+        .parchaos-preview .selected-text { background-color: color-mix(in srgb, var(--accent-bg-color) 30%, transparent);
+                                           border-radius: 4px; padding: 0 4px; }
+    ''' + ''.join(f'.parchaos-swatch.{name} {{ background-color: var(--accent-{name}); color: var(--accent-{name}); }}\n'
+                   for name in ('blue', 'teal', 'green', 'yellow', 'orange', 'red', 'pink', 'purple', 'slate'))
+
+    def _colours_group(self, schema):
+        group = Adw.PreferencesGroup(
+            title=_('Colours and icons'),
+            description=_('The accent colour marks buttons, switches, selections and links in every app.'))
+        provider = Gtk.CssProvider()
+        provider.load_from_string(self.SWATCH_CSS)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+        group.add(self._colour_preview())
+
+        interface = Gio.Settings(schema_id='org.gnome.desktop.interface')
+        if 'accent-color' in interface.props.settings_schema.list_keys():
+            row = Adw.ActionRow(title=_('Accent colour'))
+            box = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
+            buttons = {}
+            first = None
+            for value, name in self.ACCENTS:
+                button = Gtk.ToggleButton(css_classes=['parchaos-swatch', value], tooltip_text=name,
+                                          child=Gtk.Image(icon_name='object-select-symbolic'))
+                button.update_property([Gtk.AccessibleProperty.LABEL], [name])
+                if first is None:
+                    first = button
+                else:
+                    button.set_group(first)
+                button.connect('toggled', lambda b, v=value: b.get_active() and
+                               interface.get_string('accent-color') != v and
+                               interface.set_string('accent-color', v))
+                buttons[value] = button
+                box.append(button)
+
+            def load(*_a):
+                button = buttons.get(interface.get_string('accent-color'))
+                if button is not None and not button.get_active():
+                    button.set_active(True)
+
+            load()
+            interface.connect('changed::accent-color', load)
+            self._interface = interface   # keep the connection alive with the page
+            row.add_suffix(box)
+            group.add(row)
+
+        if 'icon-style' in schema.list_keys():
+            values = [value for value, _n, _d in self.ICON_STYLES]
+            row = Adw.ComboRow(title=_('Icon style'),
+                               model=Gtk.StringList.new([name for _v, name, _d in self.ICON_STYLES]))
+
+            def load_style(*_a):
+                current = self._desktop.get_string('icon-style')
+                index = values.index(current) if current in values else 0
+                row.set_subtitle(self.ICON_STYLES[index][2])
+                if row.get_selected() != index:
+                    row.set_selected(index)
+
+            def store_style(*_a):
+                value = values[row.get_selected()]
+                row.set_subtitle(self.ICON_STYLES[row.get_selected()][2])
+                if self._desktop.get_string('icon-style') != value:
+                    # parchaos-theme-sync (parchaos-desktop) switches the icon theme.
+                    self._desktop.set_string('icon-style', value)
+
+            load_style()
+            row.connect('notify::selected', store_style)
+            self._desktop.connect('changed::icon-style', load_style)
+            group.add(row)
+        return group
+
+    def _colour_preview(self):
+        """A card of real controls and app icons that follow the accent and the icon style."""
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                       css_classes=['card', 'parchaos-preview'], margin_bottom=6)
+        card.update_property([Gtk.AccessibleProperty.LABEL], [_('Preview of the accent colour and icons')])
+        icons = Gtk.Box(spacing=10, halign=Gtk.Align.CENTER)
+        for name in ('org.gnome.Nautilus', 'org.gnome.Calendar', 'org.gnome.Settings',
+                     'org.gnome.TextEditor', 'org.gnome.Calculator', 'org.gnome.Weather'):
+            icons.append(Gtk.Image(icon_name=name, pixel_size=40))
+        card.append(icons)
+        controls = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER)
+        controls.append(Gtk.Button(label=_('Done'), css_classes=['suggested-action', 'pill'],
+                                   can_target=False, valign=Gtk.Align.CENTER))
+        controls.append(Gtk.Switch(active=True, can_target=False, valign=Gtk.Align.CENTER))
+        controls.append(Gtk.CheckButton(active=True, can_target=False, valign=Gtk.Align.CENTER))
+        controls.append(Gtk.Label(label=_('Selected text'), css_classes=['selected-text']))
+        controls.append(Gtk.Label(label=_('A link'), css_classes=['accent']))
+        card.append(controls)
+        progress = Gtk.ProgressBar(fraction=0.6, margin_start=40, margin_end=40)
+        card.append(progress)
+        return card
 
     # Menu bar background (ticket #176). "auto" (the default) shows as what it means for the
     # current style: Clear with Glass, Tinted with Classic. Choosing one stores it.

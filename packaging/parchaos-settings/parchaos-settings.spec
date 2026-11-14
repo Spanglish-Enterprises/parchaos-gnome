@@ -9,7 +9,7 @@
 
 Name:           parchaos-settings
 Version:        1.0.0
-Release:        35%{?dist}
+Release:        36%{?dist}
 Summary:        ParchaOS Settings, preferences specific to ParchaOS
 
 License:        GPL-3.0-or-later
@@ -74,6 +74,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.parchaos.Settings
 %{_userunitdir}/graphical-session.target.wants/parchaos-app-network-refresh.service
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-36
+- Ticket #177: Appearance > Colours and icons. GNOME's nine accent colours as
+  swatches, an icon style (Standard, Dark, Glass, Mono) and a preview card of
+  real controls and app icons that follows both as they change.
+
 * Fri Nov 13 2026 ParchaOS packaging - 1.0.0-35
 - Ticket #154: Desktop > Focus modes: each mode's allowed apps (add and remove) and a dark appearance switch; the schedule is now Scheduled Sleep when focus modes are available. Spanish: Focus is Enfoque, as in Control Center. Spanish strings added.
 

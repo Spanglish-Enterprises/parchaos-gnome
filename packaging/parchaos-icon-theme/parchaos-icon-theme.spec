@@ -13,7 +13,7 @@
 
 Name:           parchaos-icon-theme
 Version:        2026.09.23
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        ParchaOS icon theme (original drawings over Adwaita)
 
 License:        CC-BY-SA-4.0
@@ -170,11 +170,41 @@ for base in dark light; do
     done
 done
 
+# Icon styles (ticket #177): Dark, Glass and Mono (one per accent colour).
+# ParchaOS-apps-<Style> holds only the app drawings in that style and
+# inherits nothing; ParchaOS-<scheme>[-<Folder>]-<Style> is just an
+# index.theme that stacks it over the full theme for that scheme and folder
+# colour, so a style never changes folders, file icons or Adwaita's icons.
+# parchaos-theme-sync (parchaos-desktop) picks the theme for the account.
+python3 %{SOURCE72} --styles %{_sourcedir} styles
+grep -E '^apps/' %{SOURCE74} > styles/apps.tsv
+for dir in styles/*/; do
+    style=$(basename "$dir")
+    Style=$(echo "$style" | sed -E 's/(^|-)([a-z])/\1\u\2/g')
+    PARCHAOS_ICON_SKELETON=styles/apps.tsv PARCHAOS_ICON_INHERITS= \
+        python3 %{SOURCE73} %{buildroot}%{_datadir}/icons/ParchaOS-apps-$Style ParchaOS-apps-$Style "$dir"
+    for scheme in dark light; do
+        for folder in "" Berry Sunny Leaf Ocean Graphite; do
+            base=ParchaOS-$scheme${folder:+-$folder}
+            root=%{buildroot}%{_datadir}/icons/$base-$Style
+            mkdir -p "$root"
+            printf '%%s\n' \
+                '[Icon Theme]' \
+                "Name=$base-$Style" \
+                "Comment=ParchaOS $scheme icons, $Style style" \
+                "Inherits=ParchaOS-apps-$Style,$base" \
+                'Directories=' > "$root/index.theme"
+        done
+    done
+done
+
 # Build the icon caches for what we ship.
 for theme in ParchaOS ParchaOS-dark ParchaOS-light; do
     gtk-update-icon-cache -f -q %{buildroot}%{_datadir}/icons/$theme
 done
 for theme in %{buildroot}%{_datadir}/icons/ParchaOS-*-*; do
+    # The stacking themes have no icons of their own.
+    [ -n "$(sed -n 's/^Directories=//p' "$theme/index.theme")" ] || continue
     gtk-update-icon-cache -f -q "$theme"
 done
 
@@ -207,6 +237,14 @@ end
 %{_datadir}/icons/*
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-25
+- Ticket #177: icon styles. The app drawings in Dark (dark plates), Glass
+  (smoky translucent plates, white glyphs) and Mono (plates in one of
+  GNOME's nine accent colours), generated at build time by
+  generate.py --styles. Each style is a small ParchaOS-apps-<Style> theme
+  stacked over the full theme by ParchaOS-<scheme>[-<Folder>]-<Style>, so
+  it combines with every folder colour.
+
 * Sat Oct 17 2026 ParchaOS packaging - 2026.09.23-24
 - Fix upgrades from -21 and earlier failing with "file ... conflicts with file
   from package parchaos-icon-theme-...-21": the dark and light themes used to

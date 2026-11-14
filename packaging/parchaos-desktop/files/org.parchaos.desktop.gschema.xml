@@ -114,6 +114,21 @@
         parchaos-theme-sync picks the matching dark or light icon theme.
       </description>
     </key>
+    <key name="icon-style" type="s">
+      <choices>
+        <choice value="standard"/>
+        <choice value="dark"/>
+        <choice value="glass"/>
+        <choice value="mono"/>
+      </choices>
+      <default>'standard'</default>
+      <summary>Icon style</summary>
+      <description>
+        How ParchaOS's app icons are drawn: standard, on dark plates, on glass
+        plates with white glyphs, or in the accent colour (mono).
+        parchaos-theme-sync picks the matching icon theme.
+      </description>
+    </key>
     <key name="restore-session" type="b">
       <default>true</default>
       <summary>Reopen apps when logging back in</summary>

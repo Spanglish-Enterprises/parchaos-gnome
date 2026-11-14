@@ -11,6 +11,7 @@
 # different from the corresponding Apple designs.
 
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -524,10 +525,110 @@ def write_variants(outdir):
     print(f'wrote {count} colour variants')
 
 
+# --- Icon styles (ticket #177): the app drawings on other plates. ---
+#
+#   dark   the drawing as it is, on a dark plate
+#   glass  a translucent smoky plate with the drawing in white and greys
+#   mono   a plate in the accent colour with the drawing in white and tints of it
+#
+# Only the plate (the "bg" gradient) and the drawing's own colours change; the tile's
+# shadow, gloss and rim stay. Every app drawing sits on the shared tile, so the
+# styles apply to all of them, including the hand-drawn ones.
+
+# GNOME's accent colours (the same values as the GTK theme's accent copies).
+ACCENTS = {
+    'blue': '#3584e4', 'teal': '#2190a4', 'green': '#3a944a', 'yellow': '#c88800',
+    'orange': '#ed5b00', 'red': '#e62d42', 'pink': '#d56199', 'purple': '#9141ac',
+    'slate': '#6f8396',
+}
+BG = re.compile(r'<linearGradient id="bg"[^>]*>.*?</linearGradient>')
+KEEP = re.compile(r'<linearGradient id="gloss".*?</linearGradient>|<filter id="sh".*?</filter>'
+                  r'|<rect x="3[23]" y="(?:28|29)"[^>]*/>')
+COLOUR = re.compile(r'(fill|stroke|stop-color|flood-color)="(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})"')
+
+
+def _rgb(hex_colour):
+    h = hex_colour.lstrip('#')
+    if len(h) == 3:
+        h = ''.join(c * 2 for c in h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _hex(rgb):
+    return '#%02x%02x%02x' % tuple(max(0, min(255, round(c))) for c in rgb)
+
+
+def _mix(a, b, t):
+    """a at t=0, b at t=1."""
+    return tuple(x + (y - x) * t for x, y in zip(a, b))
+
+
+def _luma(rgb):
+    r, g, b = (c / 255 for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _plate(top, bottom, top_opacity=1, bottom_opacity=1):
+    return ('<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0" stop-color="{top}" stop-opacity="{top_opacity}"/>'
+            f'<stop offset="1" stop-color="{bottom}" stop-opacity="{bottom_opacity}"/></linearGradient>')
+
+
+def styled(svg, style, accent=None):
+    """The app drawing `svg` in `style` ('dark', 'glass' or 'mono'; mono takes an accent name)."""
+    if not BG.search(svg):
+        return svg
+    if style == 'dark':
+        return BG.sub(_plate('#4a4a52', '#1d1d22'), svg, count=1)
+    if style == 'glass':
+        plate = _plate('#5a5a66', '#26262e', 0.62, 0.5)
+        light, dark = (255, 255, 255), (96, 96, 108)
+    elif style == 'mono':
+        a = _rgb(ACCENTS[accent])
+        plate = _plate(_hex(_mix(a, (255, 255, 255), 0.22)), _hex(_mix(a, (0, 0, 0), 0.18)))
+        light, dark = (255, 255, 255), _mix(a, (0, 0, 0), 0.35)
+    else:
+        raise ValueError(style)
+    # The drawing keeps its light and dark parts (a dot on a white card stays visible),
+    # in one ramp from `dark` to `light`.
+    kept = []
+    parked = KEEP.sub(lambda m: kept.append(m.group(0)) or f'@KEEP{len(kept) - 1}@', BG.sub('@BG@', svg, count=1))
+
+    def recolour(m):
+        # Curved so mid-tones stay apart from the white they often sit on.
+        level = min(1.0, max(0.0, (_luma(_rgb(m.group(2))) - 0.15) / 0.75)) ** 1.8
+        return f'{m.group(1)}="{_hex(_mix(dark, light, level))}"'
+
+    out = COLOUR.sub(recolour, parked).replace('@BG@', plate)
+    return re.sub(r'@KEEP(\d+)@', lambda m: kept[int(m.group(1))], out)
+
+
+STYLE_NAMES = ['dark', 'glass'] + [f'mono-{a}' for a in ACCENTS]
+
+
+def write_styles(sources, outdir):
+    """Write every app drawing in <sources> (the files named on the command line's apps/
+    rows of theme-skeleton.tsv) in each style to <outdir>/<style>/<file>."""
+    names = sorted({line.split('\t')[2].strip() for line in open(os.path.join(HERE, 'theme-skeleton.tsv'))
+                    if line.startswith('apps/') and line.split('\t')[1] == 'F'})
+    for name in STYLE_NAMES:
+        style, _, accent = name.partition('-')
+        os.makedirs(os.path.join(outdir, name), exist_ok=True)
+        for file in names:
+            with open(os.path.join(sources, file)) as f:
+                svg = f.read()
+            with open(os.path.join(outdir, name, file), 'w') as f:
+                f.write(styled(svg, style, accent or None))
+    print(f'wrote {len(names)} app drawings in {len(STYLE_NAMES)} styles')
+
+
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 3 and sys.argv[1] == '--variants':
         write_variants(sys.argv[2])
+        sys.exit(0)
+    if len(sys.argv) == 4 and sys.argv[1] == '--styles':
+        write_styles(sys.argv[2], sys.argv[3])
         sys.exit(0)
     for name, (gen, _targets) in {**ICONS, **PLACES}.items():
         with open(os.path.join(HERE, f'{name}.svg'), 'w') as f:

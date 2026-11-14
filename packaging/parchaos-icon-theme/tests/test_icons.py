@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Tests for the icon generator (tickets #133, #79). Run:
+# Tests for the icon generator (tickets #133, #79, #177). Run:
 #   python3 packaging/parchaos-icon-theme/tests/test_icons.py
 import importlib.machinery
 import importlib.util
@@ -61,6 +61,25 @@ def main():
                 continue
             files = sorted(os.listdir(os.path.join(tmp, palette)))
             check(files == sorted(f'{n}.svg' for n in gen.PLACES), f'{palette} variant set is complete')
+
+    # 4. Icon styles (#177): only the plate and the drawing's colours change, never the shapes,
+    #    the tile's shadow, gloss or rim; every app drawing is written in every style.
+    cal = read(os.path.join(ICONS, 'parchaos-calendar.svg'))
+    for name in gen.STYLE_NAMES:
+        style, _, accent = name.partition('-')
+        out = gen.styled(cal, style, accent or None)
+        check(out != cal, f'{name} changes the calendar')
+        check(out.count('<') == cal.count('<'), f'{name} keeps the same shapes')
+        check('flood-opacity="0.22"' in out and 'stroke-opacity="0.35"' in out, f'{name} keeps the tile shadow and rim')
+        check('@KEEP' not in out and '@BG@' not in out, f'{name} leaves no placeholders')
+    check('#b9a6e8' in gen.styled(cal, 'dark'), 'dark keeps the drawing colours')
+    mono = gen.styled(cal, 'mono', 'teal')
+    check('#b9a6e8' not in mono and '#f2b632' not in mono, 'mono replaces the drawing colours')
+    check(gen.styled('<svg/>', 'glass') == '<svg/>', 'a drawing without the tile is left alone')
+    with tempfile.TemporaryDirectory() as tmp:
+        gen.write_styles(ICONS, tmp)
+        check(sorted(os.listdir(tmp)) == sorted(gen.STYLE_NAMES), 'one folder per style')
+        check(len(os.listdir(os.path.join(tmp, 'mono-pink'))) == 20, 'every app drawing in a style')
 
     print('icons: all checks passed' if failures == 0 else f'icons: {failures} check(s) failed')
     return 0 if failures == 0 else 1

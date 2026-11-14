@@ -6,8 +6,9 @@
 # Light/dark is GNOME's color-scheme; libadwaita apps follow it on their
 # own, but GTK 3 apps and the Shell theme use a named theme. This service
 # picks ParchaOS-Light or ParchaOS-Dark, with the -solid variant for the
-# Classic style, whenever either setting changes (Parcha Controls, ParchaOS
-# Welcome, ParchaOS Settings or GNOME Settings). Themes that aren't
+# Classic style and the copy recoloured in GNOME's accent colour for GTK 3
+# (ticket #177), whenever one of those settings changes (Parcha Controls,
+# ParchaOS Welcome, ParchaOS Settings or GNOME Settings). Themes that aren't
 # ParchaOS are the user's own choice and are left alone.
 #
 #   parchaos-theme-sync            run as a user service
@@ -25,8 +26,9 @@ import gi
 gi.require_version('Gio', '2.0')
 from gi.repository import Gio, GLib  # noqa: E402
 
-THEMES_DIR = '/usr/share/themes'
-ICONS_DIR = '/usr/share/icons'
+# The overrides are for tests.
+THEMES_DIR = os.environ.get('PARCHAOS_THEMES_DIR', '/usr/share/themes')
+ICONS_DIR = os.environ.get('PARCHAOS_ICONS_DIR', '/usr/share/icons')
 TARGETS = [
     ('org.gnome.desktop.interface', 'gtk-theme'),
     ('org.gnome.desktop.wm.preferences', 'theme'),
@@ -40,26 +42,41 @@ def settings(schema_id):
     return Gio.Settings(settings_schema=found) if found else None
 
 
-def wanted_theme(dark, classic):
-    return f'ParchaOS-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
+def wanted_theme(dark, classic, accent='blue'):
+    """The GTK and Shell theme for the scheme, style and accent colour.
 
-
-ICON_VARIANT = re.compile(r'^ParchaOS-(dark|light)-[A-Z][a-z]+$')
-
-
-def wanted_icon_theme(dark, colour, current):
-    """The icon theme that matches the light/dark scheme and folder colour.
-
-    Returns None when nothing should change: an account that uses another
-    icon theme is left alone, and the default colour changes nothing unless
-    a colour variant is being switched off (ticket #79).
+    GTK 4 follows GNOME's accent by itself; GTK 3 needs the theme copy that is
+    recoloured in it (ParchaOS-Dark-Teal, ...; ticket #177). Blue, GNOME's
+    default, is the base theme.
     """
-    base = 'ParchaOS-dark' if dark else 'ParchaOS-light'
-    if colour == 'passion':
-        return base if ICON_VARIANT.match(current) else None
+    base = f'ParchaOS-{"Dark" if dark else "Light"}{"-solid" if classic else ""}'
+    return base if accent in ('', 'blue') else f'{base}-{accent.capitalize()}'
+
+
+ICON_VARIANT = re.compile(r'^ParchaOS-(dark|light)-[A-Z]')
+
+
+def wanted_icon_theme(dark, colour, current, style='standard', accent='blue'):
+    """The icon theme that matches the light/dark scheme, folder colour and icon style.
+
+    Folder colours (ticket #79) are ParchaOS-<scheme>-<Colour>; an icon style
+    (ticket #177) adds -Dark, -Glass or -Mono-<Accent> on top of either.
+    Returns None when nothing should change: an account that uses another
+    icon theme is left alone, and the defaults change nothing unless a
+    variant is being switched off.
+    """
+    name = 'ParchaOS-dark' if dark else 'ParchaOS-light'
+    if colour and colour != 'passion':
+        name += f'-{colour.capitalize()}'
+    if style == 'mono':
+        name += f'-Mono-{(accent or "blue").capitalize()}'
+    elif style in ('dark', 'glass'):
+        name += f'-{style.capitalize()}'
     if not current.startswith('ParchaOS'):
         return None
-    return f'{base}-{colour.capitalize()}'
+    if not ICON_VARIANT.match(name):
+        return name if ICON_VARIANT.match(current) else None
+    return name
 
 
 def available(name, roots):
@@ -135,16 +152,27 @@ class ThemeSync:
 
     def watch(self):
         self.interface.connect('changed::color-scheme', lambda *_: self.apply())
+        if 'accent-color' in self.interface.props.settings_schema.list_keys():
+            self.interface.connect('changed::accent-color', lambda *_: self.apply())
         if self.desktop is not None:
             self.desktop.connect('changed::style', lambda *_: self.apply())
-            if 'folder-colour' in self.desktop.props.settings_schema.list_keys():
-                self.desktop.connect('changed::folder-colour', lambda *_: self.apply())
+            for key in ('folder-colour', 'icon-style'):
+                if key in self.desktop.props.settings_schema.list_keys():
+                    self.desktop.connect(f'changed::{key}', lambda *_: self.apply())
+
+    def _accent(self):
+        if 'accent-color' in self.interface.props.settings_schema.list_keys():
+            return self.interface.get_string('accent-color')
+        return 'blue'
 
     def _sync_icon_theme(self, dark):
         if self.desktop is None or 'folder-colour' not in self.desktop.props.settings_schema.list_keys():
             return
         current = self.interface.get_string('icon-theme')
-        wanted = wanted_icon_theme(dark, self.desktop.get_string('folder-colour'), current)
+        keys = self.desktop.props.settings_schema.list_keys()
+        style = self.desktop.get_string('icon-style') if 'icon-style' in keys else 'standard'
+        wanted = wanted_icon_theme(dark, self.desktop.get_string('folder-colour'), current,
+                                   style, self._accent())
         if wanted and wanted != current and available(wanted, [ICONS_DIR]):
             self.interface.set_string('icon-theme', wanted)
             Gio.Settings.sync()
@@ -170,10 +198,14 @@ class ThemeSync:
         dark = self.interface.get_string('color-scheme') == 'prefer-dark'
         self._sync_icon_theme(dark)
         classic = self.desktop is not None and self.desktop.get_string('style') == 'classic'
-        theme = wanted_theme(dark, classic)
-        if not os.path.isdir(os.path.join(THEMES_DIR, theme)):
+        base = wanted_theme(dark, classic)
+        if not os.path.isdir(os.path.join(THEMES_DIR, base)):
             return
-        gtk4_links(os.path.expanduser('~/.config/gtk-4.0'), THEMES_DIR, theme)
+        theme = wanted_theme(dark, classic, self._accent())
+        if not os.path.isdir(os.path.join(THEMES_DIR, theme)):
+            theme = base
+        # The accent copies share the base theme's GTK 4 stylesheet, which follows the accent.
+        gtk4_links(os.path.expanduser('~/.config/gtk-4.0'), THEMES_DIR, base)
         for target, key in self.targets:
             current = target.get_string(key)
             if current.startswith('ParchaOS') and current != theme:

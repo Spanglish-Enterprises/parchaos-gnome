@@ -33,7 +33,7 @@
 
 Name:           parchaos-gtk-theme
 Version:        2026.09.23
-Release:        24%{?dist}
+Release:        25%{?dist}
 Summary:        ParchaOS GTK3/GTK4 and GNOME Shell theme
 
 License:        MIT AND CC-BY-SA-4.0
@@ -57,6 +57,8 @@ Source2:        parchaos-launcher.svg
 # titlebutton PNGs to the ParchaOS palette. Fails the build if it finds none.
 Source3:        recolor-titlebuttons.py
 Source4:        parchaos-classic.css
+# Accent colours (ticket #177): see the script's header.
+Source5:        accent-colours.py
 Source91:       LICENSE-ARTWORK
 
 BuildArch:      noarch
@@ -299,6 +301,8 @@ done
 # Window buttons in the ParchaOS palette (ticket #111), in every copy
 # (GTK 3, GTK 4, libadwaita config in skel).
 python3 %{SOURCE3} %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel
+# GNOME's accent colour: GTK 4 follows it live, GTK 3 gets a theme copy per colour.
+python3 %{SOURCE5} %{buildroot}%{_datadir}/themes %{buildroot}%{_sysconfdir}/skel/.config/gtk-4.0
 # Also shipped, so parchaos-theme-sync can recolor the libadwaita copy in
 # accounts that were created before this release (~/.config/gtk-4.0 is a
 # frozen copy of the skeleton).
@@ -313,6 +317,15 @@ install -Dm 0755 %{SOURCE3} %{buildroot}%{_libexecdir}/parchaos-recolor-titlebut
 %{_libexecdir}/parchaos-recolor-titlebuttons
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-25
+- Ticket #177: GNOME's accent colour reaches every app. The stylesheets
+  used to pin one blue, which also overrode libadwaita's accent. Now GTK 4
+  apps take the accent from libadwaita (they change as soon as it is
+  picked) and GTK 3 apps get a copy of each theme per accent colour
+  (ParchaOS-Dark-Teal, ...; recoloured stylesheet only, the rest links to
+  the base theme), which parchaos-theme-sync switches to. Blue is now
+  GNOME's blue in GTK 3, GTK 4 and the Shell alike (accent-colours.py).
+
 * Wed Sep 30 2026 ParchaOS packaging - 2026.09.23-24
 - Ticket #135: the Classic (-solid) themes now drop the glass highlights and
   shadows from header bar buttons, so Classic looks flat in libadwaita apps.
