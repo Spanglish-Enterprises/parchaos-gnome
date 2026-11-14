@@ -1,6 +1,6 @@
 Name:           parchaos-assistant
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Parcha Assistant: a chat window backed by a local model or Claude
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -70,5 +70,10 @@ dconf update >/dev/null 2>&1 || :
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-assistant.mo
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 1.0.0-2
+- Ticket #180: parchaos-assistant --ask TEXT opens the window with TEXT in
+  the question box (used by Screen Lookup); nothing is sent until the user
+  sends it.
+
 * Sun Nov 08 2026 ParchaOS packaging - 1.0.0-1
 - Ticket #122: first version. Chat window (Ctrl+Alt+Space) with two backends the user picks: a local model through Ollama, or Claude (claude-opus-5-5, low effort, streamed, server-side refusal fallback) with the user's own key in GNOME Keyring; the Anthropic SDK is pip-installed per user on first use. Nothing is sent before a backend is chosen. Fake-server tests for both backends. English and Spanish.

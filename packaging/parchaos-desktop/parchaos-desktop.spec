@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        86%{?dist}
+Release:        87%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -119,6 +119,7 @@ Requires:       parchaos-wiggle
 Requires:       parchaos-clipboard
 Requires:       parchaos-dictation
 Requires:       parchaos-speak
+Requires:       parchaos-lookup
 Requires:       parchaos-glass
 Requires:       sushi
 Requires:       parchaos-snapshots
@@ -212,7 +213,7 @@ ln -s ../parchaos-theme-sync.service \
 # stops at an older GNOME version (e.g. notification-position) load.
 cat > %{buildroot}%{_sysconfdir}/dconf/db/local.d/00-parchaos-extensions <<'DCONF'
 [org/gnome/shell]
-enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org']
+enabled-extensions=['parcha-dock@parchaos.org', 'parchaos-global-menu@parchaos.org', 'parchaos-launcher@parchaos.org', 'parchaos-controls@parchaos.org', 'parchaos-session@parchaos.org', 'parchaos-live-icons@parchaos.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'xremap@k0kubun.com', 'appindicatorsupport@rgcjonas.gmail.com', 'blur-my-shell@aunetx', 'just-perfection-desktop@just-perfection', 'no-overview@fthx', 'notification-banner-reloaded@marcinjakubowski.github.com', 'compiz-alike-magic-lamp-effect@hermes83.github.com', 'wiggle@mechtifs', 'gnome-ui-tune@itstime.tech', 'ding@rastersoft.com', 'clipboard-indicator@tudmotu.com', 'wisp@epogonii.github.io', 'parchaos-dictation@parchaos.org', 'parchaos-speak@parchaos.org', 'parchaos-lookup@parchaos.org']
 disable-user-extensions=false
 disable-extension-version-validation=true
 DCONF
@@ -281,6 +282,10 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-87
+- Ticket #180: Screen Lookup (Super+Shift+Space on the ParchaOS layout) is
+  on by default. Requires parchaos-lookup.
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-86
 - Ticket #178: theme-sync copies theme assets that are new since an account
   was created (the new title buttons) into ~/.config/gtk-4.0, where GTK 4

@@ -437,7 +437,21 @@ CSS = b"""
 
 class App(Adw.Application):
     def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        # parchaos-assistant --ask TEXT opens the window with TEXT in the question box
+        # (Screen Lookup, ticket #180). Nothing is sent until the user sends it.
+        self.add_main_option('ask', 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
+                             'Put TEXT in the question box', 'TEXT')
+
+    def do_command_line(self, command_line):
+        options = command_line.get_options_dict().end().unpack()
+        self.activate()
+        text = options.get('ask')
+        win = self.get_active_window()
+        if text and hasattr(win, 'entry'):
+            win.entry.set_text(text)
+            win.entry.set_position(-1)
+        return 0
 
     def do_startup(self):
         Adw.Application.do_startup(self)

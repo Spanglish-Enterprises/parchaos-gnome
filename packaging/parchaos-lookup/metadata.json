@@ -1,0 +1,8 @@
+{
+  "uuid": "parchaos-lookup@parchaos.org",
+  "name": "Screen Lookup",
+  "description": "Press Ctrl+Shift+Space (Super+Shift+Space on the ParchaOS keyboard layout), drag a box around text anywhere on the screen, and copy it, search for it or ask the assistant. The text is read on this computer.",
+  "shell-version": ["48", "49", "50", "51"],
+  "settings-schema": "org.parchaos.lookup",
+  "url": "https://parchaos.org"
+}

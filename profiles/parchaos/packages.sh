@@ -200,6 +200,8 @@ PROFILE_REPO_PACKAGES=(
 
     # Read the selected text aloud, Ctrl+Alt+S (packaging/parchaos-speak/).
     parchaos-speak
+    # Look up text anywhere on the screen, Super+Shift+Space (packaging/parchaos-lookup/).
+    parchaos-lookup
 
     # Gaming (packaging/parchaos-gaming/, ticket #201): gamemode, gamescope,
     # controller rules and the Game Mode session; launchers come from Flathub.

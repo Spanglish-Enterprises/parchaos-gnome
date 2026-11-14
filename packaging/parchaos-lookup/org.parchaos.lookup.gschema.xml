@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.parchaos.lookup" path="/org/parchaos/lookup/">
+    <key name="lookup-shortcut" type="as">
+      <!-- Ctrl here is the physical Super key on the ParchaOS keyboard layout. -->
+      <default><![CDATA[['<Control><Shift>space']]]></default>
+      <summary>Look up text on the screen</summary>
+      <description>Dims the screen; drag a box around text to copy it, search for it or ask the assistant.</description>
+    </key>
+  </schema>
+</schemalist>

@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Screen Lookup (ticket #180). */
+.parchaos-lookup-shade { background-color: rgba(0, 0, 0, 0.32); }
+.parchaos-lookup-box {
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.parchaos-lookup-hint {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background-color: rgba(30, 30, 36, 0.78);
+  color: white;
+  font-weight: 600;
+}
+.parchaos-lookup-popover {
+  padding: 12px;
+  spacing: 10px;
+  border-radius: 18px;
+  background-color: rgba(36, 36, 42, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  color: white;
+}
+.parchaos-lookup-text { font-size: 10.5pt; padding: 2px 4px; }
+.parchaos-lookup-status { padding: 4px; color: rgba(255, 255, 255, 0.8); }
+.parchaos-lookup-actions { spacing: 6px; }
+.parchaos-lookup-action {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.10);
+}
+.parchaos-lookup-action:hover, .parchaos-lookup-action:focus { background-color: rgba(255, 255, 255, 0.20); }
+.parchaos-lookup-action:active { background-color: -st-accent-color; }
+.parchaos-lookup-action-content { spacing: 6px; }
