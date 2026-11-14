@@ -220,6 +220,23 @@ class GlassPreview(Gtk.DrawingArea):
 class Window(Adw.ApplicationWindow):
     # A sidebar of sections beside the page of the chosen section, the layout
     # GNOME's own Settings uses. It folds to a single column in a narrow window.
+    @staticmethod
+    def _managed_banner():
+        """Who manages this computer (parchaos-policy, ticket #168), when an organisation does."""
+        try:
+            with open(os.environ.get('PARCHAOS_MANAGED', '/etc/parchaos/managed.json'), encoding='utf-8') as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            return None
+        name = str(info.get('name') or '').strip()
+        if not name:
+            return None
+        text = _('This computer is managed by {name}. Some settings are set by them.').format(name=name)
+        contact = str(info.get('contact') or '').strip()
+        if contact:
+            text += ' ' + _('Help: {contact}').format(contact=contact)
+        return Adw.Banner(title=GLib.markup_escape_text(text), revealed=True)
+
     def __init__(self, app):
         super().__init__(application=app, title=_('ParchaOS Settings'))
         self.set_default_size(860, 640)
@@ -239,6 +256,9 @@ class Window(Adw.ApplicationWindow):
         content_bar = Adw.HeaderBar(title_widget=self._content_title)
         content = Adw.ToolbarView(content=self._stack)
         content.add_top_bar(content_bar)
+        managed = self._managed_banner()
+        if managed:
+            content.add_top_bar(managed)
         self._content_page = Adw.NavigationPage(child=content, title='', tag='content')
 
         self._split = Adw.NavigationSplitView(sidebar=self._side_page, content=self._content_page,

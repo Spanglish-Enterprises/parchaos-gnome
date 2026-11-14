@@ -1,0 +1,51 @@
+# ParchaOS policy: copy to /etc/parchaos/policy.toml on each computer. It applies by itself
+# when the file is copied in or changed. Check it first with:
+#   parchaos-policy check policy.toml
+# Every section is optional. "lock = true" stops people changing that section's settings;
+# "lock = ["accent"]" locks only those. Without lock the values are only defaults.
+
+[organisation]
+name = "Escuela Ejemplo"
+contact = "soporte@escuela.example"
+
+[appearance]
+style = "glass"               # glass or classic
+colour_scheme = "light"       # light, dark or auto
+accent = "blue"               # blue teal green yellow orange red pink purple slate
+icon_style = "standard"       # standard dark glass mono
+wallpaper = "/usr/share/backgrounds/parchaos/default.png"
+lock = ["wallpaper"]
+
+[screen]
+lock_after_minutes = 10
+lock_enabled = true
+lock = true
+
+[privacy]
+location = false
+phone_connection = false      # no phone pairing on school computers
+lock = true
+
+[extensions]
+allow_install = false         # no new extensions from the web
+lock = true
+
+[apps]
+dock = ["es.parchaos.Browser.desktop", "org.gnome.Nautilus.desktop", "org.gnome.TextEditor.desktop"]
+
+[updates]
+mode = "install"              # off, notify, download or install
+when = "Sat 03:00"            # any systemd time: "daily", "Mon..Fri 18:30"...
+reboot = "never"              # never or when-needed
+security_only = false
+
+[browser]                     # Chromium policies for Parcha Browser, as listed at
+                              # chromeenterprise.google/policies
+HomepageLocation = "https://escuela.example"
+HomepageIsNewTabPage = false
+PasswordManagerEnabled = false
+URLBlocklist = ["example-games.com"]
+
+[settings]                    # any other setting, by its dconf path
+"org/gnome/desktop/interface/clock-format" = "24h"
+lock = ["org/gnome/desktop/interface/clock-format"]

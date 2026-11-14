@@ -1,0 +1,14 @@
+[Unit]
+Description=Apply the ParchaOS policy (/etc/parchaos/policy.toml)
+Documentation=file:///usr/share/doc/parchaos-policy/admin-guide.md
+# At boot only when there is a policy, or one was applied before (so a removed file is undone).
+ConditionPathExists=|/etc/parchaos/policy.toml
+ConditionPathExists=|/var/lib/parchaos-policy/applied.json
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/parchaos-policy apply
+
+[Install]
+WantedBy=multi-user.target

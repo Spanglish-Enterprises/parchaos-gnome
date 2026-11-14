@@ -1,0 +1,537 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-policy (ticket #168): one policy file sets, and if wanted locks, settings on every
+# ParchaOS computer of an organisation.
+#
+#   parchaos-policy check [FILE]    read the policy and print what it would write (no root)
+#   parchaos-policy apply [FILE]    write it (root); parchaos-policy.path runs this whenever
+#                                   /etc/parchaos/policy.toml changes, so copying the file in
+#                                   is enough
+#   parchaos-policy status          what is applied now
+#   parchaos-policy remove          take everything it wrote away again (root)
+#
+# FILE defaults to /etc/parchaos/policy.toml. Nothing here is a hosted service: the file is
+# copied by hand, by a package, or by Ansible/Salt/etc. What it writes are the standard Fedora
+# places, so the usual tools still see it:
+#   settings and locks   /etc/dconf/db/local.d/60-parchaos-policy (+ locks/), then dconf update
+#   Parcha Browser       /etc/chromium/policies/managed/parchaos-policy.json
+#   updates              /etc/dnf/dnf5-plugins/automatic.conf and a dnf5-automatic.timer drop-in
+#   who manages it       /etc/parchaos/managed.json (shown in Settings)
+#
+# docs/admin-guide.md explains the file with examples.
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tomllib
+
+POLICY = '/etc/parchaos/policy.toml'
+ROOT = os.environ.get('PARCHAOS_POLICY_ROOT', '/')       # tests write into a scratch tree
+RECORD = 'var/lib/parchaos-policy/applied.json'
+DCONF_FILE = 'etc/dconf/db/local.d/60-parchaos-policy'
+DCONF_LOCKS = 'etc/dconf/db/local.d/locks/60-parchaos-policy'
+CHROMIUM = 'etc/chromium/policies/managed/parchaos-policy.json'
+AUTOMATIC = 'etc/dnf/dnf5-plugins/automatic.conf'
+TIMER_DROPIN = 'etc/systemd/system/dnf5-automatic.timer.d/60-parchaos-policy.conf'
+MANAGED = 'etc/parchaos/managed.json'
+
+
+class PolicyError(Exception):
+    pass
+
+
+def path(rel):
+    return os.path.join(ROOT, rel)
+
+
+# --- Friendly names -> dconf keys ------------------------------------------------------------
+# Each entry: section -> name -> (dconf key, how to turn the value into the key's value).
+
+def scheme(v):
+    return {'dark': 'prefer-dark', 'light': 'prefer-light', 'auto': 'default', 'default': 'default'}[v]
+
+
+def file_uri(v):
+    if v.startswith(('file://', 'resource://')):
+        return v
+    if not v.startswith('/'):
+        raise ValueError('a full path starting with /')
+    return 'file://' + v
+
+
+def minutes(v):
+    if not isinstance(v, int) or v < 0:
+        raise ValueError('a whole number of minutes')
+    return v * 60
+
+
+def one_of(*choices):
+    def f(v):
+        if v not in choices:
+            raise ValueError('one of ' + ', '.join(choices))
+        return v
+    return f
+
+
+def same(v):
+    return v
+
+
+def negate(v):
+    if not isinstance(v, bool):
+        raise ValueError('true or false')
+    return not v
+
+
+FRIENDLY = {
+    'appearance': {
+        'style': [('org/parchaos/desktop/style', one_of('glass', 'classic'))],
+        'colour_scheme': [('org/gnome/desktop/interface/color-scheme', scheme)],
+        'accent': [('org/gnome/desktop/interface/accent-color',
+                    one_of('blue', 'teal', 'green', 'yellow', 'orange', 'red', 'pink', 'purple', 'slate'))],
+        'icon_style': [('org/parchaos/desktop/icon-style', one_of('standard', 'dark', 'glass', 'mono'))],
+        'wallpaper': [('org/gnome/desktop/background/picture-uri', file_uri),
+                      ('org/gnome/desktop/background/picture-uri-dark', file_uri)],
+    },
+    'screen': {
+        'lock_after_minutes': [('org/gnome/desktop/session/idle-delay', minutes)],
+        'lock_enabled': [('org/gnome/desktop/screensaver/lock-enabled', same)],
+    },
+    'privacy': {
+        'location': [('org/gnome/system/location/enabled', same)],
+        'camera': [('org/gnome/desktop/privacy/disable-camera', negate)],
+        'microphone': [('org/gnome/desktop/privacy/disable-microphone', negate)],
+        'phone_connection': [('org/parchaos/desktop/phone-link', same)],
+        'usage_history': [('org/gnome/desktop/privacy/remember-recent-files', same)],
+    },
+    'extensions': {
+        'allow_install': [('org/gnome/shell/allow-extension-installation', same)],
+        'user_extensions': [('org/gnome/shell/disable-user-extensions', negate)],
+        'enabled': [('org/gnome/shell/enabled-extensions', same)],
+    },
+    'apps': {
+        'dock': [('org/gnome/shell/favorite-apps', same)],
+    },
+}
+SECTIONS = set(FRIENDLY) | {'organisation', 'organization', 'browser', 'updates', 'settings'}
+
+
+# --- Types from the installed schemas --------------------------------------------------------
+
+class Schemas:
+    """Finds the type of a dconf key from the installed GSettings schemas."""
+
+    def __init__(self, types=None):
+        self.types = types           # tests pass {'/org/x/key': 's'}
+        self.by_path = None
+
+    def type_of(self, key):
+        """'org/gnome/desktop/interface/accent-color' -> 's' (or None if no schema has it)."""
+        full = '/' + key.strip('/')
+        if self.types is not None:
+            return self.types.get(full)
+        if self.by_path is None:
+            import gi
+            gi.require_version('Gio', '2.0')
+            from gi.repository import Gio
+            source = Gio.SettingsSchemaSource.get_default()
+            self.by_path = {}
+            non_reloc, _reloc = source.list_schemas(True)
+            for sid in non_reloc:
+                s = source.lookup(sid, True)
+                if s and s.get_path():
+                    self.by_path[s.get_path()] = s
+        folder, name = full.rsplit('/', 1)
+        s = self.by_path.get(folder + '/')
+        if s is None or not s.has_key(name):
+            return None
+        return s.get_key(name).get_value_type().dup_string()
+
+
+def gvariant_text(vtype, value):
+    """A TOML value as GVariant text of type `vtype` (what dconf keyfiles hold)."""
+    if isinstance(value, str) and vtype != 's' and vtype != 'as' and not vtype.startswith('a'):
+        # Written as GVariant text already ("uint32 300", "'24h'"...) or a plain number in a string.
+        return value
+    try:
+        from gi.repository import GLib
+        return GLib.Variant(vtype, value).print_(True)
+    except ImportError:
+        return simple_text(vtype, value)
+    except (TypeError, ValueError, OverflowError) as e:
+        raise ValueError(f'not a {vtype} value ({e})')
+
+
+def simple_text(vtype, value):
+    """GVariant text for the common types without GLib (tests on a bare build machine)."""
+    if vtype == 'b':
+        if not isinstance(value, bool):
+            raise ValueError('not a b value')
+        return 'true' if value else 'false'
+    if vtype == 's':
+        if not isinstance(value, str):
+            raise ValueError('not a s value')
+        return "'" + value.replace('\\', '\\\\').replace("'", "\\'") + "'"
+    if vtype in ('i', 'u', 'x', 't', 'n', 'q', 'y'):
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(f'not a {vtype} value')
+        names = {'i': 'int32', 'u': 'uint32', 'x': 'int64', 't': 'uint64', 'n': 'int16', 'q': 'uint16', 'y': 'byte'}
+        return str(value) if vtype == 'i' else f'{names[vtype]} {value}'
+    if vtype == 'd':
+        return repr(float(value))
+    if vtype == 'as':
+        if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
+            raise ValueError('not a list of text')
+        return '[' + ', '.join(simple_text('s', x) for x in value) + ']' if value else '@as []'
+    raise ValueError(f'type {vtype} needs GLib')
+
+
+# --- Reading a policy --------------------------------------------------------------------------
+
+def read(file):
+    try:
+        with open(file, 'rb') as f:
+            data = tomllib.load(f)
+    except FileNotFoundError:
+        raise PolicyError(f'{file}: no such file')
+    except tomllib.TOMLDecodeError as e:
+        raise PolicyError(f'{file}: {e}')
+    return data
+
+
+def plan(data, schemas=None):
+    """What a policy means: {'dconf': {key: text}, 'locks': [key], 'browser': {...} or None,
+    'updates': {...} or None, 'managed': {...}, 'notes': [...]}. Raises PolicyError on mistakes."""
+    schemas = schemas or Schemas()
+    errors = []
+    out = {'dconf': {}, 'locks': [], 'browser': None, 'updates': None, 'managed': {}, 'notes': []}
+
+    for section in data:
+        if section not in SECTIONS:
+            errors.append(f'[{section}]: unknown section (known: {", ".join(sorted(SECTIONS))})')
+
+    def put(key, value, lock, where):
+        vtype = schemas.type_of(key)
+        if vtype is None:
+            out['notes'].append(f'{where}: {key} is not in any installed schema; written anyway as given')
+            text = value if isinstance(value, str) else simple_text(
+                'b' if isinstance(value, bool) else 'i' if isinstance(value, int) else 'as', value)
+        else:
+            try:
+                text = gvariant_text(vtype, value)
+            except ValueError as e:
+                errors.append(f'{where}: {e}')
+                return
+        out['dconf']['/' + key.strip('/')] = text
+        if lock:
+            out['locks'].append('/' + key.strip('/'))
+
+    for section, names in FRIENDLY.items():
+        table = data.get(section, {})
+        if not isinstance(table, dict):
+            errors.append(f'[{section}] must be a table')
+            continue
+        lock = table.get('lock', False)
+        for name, value in table.items():
+            if name == 'lock':
+                continue
+            if name not in names:
+                errors.append(f'[{section}] {name}: unknown (known: {", ".join(sorted(names))}, lock)')
+                continue
+            locked = lock is True or (isinstance(lock, list) and name in lock)
+            for key, convert in names[name]:
+                try:
+                    v = convert(value)
+                except (ValueError, KeyError) as e:
+                    errors.append(f'[{section}] {name}: should be {e}' if str(e) else f'[{section}] {name}: bad value')
+                    break
+                put(key, v, locked, f'[{section}] {name}')
+        if isinstance(lock, list):
+            for name in lock:
+                if name not in names:
+                    errors.append(f'[{section}] lock: {name} is not a setting of this section')
+                elif name not in table:
+                    errors.append(f'[{section}] lock: {name} is locked but not set')
+        elif not isinstance(lock, bool):
+            errors.append(f'[{section}] lock: true, false, or a list of names')
+
+    settings = data.get('settings', {})
+    lock_all = settings.get('lock', False) if isinstance(settings, dict) else False
+    for key, value in (settings.items() if isinstance(settings, dict) else []):
+        if key == 'lock':
+            continue
+        if not re.fullmatch(r'/?[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+', key):
+            errors.append(f'[settings] "{key}": write keys as "org/gnome/desktop/interface/clock-format"')
+            continue
+        locked = lock_all is True or (isinstance(lock_all, list) and key in lock_all)
+        put(key, value, locked, f'[settings] {key}')
+
+    browser = data.get('browser')
+    if browser is not None:
+        if not isinstance(browser, dict):
+            errors.append('[browser] must be a table of Chromium policies')
+        else:
+            bad = [k for k in browser if not re.fullmatch(r'[A-Z][A-Za-z0-9]+', k)]
+            if bad:
+                errors.append(f'[browser] {", ".join(bad)}: Chromium policy names look like HomepageLocation')
+            out['browser'] = browser
+
+    updates = data.get('updates')
+    if updates is not None:
+        u = {'mode': updates.get('mode', 'notify'), 'when': updates.get('when', ''),
+             'reboot': updates.get('reboot', 'never'), 'security_only': updates.get('security_only', False)}
+        if u['mode'] not in ('off', 'notify', 'download', 'install'):
+            errors.append('[updates] mode: off, notify, download or install')
+        if u['reboot'] not in ('never', 'when-needed'):
+            errors.append('[updates] reboot: never or when-needed')
+        if u['when'] and not calendar_ok(u['when']):
+            errors.append(f'[updates] when: "{u["when"]}" is not a time systemd understands (e.g. "Sat 03:00" or "daily")')
+        if not isinstance(u['security_only'], bool):
+            errors.append('[updates] security_only: true or false')
+        unknown = set(updates) - {'mode', 'when', 'reboot', 'security_only'}
+        if unknown:
+            errors.append(f'[updates] {", ".join(sorted(unknown))}: unknown')
+        out['updates'] = u
+
+    org = data.get('organisation', data.get('organization', {}))
+    if org:
+        out['managed'] = {k: str(v) for k, v in org.items() if k in ('name', 'contact', 'website', 'note')}
+        unknown = set(org) - {'name', 'contact', 'website', 'note'}
+        if unknown:
+            errors.append(f'[organisation] {", ".join(sorted(unknown))}: unknown (name, contact, website, note)')
+
+    if errors:
+        raise PolicyError('\n'.join(errors))
+    return out
+
+
+def calendar_ok(text):
+    if shutil.which('systemd-analyze') is None:
+        return bool(re.fullmatch(r'[\w:*,./ -]+', text))
+    r = subprocess.run(['systemd-analyze', 'calendar', text], capture_output=True, text=True)
+    return r.returncode == 0
+
+
+# --- What gets written -------------------------------------------------------------------------
+
+def dconf_keyfile(dconf):
+    groups = {}
+    for key, text in sorted(dconf.items()):
+        folder, name = key.strip('/').rsplit('/', 1)
+        groups.setdefault(folder, []).append(f'{name}={text}')
+    parts = ['# Written by parchaos-policy from /etc/parchaos/policy.toml; edit that file instead.']
+    for folder, lines in groups.items():
+        parts.append(f'\n[{folder}]')
+        parts += lines
+    return '\n'.join(parts) + '\n'
+
+
+def locks_file(locks):
+    return '# Written by parchaos-policy.\n' + ''.join(f'{k}\n' for k in sorted(set(locks)))
+
+
+def automatic_conf(u):
+    return ('# Written by parchaos-policy from /etc/parchaos/policy.toml.\n'
+            '[commands]\n'
+            f"apply_updates = {'yes' if u['mode'] == 'install' else 'no'}\n"
+            f"download_updates = {'yes' if u['mode'] in ('download', 'install') else 'no'}\n"
+            f"upgrade_type = {'security' if u['security_only'] else 'default'}\n"
+            f"reboot = {u['reboot']}\n"
+            'network_online_timeout = 60\n'
+            '\n[emitters]\nemit_via = stdio\n')
+
+
+def timer_dropin(when):
+    return ('# Written by parchaos-policy.\n[Timer]\nOnCalendar=\n'
+            f'OnCalendar={when}\n')
+
+
+def files_for(p):
+    """{relative path: text} for a plan; None means the file should not exist."""
+    files = {
+        DCONF_FILE: dconf_keyfile(p['dconf']) if p['dconf'] else None,
+        DCONF_LOCKS: locks_file(p['locks']) if p['locks'] else None,
+        CHROMIUM: json.dumps(p['browser'], indent=2, ensure_ascii=False) + '\n' if p['browser'] else None,
+        MANAGED: json.dumps(p['managed'], indent=2, ensure_ascii=False) + '\n' if p['managed'] else None,
+        AUTOMATIC: None, TIMER_DROPIN: None,
+    }
+    u = p['updates']
+    if u and u['mode'] in ('download', 'install'):
+        files[AUTOMATIC] = automatic_conf(u)
+        if u['when']:
+            files[TIMER_DROPIN] = timer_dropin(u['when'])
+    return files
+
+
+# --- Doing it ----------------------------------------------------------------------------------
+
+def run(argv):
+    if ROOT != '/':
+        print('  (would run) ' + ' '.join(argv))
+        return
+    subprocess.run(argv, check=False)
+
+
+def write_files(files, record):
+    """Writes, replaces or removes each file; returns the list now written by us."""
+    ours = set(record.get('files', []))
+    for rel, text in files.items():
+        full = path(rel)
+        if text is None:
+            if rel in ours and os.path.exists(full):
+                os.remove(full)
+            ours.discard(rel)
+            continue
+        if rel == AUTOMATIC and rel not in ours and os.path.exists(full):
+            # The administrator's own file: keep a copy to put back on remove.
+            shutil.copy2(full, full + '.before-parchaos-policy')
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        tmp = full + '.new'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            f.write(text)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, full)
+        ours.add(rel)
+    return sorted(ours)
+
+
+def load_record():
+    try:
+        with open(path(RECORD), encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_record(record):
+    os.makedirs(os.path.dirname(path(RECORD)), exist_ok=True)
+    with open(path(RECORD), 'w', encoding='utf-8') as f:
+        json.dump(record, f, indent=1)
+
+
+def apply(file, schemas=None):
+    if os.path.exists(file):
+        p = plan(read(file), schemas)
+    else:
+        # The policy file was removed: undo everything.
+        return remove()
+    record = load_record()
+    had_timer = record.get('timer_enabled', False)
+    record['files'] = write_files(files_for(p), record)
+    if os.path.exists(path(AUTOMATIC) + '.before-parchaos-policy') and AUTOMATIC not in record['files']:
+        os.replace(path(AUTOMATIC) + '.before-parchaos-policy', path(AUTOMATIC))
+    run(['dconf', 'update'])
+    run(['systemctl', 'daemon-reload'])
+    u = p['updates']
+    want_timer = bool(u and u['mode'] in ('download', 'install'))
+    if want_timer:
+        if shutil.which('dnf5') and not os.path.exists('/usr/lib/systemd/system/dnf5-automatic.timer') and ROOT == '/':
+            print('note: dnf5-plugin-automatic is not installed; install it for automatic updates', file=sys.stderr)
+        run(['systemctl', 'enable', '--now', 'dnf5-automatic.timer'])
+        record['timer_enabled'] = True
+    elif had_timer:
+        run(['systemctl', 'disable', '--now', 'dnf5-automatic.timer'])
+        record['timer_enabled'] = False
+    record['policy'] = os.path.abspath(file)
+    save_record(record)
+    for note in p['notes']:
+        print('note: ' + note, file=sys.stderr)
+    print(summary(p))
+    return 0
+
+
+def remove():
+    record = load_record()
+    for rel in record.get('files', []):
+        try:
+            os.remove(path(rel))
+        except FileNotFoundError:
+            pass
+    backup = path(AUTOMATIC) + '.before-parchaos-policy'
+    if os.path.exists(backup):
+        os.replace(backup, path(AUTOMATIC))
+    if record.get('timer_enabled'):
+        run(['systemctl', 'disable', '--now', 'dnf5-automatic.timer'])
+    run(['dconf', 'update'])
+    run(['systemctl', 'daemon-reload'])
+    try:
+        os.remove(path(RECORD))
+    except FileNotFoundError:
+        pass
+    print('policy removed')
+    return 0
+
+
+def summary(p):
+    lines = []
+    if p['managed'].get('name'):
+        lines.append(f"Managed by {p['managed']['name']}" + (f" ({p['managed']['contact']})" if p['managed'].get('contact') else ''))
+    locks = set(p['locks'])
+    for key, text in sorted(p['dconf'].items()):
+        lines.append(f"  {key} = {text}" + ('   [locked]' if key in locks else ''))
+    if p['browser']:
+        lines.append(f"  Parcha Browser: {len(p['browser'])} polic{'y' if len(p['browser']) == 1 else 'ies'}")
+    u = p['updates']
+    if u:
+        lines.append(f"  updates: {u['mode']}" + (f", at {u['when']}" if u['when'] else '')
+                     + (f", reboot {u['reboot']}" if u['mode'] == 'install' else '')
+                     + (', security only' if u['security_only'] else ''))
+    return '\n'.join(lines) if lines else 'the policy is empty'
+
+
+def status():
+    record = load_record()
+    if not record:
+        print('No policy applied.')
+        return 0
+    print(f"Policy: {record.get('policy', POLICY)}")
+    for rel in record.get('files', []):
+        print(f'  wrote /{rel}')
+    if record.get('timer_enabled'):
+        print('  automatic updates timer on')
+    try:
+        print(summary(plan(read(record.get('policy', POLICY)))))
+    except PolicyError as e:
+        print(f'The policy file now has problems:\n{e}')
+    return 0
+
+
+def main(argv):
+    if len(argv) < 2 or argv[1] in ('-h', '--help', 'help'):
+        print('usage: parchaos-policy check|apply|status|remove [FILE]   (FILE: /etc/parchaos/policy.toml)')
+        return 0 if len(argv) >= 2 else 2
+    cmd, file = argv[1], (argv[2] if len(argv) > 2 else POLICY)
+    try:
+        if cmd == 'check':
+            p = plan(read(file))
+            for note in p['notes']:
+                print('note: ' + note)
+            print(summary(p))
+            print('\nWould write:')
+            for rel, text in files_for(p).items():
+                if text is not None:
+                    print(f'--- /{rel}\n{text}')
+            return 0
+        if cmd in ('apply', 'remove') and ROOT == '/' and os.geteuid() != 0:
+            print('parchaos-policy: run as root (sudo)', file=sys.stderr)
+            return 1
+        if cmd == 'apply':
+            return apply(file)
+        if cmd == 'remove':
+            return remove()
+        if cmd == 'status':
+            return status()
+    except PolicyError as e:
+        print(f'parchaos-policy: the policy has problems:\n{e}', file=sys.stderr)
+        return 1
+    print(f'parchaos-policy: unknown command {cmd}', file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

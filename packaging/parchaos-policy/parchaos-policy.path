@@ -1,0 +1,9 @@
+[Unit]
+Description=Apply the ParchaOS policy whenever /etc/parchaos/policy.toml changes
+
+[Path]
+PathChanged=/etc/parchaos/policy.toml
+Unit=parchaos-policy.service
+
+[Install]
+WantedBy=paths.target
