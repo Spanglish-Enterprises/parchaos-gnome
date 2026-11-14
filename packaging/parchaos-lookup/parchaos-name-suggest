@@ -210,9 +210,14 @@ def read_image_text(path):
 
 
 def content_type(path):
-    import gi
-    gi.require_version('Gio', '2.0')
-    from gi.repository import Gio
+    try:
+        import gi
+        gi.require_version('Gio', '2.0')
+        from gi.repository import Gio
+    except (ImportError, ValueError):
+        # Without GLib (tests on a bare build machine): by the file's extension.
+        import mimetypes
+        return mimetypes.guess_type(path)[0] or ''
     try:
         info = Gio.File.new_for_path(path).query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, None)
         return info.get_content_type() or ''
