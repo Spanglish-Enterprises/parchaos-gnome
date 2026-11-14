@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        89%{?dist}
+Release:        90%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -126,6 +126,9 @@ Requires:       parchaos-lookup
 Requires:       parchaos-reader
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
+# "Send to Mobile Device" in Parcher's right-click menu (needs parcher >= 48.7-40).
+Requires:       nautilus-gsconnect
+Requires:       parcher >= 48.7-40
 Requires:       parchaos-glass
 Requires:       sushi
 Requires:       parchaos-snapshots
@@ -295,6 +298,11 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-90
+- Ticket #156: Requires nautilus-gsconnect, so Parcher's right-click menu
+  has "Send to Mobile Device" (Parcher 48.7-40 provides nautilus-extensions
+  for it).
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-89
 - Ticket #156: phone connection. Requires GSConnect and turns it on by default;
   parchaos-phone-guard (user service) lets it run only while it is turned

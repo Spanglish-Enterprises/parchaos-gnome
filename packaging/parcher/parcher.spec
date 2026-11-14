@@ -54,7 +54,7 @@
 
 Name:           parcher
 Version:        48.7
-Release:        39%{?dist}
+Release:        40%{?dist}
 Summary:        Parcher — ParchaOS's fork of GNOME Files (Nautilus)
 
 License:        GPL-3.0-or-later
@@ -109,6 +109,12 @@ Provides:       parchaos-finder = %{version}-%{release}
 Obsoletes:      parchaos-finder < 48.7-12
 Provides:       nautilus = %{version}-%{release}
 Provides:       libnautilus-extension = %{version}-%{release}
+# Parcher ships libnautilus-extension itself, which is what Fedora's
+# nautilus-extensions package holds; extensions such as nautilus-python
+# (and GSConnect's "Send to Mobile Device", ticket #156) require it by name.
+Provides:       nautilus-extensions = %{version}-%{release}
+Provides:       nautilus-extensions%{?_isa} = %{version}-%{release}
+Obsoletes:      nautilus-extensions < 51
 Conflicts:      nautilus
 # Any Fedora nautilus up to the next GNOME major: while Parcher is
 # installed, a newer Fedora nautilus can't be installed alongside it or
@@ -363,6 +369,12 @@ msgfmt --check -o /dev/null po/es.po
 %{_datadir}/nautilus/
 
 %changelog
+* Fri Nov 13 2026 ParchaOS packaging - 48.7-40
+- Ticket #156: Provides (and Obsoletes) nautilus-extensions, whose library
+  Parcher already ships, so nautilus-python and the extensions built on it
+  (GSConnect's "Send to Mobile Device") install against Parcher instead of
+  pulling in Fedora's nautilus-extensions.
+
 * Fri Nov 13 2026 ParchaOS packaging - 48.7-39
 - Ticket #185: suggested names in the rename box (0013-name-suggestions.patch).
   Renaming a file on this computer shows up to three names read from its
