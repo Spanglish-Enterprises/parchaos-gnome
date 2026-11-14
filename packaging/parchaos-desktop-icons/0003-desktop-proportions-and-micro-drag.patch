@@ -18,8 +18,7 @@
  /* Must put some alpha, never zero, to ensure that Gtk4 doesn't
     ignore a "fully empty and transparent window" */
  window.desktopwindow {
--    background-color: rgba(0, 0, 0, 0.005);
-+    background-color: rgba(0, 0, 0, 0.001);
+     background-color: rgba(0, 0, 0, 0.005);
 +    border: none;
 +    box-shadow: none;
  }

@@ -35,7 +35,7 @@
 
 Name:           parchaos-desktop-icons
 Version:        50
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Desktop Icons NG (DING) -- real icons on the GNOME desktop background
 
 License:        GPL-3.0-or-later
@@ -108,6 +108,14 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || true
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 50-8
+- Fix the desktop restarting every 6 seconds and taking focus from windows
+  on computers with more than one monitor. 50-6 (ticket #127) lowered the
+  desktop window's background alpha from 0.005 to 0.001, which rounds to
+  zero, and GTK does not draw a fully transparent window: the desktop
+  windows of monitors without icons never appeared, so GNOME Shell killed
+  and relaunched DING every 6 s. Back to 0.005 (upstream's minimum).
+
 * Fri Nov 13 2026 ParchaOS packaging - 50-7
 - Ticket #175: file piles. Group Files into Piles in the desktop menu groups
   desktop files by kind (Pictures, Screenshots, Screen Recordings,
