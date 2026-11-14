@@ -62,7 +62,7 @@
 
 Name:           parchaos-desktop
 Version:        2026.09.23
-Release:        90%{?dist}
+Release:        91%{?dist}
 Summary:        ParchaOS (GNOME) desktop meta-package -- installing/updating this pulls in the full profile
 
 License:        GPL-3.0-or-later
@@ -126,9 +126,11 @@ Requires:       parchaos-lookup
 Requires:       parchaos-reader
 # Phone connection (ticket #156): GSConnect, KDE Connect for GNOME (GPL-2.0-or-later, in Fedora).
 Requires:       gnome-shell-extension-gsconnect
-# "Send to Mobile Device" in Parcher's right-click menu (needs parcher >= 48.7-40).
-Requires:       nautilus-gsconnect
-Requires:       parcher >= 48.7-40
+# Not nautilus-gsconnect: it runs on nautilus-python 4.1, which needs the
+# Nautilus 4.1 extension API (Nautilus 49+); Parcher is Nautilus 48 (API 4.0),
+# so it only logged an error in every Parcher window. Removed on upgrade.
+Obsoletes:      nautilus-gsconnect < 100
+Obsoletes:      nautilus-python < 5
 Requires:       parchaos-glass
 Requires:       sushi
 Requires:       parchaos-snapshots
@@ -298,6 +300,13 @@ fi
 %{_sysconfdir}/dconf/db/local.d/05-parchaos-desktop
 
 %changelog
+* Sat Nov 14 2026 ParchaOS packaging - 2026.09.23-91
+- Ticket #156: drop nautilus-gsconnect again and remove it (and
+  nautilus-python) on upgrade. nautilus-python 4.1 needs Nautilus 49's
+  extension API; Parcher is Nautilus 48, so the menu never appeared and
+  every Parcher start logged an error. Sending to the phone works from the
+  phone connection's own menu.
+
 * Fri Nov 13 2026 ParchaOS packaging - 2026.09.23-90
 - Ticket #156: Requires nautilus-gsconnect, so Parcher's right-click menu
   has "Send to Mobile Device" (Parcher 48.7-40 provides nautilus-extensions
