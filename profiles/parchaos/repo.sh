@@ -34,6 +34,13 @@ profile_setup_repo() {
         echo "         fedora-$BRANCH-${ARCH:-x86_64}). Use --local with hand-built RPMs" >&2
         echo "         in build/local-rpms/ as a fallback." >&2
     fi
+    # The plugin wrote the build's release into the repo file
+    # (fedora-$BRANCH-...). Installed systems must follow their own release,
+    # or a Fedora version upgrade keeps getting the old release's ParchaOS
+    # packages and fails to resolve (found by a real 44 -> 45 upgrade).
+    # parchaos-desktop's dnf5 override sets the same baseurl for older
+    # installs.
+    run_in_target sh -c 'sed -i "s|/fedora-[0-9]*-[a-z0-9_]*/|/fedora-\$releasever-\$basearch/|" /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:alexgalicea:parchaos-gnome.repo'
 
     # Something in the base pulls in fedora-logos as the default provider of
     # system-logos (nothing else provides it now that generic-logos is not in

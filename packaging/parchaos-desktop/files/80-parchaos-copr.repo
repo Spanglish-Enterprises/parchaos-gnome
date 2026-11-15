@@ -10,6 +10,15 @@
 # updates repository does (6 hours). The COPR repo file sets nothing, so
 # dnf's 48-hour default applied and the app store could go two days
 # without seeing an update.
+#
+# baseurl: follow the Fedora release. Images built before 2026-11-15
+# wrote the repo file with the build's release in it (fedora-44-x86_64),
+# so after `dnf system-upgrade --releasever=45` dnf still offered only
+# Fedora 44 builds of ParchaOS packages and the upgrade failed to resolve.
+# Found by a real 44 -> 45 upgrade of an ISO install in a VM. This keeps
+# the same repository, just with the release and architecture filled in
+# by dnf.
 [copr:copr.fedorainfracloud.org:alexgalicea:parchaos-gnome]
 priority=90
 metadata_expire=6h
+baseurl=https://download.copr.fedorainfracloud.org/results/alexgalicea/parchaos-gnome/fedora-$releasever-$basearch/

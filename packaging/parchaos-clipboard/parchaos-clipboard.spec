@@ -16,7 +16,7 @@
 
 Name:           parchaos-clipboard
 Version:        1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Clipboard history in the top bar
 
 License:        MIT
@@ -44,6 +44,13 @@ extension (MIT).
 
 # GNOME Shell 51 removed Clutter.get_default_backend().
 grep -rl 'Clutter.get_default_backend()' *.js | xargs -r sed -i 's/Clutter\.get_default_backend()/(global.stage.context?.get_backend?.() ?? Clutter.get_default_backend())/'
+# GNOME Shell 51 also removed St.BoxLayout's "vertical" property (GNOME 50
+# already has "orientation"). With it, building the menu threw inside a
+# promise nobody caught: on Fedora 45 the clipboard menu never appeared and
+# the top bar showed the placeholder "Text will be here" (found on a real
+# 44 -> 45 upgrade in a VM).
+sed -i -E 's/\bvertical: true\b/orientation: Clutter.Orientation.VERTICAL/; s/\bvertical: false\b/orientation: Clutter.Orientation.HORIZONTAL/' extension.js confirmDialog.js
+! grep -nE '\bvertical:' extension.js confirmDialog.js
 
 %build
 # Upstream ships compiled catalogs; rebuild them from the .po files so the
@@ -70,6 +77,10 @@ done
 %{_datadir}/gnome-shell/extensions/clipboard-indicator@tudmotu.com/
 
 %changelog
+* Sun Nov 15 2026 ParchaOS packaging - 1-3
+- GNOME 51: use "orientation" instead of the removed "vertical" property;
+  the clipboard menu failed to build on Fedora 45 (ticket #37).
+
 * Wed Sep 30 2026 ParchaOS packaging - 1-2
 - Fedora 45 prep (ticket #37): loads on GNOME Shell 51.
 
