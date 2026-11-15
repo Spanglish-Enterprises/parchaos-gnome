@@ -205,6 +205,19 @@ cmd_status() {
     fi
 }
 
+# With SELinux on, the writable layer of a started snapshot is labelled as
+# memory (tmpfs_t): it was made in the initramfs, before the policy was
+# loaded. Run early at boot (parchaos-snapshot-relabel.service), this gives
+# everything in that layer the label of its real path, so services aren't
+# denied. Files made later get correct labels from their folders.
+cmd_relabel() {
+    local up=/run/parchaos-snapshot/rw/upper
+    booted_snapshot >/dev/null || exit 0
+    [ -d "$up" ] || exit 0
+    command -v restorecon >/dev/null || exit 0
+    { echo /; (cd "$up" && find . -mindepth 1 -printf '/%P\n'); } | restorecon -F -f - 2>/dev/null || true
+}
+
 root_device() {
     local a
     for a in $(cat /proc/cmdline); do
@@ -301,6 +314,7 @@ case "${1:-}" in
     grub) cmd_grub ;;
     menu) shift; cmd_menu "$@" ;;
     status) cmd_status ;;
+    relabel) cmd_relabel ;;
     keep) shift; cmd_keep "$@" ;;
     undo) cmd_undo ;;
     *) sed -n '/^#   parchaos-snapshot-boot grub/,/^#$/p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;

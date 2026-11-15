@@ -1,6 +1,6 @@
 Name:           parchaos-boot
 Version:        1.1.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ParchaOS boot menu: new kernels and earlier versions
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -16,6 +16,7 @@ Source8:        parchaos-earlier-version.desktop
 Source9:        org.parchaos.snapshot-boot.policy
 Source10:       es.po
 Source11:       org.parchaos.EarlierVersion.desktop
+Source12:       parchaos-snapshot-relabel.service
 Source90:       LICENSE
 BuildArch:      noarch
 
@@ -27,7 +28,6 @@ Requires(post): grub2-tools-minimal
 Requires:       btrfs-progs
 Requires:       dracut
 Requires:       util-linux
-Requires:       attr
 # The window shown when started from an earlier version.
 Requires:       python3-gobject
 Requires:       gtk4
@@ -67,6 +67,9 @@ install -Dm0644 %{SOURCE5} %{buildroot}%{_prefix}/lib/dracut/dracut.conf.d/50-pa
 install -Dm0644 %{SOURCE6} %{buildroot}%{_unitdir}/parchaos-snapshot-menu.service
 install -d %{buildroot}%{_unitdir}/multi-user.target.wants
 ln -s ../parchaos-snapshot-menu.service %{buildroot}%{_unitdir}/multi-user.target.wants/parchaos-snapshot-menu.service
+install -Dm0644 %{SOURCE12} %{buildroot}%{_unitdir}/parchaos-snapshot-relabel.service
+install -d %{buildroot}%{_unitdir}/sysinit.target.wants
+ln -s ../parchaos-snapshot-relabel.service %{buildroot}%{_unitdir}/sysinit.target.wants/parchaos-snapshot-relabel.service
 install -d %{buildroot}%{_sharedstatedir}/parchaos/snapshot-boot
 install -Dm0755 %{SOURCE7} %{buildroot}%{_libexecdir}/parchaos-earlier-version
 install -Dm0644 %{SOURCE8} %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-earlier-version.desktop
@@ -104,6 +107,8 @@ fi
 %{_prefix}/lib/dracut/dracut.conf.d/50-parchaos-snapshot.conf
 %{_unitdir}/parchaos-snapshot-menu.service
 %{_unitdir}/multi-user.target.wants/parchaos-snapshot-menu.service
+%{_unitdir}/parchaos-snapshot-relabel.service
+%{_unitdir}/sysinit.target.wants/parchaos-snapshot-relabel.service
 %dir %{_sharedstatedir}/parchaos
 %dir %{_sharedstatedir}/parchaos/snapshot-boot
 %{_libexecdir}/parchaos-earlier-version
@@ -113,6 +118,10 @@ fi
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-boot.mo
 
 %changelog
+* Sun Nov 15 2026 ParchaOS packaging - 1.1.0-2
+- With SELinux on, a start from an earlier version labelled its temporary
+  layer as memory (tmpfs_t) and services were denied. An early service
+  now restores the real labels once the policy is loaded.
 * Sun Nov 15 2026 ParchaOS packaging - 1.1.0-1
 - Ticket #151: "Start from an earlier version" in the boot menu, with the
   system as it was before the last few updates. Starts with a temporary

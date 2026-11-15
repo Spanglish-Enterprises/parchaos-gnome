@@ -20,7 +20,7 @@ installkernel() {
 }
 
 install() {
-    inst_multiple -o getfattr setfattr grep
+    inst_multiple grep
     # shellcheck disable=SC2154  # moddir is set by dracut
     inst_hook pre-pivot 50 "$moddir/parchaos-snapshot-overlay.sh"
 }

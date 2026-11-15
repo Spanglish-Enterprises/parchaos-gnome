@@ -1,0 +1,16 @@
+[Unit]
+Description=Label the temporary layer of a start from an earlier version
+Documentation=file:///usr/libexec/parchaos-snapshot-boot
+DefaultDependencies=no
+ConditionKernelCommandLine=parchaos.snapshot
+ConditionSecurity=selinux
+ConditionPathIsDirectory=/run/parchaos-snapshot/rw/upper
+After=systemd-remount-fs.service
+Before=sysinit.target systemd-tmpfiles-setup.service local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/parchaos-snapshot-boot relabel
+
+[Install]
+WantedBy=sysinit.target
