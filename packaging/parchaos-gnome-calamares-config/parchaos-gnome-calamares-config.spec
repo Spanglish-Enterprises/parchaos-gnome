@@ -68,7 +68,7 @@
 
 Name:           parchaos-gnome-calamares-config
 Version:        2026.09.23
-Release:        33%{?dist}
+Release:        34%{?dist}
 Summary:        ParchaOS (GNOME) Calamares installer branding and module configuration
 
 License:        GPL-3.0-or-later AND CC0-1.0 AND CC-BY-SA-4.0
@@ -120,6 +120,10 @@ chmod 0755 %{buildroot}/usr/local/bin/parchaos-launch-calamares
 %{_datadir}/polkit-1/actions/org.parchaos.installer.policy
 
 %changelog
+* Sun Nov 15 2026 ParchaOS packaging - 2026.09.23-34
+- Rebuild the real initramfs at install time. Fedora's calamares ships
+  an example dracut.conf that wrote /boot/initramfs-freebsd.img instead,
+  so installs kept the live ISO's initramfs.
 * Sun Nov 08 2026 ParchaOS packaging - 2026.09.23-33
 - Ticket #146: Spanish name and description in the .desktop file(s).
 

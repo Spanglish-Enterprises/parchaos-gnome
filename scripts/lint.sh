@@ -188,6 +188,13 @@ if grep -rnE "vertical:[[:space:]]*(true|false|!)" packaging --include=*.js; the
     fail st-boxlayout-vertical
 fi
 
+echo "== autostart entries: no X-GNOME-Autostart-Phase =="
+# gnome-session 50 skips autostart entries with this key ("no longer manages session services"),
+# so Welcome and What's New never opened at login (found on a fresh install, 2026-11-15).
+if grep -rln '^X-GNOME-Autostart-Phase=' packaging --include=*.desktop; then
+    fail autostart-phase
+fi
+
 echo "== packages.sh vs parchaos-desktop Requires/Recommends =="
 # Every non-comment, non-conditional package in packages.sh should appear
 # in the meta-package's Requires list.

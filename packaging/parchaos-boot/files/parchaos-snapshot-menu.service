@@ -1,0 +1,15 @@
+[Unit]
+Description=Keep the earlier-version entries in the boot menu up to date
+Documentation=file:///usr/libexec/parchaos-snapshot-boot
+ConditionPathExists=/etc/snapper/configs/root
+ConditionKernelCommandLine=!parchaos.snapshot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/parchaos-snapshot-boot menu --if-changed
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

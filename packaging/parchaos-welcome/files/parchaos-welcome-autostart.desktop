@@ -7,5 +7,4 @@ Comment[es]=Se muestra una vez, al primer inicio de sesión
 Exec=parchaos-welcome --first-run
 Icon=parchaos-logo
 NoDisplay=true
-X-GNOME-Autostart-Phase=Applications
 X-GNOME-Autostart-Delay=3

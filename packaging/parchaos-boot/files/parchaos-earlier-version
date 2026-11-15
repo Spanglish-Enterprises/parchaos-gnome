@@ -1,0 +1,218 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Earlier Version (ticket #151): shown at login when ParchaOS was started
+# from "Start from an earlier version" in the boot menu, or right after such
+# a version was kept. Says so in plain words and offers the next step: keep
+# this version, restart normally, or go back to the newer version.
+#
+# Does nothing on a normal start. The work is done by
+# /usr/libexec/parchaos-snapshot-boot (run through pkexec).
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+import gettext
+import os
+import subprocess
+import sys
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+DOMAIN = 'parchaos-boot'
+gettext.bindtextdomain(DOMAIN, os.environ.get('PARCHAOS_LOCALEDIR', '/usr/share/locale'))
+gettext.textdomain(DOMAIN)
+_ = gettext.gettext
+
+APP_ID = 'org.parchaos.EarlierVersion'
+TOOL = os.environ.get('PARCHAOS_SNAPSHOT_BOOT', '/usr/libexec/parchaos-snapshot-boot')
+STATE = os.path.join(GLib.get_user_state_dir(), 'parchaos', 'earlier-version-seen')
+
+
+def status():
+    """('snapshot', number, date) | ('restored', number, date) | ('current', '', '')"""
+    try:
+        out = subprocess.run([TOOL, 'status'], capture_output=True, text=True, timeout=20).stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        return 'current', '', ''
+    if not out:
+        return 'current', '', ''
+    kind = out[0]
+    num = out[1] if len(out) > 1 else ''
+    date = ' '.join(out[2:])
+    return kind, num, date
+
+
+def seen_marker():
+    try:
+        with open(STATE) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def remember_seen(text):
+    try:
+        os.makedirs(os.path.dirname(STATE), exist_ok=True)
+        with open(STATE, 'w') as f:
+            f.write(text + '\n')
+    except OSError:
+        pass
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app, kind, num, date):
+        super().__init__(application=app, title=_('Earlier Version'), default_width=560, default_height=640)
+        self.kind, self.num, self.date = kind, num, date
+        view = Adw.ToolbarView()
+        view.add_top_bar(Adw.HeaderBar(show_title=False))
+        self.page = Adw.StatusPage(icon_name='document-revert-symbolic')
+        self.buttons = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, halign=Gtk.Align.CENTER)
+        self.page.set_child(self.buttons)
+        view.set_content(self.page)
+        self.set_content(view)
+        self.connect('close-request', lambda *_a: app.withdraw_notification('earlier-version') or False)
+        self.show_state()
+
+    def button(self, label, style, handler):
+        b = Gtk.Button(label=label, width_request=260)
+        b.add_css_class('pill')
+        if style:
+            b.add_css_class(style)
+        b.connect('clicked', handler)
+        self.buttons.append(b)
+        return b
+
+    def clear_buttons(self):
+        while (c := self.buttons.get_first_child()) is not None:
+            self.buttons.remove(c)
+
+    def show_state(self):
+        self.clear_buttons()
+        when = self.date or _('an earlier update')
+        if self.kind == 'snapshot':
+            self.page.set_title(_('You Are Using an Earlier Version'))
+            self.page.set_description(_(
+                'ParchaOS started as it was before the update of {date}. Your files are the current ones.\n\n'
+                'Apps installed and system settings changed in this session are not kept. If this version '
+                'works better, keep it; otherwise restart to go back to the newer version.').format(date=when))
+            self.button(_('Keep This Version'), 'suggested-action', self.on_keep)
+            self.button(_('Restart Normally'), None, self.on_restart)
+        else:
+            self.page.set_title(_('Using the Version From Before an Update'))
+            self.page.set_description(_(
+                'ParchaOS is now the version from before the update of {date}. The newer version was kept, '
+                'so you can go back to it.\n\nThe same updates will be offered again. If one of them caused '
+                'the problem, wait for a newer one before installing.').format(date=when))
+            self.button(_('Done'), 'suggested-action', lambda *_a: self.close())
+            self.button(_('Go Back to the Newer Version'), None, self.on_undo)
+
+    def busy(self, text):
+        self.clear_buttons()
+        spinner = Adw.Spinner(width_request=32, height_request=32)
+        self.buttons.append(spinner)
+        self.page.set_description(text)
+
+    def run_tool(self, args, done):
+        self.busy(_('Working…'))
+        try:
+            proc = subprocess.Popen(['pkexec', TOOL] + args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        except OSError as e:
+            done(False, str(e))
+            return
+
+        def check():
+            if proc.poll() is None:
+                return True
+            out = proc.stdout.read() if proc.stdout else ''
+            done(proc.returncode == 0, out)
+            return False
+        GLib.timeout_add(300, check)
+
+    def on_keep(self, *_a):
+        def done(ok, out):
+            if ok:
+                self.get_application().withdraw_notification('earlier-version')
+                self.page.set_title(_('This Version Will Be Kept'))
+                self.page.set_description(_('Restart to finish. The newer version is kept, so you can go back to it later.'))
+                self.clear_buttons()
+                self.button(_('Restart Now'), 'suggested-action', self.on_restart)
+            else:
+                self.failed(out)
+        self.run_tool(['keep', self.num], done)
+
+    def on_undo(self, *_a):
+        def done(ok, out):
+            if ok:
+                self.get_application().withdraw_notification('earlier-version')
+                self.page.set_title(_('The Newer Version Starts Next Time'))
+                self.page.set_description(_('Restart to finish.'))
+                self.clear_buttons()
+                self.button(_('Restart Now'), 'suggested-action', self.on_restart)
+            else:
+                self.failed(out)
+        self.run_tool(['undo'], done)
+
+    def failed(self, out):
+        self.show_state()
+        # pkexec exits 126/127 when the password dialog is dismissed; say nothing then.
+        if out.strip() and 'Not authorized' not in out and 'dismissed' not in out.lower():
+            dialog = Adw.AlertDialog(heading=_('That Did Not Work'), body=out.strip()[-600:])
+            dialog.add_response('ok', _('OK'))
+            dialog.present(self)
+
+    def on_restart(self, *_a):
+        subprocess.Popen(['systemctl', 'reboot'])
+
+
+class App(Adw.Application):
+    def __init__(self, kind, num, date):
+        super().__init__(application_id=APP_ID)
+        self.state = (kind, num, date)
+
+    def do_startup(self):
+        Adw.Application.do_startup(self)
+        show = Gio.SimpleAction.new('show', None)
+        show.connect('activate', lambda *_a: self.activate())
+        self.add_action(show)
+
+    def do_activate(self):
+        first = self.get_active_window() is None
+        win = self.get_active_window() or Window(self, *self.state)
+        win.present()
+        if first:
+            # Session restore reopens the last session's windows right after
+            # login, on top of this one, and GNOME doesn't raise a window
+            # without a user action. A notification stays visible; clicking
+            # it brings the window forward.
+            kind, _num, date = self.state
+            n = Gio.Notification.new(_('You Are Using an Earlier Version') if kind == 'snapshot'
+                                     else _('Using the Version From Before an Update'))
+            n.set_body(_('From before the update of {date}. Open to keep it or go back.').format(
+                date=date or _('an earlier update')))
+            # Urgent: shown even with Do Not Disturb on (the focus schedule
+            # turns it on at night), and it stays until clicked.
+            n.set_priority(Gio.NotificationPriority.URGENT)
+            n.set_default_action('app.show')
+            self.send_notification('earlier-version', n)
+
+
+def main():
+    GLib.set_application_name(_('Earlier Version'))
+    kind, num, date = status()
+    autostart = '--autostart' in sys.argv
+    if kind == 'current':
+        if not autostart:
+            print(_('ParchaOS started normally; nothing to do.'))
+        return 0
+    if kind == 'restored' and autostart:
+        # Say it once per kept version, not at every login.
+        if seen_marker() == f'{num} {date}':
+            return 0
+        remember_seen(f'{num} {date}')
+    return App(kind, num, date).run([sys.argv[0]])
+
+
+if __name__ == '__main__':
+    sys.exit(main())

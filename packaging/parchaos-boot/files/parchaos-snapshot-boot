@@ -1,0 +1,307 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# parchaos-snapshot-boot: start ParchaOS as it was before an update, and
+# keep that version if the update broke something (ticket #151).
+#
+# Snapper takes a snapshot of the system before every update (ticket
+# #116). This script lists the most recent of those in the boot menu, in
+# a submenu "Start from an earlier version". Picking one starts the system
+# from that snapshot with a temporary writable layer in memory on top
+# (the parchaos-snapshot dracut module), so nothing on the disk changes
+# and a normal restart returns to the current version. Home folders are
+# not part of the system snapshot: they stay current either way.
+#
+# "keep" makes a snapshot the system for good: the current system is
+# renamed (kept as @root.before-restore-<time>) and a writable copy of
+# the snapshot takes the name @root. The boot menu, the EFI stub and
+# /etc/fstab all refer to the system by that name, so nothing else needs
+# rewriting and the default subvolume is not involved (snapper's own
+# rollback works by changing the default subvolume, which ParchaOS's GRUB
+# setup does not follow). "undo" swaps the two back.
+#
+#   parchaos-snapshot-boot grub           print the boot menu entries (grub.d)
+#   parchaos-snapshot-boot menu [--if-changed]
+#                                         regenerate /boot/grub2/grub.cfg
+#   parchaos-snapshot-boot status         "snapshot N DATE" when started from one,
+#                                         "restored N DATE" after "keep", or "current"
+#   parchaos-snapshot-boot keep [N]       make snapshot N (default: the one
+#                                         this boot started from) the system
+#   parchaos-snapshot-boot undo           go back to the version before "keep"
+#
+# Original code for ParchaOS, GPL-3.0-or-later.
+
+set -euo pipefail
+
+SNAPDIR=${PARCHAOS_SNAPDIR:-/.snapshots}
+STATE=${PARCHAOS_SNAPSHOT_STATE:-/var/lib/parchaos/snapshot-boot}
+REAL_CFG=/boot/grub2/grub.cfg
+MAX=${PARCHAOS_SNAPSHOT_MENU_MAX:-5}
+TOP=/run/parchaos-top
+
+say() { echo "parchaos-snapshot-boot: $*" >&2; }
+die() { say "$*"; exit 1; }
+
+spanish() { case "${LANG:-}${LC_MESSAGES:-}" in es*) return 0 ;; esac; return 1; }
+
+# The snapshot this boot started from, if any.
+booted_snapshot() {
+    local a
+    for a in $(cat "${PARCHAOS_CMDLINE:-/proc/cmdline}"); do
+        case $a in parchaos.snapshot=*) echo "${a#parchaos.snapshot=}"; return 0 ;; esac
+    done
+    return 1
+}
+
+# Field from a snapper info.xml: info_field FILE TAG
+info_field() {
+    sed -n "s:.*<$2>\(.*\)</$2>.*:\1:p" "$1" | head -n1
+}
+
+# Newest kernel version in a snapshot's /boot with an initramfs next to it.
+snapshot_kernel() {
+    local boot=$1/boot v
+    for v in $(ls "$boot" 2>/dev/null | sed -n 's/^vmlinuz-//p' | grep -v rescue | sort -rV); do
+        if [ -f "$boot/initramfs-$v.img" ]; then
+            echo "$v"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Whether an initramfs can start a snapshot (has the overlay hook). Snapshots
+# never change, so the answer is cached per snapshot and kernel.
+initramfs_ready() {
+    local n=$1 img=$2 key
+    key=$STATE/ready-$n-$(basename "$img")
+    [ -f "$key.yes" ] && return 0
+    [ -f "$key.no" ] && return 1
+    mkdir -p "$STATE" 2>/dev/null || true
+    # grep -c reads the whole listing: with pipefail, grep -q would stop
+    # early and lsinitrd's SIGPIPE would count as "not ready".
+    if [ "$(lsinitrd "$img" 2>/dev/null | grep -c 'parchaos-snapshot-overlay')" -gt 0 ]; then
+        touch "$key.yes" 2>/dev/null || true
+        return 0
+    fi
+    touch "$key.no" 2>/dev/null || true
+    return 1
+}
+
+# Lines "N<TAB>kernel<TAB>date" for the snapshots that go in the menu,
+# newest first: snapshots taken before an update, that still have a
+# kernel and an initramfs able to start them.
+menu_snapshots() {
+    local n info dir k date count=0
+    [ -d "$SNAPDIR" ] || return 0
+    # shellcheck disable=SC2010  # only all-digit names are kept
+    for n in $(ls "$SNAPDIR" 2>/dev/null | grep -E '^[0-9]+$' | sort -rn); do
+        info=$SNAPDIR/$n/info.xml
+        dir=$SNAPDIR/$n/snapshot
+        [ -f "$info" ] && [ -d "$dir" ] || continue
+        [ "$(info_field "$info" type)" = pre ] || continue
+        k=$(snapshot_kernel "$dir") || continue
+        initramfs_ready "$n" "$dir/boot/initramfs-$k.img" || continue
+        date=$(info_field "$info" date)
+        printf '%s\t%s\t%s\n' "$n" "$k" "$date"
+        count=$((count + 1))
+        [ "$count" -ge "$MAX" ] && break
+    done
+}
+
+local_time() {
+    date -d "$1 UTC" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "$1"
+}
+
+cmd_grub() {
+    # PARCHAOS_FSROOT / PARCHAOS_ROOT_UUID stand in for the root filesystem
+    # in the tests.
+    if [ -z "${PARCHAOS_FSROOT:-}" ]; then
+        [ -e /etc/snapper/configs/root ] || exit 0
+        [ "$(findmnt -no FSTYPE / 2>/dev/null)" = btrfs ] || exit 0
+    fi
+    booted_snapshot >/dev/null && exit 0
+    local fsroot uuid entries first=1 n k d when title sub args path
+    fsroot=${PARCHAOS_FSROOT:-$(findmnt -no FSROOT /)}   # e.g. /@root
+    uuid=${PARCHAOS_ROOT_UUID:-$(findmnt -no UUID /)}
+    [ -n "$uuid" ] || exit 0
+    entries=$(menu_snapshots)
+    [ -n "$entries" ] || exit 0
+    args="${GRUB_CMDLINE_LINUX:-} ${GRUB_CMDLINE_LINUX_DEFAULT:-}"
+    if spanish; then sub="Iniciar desde una versión anterior"; else sub="Start from an earlier version"; fi
+    echo "submenu '$sub' --class parchaos --class os {"
+    echo "  insmod part_gpt"
+    echo "  insmod btrfs"
+    # Before the file checks below: until then root is the EFI partition.
+    echo "  search --no-floppy --fs-uuid --set=root $uuid"
+    while IFS=$'\t' read -r n k d; do
+        when=$(local_time "$d")
+        if [ $first -eq 1 ]; then
+            if spanish; then title="Antes de la última actualización ($when)"; else title="Before the last update ($when)"; fi
+            first=0
+        else
+            if spanish; then title="Antes de la actualización del $when"; else title="Before the update of $when"; fi
+        fi
+        path="${fsroot%/}/.snapshots/$n/snapshot"
+        echo "  if [ -f $path/boot/vmlinuz-$k ]; then"
+        echo "  menuentry '$title' --class parchaos --class os {"
+        echo "    search --no-floppy --fs-uuid --set=root $uuid"
+        # The date goes on the command line too: a started snapshot has an
+        # empty /.snapshots (nested subvolumes are not part of a snapshot).
+        echo "    linux $path/boot/vmlinuz-$k root=UUID=$uuid ro rootflags=subvol=${path#/} parchaos.snapshot=$n parchaos.snapshot.date=${when/ /T} $args"
+        echo "    initrd $path/boot/initramfs-$k.img"
+        echo "  }"
+        echo "  fi"
+    done <<< "$entries"
+    echo "}"
+}
+
+cmd_menu() {
+    local sig old=
+    [ -f "$REAL_CFG" ] || { say "no $REAL_CFG; nothing to do"; return 0; }
+    booted_snapshot >/dev/null && { say "started from a snapshot; menu left as it is"; return 0; }
+    if [ "${1:-}" = --if-changed ]; then
+        sig=$(menu_snapshots | cut -f1,2 | tr '\n' ' ')
+        [ -f "$STATE/menu.sig" ] && old=$(cat "$STATE/menu.sig")
+        [ "$sig" = "$old" ] && return 0
+    fi
+    local new
+    new=$(mktemp /boot/grub2/.grub.cfg.XXXXXX)
+    trap 'rm -f "$new"' RETURN
+    grub2-mkconfig -o "$new" >/dev/null 2>&1
+    grub2-script-check "$new"
+    grep -q '^menuentry \|^[[:space:]]*menuentry ' "$new" || die "generated menu has no entries; kept the old one"
+    chmod 0600 "$new"
+    mv -f "$new" "$REAL_CFG"
+    mkdir -p "$STATE"
+    menu_snapshots | cut -f1,2 | tr '\n' ' ' > "$STATE/menu.sig"
+    say "boot menu updated"
+}
+
+booted_date() {
+    local a
+    for a in $(cat "${PARCHAOS_CMDLINE:-/proc/cmdline}"); do
+        case $a in parchaos.snapshot.date=*) a=${a#parchaos.snapshot.date=}; echo "${a/T/ }"; return 0 ;; esac
+    done
+    return 1
+}
+
+cmd_status() {
+    local n info d
+    if n=$(booted_snapshot); then
+        info=$SNAPDIR/$n/info.xml
+        if d=$(booted_date); then
+            echo "snapshot $n $d"
+        elif [ -f "$info" ]; then
+            echo "snapshot $n $(local_time "$(info_field "$info" date)")"
+        else
+            echo "snapshot $n"
+        fi
+    elif [ -s "$STATE/restored" ]; then
+        # Written by "keep" into the version it restored; an "undo" goes
+        # back to a version without it.
+        echo "restored $(cat "$STATE/restored")"
+    else
+        echo "current"
+    fi
+}
+
+root_device() {
+    local a
+    for a in $(cat /proc/cmdline); do
+        case $a in root=UUID=*) echo "/dev/disk/by-uuid/${a#root=UUID=}"; return 0 ;; esac
+    done
+    findmnt -no SOURCE /home | sed 's/\[.*//'
+}
+
+mount_top() {
+    mkdir -p "$TOP"
+    mountpoint -q "$TOP" || mount -o subvolid=5 "$(root_device)" "$TOP"
+}
+
+# Move the subvolumes nested in one system subvolume (.snapshots,
+# var/lib/portables) into another: move_nested FROM TO (names under $TOP).
+move_nested() {
+    local from=$1 to=$2 rel
+    while read -r rel; do
+        [ -n "$rel" ] || continue
+        rel=${rel#"$from"/}
+        if [ -d "$TOP/$to/$rel" ]; then
+            rmdir "$TOP/$to/$rel" 2>/dev/null || die "$to/$rel is not empty; stopped before changing anything else"
+        fi
+        mkdir -p "$(dirname "$TOP/$to/$rel")"
+        mv "$TOP/$from/$rel" "$TOP/$to/$rel"
+    done < <(btrfs subvolume list -o "$TOP/$from" | sed -n 's/.* path //p' | sed "s:^<FS_TREE>/::")
+}
+
+# Point the default subvolume at the new @root if it pointed at the old one.
+follow_default() {
+    local old_id=$1 new_id
+    if [ "$(btrfs subvolume get-default "$TOP" | awk '{print $2}')" = "$old_id" ]; then
+        new_id=$(btrfs subvolume show "$TOP/@root" | awk '/Subvolume ID:/ {print $3}')
+        btrfs subvolume set-default "$new_id" "$TOP"
+    fi
+}
+
+# Keep only the newest copy of each kind (they can be large).
+prune() {
+    local kind=$1 d
+    for d in $(ls -d "$TOP/@root.$kind-"* 2>/dev/null | sort -r | tail -n +2); do
+        btrfs subvolume delete "$d" >/dev/null && say "removed old copy $(basename "$d")"
+    done
+}
+
+cmd_keep() {
+    [ "$(id -u)" -eq 0 ] || die "must run as root"
+    local n=${1:-} stamp old_id
+    if [ -z "$n" ]; then n=$(booted_snapshot) || die "not started from a snapshot; say which one (snapper list)"; fi
+    [[ $n =~ ^[0-9]+$ ]] || die "not a snapshot number: $n"
+    mount_top
+    [ -d "$TOP/@root/.snapshots/$n/snapshot" ] || die "snapshot $n not found"
+    [ ! -e "$TOP/@root.restoring" ] || die "$TOP/@root.restoring exists from an interrupted run; remove it first"
+    stamp=$(date +%Y%m%d-%H%M%S)
+    old_id=$(btrfs subvolume show "$TOP/@root" | awk '/Subvolume ID:/ {print $3}')
+    btrfs subvolume snapshot "$TOP/@root/.snapshots/$n/snapshot" "$TOP/@root.restoring" >/dev/null
+    if ! move_nested @root @root.restoring; then
+        move_nested @root.restoring @root || true
+        btrfs subvolume delete "$TOP/@root.restoring" >/dev/null || true
+        die "could not move the snapshot folder; nothing was changed"
+    fi
+    # Tell the restored system what it is (shown once at login by
+    # parchaos-earlier-version).
+    mkdir -p "$TOP/@root.restoring$STATE"
+    echo "$n $(local_time "$(info_field "$TOP/@root.restoring/.snapshots/$n/info.xml" date)")" > "$TOP/@root.restoring$STATE/restored"
+    mv "$TOP/@root" "$TOP/@root.before-restore-$stamp"
+    mv "$TOP/@root.restoring" "$TOP/@root"
+    follow_default "$old_id"
+    prune before-restore
+    sync
+    say "snapshot $n is now the system; the previous version is kept as @root.before-restore-$stamp"
+    say "restart to use it ('parchaos-snapshot-boot undo' goes back)"
+}
+
+cmd_undo() {
+    [ "$(id -u)" -eq 0 ] || die "must run as root"
+    local prev stamp old_id
+    mount_top
+    prev=$(ls -d "$TOP/@root.before-restore-"* 2>/dev/null | sort | tail -n1) || true
+    [ -n "$prev" ] || die "no earlier version to go back to"
+    prev=$(basename "$prev")
+    stamp=$(date +%Y%m%d-%H%M%S)
+    old_id=$(btrfs subvolume show "$TOP/@root" | awk '/Subvolume ID:/ {print $3}')
+    move_nested @root "$prev"
+    mv "$TOP/@root" "$TOP/@root.undone-$stamp"
+    mv "$TOP/$prev" "$TOP/@root"
+    follow_default "$old_id"
+    prune undone
+    sync
+    say "back to the version from before the restore; restart to use it"
+}
+
+case "${1:-}" in
+    grub) cmd_grub ;;
+    menu) shift; cmd_menu "$@" ;;
+    status) cmd_status ;;
+    keep) shift; cmd_keep "$@" ;;
+    undo) cmd_undo ;;
+    *) sed -n '/^#   parchaos-snapshot-boot grub/,/^#$/p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

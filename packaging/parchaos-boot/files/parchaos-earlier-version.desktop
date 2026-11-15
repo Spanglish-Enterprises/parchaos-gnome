@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Earlier Version
+Name[es]=Versión anterior
+Comment=Shown when ParchaOS was started as it was before an update
+Comment[es]=Aparece cuando ParchaOS se inició tal como estaba antes de una actualización
+Exec=/usr/libexec/parchaos-earlier-version --autostart
+Icon=parchaos-logo
+NoDisplay=true
+X-GNOME-Autostart-Delay=6
+X-GNOME-Autostart-enabled=true

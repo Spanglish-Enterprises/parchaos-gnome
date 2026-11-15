@@ -14,7 +14,7 @@
 
 Name:           parchaos-snapshots
 Version:        1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Snapshots of your system and files, in the top bar
 
 License:        GPL-2.0-or-later
@@ -88,6 +88,8 @@ systemctl start parchaos-snapper-setup.service >/dev/null 2>&1 || :
 %config(noreplace) %{_sysconfdir}/dnf/libdnf5-plugins/actions.d/parchaos-snapper.actions
 
 %changelog
+* Sun Nov 15 2026 ParchaOS packaging - 1-2
+- After an update, refresh the boot menu's earlier versions (#151).
 * Tue Sep 29 2026 ParchaOS packaging - 1-1
 - Initial package (ticket #116, layer 1): Wisp at commit 9543d86 (1.0.13),
   first-boot snapper configs for / and /home on Btrfs (wheel can read them),

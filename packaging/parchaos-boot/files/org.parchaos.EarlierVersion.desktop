@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Earlier Version
+Name[es]=Versión anterior
+Comment=Keep the version of ParchaOS from before an update, or go back to the newer one
+Comment[es]=Conserva la versión de ParchaOS de antes de una actualización, o vuelve a la más reciente
+Exec=/usr/libexec/parchaos-earlier-version
+Icon=parchaos-logo
+NoDisplay=true
+StartupNotify=true

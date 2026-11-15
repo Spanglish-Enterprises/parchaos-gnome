@@ -1,0 +1,112 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-boot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-boot\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-15 00:26-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-earlier-version:66 files/parchaos-earlier-version:202
+msgid "Earlier Version"
+msgstr "Versión anterior"
+
+#: files/parchaos-earlier-version:93 files/parchaos-earlier-version:193
+msgid "an earlier update"
+msgstr "una actualización anterior"
+
+#: files/parchaos-earlier-version:95 files/parchaos-earlier-version:190
+msgid "You Are Using an Earlier Version"
+msgstr "Estás usando una versión anterior"
+
+#: files/parchaos-earlier-version:97
+#, python-brace-format
+msgid ""
+"ParchaOS started as it was before the update of {date}. Your files are the "
+"current ones.\n"
+"\n"
+"Apps installed and system settings changed in this session are not kept. If "
+"this version works better, keep it; otherwise restart to go back to the "
+"newer version."
+msgstr "ParchaOS se inició tal como estaba antes de la actualización del {date}. Tus archivos son los actuales.\n\nLas apps que instales y los ajustes del sistema que cambies en esta sesión no se guardan. Si esta versión funciona mejor, consérvala; si no, reinicia para volver a la versión más reciente."
+
+#: files/parchaos-earlier-version:100
+msgid "Keep This Version"
+msgstr "Conservar esta versión"
+
+#: files/parchaos-earlier-version:101
+msgid "Restart Normally"
+msgstr "Reiniciar normalmente"
+
+#: files/parchaos-earlier-version:103 files/parchaos-earlier-version:191
+msgid "Using the Version From Before an Update"
+msgstr "Usando la versión de antes de una actualización"
+
+#: files/parchaos-earlier-version:105
+#, python-brace-format
+msgid ""
+"ParchaOS is now the version from before the update of {date}. The newer "
+"version was kept, so you can go back to it.\n"
+"\n"
+"The same updates will be offered again. If one of them caused the problem, "
+"wait for a newer one before installing."
+msgstr "ParchaOS es ahora la versión de antes de la actualización del {date}. La versión más reciente se guardó, así que puedes volver a ella.\n\nLas mismas actualizaciones se ofrecerán de nuevo. Si una de ellas causó el problema, espera a que haya una más nueva antes de instalarla."
+
+#: files/parchaos-earlier-version:108
+msgid "Done"
+msgstr "Listo"
+
+#: files/parchaos-earlier-version:109
+msgid "Go Back to the Newer Version"
+msgstr "Volver a la versión más reciente"
+
+#: files/parchaos-earlier-version:118
+msgid "Working…"
+msgstr "Trabajando…"
+
+#: files/parchaos-earlier-version:137
+msgid "This Version Will Be Kept"
+msgstr "Se conservará esta versión"
+
+#: files/parchaos-earlier-version:138
+msgid ""
+"Restart to finish. The newer version is kept, so you can go back to it later."
+msgstr "Reinicia para terminar. La versión más reciente se guarda, así que puedes volver a ella más adelante."
+
+#: files/parchaos-earlier-version:140 files/parchaos-earlier-version:152
+msgid "Restart Now"
+msgstr "Reiniciar ahora"
+
+#: files/parchaos-earlier-version:149
+msgid "The Newer Version Starts Next Time"
+msgstr "La versión más reciente se iniciará la próxima vez"
+
+#: files/parchaos-earlier-version:150
+msgid "Restart to finish."
+msgstr "Reinicia para terminar."
+
+#: files/parchaos-earlier-version:161
+msgid "That Did Not Work"
+msgstr "No funcionó"
+
+#: files/parchaos-earlier-version:162
+msgid "OK"
+msgstr "Aceptar"
+
+#: files/parchaos-earlier-version:192
+#, python-brace-format
+msgid "From before the update of {date}. Open to keep it or go back."
+msgstr "De antes de la actualización del {date}. Ábrelo para conservarla o volver."
+
+#: files/parchaos-earlier-version:207
+msgid "ParchaOS started normally; nothing to do."
+msgstr "ParchaOS se inició normalmente; no hay nada que hacer."

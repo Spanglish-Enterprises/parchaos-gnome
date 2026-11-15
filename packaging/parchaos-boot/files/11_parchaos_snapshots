@@ -1,0 +1,5 @@
+#!/usr/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# grub.d (right after the normal entries): "Start from an earlier version" submenu with the snapshots taken
+# before updates (parchaos-boot, ticket #151).
+exec /usr/libexec/parchaos-snapshot-boot grub

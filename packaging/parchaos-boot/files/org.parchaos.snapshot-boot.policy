@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Keeping an earlier version of the system, or going back to the newer one (#151). -->
+<policyconfig>
+  <vendor>ParchaOS</vendor>
+  <vendor_url>https://www.parchaos.org</vendor_url>
+  <action id="org.parchaos.snapshot-boot">
+    <description>Change which version of the system starts</description>
+    <description xml:lang="es">Cambiar qué versión del sistema se inicia</description>
+    <message>Authentication is required to change which version of ParchaOS starts</message>
+    <message xml:lang="es">Se necesita autenticación para cambiar qué versión de ParchaOS se inicia</message>
+    <icon_name>document-revert-symbolic</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/parchaos-snapshot-boot</annotate>
+  </action>
+</policyconfig>

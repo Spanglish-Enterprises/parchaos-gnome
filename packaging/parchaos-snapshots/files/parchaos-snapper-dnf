@@ -18,6 +18,11 @@ case "${1:-}" in
         if [ -s "$state" ]; then
             snapper -c "$config" create --type post --pre-number "$(cat "$state")" --cleanup-algorithm number --description "dnf" >/dev/null 2>&1
             rm -f "$state"
+            # A new snapshot from before this update: list it in the boot
+            # menu's "Start from an earlier version" (parchaos-boot, #151).
+            if [ -x /usr/libexec/parchaos-snapshot-boot ]; then
+                /usr/libexec/parchaos-snapshot-boot menu --if-changed >/dev/null 2>&1
+            fi
         fi
         ;;
 esac

@@ -1,6 +1,6 @@
 Name:           parchaos-welcome
 Version:        1.0.0
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        First-login assistant for ParchaOS
 License:        GPL-3.0-or-later
 URL:            https://github.com/Spanglish-Enterprises/parchaos-gnome
@@ -52,6 +52,10 @@ desktop-file-validate %{buildroot}%{_sysconfdir}/xdg/autostart/parchaos-welcome.
 %{_datadir}/locale/es/LC_MESSAGES/parchaos-welcome.mo
 
 %changelog
+* Sun Nov 15 2026 ParchaOS packaging - 1.0.0-12
+- Start at login again: gnome-session 50 skips autostart entries that set
+  X-GNOME-Autostart-Phase ("no longer manages session services"), so this
+  never opened on its own. Found on a fresh ISO install in a VM.
 * Sat Nov 14 2026 ParchaOS packaging - 1.0.0-11
 - Ticket #157: a "Coming From Another Computer?" step that opens Bring Your
   Stuff, when it is installed.

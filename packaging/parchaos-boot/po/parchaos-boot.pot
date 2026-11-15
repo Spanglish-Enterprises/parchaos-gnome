@@ -1,0 +1,113 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parchaos-boot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parchaos-boot\n"
+"Report-Msgid-Bugs-To: https://www.parchaos.org/support\n"
+"POT-Creation-Date: 2026-11-15 00:26-0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: files/parchaos-earlier-version:66 files/parchaos-earlier-version:202
+msgid "Earlier Version"
+msgstr ""
+
+#: files/parchaos-earlier-version:93 files/parchaos-earlier-version:193
+msgid "an earlier update"
+msgstr ""
+
+#: files/parchaos-earlier-version:95 files/parchaos-earlier-version:190
+msgid "You Are Using an Earlier Version"
+msgstr ""
+
+#: files/parchaos-earlier-version:97
+#, python-brace-format
+msgid ""
+"ParchaOS started as it was before the update of {date}. Your files are the "
+"current ones.\n"
+"\n"
+"Apps installed and system settings changed in this session are not kept. If "
+"this version works better, keep it; otherwise restart to go back to the "
+"newer version."
+msgstr ""
+
+#: files/parchaos-earlier-version:100
+msgid "Keep This Version"
+msgstr ""
+
+#: files/parchaos-earlier-version:101
+msgid "Restart Normally"
+msgstr ""
+
+#: files/parchaos-earlier-version:103 files/parchaos-earlier-version:191
+msgid "Using the Version From Before an Update"
+msgstr ""
+
+#: files/parchaos-earlier-version:105
+#, python-brace-format
+msgid ""
+"ParchaOS is now the version from before the update of {date}. The newer "
+"version was kept, so you can go back to it.\n"
+"\n"
+"The same updates will be offered again. If one of them caused the problem, "
+"wait for a newer one before installing."
+msgstr ""
+
+#: files/parchaos-earlier-version:108
+msgid "Done"
+msgstr ""
+
+#: files/parchaos-earlier-version:109
+msgid "Go Back to the Newer Version"
+msgstr ""
+
+#: files/parchaos-earlier-version:118
+msgid "Working…"
+msgstr ""
+
+#: files/parchaos-earlier-version:137
+msgid "This Version Will Be Kept"
+msgstr ""
+
+#: files/parchaos-earlier-version:138
+msgid ""
+"Restart to finish. The newer version is kept, so you can go back to it later."
+msgstr ""
+
+#: files/parchaos-earlier-version:140 files/parchaos-earlier-version:152
+msgid "Restart Now"
+msgstr ""
+
+#: files/parchaos-earlier-version:149
+msgid "The Newer Version Starts Next Time"
+msgstr ""
+
+#: files/parchaos-earlier-version:150
+msgid "Restart to finish."
+msgstr ""
+
+#: files/parchaos-earlier-version:161
+msgid "That Did Not Work"
+msgstr ""
+
+#: files/parchaos-earlier-version:162
+msgid "OK"
+msgstr ""
+
+#: files/parchaos-earlier-version:192
+#, python-brace-format
+msgid "From before the update of {date}. Open to keep it or go back."
+msgstr ""
+
+#: files/parchaos-earlier-version:207
+msgid "ParchaOS started normally; nothing to do."
+msgstr ""

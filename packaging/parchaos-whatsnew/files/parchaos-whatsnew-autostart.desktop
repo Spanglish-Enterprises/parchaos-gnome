@@ -7,5 +7,4 @@ Comment[es]=Se muestra una vez después de una actualización grande
 Exec=parchaos-whatsnew --if-new
 Icon=parchaos-logo
 NoDisplay=true
-X-GNOME-Autostart-Phase=Applications
 X-GNOME-Autostart-Delay=8
